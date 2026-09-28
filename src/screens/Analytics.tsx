@@ -50,8 +50,8 @@ function Inner() {
     if (o.s === 'value') rows.sort((x, y) => y.v - x.v); else if (o.s === 'name') rows.sort((x, y) => x.n.localeCompare(y.n))
     return o.n ? rows.slice(0, o.n) : rows
   }
-  const donut: [string, number, string][] = [['Promoted', X.sc.promoted, '#fff'], ['Selected', X.sc.selected, '#d0d0d0'], ['In review', X.sc.review, '#8a8a8a'], ['Held', X.sc.held, '#555'], ['Declined', X.sc.declined, '#333']]
-  const funnel: [string, number][] = [['Members', X.mem], ['Contributors', Object.keys(X.auth).length], ['Ideas', data.ideas.length], ['Selected', X.sc.selected + X.sc.promoted], ['Published', data.promotions.length]]
+  const donut: [string, number, string][] = [['Ready to share', X.sc.promoted, '#fff'], ['Selected', X.sc.selected, '#d0d0d0'], ['In review', X.sc.review, '#8a8a8a'], ['Held', X.sc.held, '#555'], ['Declined', X.sc.declined, '#333']]
+  const funnel: [string, number][] = [['Members', X.mem], ['Contributors', Object.keys(X.auth).length], ['Ideas', data.ideas.length], ['Selected', X.sc.selected + X.sc.promoted], ['Ready to share', data.promotions.length]]
   const src = cs.top.m === 'backs' ? X.back : X.auth
   const topIds = Object.keys(src).sort((x, y) => src[y] - src[x]).slice(0, cs.top.n)
 
@@ -83,7 +83,7 @@ function Inner() {
     d.setFillColor(0, 0, 0); d.rect(0, 0, W, 40, 'F'); d.setTextColor(255, 255, 255); d.setFont('helvetica', 'bold'); d.setFontSize(22); d.text('QUORLYTH', M, 22)
     d.setFont('helvetica', 'normal'); d.setFontSize(10); d.text(T(data.settings?.name || 'Community report'), M, 30); d.text(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) + `   Last ${rg} days`, W - M, 30, { align: 'right' })
     const H1 = (t: string) => { ck(14); d.setTextColor(0, 0, 0); d.setFont('helvetica', 'bold'); d.setFontSize(13); d.text(t, M, y); d.setDrawColor(0, 0, 0); d.setLineWidth(0.3); d.line(M, y + 2, W - M, y + 2); y += 10; d.setFont('helvetica', 'normal') }
-    ;[['Ideas in range', dd.v.reduce((x, z) => x + z, 0)], ['Members', X.mem], ['Backings', X.tv], ['Published', data.promotions.length]].forEach((k, i) => { const x = M + i * 45.5; d.setDrawColor(0, 0, 0); d.setLineWidth(0.3); d.roundedRect(x, y, 42, 24, 3, 3); d.setFontSize(8); d.setTextColor(110, 110, 110); d.text(String(k[0]), x + 4, y + 8); d.setFontSize(18); d.setTextColor(0, 0, 0); d.text(String(k[1]), x + 4, y + 19) })
+    ;[['Ideas in range', dd.v.reduce((x, z) => x + z, 0)], ['Members', X.mem], ['Backings', X.tv], ['Ready to share', data.promotions.length]].forEach((k, i) => { const x = M + i * 45.5; d.setDrawColor(0, 0, 0); d.setLineWidth(0.3); d.roundedRect(x, y, 42, 24, 3, 3); d.setFontSize(8); d.setTextColor(110, 110, 110); d.text(String(k[0]), x + 4, y + 8); d.setFontSize(18); d.setTextColor(0, 0, 0); d.text(String(k[1]), x + 4, y + 19) })
     y += 34; H1('Ideas per day')
     const cw = W - 2 * M - 8, chh = 46, cx = M + 8, mx = Math.max(1, ...dd.v), n = dd.v.length
     d.setDrawColor(200, 200, 200); d.setLineWidth(0.2); for (let g = 0; g <= 4; g++) { const gy = y + (chh * g) / 4; d.line(cx, gy, cx + cw, gy); d.setFontSize(7); d.setTextColor(120, 120, 120); d.text(String(Math.round(mx * (1 - g / 4))), cx - 2, gy + 1, { align: 'right' }) }
@@ -110,10 +110,10 @@ function Inner() {
     <>
       <Head kicker="Analytics" title="Your community in numbers." right={<>{[7, 30, 90].map(d => <span key={d}><Chip on={rg === d} onClick={() => setRg(d)}>{d} days</Chip>{' '}</span>)}<button className="btn" style={{ padding: '9px 20px', marginLeft: 8 }} onClick={csv}><Icon name="publish" size={16} />CSV</button>{' '}<button className="btn p" style={{ padding: '9px 20px' }} onClick={pdf}><Icon name="publish" size={16} />Export PDF</button></>} />
       <div className="grid g4" style={{ marginBottom: 18 }}>
-        {([['Ideas in range', dd.v.reduce((x, y) => x + y, 0)], ['Members', X.mem], ['Backings', X.tv], ['Published', data.promotions.length]] as [string, number][]).map(([l, v]) => <div key={l} className="glass pad"><p className="dim">{l}</p><p className="num" style={{ fontSize: 42 }}>{v}</p></div>)}
+        {([['Ideas in range', dd.v.reduce((x, y) => x + y, 0)], ['Members', X.mem], ['Backings', X.tv], ['Ready to share', data.promotions.length]] as [string, number][]).map(([l, v]) => <div key={l} className="glass pad"><p className="dim">{l}</p><p className="num" style={{ fontSize: 42 }}>{v}</p></div>)}
       </div>
       <div className="grid g32" style={{ marginBottom: 18 }}>{card('area', `Last ${rg} days`)}{card('don', 'By review status')}</div>
-      <div style={{ marginBottom: 18 }}>{card('bar', ({ ideas: 'Ideas shared', backs: 'Backings received', members: 'Members', pub: 'Posts published' } as any)[cs.bar.m])}</div>
+      <div style={{ marginBottom: 18 }}>{card('bar', ({ ideas: 'Ideas shared', backs: 'Backings received', members: 'Members', pub: 'Posts prepared to share' } as any)[cs.bar.m])}</div>
       <div className="grid g2" style={{ marginBottom: 18 }}>{card('heat', 'By day and time, all time')}{card('fun', 'How people move through your space')}</div>
       {card('top', 'Your most active people')}
 

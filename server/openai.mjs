@@ -1,14 +1,31 @@
 // All OpenAI calls happen here, on the server. The key never reaches the browser.
 const KEY = () => process.env.OPENAI_API_KEY
 const MODEL = () => process.env.OPENAI_MODEL || 'gpt-4o'
-const REALTIME_MODEL = () => process.env.OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview'
+const REALTIME_MODEL = () => {
+  const configured = process.env.OPENAI_REALTIME_MODEL
+  return !configured || configured === 'gpt-4o-realtime-preview' ? 'gpt-realtime-2.1' : configured
+}
 const GEMINI_KEY = () => process.env.GEMINI_API_KEY
+const XAI_KEY = () => process.env.XAI_API_KEY
+const XAI_MODEL = (tier) => tier === 'quick'
+  ? process.env.XAI_QUICK_MODEL || process.env.XAI_MODEL || 'grok-4.7'
+  : process.env.XAI_MODEL || 'grok-4.7'
+function textProvider() {
+  const selected = (process.env.AI_PROVIDER || 'auto').trim().toLowerCase()
+  if (selected === 'gemini' || selected === 'grok' || selected === 'openai') return selected
+  if (GEMINI_KEY()) return 'gemini'
+  if (XAI_KEY()) return 'grok'
+  return 'openai'
+}
 const GEMINI_MODEL = (tier) => tier === 'quick'
   ? process.env.GEMINI_QUICK_MODEL || 'gemini-3.5-flash-lite'
   : process.env.GEMINI_MODEL || 'gemini-3.8-flash'
 
 function needText() {
-  if (!GEMINI_KEY() && !KEY()) { const e = new Error('Add GEMINI_API_KEY or OPENAI_API_KEY to the server environment.'); e.status = 500; throw e }
+  const provider = textProvider()
+  if (provider === 'gemini' && !GEMINI_KEY()) { const e = new Error('AI_PROVIDER is set to gemini, but GEMINI_API_KEY is missing.'); e.status = 503; throw e }
+  if (provider === 'grok' && !XAI_KEY()) { const e = new Error('AI_PROVIDER is set to grok, but XAI_API_KEY is missing.'); e.status = 503; throw e }
+  if (provider === 'openai' && !KEY()) { const e = new Error('Add GEMINI_API_KEY, XAI_API_KEY, or OPENAI_API_KEY to the server environment.'); e.status = 503; throw e }
 }
 function needOpenAI(feature) {
   if (!KEY()) { const e = new Error(`${feature} needs OPENAI_API_KEY. Gemini is configured for chat, but does not provide this OpenAI voice endpoint.`); e.status = 503; throw e }
@@ -33,6 +50,13 @@ async function providerError(r) {
     return 'QuorlythBot is temporarily unavailable because the OpenAI account has no API credits remaining. Add credits to the OpenAI project connected to this site, then try again.'
   }
   return payload.error?.message || 'The AI service could not complete this request. Please try again.'
+}
+
+async function xaiError(r) {
+  let payload = {}
+  try { payload = await r.json() } catch {}
+  if (r.status === 401 || r.status === 403) return 'xAI rejected the server API key. Check XAI_API_KEY in your environment settings.'
+  return payload.error?.message || 'Grok could not complete this request. Please try again.'
 }
 
 async function geminiError(r) {
@@ -75,7 +99,7 @@ async function geminiChat(req, res, body) {
   const requestBody = JSON.stringify({
     ...(system ? { systemInstruction: { parts: [{ text: String(system) }] } } : {}),
     contents: geminiContents(messages),
-    generationConfig: { temperature: 0.7 },
+    generationConfig: { temperature: 0.7, maxOutputTokens: tier === 'quick' ? 1024 : 2048 },
   })
   const r = await fetchGeminiWithFallback(tier, model => fetch(geminiUrl(model, true), {
     method: 'POST',
@@ -118,7 +142,7 @@ async function geminiJson(req, res, body) {
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: String(system) }] },
     contents: [{ role: 'user', parts: [{ text: String(prompt) }] }],
-    generationConfig: { responseMimeType: 'application/json' },
+    generationConfig: { responseMimeType: 'application/json', maxOutputTokens: tier === 'quick' ? 1024 : 2048 },
   })
   const r = await fetchGeminiWithFallback(tier, model => fetch(geminiUrl(model), {
     method: 'POST',
@@ -137,19 +161,22 @@ export async function chat(req, res) {
   try {
     needText()
     const body = await readBody(req)
-    if (GEMINI_KEY()) return await geminiChat(req, res, body)
+    const provider = textProvider()
+    if (provider === 'gemini') return await geminiChat(req, res, body)
     const { messages = [], system, tier } = body
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    const grok = provider === 'grok'
+    const r = await fetch(grok ? 'https://api.x.ai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEY()}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${grok ? XAI_KEY() : KEY()}` },
       body: JSON.stringify({
-        model: tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
+        model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
         stream: true,
         temperature: 0.7,
+        max_tokens: tier === 'quick' ? 1024 : 2048,
         messages: [...(system ? [{ role: 'system', content: system }] : []), ...messages],
       }),
     })
-    if (!r.ok || !r.body) return send(res, r.status || 500, { error: await providerError(r) })
+    if (!r.ok || !r.body) return send(res, r.status || 500, { error: await (grok ? xaiError(r) : providerError(r)) })
     res.statusCode = 200
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
@@ -180,19 +207,22 @@ export async function json(req, res) {
   try {
     needText()
     const body = await readBody(req)
-    if (GEMINI_KEY()) return await geminiJson(req, res, body)
+    const provider = textProvider()
+    if (provider === 'gemini') return await geminiJson(req, res, body)
     const { prompt = '', system = 'Reply with only valid JSON.', tier } = body
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    const grok = provider === 'grok'
+    const r = await fetch(grok ? 'https://api.x.ai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEY()}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${grok ? XAI_KEY() : KEY()}` },
       body: JSON.stringify({
-        model: tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
+        model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
         response_format: { type: 'json_object' },
+        max_tokens: tier === 'quick' ? 1024 : 2048,
         messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
       }),
     })
     const j = await r.json()
-    if (!r.ok) return send(res, r.status, { error: j.error?.code === 'credit_balance_exhausted' || j.error?.code === 'insufficient_quota' ? 'QuorlythBot is temporarily unavailable because the OpenAI account has no API credits remaining. Add credits to the OpenAI project connected to this site, then try again.' : j.error?.message || 'The AI service could not complete this request. Please try again.' })
+    if (!r.ok) return send(res, r.status, { error: grok ? await xaiError(new Response(JSON.stringify(j), { status: r.status })) : j.error?.code === 'credit_balance_exhausted' || j.error?.code === 'insufficient_quota' ? 'QuorlythBot is temporarily unavailable because the OpenAI account has no API credits remaining. Add credits to the OpenAI project connected to this site, then try again.' : j.error?.message || 'The AI service could not complete this request. Please try again.' })
     send(res, 200, JSON.parse(j.choices?.[0]?.message?.content || '{}'))
   } catch (e) { send(res, e.status || 500, { error: String(e.message || e) }) }
 }
@@ -202,23 +232,30 @@ export async function realtimeSession(req, res) {
   try {
     needOpenAI('Live voice')
     const { instructions = '', voice = 'alloy', tools = [] } = await readBody(req)
-    const r = await fetch('https://api.openai.com/v1/realtime/sessions', {
+    const model = REALTIME_MODEL()
+    const r = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEY()}` },
       body: JSON.stringify({
-        model: REALTIME_MODEL(),
-        voice,
-        instructions,
-        modalities: ['audio', 'text'],
-        input_audio_transcription: { model: 'whisper-1' },
-        turn_detection: { type: 'server_vad', threshold: 0.5, silence_duration_ms: 450, create_response: true },
-        tools,
-        tool_choice: 'auto',
+        session: {
+          type: 'realtime',
+          model,
+          instructions,
+          audio: {
+            input: {
+              transcription: { model: 'gpt-4o-mini-transcribe' },
+              turn_detection: { type: 'server_vad', threshold: 0.5, silence_duration_ms: 450, create_response: true },
+            },
+            output: { voice },
+          },
+          tools,
+          tool_choice: 'auto',
+        },
       }),
     })
     const j = await r.json()
     if (!r.ok) return send(res, r.status, { error: j.error?.code === 'credit_balance_exhausted' || j.error?.code === 'insufficient_quota' ? 'QuorlythBot is temporarily unavailable because the OpenAI account has no API credits remaining. Add credits to the OpenAI project connected to this site, then try again.' : j.error?.message || 'The AI service could not complete this request. Please try again.' })
-    send(res, 200, { token: j.client_secret?.value, model: REALTIME_MODEL() })
+    send(res, 200, { token: j.value, model })
   } catch (e) { send(res, e.status || 500, { error: String(e.message || e) }) }
 }
 

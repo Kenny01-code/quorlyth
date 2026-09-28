@@ -23,7 +23,7 @@ function Stage({ greeting }: { greeting: string }) {
 }
 
 export function SignIn() {
-  const { backend, me, toast } = useApp()
+  const { backend, me, toast, enterDemo } = useApp()
   const nav = useNavigate()
   const [params] = useSearchParams()
   const requested = params.get('next') || ''
@@ -123,6 +123,7 @@ export function SignIn() {
           <form onSubmit={submit}>
             <h2 style={{ fontSize: 40 }}>{mode === 'signup' ? 'Create your account.' : mode === 'reset' ? 'Reset password.' : mode === 'recovery' ? 'Choose a new password.' : 'Welcome.'}</h2>
             <p className="mut" style={{ marginTop: 10 }}>{mode === 'signup' ? 'Use your email to join the space.' : mode === 'reset' ? 'We will email you a secure reset link.' : mode === 'recovery' ? 'Choose a new password for your account.' : 'Sign in to enter your space.'}</p>
+            {mode === 'signin' && <button type="button" className="btn wide" style={{ marginTop: 22 }} onClick={() => { enterDemo(); nav('/dashboard') }}><Icon name="spark" size={16} />Explore Demo Space</button>}
             {(mode === 'signin' || mode === 'signup') && <>
               <button type="button" className="btn p wide" style={{ marginTop: 24 }} onClick={google}><GoogleG />Continue with Google</button>
               <div className="dv">or with email</div>

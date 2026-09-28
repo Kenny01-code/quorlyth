@@ -8,7 +8,8 @@
     "dev:ai": "node server/dev-server.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test server/openai.test.mjs"
   },
   "dependencies": {
     "jspdf": "^4.2.1",

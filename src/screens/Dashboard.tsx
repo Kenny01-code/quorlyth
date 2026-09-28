@@ -48,9 +48,12 @@ function Inner() {
   const pending = data.ideas.filter(i => a.statusOf(i.id) === 'review').length
   const ranked = data.ideas.filter(i => data.reviews[i.id]?.score != null && a.statusOf(i.id) === 'review').sort((x, y) => data.reviews[y.id].score! - data.reviews[x.id].score!).slice(0, 3)
   const recent = [...data.ideas].sort((x, y) => y.at - x.at).slice(0, 5)
+  const backed = [...data.ideas].map(idea => ({ idea, votes: a.votesOf(idea.id) }))
+    .filter(x => x.votes > 0 && a.statusOf(x.idea.id) !== 'declined')
+    .sort((x, y) => y.votes - x.votes || y.idea.at - x.idea.at).slice(0, 3)
   const list = ranked.length ? ranked : recent
   const dd = (() => { const d = 864e5, t0 = new Date().setHours(0, 0, 0, 0), v: number[] = [], t: number[] = []; for (let i = 29; i >= 0; i--) { const st = t0 - i * d; v.push(data.ideas.filter(x => x.at >= st && x.at < st + d).length); t.push(st) } return { v, d: t } })()
-  const stats: [string, number][] = [['Waiting for review', pending], ['Ideas shared', data.ideas.length], ['Members', Object.keys(data.members).length], ['Published', data.promotions.length]]
+  const stats: [string, number][] = [['Waiting for review', pending], ['Ideas shared', data.ideas.length], ['Members', Object.keys(data.members).length], ['Ready to share', data.promotions.length]]
 
   return (
     <>
@@ -76,6 +79,14 @@ function Inner() {
           )
         })}
       </div></div>
+      <div className="glass pad" style={{ marginTop: 18 }}>
+        <div className="head" style={{ marginBottom: 8 }}><div><h3>Most backed by members</h3><p className="dim">Community support, separate from AI review scores</p></div><button className="chip" onClick={() => nav('/communities')}>Explore communities</button></div>
+        {backed.length ? backed.map(({ idea, votes }) => <button key={idea.id} className="row rowbtn" onClick={() => nav('/idea/' + idea.id)}>
+          <div className="score" style={{ width: 42, height: 42, fontSize: 14 }}>{votes}</div>
+          <div className="t"><h3 style={{ fontSize: 15 }}>{idea.title}</h3><p className="dim">{data.communities.find(c => c.id === idea.cid)?.name || 'Community'} · {a.nm(idea.authorId)}</p></div>
+          <span className="dim">{votes} {votes === 1 ? 'backing' : 'backings'}</span>
+        </button>) : <p className="mut" style={{ padding: '14px 0' }}>Member backing will appear here as people support ideas. No popularity is inferred before they do.</p>}
+      </div>
       {owner && <Briefing />}
       {owner && <ShareCard title="Your space link" url={location.origin} sub="Share this with the people you want in your space." />}
     </>

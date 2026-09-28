@@ -8,6 +8,19 @@ const clamp = (v: any) => Math.max(0, Math.min(100, Math.round(+v || 0)))
 export async function reviewIdeas(a: App, ideas: Idea[], opts: { community?: string; signal?: AbortSignal; onProgress?: (s: string) => void } = {}) {
   const d = a.data
   const w = { o: d.settings?.wo ?? 40, f: d.settings?.wf ?? 25, r: d.settings?.wr ?? 35 }
+  if (a.demo) {
+    let done = 0
+    for (const idea of ideas) {
+      if (opts.signal?.aborted) throw new DOMException('Review cancelled', 'AbortError')
+      opts.onProgress?.(`Scoring sample ${done + 1} of ${ideas.length}...`)
+      const hash = [...(idea.title + idea.body)].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7)
+      const o = 62 + hash % 34, f = 58 + (hash >>> 4) % 38, r = 60 + (hash >>> 9) % 36
+      await a.saveReview(idea.id, { o, f, r, score: Math.round((o * w.o + f * w.f + r * w.r) / (w.o + w.f + w.r || 1)), reason: 'Demo score based on the sample idea and the space’s configured signal weights. In a live space, QuorlythBot would explain its assessment using the real idea context.', status: a.statusOf(idea.id) })
+      done++
+      await new Promise(resolve => setTimeout(resolve, 120))
+    }
+    return done
+  }
   let done = 0
   const batches: Idea[][] = []
   for (let k = 0; k < ideas.length; k += 10) batches.push(ideas.slice(k, k + 10))

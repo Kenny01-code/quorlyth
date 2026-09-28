@@ -15,10 +15,10 @@ export function useNotifs(a: App, st: UserState): Notif[] {
     const d = a.data
     d.ideas.forEach(i => {
       const r = d.reviews[i.id]
-      if (i.authorId === m && r && r.status && r.status !== 'review' && r.at) out.push({ at: r.at, icon: r.status === 'promoted' ? 'publish' : r.status === 'selected' ? 'select' : r.status === 'held' ? 'hold' : 'decline', text: `Your idea "${i.title}" was ${r.status === 'promoted' ? 'published' : r.status}`, kind: 'idea', id: i.id })
+      if (i.authorId === m && r && r.status && r.status !== 'review' && r.at) out.push({ at: r.at, icon: r.status === 'promoted' ? 'publish' : r.status === 'selected' ? 'select' : r.status === 'held' ? 'hold' : 'decline', text: `Your idea "${i.title}" was ${r.status === 'promoted' ? 'prepared for sharing' : r.status}`, kind: 'idea', id: i.id })
       if (i.authorId !== m && a.joined(i.cid) && i.at) out.push({ at: i.at, icon: 'idea', text: `${a.nm(i.authorId)} shared "${i.title}"`, kind: 'idea', id: i.id })
     })
-    d.promotions.forEach(p => { if ((p.credits || []).includes(m) && p.by !== m) out.push({ at: p.at, icon: 'publish', text: 'You were credited in a published post', kind: 'promo', id: p.id }) })
+    d.promotions.forEach(p => { if ((p.credits || []).includes(m) && p.by !== m) out.push({ at: p.at, icon: 'publish', text: 'You were credited in a post prepared to share', kind: 'promo', id: p.id }) })
     const dc = d.decisions[m]
     if (dc?.at) out.push({ at: dc.at, icon: dc.status === 'approved' ? 'approve' : 'alert', text: `Your access request was ${dc.status}`, kind: 'access' })
     if (a.owner) d.requests.forEach(r => { const x = d.decisions[r.id]; if (r.at && (!x || x.at < r.at)) out.push({ at: r.at, icon: 'invite', text: `${a.nm(r.id)} requested access`, kind: 'settings', id: r.id }) })

@@ -38,7 +38,7 @@ function Inner() {
 
   const pubs = data.promotions.length ? (
     <div className="glass pad" style={{ margin: '24px auto 0', maxWidth: 760 }}>
-      <h3 style={{ marginBottom: 8 }}>Published</h3>
+      <h3 style={{ marginBottom: 8 }}>Ready to share</h3>
       {data.promotions.map(p => <div key={p.id} className="row" style={{ cursor: 'default', alignItems: 'flex-start' }}><Icon name="publish" /><div className="t"><p style={{ whiteSpace: 'pre-wrap' }}>{p.text}</p><p className="dim" style={{ marginTop: 6 }}>{when(p.at)}</p></div></div>)}
     </div>
   ) : null
@@ -46,10 +46,10 @@ function Inner() {
   if (pub !== null) {
     return (
       <>
-        <Head kicker="Promote" title="Published." />
+        <Head kicker="Promote" title="Ready to share." />
         <div className="glass pad" style={{ maxWidth: 760, margin: '0 auto' }}><div className="done">
-          <div className="score"><Icon name="approve" size={34} /></div><h2>It is out.</h2>
-          <p className="mut" style={{ margin: '12px auto 0', maxWidth: 380 }}>Your post is live in this space with contributors credited. To share it elsewhere, copy it or save it as a file.</p>
+          <div className="score"><Icon name="approve" size={34} /></div><h2>Your post is ready.</h2>
+          <p className="mut" style={{ margin: '12px auto 0', maxWidth: 420 }}>Your credited post draft is saved in Quorlyth. Copy it or save it as a file to publish on your social channels.</p>
           <div className="post" style={{ margin: '24px 0', textAlign: 'left', whiteSpace: 'pre-wrap' }}>{pub}</div>
           <div className="acts" style={{ justifyContent: 'center' }}>
             <button className="btn p" onClick={() => navigator.clipboard.writeText(pub).then(() => a.toast('Copied'))}>Copy post</button>
@@ -139,7 +139,7 @@ function Inner() {
         {opts.length > 0 && <div style={{ marginTop: 18 }}><p className="dim" style={{ marginBottom: 8 }}>Options</p>{opts.map((o, k) => <div key={k} className="row" style={{ alignItems: 'flex-start' }}><div className="t"><p className="dim">{o.label}</p><p style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>{o.text}</p></div><button className="btn" style={{ padding: '8px 16px' }} onClick={() => { setDraft(o.text); setHt([]) }}>Use this</button></div>)}</div>}
         <label className="field"><span style={{ display: 'flex', justifyContent: 'space-between' }}><span>Your post</span><span className="dim" style={{ color: draft.length > lim ? '#fff' : undefined, fontWeight: draft.length > lim ? 500 : undefined }}>{draft.length} / {lim}</span></span>
           <textarea ref={ta} value={draft} onChange={e => setDraft(e.target.value)} style={{ minHeight: 170 }} placeholder="Write a post, or let QuorlythBot draft one" /></label>
-        <p className="dim" style={{ marginTop: -8 }}>Your post is saved as a draft on this device until it is published.</p>
+        <p className="dim" style={{ marginTop: -8 }}>Your edits are saved as a draft on this device. Preparing to share saves a credited copy in Quorlyth; publishing to a social network still happens there.</p>
         <div className="ptools">
           <div className="acts" style={{ margin: '12px 0 0', gap: 8 }}>
             <Chip on={emo} onClick={() => { setEmo(!emo); setPm({ ...pm, emo: !emo }) }}>😊 Emoji</Chip>
@@ -156,7 +156,7 @@ function Inner() {
           ))}
         </div>
         <div className="reason" style={{ marginTop: 24 }}><span className="dim">Credited</span><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{credits.slice(0, 8).map(c => <Av key={c} id={c} size={28} />)}<span className="dim">{credits.slice(0, 4).map(a.nm).join(', ')}{credits.length > 4 ? ` and ${credits.length - 4} more` : ''}</span></div></div>
-        <div className="acts"><button className="btn p" onClick={async () => { if (!draft.trim()) return a.toast('Write the post first'); const post = draft.trim(); if (await a.publish(idea.id, post, credits)) { clearPostDraft(''); setPub(post) } }}><Icon name="publish" />Publish</button><button className="btn" onClick={() => clearPostDraft('')}>Discard draft</button></div>
+        <div className="acts"><button className="btn p" onClick={async () => { if (!draft.trim()) return a.toast('Write the post first'); const post = draft.trim(); if (await a.publish(idea.id, post, credits)) { clearPostDraft(''); setPub(post) } }}><Icon name="publish" />Prepare to share</button><button className="btn" onClick={() => clearPostDraft('')}>Discard draft</button></div>
       </div>
       {pubs}
     </>

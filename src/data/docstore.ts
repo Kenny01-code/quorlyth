@@ -10,7 +10,7 @@ export interface DocStore {
   update(path: string, patch: any): Promise<void>
   delete(path: string): Promise<void>
   /** live list of the documents directly inside a collection */
-  subscribe(collection: string, cb: (docs: Doc[]) => void): () => void
+  subscribe(collection: string, cb: (docs: Doc[]) => void, onError?: (error: unknown) => void): () => void
 }
 
 export function isDirectChild(collection: string, path: string) {

@@ -96,10 +96,23 @@ function localAuth(): Auth {
 export async function createBackend(): Promise<Backend> {
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-  if (url && key) {
-    try {
-      const { store, sb } = await createSupabaseStore(url, key)
-      const toMe = (u: any): Me | null => u ? { id: u.id, email: u.email, name: u.user_metadata?.full_name || u.user_metadata?.name || (u.email || '').split('@')[0], avatarUrl: u.user_metadata?.avatar_url } : null
+  if (url || key) {
+    if (!url || !key) {
+      throw new Error('Supabase is partially configured. Set both VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+    }
+
+    const { store, sb } = await createSupabaseStore(url, key)
+      const toMe = (u: any): Me | null => {
+        if (!u) return null
+        const google = u.identities?.find((identity: any) => identity.provider === 'google')?.identity_data || {}
+        const metadata = u.user_metadata || {}
+        return {
+          id: u.id,
+          email: u.email,
+          name: metadata.full_name || metadata.name || google.full_name || google.name || (u.email || '').split('@')[0],
+          avatarUrl: metadata.avatar_url || metadata.picture || google.avatar_url || google.picture || google.photo_url,
+        }
+      }
       const auth: Auth = {
         mode: 'supabase',
         async current() { const { data } = await sb.auth.getUser(); return toMe(data.user) },
@@ -118,9 +131,10 @@ export async function createBackend(): Promise<Backend> {
         async updatePassword(password) { const { error } = await sb.auth.updateUser({ password }); if (error) throw error },
         async signOut() { const { error } = await sb.auth.signOut({ scope: 'local' }); if (error) throw error },
       }
-      return { store, auth }
-    } catch (e) { console.warn('Supabase unavailable, using local storage', e) }
+    return { store, auth }
   }
+
+  // Local storage is used only when neither Supabase credential is configured.
   const store = createLocalStore()
   // Older local builds silently made the first signed-in user the owner.
   // Preserve the space data, but require an explicit claim under the new flow.

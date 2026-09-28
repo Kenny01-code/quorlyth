@@ -27,13 +27,16 @@ function Mine() {
   const profileBase = { name: q.name || '', head: q.head || '', bio: q.bio || '' }
   const [f, setF, clearProfileDraft] = useDraftState(`q-draft:${me.id}:profile`, profileBase)
   const [crop, setCrop] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState('')
   const [menu, setMenu] = useState(false)
   const file = useRef<HTMLInputElement>(null)
   const my = a.data.ideas.filter(i => i.authorId === me.id).sort((x, y) => y.at - x.at)
   const joined = a.data.communities.filter(c => a.joined(c.id))
   const rc = my.reduce((n, i) => n + a.votesOf(i.id), 0)
   const url = location.origin + '/me/' + me.id
-  const photo = q.photo || me.avatarUrl || ''
+  const photo = photoPreview || q.photo || q.authAvatarUrl || me.avatarUrl || ''
+  const avatarName = a.nm(me.id)
+  const avatarInitials = avatarName.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase() || 'M'
 
   const access: [string, string, string, boolean][] = [
     ['idea', 'Share ideas', 'Post to communities you join.', a.canPost()],
@@ -52,12 +55,12 @@ function Mine() {
           <div className="pw">
             <div className="pwrap">
               <button className="pav" aria-label="Edit photo" aria-haspopup="menu" onClick={() => setMenu(!menu)}>
-                <img alt="" src={photo || undefined} /><span className="cam"><Icon name="edit" size={14} /></span>
+                <span className="pav-initials" aria-hidden="true">{avatarInitials}</span>{photo && <img alt="" src={photo} onError={e => { e.currentTarget.style.display = 'none' }} />}<span className="cam"><Icon name="edit" size={14} /></span>
               </button>
               {menu && (
                 <div className="pmenu glass">
                   <button onClick={() => { setMenu(false); file.current?.click() }}><Icon name="camera" size={16} />Upload new photo</button>
-                  {q.photo && <button onClick={() => { setMenu(false); a.saveProfile({ photo: '' }) }}><Icon name="decline" size={16} />Remove photo</button>}
+                  {q.photo && <button onClick={async () => { setMenu(false); if (await a.saveProfile({ photo: '' })) setPhotoPreview('') }}><Icon name="decline" size={16} />Remove photo</button>}
                 </div>
               )}
             </div>
@@ -85,7 +88,7 @@ function Mine() {
         {saved.length ? saved.map(i => <div key={i.id} className="row" onClick={() => nav('/idea/' + i.id)}><Icon name="save" /><div className="t"><h3 style={{ fontSize: 15 }}>{i.title}</h3><p className="dim">{a.nm(i.authorId)}</p></div></div>) : <p className="mut" style={{ padding: '14px 0' }}>Save an idea to find it here.</p>}</div>
       <div className="glass pad"><h3 style={{ marginBottom: 8 }}>My contributions</h3>
         {my.length ? my.map(i => <div key={i.id} className="row" onClick={() => nav('/idea/' + i.id)}><div className="score" style={{ width: 44, height: 44 }}><Icon name={a.statusOf(i.id) === 'promoted' ? 'publish' : a.statusOf(i.id) === 'selected' ? 'select' : 'status'} size={18} /></div><div className="t"><h3>{i.title}</h3><p className="dim">{STATUS_LABEL[a.statusOf(i.id)]}, {a.votesOf(i.id)} backing</p></div></div>) : <p className="mut" style={{ padding: '14px 0' }}>You have not shared an idea yet.</p>}</div></div>
-      {crop && <CropModal file={crop} onCancel={() => setCrop(null)} onSave={d => { setCrop(null); a.saveProfile({ photo: d }) }} />}
+      {crop && <CropModal file={crop} onCancel={() => setCrop(null)} onSave={async d => { if (!await a.saveProfile({ photo: d })) return false; setPhotoPreview(d); setCrop(null); return true }} />}
     </>
   )
 }

@@ -8,7 +8,7 @@ export interface RobotApi {
 }
 
 /** The 3D QuorlythBot. Shows a retry button if the 3D scene cannot start. */
-export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; onReady?: () => void }>(function Robot({ theme = 'pearl', calm, drag, onReady }, ref) {
+export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; onReady?: () => void }>(function Robot({ theme = 'onyx', calm, drag, onReady }, ref) {
   const cv = useRef<HTMLCanvasElement>(null)
   const api = useRef<RobotApi | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'fail'>('loading')

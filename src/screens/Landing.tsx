@@ -17,7 +17,7 @@ const STEPS = [
   ['surface', 'Surfacing', 'QuorlythBot reads every idea, scores it, and explains the score in plain language.', 'Run an AI review from the queue.'],
   ['promote', 'Promotion', 'You choose. The idea becomes a post, with contributors credited.', 'Select an idea and publish it.'],
 ]
-const FEATURES = [['rank', 'Ranked with reasons', 'Every score comes with a plain explanation.'], ['contribute', 'Credit built in', 'Contributors are named when their idea is published.'], ['private', 'Private by default', 'Your space is only open to the people you share it with.'], ['status', 'Calm by design', 'No noise. Just what needs your attention.'], ['member', 'Your voice stays yours', 'The AI suggests. You decide, always.'], ['audience', 'Made to grow', 'From a handful of fans to a large community.']]
+const FEATURES = [['rank', 'Ranked with reasons', 'Every score comes with a plain explanation.'], ['contribute', 'Credit built in', 'Contributors stay attached to the share-ready post.'], ['private', 'Private by default', 'Your space is only open to the people you share it with.'], ['status', 'Calm by design', 'No noise. Just what needs your attention.'], ['member', 'Your voice stays yours', 'The AI suggests. You decide, always.'], ['audience', 'Made to grow', 'From a handful of fans to a large community.']]
 const WORDS = ['Communities', 'Ideas', 'Collaboration', 'Surfacing', 'Selection', 'Promotion', 'Credit', 'Reach']
 
 function Words({ list }: { list: string[] }) {
@@ -29,7 +29,7 @@ function Words({ list }: { list: string[] }) {
 
 export function Landing() {
   const nav = useNavigate()
-  const { me, data } = useApp()
+  const { me, data, enterDemo } = useApp()
   const typed = useTypewriter(HEADLINES)
   useReveal()
   const w = { o: data.settings?.wo ?? 40, f: data.settings?.wf ?? 25, r: data.settings?.wr ?? 35 }
@@ -43,6 +43,7 @@ export function Landing() {
         <h1 style={{ marginTop: 28, minHeight: '2.1em' }}>{typed}<span className="cr" /></h1>
         <Words list={SUBS} />
         <button className="btn p" onClick={() => nav(me ? '/dashboard' : '/signin')}>{me ? 'Open dashboard' : 'Get started'}</button>{' '}
+        {!me && <button className="btn" onClick={() => { enterDemo(); nav('/dashboard') }}><Icon name="spark" size={15} />Try Demo</button>}{' '}
         {!me && <button className="btn" onClick={() => nav('/signin')}>Sign in</button>}
         <i className="hz" />
       </div>
@@ -65,7 +66,7 @@ export function Landing() {
       <div className="sec rv"><p className="mani">A following is a crowd.<br />A community is a room<br />full of ideas.</p></div>
       <div className="sec rv"><div className="glass cta lift"><div className="hmark" style={{ marginTop: -20 }}><i className="hh" /><Logo size={72} breathe /></div>
         <h2>Bring order to your fans.</h2><p className="mut" style={{ margin: '14px auto 30px', maxWidth: 420 }}>Request access to join a space, or sign in if you already have it.</p>
-        <div className="acts"><button className="btn p" onClick={() => nav(me ? '/access' : '/signin?next=%2Faccess')}>Request access</button><button className="btn" onClick={() => nav('/signin')}>Sign in</button></div></div>
+        <div className="acts"><button className="btn p" onClick={() => me ? nav('/access') : (enterDemo(), nav('/dashboard'))}>{me ? 'Request access' : 'Explore Demo Space'}</button><button className="btn" onClick={() => nav('/signin')}>Sign in</button></div></div>
         <div className="ft"><span>Quorlyth</span><span className="dim">Built for creators and their communities</span></div></div>
     </>
   )

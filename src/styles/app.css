@@ -169,6 +169,10 @@ button.lk{all:unset;cursor:pointer;color:var(--g6);border-bottom:1px solid var(-
 @media(min-width:1600px){main{max-width:1320px}}
 @media(pointer:coarse){.btn,button.chip,.row{min-height:44px}}
 .bdg{position:absolute;top:3px;right:5px;min-width:16px;height:16px;border-radius:99px;background:#fff;color:#000;font-size:10px;font-weight:600;display:grid;place-items:center;padding:0 4px;box-shadow:0 0 14px rgba(255,255,255,.7)}
+.nav-count{position:absolute;top:2px;right:3px;z-index:2;min-width:17px;height:17px;padding:0 5px;border-radius:999px;display:grid;place-items:center;background:#fff;color:#000;font-size:10px;line-height:1;font-weight:600;box-shadow:0 0 12px rgba(255,255,255,.25);pointer-events:none}.nav-count.sent{min-width:30px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff}
+.bdg.pulse,.nav-count.pulse{animation:request-pulse 1.8s ease-in-out infinite}@keyframes request-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.08),0 0 12px rgba(255,255,255,.25)}50%{box-shadow:0 0 0 5px rgba(255,255,255,.12),0 0 22px rgba(255,255,255,.55)}}
+nav .navmain button.on .nav-count:not(.sent){background:#000;color:#fff}nav .navmain button.on .nav-count.sent{background:rgba(0,0,0,.1);color:#000;border-color:rgba(0,0,0,.2)}
+@media(prefers-reduced-motion:reduce){.bdg.pulse,.nav-count.pulse{animation:none}}
 nav button.bl{position:relative}
 nav button.srch{border:1px solid var(--line);background:rgba(255,255,255,.06);margin-left:4px}nav button.srch kbd{font:inherit;font-size:11px;color:var(--g4);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
 #sp{position:fixed;top:0;left:0;right:0;height:2px;z-index:60;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,transparent,#fff);box-shadow:0 0 14px #fff;pointer-events:none}
@@ -184,7 +188,8 @@ nav button.srch{border:1px solid var(--line);background:rgba(255,255,255,.06);ma
 #np{position:fixed;top:calc(max(12px,env(safe-area-inset-top,0px)) + 66px);right:12px;width:min(390px,calc(100vw - 24px));max-height:min(70dvh,560px);overflow-y:auto;z-index:70;padding:10px;animation:in .4s cubic-bezier(.2,.7,.2,1)}
 .nitem{display:flex;gap:12px;padding:12px;border-radius:14px;cursor:pointer;align-items:flex-start}.nitem:hover{background:rgba(255,255,255,.07)}.nitem .dot{width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 10px #fff;margin-top:9px;flex:none}.nitem .nd2{width:7px;flex:none}
 button.pav{all:unset;position:relative;width:128px;height:128px;border-radius:50%;cursor:pointer;border:1px solid rgba(255,255,255,.35);box-shadow:0 0 44px -6px rgba(255,255,255,.35),inset 0 0 20px rgba(255,255,255,.1);flex:none}
-.pav img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}.pav .cam{position:absolute;right:0;bottom:0;width:38px;height:38px;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center;box-shadow:0 0 24px rgba(255,255,255,.5)}
+.pav-initials{position:absolute;z-index:0;inset:0;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,var(--g6),var(--g3));color:#fff;font-size:36px;font-weight:500}
+.pav img{position:relative;z-index:1;width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}.pav .cam{position:absolute;z-index:2;right:0;bottom:0;width:38px;height:38px;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center;box-shadow:0 0 24px rgba(255,255,255,.5)}
 .pav:focus-visible{outline:1px solid #fff;outline-offset:4px}
 .stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat3 div{padding:16px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03);text-align:center}.stat3 .num{font-size:34px;margin-top:6px}
 .acc{display:flex;flex-direction:column;gap:10px;padding:22px}.acc .top{display:flex;justify-content:space-between;align-items:center}

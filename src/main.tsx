@@ -5,13 +5,16 @@ import './styles/app.css'
 import './styles/extra.css'
 import { AppProvider } from './data/AppProvider'
 import App from './App'
+import { AppErrorBoundary } from './components/AppErrorBoundary'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AppProvider>
-        <App />
-      </AppProvider>
-    </BrowserRouter>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <AppProvider>
+          <App />
+        </AppProvider>
+      </BrowserRouter>
+    </AppErrorBoundary>
   </React.StrictMode>,
 )

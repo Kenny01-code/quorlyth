@@ -11,7 +11,8 @@ export async function createSupabaseStore(url: string, key: string) {
 
   const store: DocStore = {
     async get(path) {
-      const { data } = await sb.from('docs').select('data').eq('path', path).maybeSingle()
+      const { data, error } = await sb.from('docs').select('data').eq('path', path).maybeSingle()
+      if (error) throw error
       return data?.data ?? null
     },
     async set(path, data) {
@@ -27,15 +28,24 @@ export async function createSupabaseStore(url: string, key: string) {
       const { error } = await sb.from('docs').delete().or(`path.eq.${path},path.like.${path}/%`)
       if (error) throw error
     },
-    subscribe(collection, cb) {
+    subscribe(collection, cb, onError) {
+      let lastErrorMessage = ''
       const load = async () => {
-        const { data } = await sb.from('docs').select('path,data').like('path', collection + '/%')
-        const docs: Doc[] = (data || []).filter(r => isDirectChild(collection, r.path)).map(r => ({ id: r.path.slice(collection.length + 1), data: r.data }))
-        cb(docs)
+        try {
+          const { data, error } = await sb.from('docs').select('path,data').like('path', collection + '/%')
+          if (error) throw error
+          lastErrorMessage = ''
+          const docs: Doc[] = (data || []).filter(r => isDirectChild(collection, r.path)).map(r => ({ id: r.path.slice(collection.length + 1), data: r.data }))
+          cb(docs)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message !== lastErrorMessage) onError?.(error)
+          lastErrorMessage = message
+        }
       }
-      load()
+      void load()
       const ch = sb.channel('docs:' + collection + ':' + Math.random().toString(36).slice(2))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, load)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, () => { void load() })
         .subscribe()
       return () => { sb.removeChannel(ch) }
     },

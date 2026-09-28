@@ -19,7 +19,7 @@ export function NotifPanel({ list, sound, onSound, onOpen, onMarkAll, onClose }:
         </div>
         {list.length ? list.map(n => (
           <div key={n.key} className="nitem" role="button" tabIndex={0}
-            onClick={() => { onOpen(n); onClose(); nav(n.kind === 'idea' ? '/idea/' + n.id : n.kind === 'settings' ? '/settings' : n.kind === 'access' ? '/access' : '/communities') }}>
+            onClick={() => { onOpen(n); onClose(); nav(n.kind === 'idea' ? '/idea/' + n.id : n.kind === 'settings' ? '/settings?tab=requests' : n.kind === 'access' ? '/access' : '/communities') }}>
             {n.unread ? <i className="dot" /> : <i className="nd2" />}<Icon name={n.icon} size={18} />
             <div style={{ minWidth: 0 }}><p style={{ fontSize: 14 }}>{n.text}</p><p className="dim">{when(n.at)}</p></div>
           </div>

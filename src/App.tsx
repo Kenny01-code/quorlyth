@@ -1,25 +1,25 @@
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
 import { Palette } from './components/Palette'
 import { Shortcuts } from './components/Shortcuts'
 import { NotifPanel } from './components/NotifPanel'
-import { Landing } from './screens/Landing'
-import { SignIn } from './screens/SignIn'
-import { Dashboard } from './screens/Dashboard'
-import { Communities } from './screens/Communities'
-import { IdeaPage } from './screens/IdeaPage'
-import { Queue } from './screens/Queue'
-import { Promote } from './screens/Promote'
-import { Me } from './screens/Me'
-import { Analytics } from './screens/Analytics'
-import { Settings } from './screens/Settings'
-import { Database } from './screens/Database'
-import { Access } from './screens/Access'
-import { Onboarding } from './screens/Onboarding'
-import { QuorlythBot } from './bot/QuorlythBot'
+const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.Landing })))
+const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
+const Dashboard = lazy(() => import('./screens/Dashboard').then(m => ({ default: m.Dashboard })))
+const Communities = lazy(() => import('./screens/Communities').then(m => ({ default: m.Communities })))
+const IdeaPage = lazy(() => import('./screens/IdeaPage').then(m => ({ default: m.IdeaPage })))
+const Queue = lazy(() => import('./screens/Queue').then(m => ({ default: m.Queue })))
+const Promote = lazy(() => import('./screens/Promote').then(m => ({ default: m.Promote })))
+const Me = lazy(() => import('./screens/Me').then(m => ({ default: m.Me })))
+const Analytics = lazy(() => import('./screens/Analytics').then(m => ({ default: m.Analytics })))
+const Settings = lazy(() => import('./screens/Settings').then(m => ({ default: m.Settings })))
+const Database = lazy(() => import('./screens/Database').then(m => ({ default: m.Database })))
+const Access = lazy(() => import('./screens/Access').then(m => ({ default: m.Access })))
+const Onboarding = lazy(() => import('./screens/Onboarding').then(m => ({ default: m.Onboarding })))
+const QuorlythBot = lazy(() => import('./bot/QuorlythBot').then(m => ({ default: m.QuorlythBot })))
 import { useApp } from './data/AppProvider'
 import { useUserState } from './lib/userState'
 import { chime, useNotifs } from './lib/notifs'
@@ -37,6 +37,11 @@ export default function App() {
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
   const unread = notifs.filter(n => n.unread).length
+  const pendingRequests = a.owner ? a.data.requests.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at }).length : 0
+  const unreadRequests = notifs.filter(n => n.kind === 'settings' && n.unread).length
+  const ownRequest = a.me && a.data.requests.find(r => r.id === a.me!.id)
+  const ownDecision = a.me && a.data.decisions[a.me.id]
+  const accessSent = !!(!a.owner && ownRequest && (!ownDecision || ownDecision.at < ownRequest.at))
   const known = useRef<Set<string> | null>(null)
   const g = useRef(0)
 
@@ -75,51 +80,58 @@ export default function App() {
     addEventListener('keydown', h); return () => removeEventListener('keydown', h)
   }, [nav])
 
-  // no pinch or ctrl-wheel zoom, and a thin line that shows how far the page is scrolled
+  // Keep the page progress indicator in sync without intercepting browser zoom controls.
   useEffect(() => {
-    const wheel = (e: WheelEvent) => { if (e.ctrlKey || e.metaKey) e.preventDefault() }
-    const gest = (e: Event) => e.preventDefault()
-    const keysZoom = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0', '_'].includes(e.key)) e.preventDefault() }
-    const touch = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault() }
-    document.addEventListener('wheel', wheel, { passive: false }); document.addEventListener('keydown', keysZoom); document.addEventListener('touchmove', touch, { passive: false })
-    ;['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, gest))
     const sp = document.getElementById('sp'); let raf = 0
     const sc = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; const m = document.documentElement.scrollHeight - innerHeight; if (sp) sp.style.transform = `scaleX(${m > 0 ? Math.min(1, scrollY / m) : 0})` }) }
     addEventListener('scroll', sc, { passive: true })
-    return () => { document.removeEventListener('wheel', wheel); document.removeEventListener('keydown', keysZoom); document.removeEventListener('touchmove', touch); ;['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.removeEventListener(t, gest)); removeEventListener('scroll', sc) }
+    return () => { if (raf) cancelAnimationFrame(raf); removeEventListener('scroll', sc) }
   }, [])
 
-  if (!a.ready) return <main />
+  if (!a.ready) return <main aria-label="Loading Quorlyth" />
+  if (a.startupError) return (
+    <main className="app-error">
+      <section className="glass pad" role="alert">
+        <h2>Quorlyth could not start.</h2>
+        <p className="mut">{a.startupError}</p>
+        <button className="btn p" onClick={() => window.location.reload()}>Reload Quorlyth</button>
+      </section>
+    </main>
+  )
   return (
     <>
       <div id="sp" />
       {intro && <Intro replay={replay} onDone={() => { setIntro(false); sessionStorage.setItem('qintro', '1') }} />}
-      <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
+      <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
+      {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin') }}>Sign in</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main">
         <section className="on">
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/communities" element={<Communities />} />
-            <Route path="/communities/:cid" element={<Communities />} />
-            <Route path="/idea/:id" element={<IdeaPage />} />
-            <Route path="/queue" element={<Queue />} />
-            <Route path="/promote" element={<Promote />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/database" element={<Database />} />
-            <Route path="/access" element={<Access />} />
-            <Route path="/me" element={<Me />} />
-            <Route path="/me/:id" element={<Me />} />
-          </Routes>
+          <Suspense fallback={<div className="route-loading" role="status" aria-label="Loading page"><span className="ast-ld"><i /><i /><i /></span></div>}>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/signin" element={<SignIn />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/communities" element={<Communities />} />
+              <Route path="/communities/:cid" element={<Communities />} />
+              <Route path="/idea/:id" element={<IdeaPage />} />
+              <Route path="/queue" element={<Queue />} />
+              <Route path="/promote" element={<Promote />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/database" element={<Database />} />
+              <Route path="/access" element={<Access />} />
+              <Route path="/request-access" element={<Access />} />
+              <Route path="/me" element={<Me />} />
+              <Route path="/me/:id" element={<Me />} />
+            </Routes>
+          </Suspense>
         </section>
       </main>
       {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); if (n) chime() }} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
-      <QuorlythBot />
+      <Suspense fallback={null}><QuorlythBot /></Suspense>
       <Toast />
     </>
   )

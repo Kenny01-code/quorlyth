@@ -8,6 +8,7 @@ import { Av } from './ui'
 
 const ITEMS: { path: string; label: string; icon: string; owner?: boolean; guest?: boolean }[] = [
   { path: '/', label: 'Home', icon: 'audience' },
+  { path: '/demo', label: 'Try demo', icon: 'spark', guest: true },
   { path: '/signin', label: 'Sign in', icon: 'private', guest: true },
   { path: '/dashboard', label: 'Dashboard', icon: 'home' },
   { path: '/access', label: 'Request access', icon: 'invite' },
@@ -20,7 +21,7 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; guest
   { path: '/database', label: 'Database', icon: 'db', owner: true },
 ]
 
-export function Nav({ onSearch, onBell, unread, onReplay }: { onSearch: () => void; onBell: () => void; unread: number; onReplay: () => void }) {
+export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests, accessSent, demo, onDemo, onReplay }: { onSearch: () => void; onBell: () => void; unread: number; pendingRequests: number; unreadRequests: number; accessSent: boolean; demo: boolean; onDemo: () => void; onReplay: () => void }) {
   const nav = useNavigate()
   const loc = useLocation()
   const { me, owner } = useApp()
@@ -61,9 +62,11 @@ export function Nav({ onSearch, onBell, unread, onReplay }: { onSearch: () => vo
       <b>QUORLYTH</b>
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
-          {ITEMS.filter(i => (!i.owner || owner) && (!i.guest || !me)).map(i => (
-            <button key={i.path} className={cn(active(i.path) && 'on')} onClick={() => nav(i.path)} title={i.label}>
+          {ITEMS.filter(i => demo ? (!i.owner || owner) && i.path !== '/demo' && i.path !== '/database' && i.path !== '/signin' : me ? (!i.owner || owner) && !i.guest : ['/', '/demo', '/signin'].includes(i.path)).map(i => (
+            <button key={i.path} className={cn(active(i.path) && 'on')} onClick={() => i.path === '/demo' ? onDemo() : nav(i.path === '/settings' && unreadRequests ? '/settings?tab=requests' : i.path)} title={i.label} aria-label={i.path === '/settings' && pendingRequests ? `${i.label}, ${pendingRequests} pending access requests` : i.path === '/access' && accessSent ? `${i.label}, request sent` : i.label} style={{ position: 'relative' }}>
               <Icon name={i.icon} size={18} /><span>{i.label}</span>
+              {i.path === '/settings' && pendingRequests > 0 && <b className={cn('nav-count', unreadRequests > 0 && 'pulse')}>{pendingRequests > 9 ? '9+' : pendingRequests}</b>}
+              {i.path === '/access' && accessSent && <b className="nav-count sent">Sent</b>}
             </button>
           ))}
         </div>
@@ -71,7 +74,7 @@ export function Nav({ onSearch, onBell, unread, onReplay }: { onSearch: () => vo
       </div>
       <div className="navend">
         <button className="bl" onClick={onBell} title="Notifications" aria-label="Notifications" style={{ position: 'relative' }}>
-          <Icon name="bell" size={18} />{unread > 0 && <b className="bdg">{unread > 9 ? '9+' : unread}</b>}
+          <Icon name="bell" size={18} />{unread > 0 && <b className="bdg pulse">{unread > 9 ? '9+' : unread}</b>}
         </button>
         <button className="srch" onClick={onSearch} title="Search (Ctrl K)"><Icon name="search" size={18} /><span>Search</span><kbd>Ctrl K</kbd></button>
         <button className="navav" onClick={() => nav(me ? '/me' : '/signin')} title={me ? 'My profile' : 'Sign in'}>

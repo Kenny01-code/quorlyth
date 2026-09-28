@@ -39,22 +39,26 @@ export async function streamChat(messages: { role: 'user' | 'assistant'; content
   if (!r.ok || !r.body) throw new Error(await readError(r))
   const reader = r.body.getReader()
   const dec = new TextDecoder()
-  let buf = '', full = ''
+  let buf = '', full = '', completed = false
+  const consume = (block: string) => {
+    const line = block.split(/\r?\n/).find(x => x.startsWith('data:'))
+    if (!line) return
+    try {
+      const j = JSON.parse(line.slice(5).trim())
+      if (j.t) { full += j.t; o.onText?.(full, j.t) }
+      if (j.done) completed = true
+    } catch {}
+  }
   for (;;) {
     const { done, value } = await reader.read()
     if (done) break
     buf += dec.decode(value, { stream: true })
-    const parts = buf.split('\n\n')
+    const parts = buf.split(/\r?\n\r?\n/)
     buf = parts.pop() || ''
-    for (const p of parts) {
-      const line = p.trim()
-      if (!line.startsWith('data:')) continue
-      try {
-        const j = JSON.parse(line.slice(5))
-        if (j.t) { full += j.t; o.onText?.(full, j.t) }
-      } catch {}
-    }
+    parts.forEach(consume)
   }
+  if (buf.trim()) consume(buf)
+  if (!completed) throw new Error('The reply was interrupted before it finished. Please try again.')
   return full
 }
 
@@ -140,10 +144,10 @@ export async function startRealtime(opts: {
 
   const offer = await pc.createOffer()
   await pc.setLocalDescription(offer)
-  const r = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
+  const r = await fetch('https://api.openai.com/v1/realtime/calls', {
     method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/sdp' },
   })
-  if (!r.ok) throw new Error('Could not connect to the live voice service')
+  if (!r.ok) throw new Error((await r.text()).slice(0, 500) || 'Could not connect to the live voice service')
   await pc.setRemoteDescription({ type: 'answer', sdp: await r.text() })
 
   return {

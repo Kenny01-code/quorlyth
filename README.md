@@ -16,8 +16,18 @@ Node 20.6 or newer is needed (`node -v`).
 
 ## Keys
 
-`.env` can hold `OPENAI_API_KEY` and/or `GEMINI_API_KEY`. The server reads these keys; they are never sent to the browser. When both are configured, Gemini handles bot chat and JSON skills, while OpenAI remains available for live voice and natural speech. `.env` is in `.gitignore`.
-For production, add keys to the Vercel project's Environment Variables and redeploy. Never commit `.env` or put provider keys in `src/`.
+`.env` is server-only and ignored by Git. The server supports `GEMINI_API_KEY`, `XAI_API_KEY` (Grok), and `OPENAI_API_KEY`; keys are never sent to the browser. With `AI_PROVIDER=auto`, it selects Gemini, then Grok, then OpenAI based on configured keys. To use Grok while Gemini is also configured, set:
+
+```env
+AI_PROVIDER=grok
+XAI_API_KEY=your-xai-api-key
+XAI_MODEL=grok-4.7
+XAI_QUICK_MODEL=grok-4.7
+```
+
+Restart `npm run dev:ai` after changing `.env`. Live voice and natural speech still use `OPENAI_API_KEY`; Grok is currently wired for text chat and structured AI tasks.
+
+For production, add the same variables under the Vercel project's Environment Variables, then redeploy. Never commit `.env` or put provider keys in `src/`.
 
 ## How it is organised
 
@@ -26,7 +36,7 @@ For production, add keys to the Vercel project's Environment Variables and redep
 | `src/screens` | Every page: Landing, SignIn, Dashboard, Communities, IdeaPage, Queue, Promote, Analytics, Settings, Database, Access, Me |
 | `src/bot` | QuorlythBot: sidebar chats, right click menu, skills, projects, library, voice studio, live voice, 3D robot |
 | `src/data` | One tiny document store. `local.ts` works with no setup. `supabase.ts` gives real accounts and a shared database |
-| `server` | Server-only Gemini/OpenAI calls: streaming chat, JSON answers, live voice session, natural speech |
+| `server` | Server-only Gemini/Grok/OpenAI calls: streaming chat, JSON answers, live voice session, natural speech |
 | `api` | The same server code as Vercel functions for deploying |
 | `supabase/schema.sql` | Tables and access rules for Supabase |
 
@@ -38,4 +48,4 @@ For production, add keys to the Vercel project's Environment Variables and redep
 
 ## Deploy
 
-Push to GitHub, import it in Vercel, add `GEMINI_API_KEY` or `OPENAI_API_KEY` (and the Supabase keys) under Environment Variables, deploy.
+Push to GitHub, import it in Vercel, add `AI_PROVIDER` and your selected provider key (`GEMINI_API_KEY`, `XAI_API_KEY`, or `OPENAI_API_KEY`) plus Supabase keys under Environment Variables, then deploy.

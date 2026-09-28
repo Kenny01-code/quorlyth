@@ -9,6 +9,13 @@ import { when } from '../lib/util'
 import { useDraftState } from '../lib/useDraftState'
 
 export function Access() {
+  const a = useApp()
+  const nav = useNavigate()
+  if (!a.me && !a.demo) return <div className="lg">
+    <div className="glass stage" style={{ minHeight: 360, display: 'grid', placeItems: 'center', textAlign: 'center', padding: 32 }}>
+      <div><div className="score" style={{ margin: '0 auto 20px' }}><Icon name="invite" size={28} /></div><p className="dim">Request access</p><h2 style={{ fontSize: 34, marginTop: 8 }}>A space with its own community.</h2><p className="mut" style={{ maxWidth: 440, margin: '12px auto 22px' }}>Sign in to send an access request to the owner, or explore the interactive demo without an account.</p><div className="acts" style={{ justifyContent: 'center' }}><button className="btn p" onClick={() => nav('/signin?next=%2Faccess')}>Sign in to request access</button><button className="btn" onClick={() => { a.enterDemo(); nav('/dashboard') }}><Icon name="spark" size={15} />Try Demo</button></div></div>
+    </div>
+  </div>
   return <Gate><Inner /></Gate>
 }
 

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { Icon } from '../lib/Icon'
 import { useApp } from '../data/AppProvider'
 import { cn } from '../lib/util'
@@ -30,8 +30,15 @@ export function Chip({ on, onClick, children, ...r }: { on?: boolean; onClick?: 
 }
 
 export function Av({ id, size = 30 }: { id: string; size?: number }) {
-  const { avatar } = useApp()
-  return <img className="av" alt="" style={{ width: size, height: size, objectFit: 'cover' }} src={avatar(id) || undefined} />
+  const { avatar, nm } = useApp()
+  const src = avatar(id)
+  const name = nm(id)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [src])
+  const initials = name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase() || 'M'
+  const style = { width: size, height: size, objectFit: 'cover' as const }
+  if (!src || failed) return <span className="av av-initials" role="img" aria-label={`${name} avatar`} title={name} style={{ ...style, display: 'inline-grid', placeItems: 'center', fontSize: Math.max(10, Math.min(16, size * .38)), fontWeight: 600, color: '#fff' }}>{initials}</span>
+  return <img className="av" alt={`${name} avatar`} title={name} style={style} src={src} onError={() => setFailed(true)} />
 }
 
 export function Toast() {

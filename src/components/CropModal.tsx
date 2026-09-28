@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../lib/Icon'
 
 /** Circular photo crop: drag to move, slider to zoom, rotate. Returns a 256px JPEG data URL. */
-export function CropModal({ file, onCancel, onSave }: { file: File; onCancel: () => void; onSave: (dataUrl: string) => void }) {
+export function CropModal({ file, onCancel, onSave }: { file: File; onCancel: () => void; onSave: (dataUrl: string) => Promise<boolean> }) {
   const cv = useRef<HTMLCanvasElement>(null)
   const [img, setImg] = useState<HTMLImageElement | null>(null)
   const st = useRef({ s: 1, x: 0, y: 0, r: 0 })
   const [zoom, setZoom] = useState(100)
+  const [saving, setSaving] = useState(false)
   const drag = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
@@ -39,12 +40,21 @@ export function CropModal({ file, onCancel, onSave }: { file: File; onCancel: ()
   const redraw = () => { if (cv.current) draw(cv.current, 300, true) }
   useEffect(redraw, [img])
 
-  const save = () => {
-    if (!img) return
-    const o = document.createElement('canvas'); o.width = o.height = 256; draw(o, 256, false)
-    let d = o.toDataURL('image/jpeg', 0.86)
-    if (d.length > 180000) d = o.toDataURL('image/jpeg', 0.6)
-    onSave(d)
+  const save = async () => {
+    if (!img || saving) return
+    setSaving(true)
+    try {
+      let dataUrl = ''
+      for (const size of [256, 192, 128]) {
+        const o = document.createElement('canvas'); o.width = o.height = size; draw(o, size, false)
+        for (const quality of [0.78, 0.66, 0.54]) {
+          dataUrl = o.toDataURL('image/jpeg', quality)
+          if (dataUrl.length <= 96_000) break
+        }
+        if (dataUrl.length <= 96_000) break
+      }
+      await onSave(dataUrl)
+    } finally { setSaving(false) }
   }
 
   return (
@@ -62,7 +72,7 @@ export function CropModal({ file, onCancel, onSave }: { file: File; onCancel: ()
           <button className="btn" onClick={() => { st.current.r = (st.current.r + 1) % 4; img && clampPos(img); redraw() }}><Icon name="rotate" size={16} />Rotate</button>
           <button className="btn" onClick={() => { st.current = { s: 1, x: 0, y: 0, r: 0 }; setZoom(100); redraw() }}>Reset</button>
           <button className="btn" onClick={onCancel}>Cancel</button>
-          <button className="btn p" onClick={save}>Save photo</button>
+          <button className="btn p" disabled={saving || !img} onClick={save}>{saving ? 'Saving...' : 'Save photo'}</button>
         </div>
       </div>
     </div>
