@@ -136,6 +136,27 @@ export function QuorlythBot() {
     setTimeout(() => { setCaption(msg); first ? robot.current?.welcome() : robot.current?.wave(); say(msg); setTimeout(() => setCaption(''), 6000) }, 700)
   }
 
+  async function requestLiveContext(text: string) {
+    const asksLocalWeather = /\\b(weather|forecast|temperature)\\b/i.test(text) && !/\\b(?:in|at|for)\\s+[A-Z][a-z]+/i.test(text)
+    const asksLocation = /\\b(near me|my location|where am i|weather here|forecast here|temperature here|local weather|nearby)\\b/i.test(text)
+    if (!asksLocalWeather && !asksLocation) return ''
+    if (!navigator.geolocation) return 'The browser does not support geolocation. Ask the user to name their city for local weather or nearby results.'
+    try {
+      const position: GeolocationPosition = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }))
+      if (asksLocalWeather) {
+        const { latitude, longitude } = position.coords
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(String(latitude)) + '&longitude=' + encodeURIComponent(String(longitude)) + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto'
+        const response = await fetch(url)
+        if (!response.ok) return 'Location permission was granted, but the live weather service is unavailable. Do not invent weather; ask the user to try again or name a city.'
+        const weather = await response.json()
+        return 'The user explicitly requested local weather and granted browser location permission. Live weather data from Open-Meteo for their approximate current coordinates: ' + JSON.stringify({ timezone: weather.timezone, current: weather.current, units: weather.current_units }) + '. Use these values as current weather, state that they are approximate to the browser location, and do not claim a more precise address.'
+      }
+      return 'The user explicitly requested location-based results and granted browser location permission. Approximate current coordinates: latitude ' + position.coords.latitude.toFixed(3) + ', longitude ' + position.coords.longitude.toFixed(3) + '. Use these only for the requested nearby/location task; do not infer a street address.'
+    } catch {
+      return 'The user did not share browser location or the location request timed out. Do not guess their location; ask them for a city or permission if location-based results are needed.'
+    }
+  }
+
   function browserContext() {
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown timezone'
     const lang = navigator.language || 'unknown language'
@@ -207,9 +228,10 @@ export function QuorlythBot() {
     ctl.current = new AbortController()
     try {
       const turns = c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
+      const liveContext = await requestLiveContext(t)
       let first = true
       const full = await streamChat(turns, {
-        system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext(), tier: bs.model, signal: ctl.current.signal,
+        system: buildContext(a, bs, loc.pathname, project) + '\\nBrowser/device context: ' + browserContext() + (liveContext ? '\\nLocation and live weather context: ' + liveContext : ''), tier: bs.model, signal: ctl.current.signal,
         onText: f => {
           if (first) { first = false; robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           const clean = f.replace(/\[\[[\s\S]*$/, '').trim()
