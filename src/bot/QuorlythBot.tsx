@@ -96,7 +96,7 @@ export function QuorlythBot() {
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
   const theme = bs.theme
-  const narrow = mode === 'compact' || viewportNarrow
+  const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 860)
   const wide = !narrow
 
   useEffect(() => {
@@ -104,10 +104,20 @@ export function QuorlythBot() {
       const isNarrow = window.innerWidth <= 860
       setViewportNarrow(isNarrow)
       setSide(!isNarrow)
+      setSize(current => {
+        if (!current) return current
+        const maxW = Math.max(240, window.innerWidth - 24)
+        const maxH = Math.max(300, window.innerHeight - 24)
+        return { w: Math.min(current.w, maxW), h: Math.min(current.h, maxH) }
+      })
     }
     window.addEventListener('resize', resize)
     return () => window.removeEventListener('resize', resize)
   }, [])
+
+  useEffect(() => {
+    if (narrow) setSide(false)
+  }, [narrow])
 
   useEffect(() => {
     if (!a.me || !bd.doc('botset')) return
@@ -808,7 +818,7 @@ export function QuorlythBot() {
           <div id="bot" className={cn('astp glass bot', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
             {mode !== 'full' && <div className="bresz" title="Drag to resize" onPointerDown={e => {
               e.preventDefault(); const el = panel.current!, sx = e.clientX, sy = e.clientY, sw = el.offsetWidth, sh = el.offsetHeight
-              const mv = (ev: PointerEvent) => { setMode('custom' as any); setSize({ w: Math.max(340, Math.min(innerWidth - 24, sw + (sx - ev.clientX))), h: Math.max(420, Math.min(innerHeight - 24, sh + (sy - ev.clientY))) }) }
+              const mv = (ev: PointerEvent) => { setMode('custom'); setSize({ w: Math.max(340, Math.min(innerWidth - 24, sw + (sx - ev.clientX))), h: Math.max(420, Math.min(innerHeight - 24, sh + (sy - ev.clientY))) }) }
               const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up) }
               addEventListener('pointermove', mv); addEventListener('pointerup', up)
             }} />}
