@@ -5,6 +5,7 @@ import { Me } from './lib/types'
 
 export interface Auth {
   mode: 'local' | 'supabase'
+  accessToken?(): Promise<string | null>
   current(): Promise<Me | null>
   onChange(cb: (m: Me | null) => void): () => void
   signInGoogle(): Promise<void>
@@ -49,6 +50,7 @@ function localAuth(): Auth {
   const emit = () => subs.forEach(f => f(get()))
   return {
     mode: 'local',
+    async accessToken() { return null },
     async current() { return get() },
     onChange(cb) { subs.add(cb); return () => { subs.delete(cb) } },
     async signInGoogle() { throw new Error('Google sign in needs Supabase. Add your keys to .env, see the README.') },
@@ -115,6 +117,7 @@ export async function createBackend(): Promise<Backend> {
       }
       const auth: Auth = {
         mode: 'supabase',
+        async accessToken() { const { data } = await sb.auth.getSession(); return data.session?.access_token || null },
         async current() { const { data } = await sb.auth.getUser(); return toMe(data.user) },
         onChange(cb) { const { data } = sb.auth.onAuthStateChange((_e, s) => cb(toMe(s?.user))); return () => data.subscription.unsubscribe() },
         async signInGoogle() { const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error },
