@@ -100,7 +100,7 @@ async function geminiChat(req, res, body) {
     ...(system ? { systemInstruction: { parts: [{ text: String(system) }] } } : {}),
     contents: geminiContents(messages),
     // Keep ordinary chat fast; only pay the grounding latency for queries that need current information.
-    ...((messages[messages.length - 1]?.content || '').match(/\\b(latest|current|today|tonight|right now|live|breaking|recent|news|weather|forecast|temperature|price today|this week|opening hours|near me|nearby|search the web|look up online|source links)\\b/i)
+    ...((messages[messages.length - 1]?.content || '').match(/\b(latest|current|today|tonight|right now|live|breaking|recent|news|weather|forecast|temperature|price today|this week|opening hours|near me|nearby|search the web|look up online|source links)\b/i)
       ? { tools: [{ google_search: {} }] }
       : {}),
     generationConfig: { temperature: 0.55, maxOutputTokens: tier === 'quick' ? 768 : 1536 },
