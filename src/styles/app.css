@@ -513,3 +513,16 @@ nav .lgb{flex:none}nav b{flex:none}
 .chat-workspace.size-compact .chat-composer{padding:10px}
 @media(max-width:700px){.chat-size-controls{justify-content:center}.chat-workspace.size-compact,.chat-workspace.size-standard,.chat-workspace.size-expanded{height:min(78dvh,850px);min-height:540px}.chat-no-thread:after{inset:5%}}
 @media(prefers-reduced-motion:reduce){.chat-unread-count,.chat-rotating-line,.chat-no-thread:after{animation:none}}
+
+
+.chat-message-line{display:flex;align-items:flex-end;gap:8px;max-width:100%}
+.chat-message-row.mine .chat-message-line{flex-direction:row-reverse}
+.message-avatar-link{width:30px;height:30px;margin-bottom:2px;opacity:.88}
+.chat-message-row:hover .message-avatar-link{opacity:1}
+.profile-name-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.profile-owner-badge{font-size:9px;padding:6px 9px}
+.chat-conversation-title b{min-width:0}
+.chat-conversation-title .owner-badge{margin-left:5px;vertical-align:middle}
+.chat-person-copy .owner-badge{margin-top:4px;align-self:flex-start}
+.chat-thread-identity .owner-badge{margin-left:6px}
+@media(max-width:700px){.chat-message-line{gap:6px}.message-avatar-link{width:27px;height:27px}.chat-message-line .chat-bubble{max-width:calc(100% - 32px)}}
