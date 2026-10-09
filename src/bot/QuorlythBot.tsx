@@ -772,7 +772,7 @@ export function QuorlythBot() {
           idea: 'Idea submitted successfully.',
           promote: 'Idea marked as promoted in Quorlyth. It has not been posted to an external platform.',
           cover: 'Community cover updated successfully.',
-          deleteCommunity: 'Community deleted. Any ideas linked to it are not automatically deleted.'
+          deleteCommunity: 'Community and its linked ideas deleted successfully.'
         }
         const next = add(cur, { r: 'a', t: labels[action.type] })
         persist(next); setPendingAction(null)
@@ -869,7 +869,7 @@ export function QuorlythBot() {
                     </div>
                   )
                 ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
-                {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style', deleteCommunity: 'Delete community' } as any)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity' ? 'This is destructive. Confirm only if you want to remove this community. Linked ideas will remain saved but will no longer belong to an existing community.' : 'Review the details, then confirm. QuorlythBot will use your signed-in account permissions.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+                {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style', deleteCommunity: 'Delete community' } as any)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity' ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.' : 'Review the details, then confirm. QuorlythBot will use your signed-in account permissions.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
                 <div className="bc">
