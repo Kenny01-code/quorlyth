@@ -63,13 +63,14 @@ export async function adminCommunity(req, res) {
 
     const q = value => encodeURIComponent(value)
     const rows = await rest(url, serviceKey, '?select=path,data&path=like.ideas%2F%25')
-    const ideas = (rows || []).filter(row => row.path === 'ideas/' + cid || row.path.startsWith('ideas/' + cid + '/'))
-    const ideaIds = new Set(ideas.filter(row => /^ideas\/[^/]+$/.test(row.path)).filter(row => row.data?.cid === cid).map(row => row.path.slice('ideas/'.length)))
+    const allIdeaRows = rows || []
+    const ideaIds = new Set(allIdeaRows
+      .filter(row => /^ideas\/[^/]+$/.test(row.path) && row.data?.cid === cid)
+      .map(row => row.path.slice('ideas/'.length)))
     const deletePaths = new Set(['communities/' + cid])
 
-    // Include every nested path under each idea, so comments and other child
-    // documents are removed together with the idea.
-    for (const row of ideas) {
+    // Include every nested path under each linked idea, including comments.
+    for (const row of allIdeaRows) {
       const id = row.path.split('/')[1]
       if (ideaIds.has(id)) deletePaths.add(row.path)
     }
