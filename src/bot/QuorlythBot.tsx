@@ -488,12 +488,14 @@ export function QuorlythBot() {
   // ----- dictation -----
   const recRef = useRef<any>(null)
   const dictationText = useRef('')
+  const noteSilenceTimer = useRef<number | null>(null)
   const [recordingNote, setRecordingNote] = useState(false)
   function dictate() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return a.toast('Voice notes need speech recognition. Try Chrome or Edge and allow microphone access.')
     if (recRef.current) {
-      // Tap a second time to finish the voice note; it stays in the composer for review.
+      // The same microphone icon stops capture. onend submits the recognized note.
+      window.clearTimeout(noteSilenceTimer.current || undefined)
       recRef.current.stop()
       return
     }
@@ -503,28 +505,41 @@ export function QuorlythBot() {
     r.lang = navigator.language || 'en-US'
     r.interimResults = true
     r.continuous = true
+    const armSilenceStop = (delay: number) => {
+      window.clearTimeout(noteSilenceTimer.current || undefined)
+      noteSilenceTimer.current = window.setTimeout(() => {
+        try { recRef.current?.stop() } catch {}
+      }, delay)
+    }
     r.onresult = (e: any) => {
       const pieces: string[] = []
       for (let i = 0; i < e.results.length; i++) {
         const item = e.results[i]
         if (item?.[0]?.transcript) pieces.push(String(item[0].transcript))
       }
-      dictationText.current = pieces.join(' ').replace(/\\s+/g, ' ').trim()
+      dictationText.current = pieces.join(' ').replace(/\s+/g, ' ').trim()
       setInput(dictationText.current)
+      armSilenceStop(1900)
     }
     r.onend = () => {
+      window.clearTimeout(noteSilenceTimer.current || undefined)
+      noteSilenceTimer.current = null
       recRef.current = null
       setRecordingNote(false)
       setStatus('Online')
       robot.current?.listen(false)
       const transcript = dictationText.current.trim()
-      if (transcript) {
+      if (transcript && !busy) {
+        setInput('')
+        void send(transcript)
+      } else if (transcript) {
         setInput(transcript)
-        a.toast('Voice note ready. Review it, then tap Send.')
+        a.toast('QuorlythBot is busy. Your voice note is ready in the composer.')
       }
     }
     r.onerror = (e: any) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        window.clearTimeout(noteSilenceTimer.current || undefined)
         recRef.current = null
         setRecordingNote(false)
         setStatus('Online')
@@ -536,7 +551,9 @@ export function QuorlythBot() {
     setRecordingNote(true)
     setStatus('Recording voice note')
     robot.current?.listen(true)
+    armSilenceStop(5000)
     try { r.start() } catch {
+      window.clearTimeout(noteSilenceTimer.current || undefined)
       recRef.current = null
       setRecordingNote(false)
       setStatus('Online')
@@ -815,7 +832,7 @@ export function QuorlythBot() {
                   <div className="ast-in">
                     <textarea rows={1} value={input} placeholder={ph} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
-                    <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Stop voice note and keep the transcript' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name={recordingNote ? 'square' : 'mic'} size={18} /></button>
+                    <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
                     <button className="btn" aria-label="Talk live" title="Talk live" style={{ padding: 12 }} onClick={startLive}><Icon name="live" size={18} /></button>
                     <button className="btn p" aria-label="Send" style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
                   </div>
