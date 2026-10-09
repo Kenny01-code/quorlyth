@@ -101,8 +101,10 @@ function Public({ id }: { id: string }) {
   const q = a.data.profiles[id]
   const my = a.data.ideas.filter(i => i.authorId === id).sort((x, y) => y.at - x.at)
   const rc = my.reduce((n, i) => n + a.votesOf(i.id), 0)
-  const jc = a.data.communities.filter(c => a.data.members[id]?.[c.id] && !(c.ownerId === id || c.createdBy === id))
-  const created = a.data.communities.filter(c => c.ownerId === id || c.createdBy === id)
+  const isCreatorOf = (c: (typeof a.data.communities)[number]) => c.ownerId === id || c.createdBy === id || (id === a.me?.id && a.owner && !c.ownerId && !c.createdBy && a.ownsCommunity(c.id))
+  // Public profiles only display listed communities; unlisted spaces remain private.
+  const created = a.data.communities.filter(c => isCreatorOf(c) && c.vis !== 'unlisted')
+  const jc = a.data.communities.filter(c => c.vis !== 'unlisted' && a.data.members[id]?.[c.id] && !isCreatorOf(c))
   const communities = [...created, ...jc]
   const createdIds = new Set(created.map(c => c.id))
   const communityIdeas = a.data.ideas.filter(i => createdIds.has(i.cid))
