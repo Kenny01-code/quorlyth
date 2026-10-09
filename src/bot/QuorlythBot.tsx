@@ -475,7 +475,8 @@ export function QuorlythBot() {
         },
         onEvent: e => {
           if (e.type === 'state') { setLive(l => (e.state === 'closed' ? null : { ...(l || { user: '', bot: '' }), state: e.state })); robot.current?.listen(e.state === 'listening'); robot.current?.think(e.state === 'thinking'); robot.current?.talk(e.state === 'speaking') }
-          if (e.type === 'user') { c = add(c, { r: 'u', t: e.text }, 'Live conversation'); setLive(l => l && { ...l, user: e.text }) }
+          if (e.type === 'user_preview') setLive(l => l && { ...l, state: 'listening', user: e.text })
+          if (e.type === 'user') { c = add(c, { r: 'u', t: e.text }, 'Live conversation'); setLive(l => l && { ...l, state: 'thinking', user: e.text }) }
           if (e.type === 'bot') { setLive(l => l && { ...l, bot: e.text }); setCaption(e.text.slice(-140)); if (e.done) { c = add(c, { r: 'a', t: e.text }); persist(c!); robot.current?.bump() } }
           if (e.type === 'error') a.toast(e.message)
         },
@@ -500,18 +501,26 @@ export function QuorlythBot() {
   const recRef = useRef<any>(null)
   const dictationText = useRef('')
   const noteSilenceTimer = useRef<number | null>(null)
+  const restartNote = useRef(false)
   const [recordingNote, setRecordingNote] = useState(false)
   function dictate() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return a.toast('Voice notes need speech recognition. Try Chrome or Edge and allow microphone access.')
     if (recRef.current) {
-      // Update the UI synchronously on tap; browser speech engines may emit onend later.
+      // If the previous browser session is still closing, queue the next start.
+      if (!recordingNote) {
+        restartNote.current = true
+        setStatus('Restarting voice note')
+      } else {
+        restartNote.current = false
+        setRecordingNote(false)
+        setStatus('Finishing voice note')
+      }
       window.clearTimeout(noteSilenceTimer.current || undefined)
-      setRecordingNote(false)
-      setStatus('Finishing voice note')
       try { recRef.current.stop() } catch {
         recRef.current = null
-        setStatus('Online')
+        if (restartNote.current) { restartNote.current = false; window.setTimeout(() => dictate(), 0) }
+        else setStatus('Online')
       }
       return
     }
@@ -540,7 +549,7 @@ export function QuorlythBot() {
     r.onend = () => {
       window.clearTimeout(noteSilenceTimer.current || undefined)
       noteSilenceTimer.current = null
-      recRef.current = null
+      if (recRef.current === r) recRef.current = null
       setRecordingNote(false)
       robot.current?.listen(false)
       const transcript = dictationText.current.trim()
@@ -551,16 +560,26 @@ export function QuorlythBot() {
       } else if (transcript) {
         setInput(transcript)
         a.toast('QuorlythBot is busy. Your voice note is ready in the composer.')
+      } else {
+        setStatus('Online')
+      }
+      if (restartNote.current) {
+        restartNote.current = false
+        window.setTimeout(() => dictate(), 0)
       }
     }
     r.onerror = (e: any) => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        restartNote.current = false
         window.clearTimeout(noteSilenceTimer.current || undefined)
-        recRef.current = null
+        if (recRef.current === r) recRef.current = null
         setRecordingNote(false)
         setStatus('Online')
         a.toast('Microphone permission was denied. Allow microphone access in your browser settings.')
       } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        if (recRef.current === r) recRef.current = null
+        setRecordingNote(false)
+        setStatus('Online')
         a.toast('Voice note stopped. Try recording again.')
       }
     }
@@ -844,9 +863,7 @@ export function QuorlythBot() {
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
                   <div className="blc">{live.state === 'speaking' || live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Say something. I am listening.</span>}</div>
                   <div className="acts" style={{ justifyContent: 'center', margin: 0 }}>
-                    <button className="btn" onClick={() => { const m = !muted; setMuted(m); rt.current?.mute(m) }}><Icon name="mic" size={16} />{muted ? 'Unmute' : 'Mute'}</button>
-                    <button className="btn" onClick={() => rt.current?.interrupt()}><Icon name="stop" size={16} />Interrupt</button>
-                    <button className="btn p" onClick={stopLive}>End</button>
+                    <span className="dim" style={{ fontSize: 12 }}>Hands-free conversation · Tap Talk live again to end</span>
                   </div>
                 </div>
               )}
@@ -879,7 +896,7 @@ export function QuorlythBot() {
                     <textarea rows={1} value={input} placeholder={ph} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
                     <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
-                    <button className="btn" aria-label="Talk live" title="Talk live" style={{ padding: 12 }} onClick={startLive}><Icon name="live" size={18} /></button>
+                    <button className={cn('btn', live && 'rec')} aria-label={live ? 'End live talk' : 'Talk live'} title={live ? 'End live talk' : 'Start live talk'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'stop' : 'live'} size={18} /></button>
                     <button className="btn p" aria-label="Send" style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
                   </div>
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
