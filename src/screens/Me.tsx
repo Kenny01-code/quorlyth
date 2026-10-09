@@ -135,7 +135,7 @@ function Public({ id }: { id: string }) {
           <div className="glass profile-impact-card"><span>Communities created</span><strong>{created.length}</strong><small>Community spaces started by this member</small></div>
         </div>
       </section>
-      {created.length > 0 && <section className="public-created-communities">
+      {communities.length > 0 && <section className="public-created-communities">
         <div className="profile-section-heading"><div><p className="dim">OPEN THE DOOR</p><h3>Communities & share links</h3><p className="mut">Explore each community or scan its QR code to open the space.</p></div><span className="profile-section-mark"><Icon name="community" size={19} /></span></div>
         <div className="public-community-grid">{communities.map(c => {
           const items = a.data.ideas.filter(i => i.cid === c.id)
