@@ -296,7 +296,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createCommunity: c => w(() => st!.set('communities/' + slug(), { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() }), 'Community created'),
       createCommunityDetailed,
       saveCommunity: (id, p) => w(() => up('communities/' + id, p), 'Saved'),
-      deleteCommunity: id => w(() => st!.delete('communities/' + id), 'Community deleted'),
+      deleteCommunity: id => w(async () => {
+        if (!owner) throw new Error('Only the space owner can delete a community.')
+        const linkedIdeas = data.ideas.filter(i => i.cid === id)
+        for (const idea of linkedIdeas) {
+          await st!.delete('ideas/' + idea.id)
+          await st!.delete('reviews/' + idea.id)
+          await st!.delete('projects/' + idea.id)
+        }
+        const linkedVolunteers = data.volunteers.filter(v => linkedIdeas.some(i => i.id === v.ideaId))
+        for (const application of linkedVolunteers) await st!.delete('volunteers/' + application.id)
+        await st!.delete('communities/' + id)
+      }, 'Community and its linked ideas deleted'),
       join: (cid, on) => w(() => up('members/' + me!.id, { c: { [cid]: on } }), on ? 'You joined' : 'You left'),
       postIdea: i => w(() => st!.set('ideas/' + slug(), { title: i.title, body: i.body || '', cid: i.cid, authorId: me!.id, tags: i.tags || [], at: Date.now() }), 'Idea shared'),
       postIdeaDetailed,
