@@ -27,6 +27,7 @@ export interface App {
   deleteCommunity: (id: string) => Promise<boolean>
   join: (cid: string, on: boolean) => Promise<boolean>
   postIdea: (i: { title: string; body?: string; cid: string; tags?: string[] }) => Promise<boolean>
+  postIdeaDetailed: (i: { title: string; body?: string; cid: string; tags?: string[] }) => Promise<{ ok: boolean; error?: string }>
   vote: (ideaId: string) => Promise<boolean>
   addComment: (ideaId: string, text: string) => Promise<boolean>
   setStatus: (ideaId: string, status: Status, extra?: Partial<Review>) => Promise<boolean>
@@ -256,6 +257,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { ok: false, error }
       }
     }
+    const postIdeaDetailed = async (i: { title: string; body?: string; cid: string; tags?: string[] }): Promise<{ ok: boolean; error?: string }> => {
+      if (!me) return { ok: false, error: 'Sign in before submitting an idea.' }
+      if (!i.title.trim()) return { ok: false, error: 'An idea title is required.' }
+      if (!data.communities.some(c => c.id === i.cid && !c.arch)) return { ok: false, error: 'The selected community does not exist or is archived.' }
+      try {
+        await st!.set('ideas/' + slug(), { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me.id, tags: i.tags || [], at: Date.now() })
+        toast('Idea shared')
+        return { ok: true }
+      } catch (e: any) {
+        const error = String(e?.message || e || 'Unknown database error').slice(0, 500)
+        console.error('Quorlyth idea submission failed:', error)
+        toast('Idea submission failed: ' + error)
+        return { ok: false, error }
+      }
+    }
     const up = async (path: string, patch: any) => {
   try {
     await st!.update(path, patch)
@@ -283,6 +299,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       deleteCommunity: id => w(() => st!.delete('communities/' + id), 'Community deleted'),
       join: (cid, on) => w(() => up('members/' + me!.id, { c: { [cid]: on } }), on ? 'You joined' : 'You left'),
       postIdea: i => w(() => st!.set('ideas/' + slug(), { title: i.title, body: i.body || '', cid: i.cid, authorId: me!.id, tags: i.tags || [], at: Date.now() }), 'Idea shared'),
+      postIdeaDetailed,
       vote: id => w(() => up('votes/' + me!.id, { ideas: { [id]: !data.votes[me!.id]?.[id] } })),
       addComment: (id, text) => w(() => st!.set(`ideas/${id}/comments/${slug()}`, { authorId: me!.id, text, at: Date.now() }), 'Reply posted'),
       setStatus: (id, status, extra) => w(() => up('reviews/' + id, { status, at: Date.now(), ...extra }), status === 'selected' ? 'Selected for promotion' : status === 'held' ? 'Held for later' : status === 'declined' ? 'Declined' : 'Done'),
