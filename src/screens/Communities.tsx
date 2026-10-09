@@ -58,7 +58,7 @@ function List() {
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{c.vis === 'unlisted' && <span className="chip">Unlisted</span>}{c.arch && <span className="chip on">Archived</span>}{a.ownsCommunity(c.id) && <span className="chip">Created by you</span>}</div>
                   <h3 style={{ fontSize: 20, fontWeight: 300 }}>{c.name}</h3>
                   <p className="mut">{c.purpose}</p>
-                  <div className="community-creator-identity"><Av id={creatorId(c) || c.ownerId || c.createdBy || ''} size={34} /><div className="community-creator-copy"><p className="dim" style={{ fontSize: 10 }}>CREATED BY</p><div className="community-creator-name"><button className="lk" onClick={() => creatorId(c) && nav('/me/' + creatorId(c))}>{creatorId(c) ? (a.nm(creatorId(c)) === 'Member' ? 'Community creator' : a.nm(creatorId(c))) : 'Community creator'}</button>{creatorId(c) && <span className="creator-badge"><span aria-hidden="true">✧</span> CREATOR</span>}</div></div></div>
+                  <div className="community-creator-identity"><Av id={creatorId(c) || c.ownerId || c.createdBy || ''} size={34} /><div className="community-creator-copy"><p className="dim" style={{ fontSize: 10 }}>CREATED BY</p><div className="community-creator-name"><button className="lk" onClick={() => creatorId(c) && nav('/me/' + creatorId(c))}>{creatorId(c) ? (a.nm(creatorId(c)) === 'Member' ? 'Community creator' : a.nm(creatorId(c))) : 'Community creator'}</button>{creatorId(c) && creatorId(c) !== data.ownerId && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}</div></div></div>
                   <p className="dim" style={{ marginTop: 'auto' }}>{m} member{m === 1 ? '' : 's'}, {n} idea{n === 1 ? '' : 's'}</p>
                   <div className="acts" style={{ margin: 0 }}>
                     <button className="btn p" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id)}>Open</button>
@@ -195,12 +195,14 @@ function Detail({ cid }: { cid: string }) {
       )}
 
       {tab === 2 && (
-        <div className="glass pad"><h3 style={{ marginBottom: 8 }}>Members</h3>
-          {mem.length && (own || joined) ? mem.map(u => (
-            <div key={u} className="row" style={{ cursor: 'default' }}><Av id={u} size={38} />
-              <div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3><p className="dim">{data.profiles[u]?.head || 'Member'}</p></div>
-              {own && <Chip onClick={() => a.backend!.store.update('members/' + u, { c: { [cid]: false } })}>Remove</Chip>}</div>
-          )) : <p className="mut" style={{ padding: '18px 0' }}>{mem.length ? 'Join this community to see who is in it.' : 'No members yet.'}</p>}
+        <div className="glass pad community-member-panel"><div className="profile-section-heading"><div><p className="dim">YOUR COMMUNITY</p><h3 style={{ marginBottom: 4 }}>Members</h3><p className="mut">Recognize the people helping this community move forward.</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
+          {mem.length && (own || joined) ? mem.map(u => {
+            const badge = c.memberBadges?.[u] || ''
+            return <div key={u} className="row community-member-row" style={{ cursor: 'default' }}><Av id={u} size={42} />
+              <div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3><p className="dim">{data.profiles[u]?.head || 'Member'}</p>{badge && <span className="community-member-badge"><span aria-hidden="true">✧</span>{badge}</span>}</div>
+              {own && <div className="community-member-actions"><label className="field community-badge-select"><span>Assign community badge</span><select aria-label={'Assign a badge to ' + a.nm(u)} value={badge} onChange={async e => { const next = { ...(c.memberBadges || {}) }; if (e.target.value) next[u] = e.target.value; else delete next[u]; await a.saveCommunity(cid, { memberBadges: next }) }}><option value="">No badge</option><option value="Founding Member">Founding Member</option><option value="Top Contributor">Top Contributor</option><option value="Idea Architect">Idea Architect</option><option value="Community MVP">Community MVP</option><option value="Trusted Member">Trusted Member</option></select></label><Chip onClick={async () => { const ok = await a.join(cid, false); if (ok) a.toast('Member removed') }}>Remove</Chip></div>}
+            </div>
+          }) : <p className="mut" style={{ padding: '18px 0' }}>{mem.length ? 'Join this community to see who is in it.' : 'No members yet.'}</p>}
         </div>
       )}
 
