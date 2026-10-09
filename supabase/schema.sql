@@ -19,11 +19,19 @@ language sql stable security definer set search_path = '' as $$
   )
 $$;
 grant execute on function public.is_owner() to anon, authenticated;
+-- Never query public.docs directly from a policy on public.docs. That causes RLS recursion.
+create or replace function public.owner_claim_exists() returns boolean
+language sql stable security definer set search_path = '' set row_security = off as $
+  select exists (select 1 from public.docs where path = 'config/owner')
+$;
+revoke all on function public.owner_claim_exists() from public;
+grant execute on function public.owner_claim_exists() to authenticated;
+
 drop policy if exists "claim owner once" on public.docs;
-create policy "claim owner once" on public.docs for insert
-  with check (path = 'config/owner' and data->>'id' = auth.uid()::text
+create policy "claim owner once" on public.docs for insert to authenticated
+  with check (path = 'config/owner' and data->>'id' = (select auth.uid())::text
     and public.is_owner()
-    and not exists (select 1 from public.docs d where d.path = 'config/owner'));
+    and not public.owner_claim_exists());
 
 -- Everyone signed in can read the space.
 create policy "read when signed in" on public.docs for select using (auth.role() = 'authenticated');
