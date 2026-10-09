@@ -99,6 +99,8 @@ async function geminiChat(req, res, body) {
   const requestBody = JSON.stringify({
     ...(system ? { systemInstruction: { parts: [{ text: String(system) }] } } : {}),
     contents: geminiContents(messages),
+    // Ground ordinary chat in live web results when current information is needed.
+    tools: [{ google_search: {} }],
     generationConfig: { temperature: 0.7, maxOutputTokens: tier === 'quick' ? 1024 : 2048 },
   })
   const r = await fetchGeminiWithFallback(tier, model => fetch(geminiUrl(model, true), {
