@@ -134,6 +134,15 @@ export function QuorlythBot() {
     setTimeout(() => { setCaption(msg); first ? robot.current?.welcome() : robot.current?.wave(); say(msg); setTimeout(() => setCaption(''), 6000) }, 700)
   }
 
+  function browserContext() {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown timezone'
+    const lang = navigator.language || 'unknown language'
+    const localTime = new Date().toLocaleString(lang, { dateStyle: 'full', timeStyle: 'long' })
+    const speech = 'speechSynthesis' in window
+    const recognition = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+    return `Browser language: ${lang}. Device time zone: ${zone}. Current local date and time: ${localTime}. Browser online: ${navigator.onLine ? 'yes' : 'no'}. Browser speech output: ${speech ? 'available' : 'unavailable'}. Browser speech recognition: ${recognition ? 'available' : 'unavailable'}. Precise device location has not been read; ask before requesting location permission and never pretend to know GPS coordinates.`
+  }
+
   function say(text: string) {
     const clean = text.replace(/\[\[.*?\]\]/g, '').trim()
     if (!clean) return
@@ -198,7 +207,7 @@ export function QuorlythBot() {
       const turns = c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
       let first = true
       const full = await streamChat(turns, {
-        system: buildContext(a, bs, loc.pathname, project), tier: bs.model, signal: ctl.current.signal,
+        system: buildContext(a, bs, loc.pathname, project) + '\\nBrowser/device context: ' + browserContext(), tier: bs.model, signal: ctl.current.signal,
         onText: f => {
           if (first) { first = false; robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           const clean = f.replace(/\[\[[\s\S]*$/, '').trim()
