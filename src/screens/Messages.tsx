@@ -9,6 +9,16 @@ type Conversation = { id: string; title?: string; type: 'direct' | 'group'; memb
 type Message = { id: string; conversationId: string; senderId: string; text: string; at: number; replyTo?: string }
 type ReadState = { id: string; userId: string; conversationId: string; lastReadAt: number }
 
+function readableChatError(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const e = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown }
+    const message = [e.message, e.details, e.hint].filter(v => typeof v === 'string' && v.trim()).join(' · ')
+    if (message) return e.code ? message + ' (code ' + String(e.code) + ')' : message
+    try { return JSON.stringify(error) } catch { /* use fallback below */ }
+  }
+  return error instanceof Error ? error.message : String(error)
+}
+
 const makeId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2)
 
 export function Messages() {
@@ -94,7 +104,7 @@ export function Messages() {
       await store.set('conversations/' + id, { title: '', type: 'direct', members: [meId, personId], createdBy: meId, createdAt: Date.now() })
       nav('/messages/' + id)
       setPeopleOpen(false); setQuery('')
-    } catch (e) { setError('Could not start this conversation. ' + (e instanceof Error ? e.message : String(e))) }
+    } catch (e) { setError('Could not start this conversation. ' + readableChatError(e)) }
   }
 
   async function createGroup() {
@@ -107,7 +117,7 @@ export function Messages() {
       await store.set('conversations/' + id, { title: groupName.trim().slice(0, 60), type: 'group', members, createdBy: meId, createdAt: Date.now() })
       nav('/messages/' + id)
       setGroupOpen(false); setSelectedPeople([]); setGroupName(''); setQuery('')
-    } catch (e) { setError('Could not create the group. ' + (e instanceof Error ? e.message : String(e))) }
+    } catch (e) { setError('Could not create the group. ' + readableChatError(e)) }
   }
 
   async function sendMessage(event?: FormEvent) {
@@ -120,7 +130,7 @@ export function Messages() {
       await store.set('messages/' + id, { conversationId: active.id, senderId: meId, text, at: Date.now() })
       setDraft('')
       if (textarea.current) textarea.current.style.height = 'auto'
-    } catch (e) { setError('Message not sent. ' + (e instanceof Error ? e.message : String(e))) }
+    } catch (e) { setError('Message not sent. ' + readableChatError(e)) }
     finally { setSending(false); textarea.current?.focus() }
   }
 
