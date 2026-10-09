@@ -34,17 +34,17 @@ function List() {
   const a = useApp()
   const nav = useNavigate()
   const { data } = a
-  const [filter, setFilter] = useState<'all' | 'owned' | 'joined' | 'discover'>('all')
+  const [filter, setFilter] = useState<'owned' | 'joined' | 'discover'>('discover')
   const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone' }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const members = (id: string) => Object.keys(data.members).filter(u => data.members[u]?.[id]).length
   const visible = data.communities.filter(c => c.vis !== 'unlisted' || a.canManageCommunity(c.id) || a.joined(c.id))
-  const shown = visible.filter(c => filter === 'owned' ? a.canManageCommunity(c.id) : filter === 'joined' ? a.joined(c.id) && !a.canManageCommunity(c.id) : filter === 'discover' ? !a.joined(c.id) && !a.canManageCommunity(c.id) && c.vis !== 'unlisted' : true)
+  const shown = visible.filter(c => filter === 'owned' ? a.ownsCommunity(c.id) : filter === 'joined' ? a.joined(c.id) && !a.ownsCommunity(c.id) : !a.ownsCommunity(c.id) && !a.joined(c.id) && c.vis !== 'unlisted')
   return (
     <>
       <Head kicker="Communities" title="Where ideas gather." right={a.me ? <button className="btn p" onClick={() => document.getElementById('newc')?.scrollIntoView({ behavior: 'smooth' })}><Icon name="contribute" size={16} />New community</button> : null} />
       <div className="acts" style={{ margin: '12px 0 18px', flexWrap: 'wrap' }}>
-        {([['all', 'All communities'], ['owned', 'My communities'], ['joined', 'Joined'], ['discover', 'Discover']] as const).map(([key, label]) => <button key={key} className={cn('chip', filter === key && 'on')} onClick={() => setFilter(key)}>{label}</button>)}
+        {([['owned', 'My communities'], ['joined', 'Joined'], ['discover', 'Discover']] as const).map(([key, label]) => <button key={key} className={cn('chip', filter === key && 'on')} onClick={() => setFilter(key)}>{label}</button>)}
       </div>
       {shown.length ? (
         <div className="grid g3">
@@ -54,10 +54,10 @@ function List() {
               <div key={c.id} className="glass lift ccl">
                 <Cover c={c} />
                 <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{c.vis === 'unlisted' && <span className="chip">Unlisted</span>}{c.arch && <span className="chip on">Archived</span>}{a.canManageCommunity(c.id) && <span className="chip">Owned by you</span>}</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{c.vis === 'unlisted' && <span className="chip">Unlisted</span>}{c.arch && <span className="chip on">Archived</span>}{a.ownsCommunity(c.id) && <span className="chip">Created by you</span>}</div>
                   <h3 style={{ fontSize: 20, fontWeight: 300 }}>{c.name}</h3>
                   <p className="mut">{c.purpose}</p>
-                  <p className="dim">Created by {c.ownerId || c.createdBy ? a.nm((c.ownerId || c.createdBy)!) : 'Community creator'}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}><Av id={c.ownerId || c.createdBy || ''} size={30} /><div><p className="dim" style={{ fontSize: 11 }}>CREATED BY</p><button className="lk" onClick={() => (c.ownerId || c.createdBy) && nav('/me/' + (c.ownerId || c.createdBy))}>{c.ownerId || c.createdBy ? a.nm((c.ownerId || c.createdBy)!) : 'Community creator'}</button></div></div>
                   <p className="dim" style={{ marginTop: 'auto' }}>{m} member{m === 1 ? '' : 's'}, {n} idea{n === 1 ? '' : 's'}</p>
                   <div className="acts" style={{ margin: 0 }}>
                     <button className="btn p" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id)}>Open</button>
