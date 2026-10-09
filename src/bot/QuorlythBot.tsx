@@ -137,8 +137,8 @@ export function QuorlythBot() {
   }
 
   async function requestLiveContext(text: string) {
-    const asksLocalWeather = /\\b(weather|forecast|temperature)\\b/i.test(text) && !/\\b(?:in|at|for)\\s+[A-Z][a-z]+/i.test(text)
-    const asksLocation = /\\b(near me|my location|where am i|weather here|forecast here|temperature here|local weather|nearby)\\b/i.test(text)
+    const asksLocalWeather = /\b(weather|forecast|temperature)\b/i.test(text) && !/\b(?:in|at|for)\s+[A-Z][a-z]+/i.test(text)
+    const asksLocation = /\b(near me|my location|where am i|weather here|forecast here|temperature here|local weather|nearby)\b/i.test(text)
     if (!asksLocalWeather && !asksLocation) return ''
     if (!navigator.geolocation) return 'The browser does not support geolocation. Ask the user to name their city for local weather or nearby results.'
     try {
