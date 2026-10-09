@@ -99,9 +99,11 @@ async function geminiChat(req, res, body) {
   const requestBody = JSON.stringify({
     ...(system ? { systemInstruction: { parts: [{ text: String(system) }] } } : {}),
     contents: geminiContents(messages),
-    // Ground ordinary chat in live web results when current information is needed.
-    tools: [{ google_search: {} }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: tier === 'quick' ? 1024 : 2048 },
+    // Keep ordinary chat fast; only pay the grounding latency for queries that need current information.
+    ...((messages[messages.length - 1]?.content || '').match(/\\b(latest|current|today|tonight|right now|live|breaking|recent|news|weather|forecast|temperature|price today|this week|opening hours|near me|nearby|search the web|look up online|source links)\\b/i)
+      ? { tools: [{ google_search: {} }] }
+      : {}),
+    generationConfig: { temperature: 0.55, maxOutputTokens: tier === 'quick' ? 768 : 1536 },
   })
   const r = await fetchGeminiWithFallback(tier, model => fetch(geminiUrl(model, true), {
     method: 'POST',
