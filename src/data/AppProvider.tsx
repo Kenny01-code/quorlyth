@@ -157,32 +157,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, toast, demo])
 
   useEffect(() => {
-    if (!backend || !me) { setData(EMPTY); return }
+    if (!backend) { setData(EMPTY); return }
     const s = backend.store
     const set = (k: keyof Data, v: any) => setData(d => ({ ...d, [k]: v }))
     let readErrorShown = false
     const onReadError = (error: unknown) => {
       console.error('Quorlyth shared-data read failed:', error)
-      if (!readErrorShown) {
+      if (me && !readErrorShown) {
         readErrorShown = true
         toast('Some shared data could not load. Check your connection and refresh.')
       }
     }
+    // Keep public profile pages usable for signed-out visitors. Sensitive member/admin data
+    // is subscribed only after authentication; the database RLS remains the authority.
     const offs = [
       s.subscribe('communities', d => set('communities', asList<Community>(d).sort((a, b) => a.at - b.at)), onReadError),
       s.subscribe('ideas', d => set('ideas', asList<Idea>(d)), onReadError),
-      s.subscribe('reviews', d => set('reviews', asMap<Review>(d)), onReadError),
-      s.subscribe('votes', d => set('votes', Object.fromEntries(d.map(x => [x.id, x.data?.ideas || {}]))), onReadError),
-      s.subscribe('members', d => set('members', Object.fromEntries(d.map(x => [x.id, x.data?.c || {}]))), onReadError),
       s.subscribe('profiles', d => set('profiles', asMap<Profile>(d)), onReadError),
-      s.subscribe('requests', d => set('requests', asList<Request>(d)), onReadError),
-      s.subscribe('decisions', d => set('decisions', asMap<Decision>(d)), onReadError),
-      s.subscribe('promotions', d => set('promotions', asList<Promotion>(d).sort((a, b) => b.at - a.at)), onReadError),
-      s.subscribe('volunteers', d => set('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
-      s.subscribe('projects', d => set('projects', asMap<Project>(d)), onReadError),
-      s.subscribe('milestones', d => set('milestones', asList<Milestone>(d).sort((a, b) => a.at - b.at)), onReadError),
-      s.subscribe('settings', d => set('settings', d.find(x => x.id === 'space')?.data ?? null), onReadError),
       s.subscribe('config', d => set('ownerId', d.find(x => x.id === 'owner')?.data?.id ?? null), onReadError),
+      ...(me ? [
+        s.subscribe('reviews', d => set('reviews', asMap<Review>(d)), onReadError),
+        s.subscribe('votes', d => set('votes', Object.fromEntries(d.map(x => [x.id, x.data?.ideas || {}]))), onReadError),
+        s.subscribe('members', d => set('members', Object.fromEntries(d.map(x => [x.id, x.data?.c || {}]))), onReadError),
+        s.subscribe('requests', d => set('requests', asList<Request>(d)), onReadError),
+        s.subscribe('decisions', d => set('decisions', asMap<Decision>(d)), onReadError),
+        s.subscribe('promotions', d => set('promotions', asList<Promotion>(d).sort((a, b) => b.at - a.at)), onReadError),
+        s.subscribe('volunteers', d => set('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
+        s.subscribe('projects', d => set('projects', asMap<Project>(d)), onReadError),
+        s.subscribe('milestones', d => set('milestones', asList<Milestone>(d).sort((a, b) => a.at - b.at)), onReadError),
+        s.subscribe('settings', d => set('settings', d.find(x => x.id === 'space')?.data ?? null), onReadError),
+      ] : []),
     ]
     return () => offs.forEach(f => f())
   }, [backend, me?.id])
