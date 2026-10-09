@@ -73,14 +73,28 @@ create or replace function public.idea_community_id(p_idea_id text)
 returns text
 language sql stable security definer
 set search_path = '' set row_security = off
-as $$
+as $
   select d.data->>'cid'
   from public.docs d
   where d.path = 'ideas/' || p_idea_id
   limit 1
-$$;
+$;
 revoke all on function public.idea_community_id(text) from public;
 grant execute on function public.idea_community_id(text) to authenticated;
+
+create or replace function public.is_idea_author(p_idea_id text)
+returns boolean
+language sql stable security definer
+set search_path = '' set row_security = off
+as $
+  select exists (
+    select 1 from public.docs d
+    where d.path = 'ideas/' || p_idea_id
+      and d.data->>'authorId' = (select auth.uid())::text
+  )
+$;
+revoke all on function public.is_idea_author(text) from public;
+grant execute on function public.is_idea_author(text) to authenticated;
 
 -- Create community records only for yourself. Platform admins retain full access
 -- through the existing "owner writes all" policy.
@@ -117,11 +131,7 @@ create policy "community owners and authors manage idea content" on public.docs 
       public.can_manage_community(public.idea_community_id(split_part(path, '/', 2)))
       or (
         public.can_post_to_community(public.idea_community_id(split_part(path, '/', 2)))
-        and exists (
-          select 1 from public.docs idea
-          where idea.path = 'ideas/' || split_part(public.docs.path, '/', 2)
-            and idea.data->>'authorId' = (select auth.uid())::text
-        )
+        and public.is_idea_author(split_part(path, '/', 2))
       )
       or (
         path like 'ideas/%/comments/%'
