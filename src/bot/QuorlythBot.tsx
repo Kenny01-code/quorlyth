@@ -253,8 +253,9 @@ export function QuorlythBot() {
             } else if (action.type === 'idea') {
               const community = a.data.communities.find(x => x.id === action.cid)
               if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
-              ok = await a.postIdea({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
-              message = ok ? `Submitted “${action.title}”. Opening ${community.name} now.` : 'I could not submit that idea. Check your permissions and try again.'
+              const result = await a.postIdeaDetailed({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
+              ok = result.ok
+              message = ok ? `Submitted “${action.title}”. Opening ${community.name} now.` : `I couldn't submit “${action.title}”: ${result.error || 'The database rejected the write.'}`
             } else {
               if (!a.owner) throw new Error('Only the space owner can change a community cover.')
               ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
