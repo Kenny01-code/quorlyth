@@ -22,6 +22,7 @@ export interface App {
   canPost: () => boolean
   claimOwner: () => Promise<boolean>
   createCommunity: (c: Partial<Community>) => Promise<boolean>
+  createCommunityDetailed: (c: Partial<Community>) => Promise<{ ok: boolean; error?: string }>
   saveCommunity: (id: string, patch: Partial<Community>) => Promise<boolean>
   deleteCommunity: (id: string) => Promise<boolean>
   join: (cid: string, on: boolean) => Promise<boolean>
@@ -241,6 +242,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const w = async (fn: () => Promise<any>, ok?: string) => {
       try { await fn(); ok && toast(ok); return true } catch (e: any) { toast(e?.message?.includes('row-level') ? 'You do not have permission to do that' : 'That did not go through. Please try again.'); return false }
     }
+    const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
+      if (!me) return { ok: false, error: 'Sign in before creating a community.' }
+      if (!owner) return { ok: false, error: 'Your current account is not recognized as the Quorlyth owner.' }
+      try {
+        await st!.set('communities/' + slug(), { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
+        toast('Community created')
+        return { ok: true }
+      } catch (e: any) {
+        const error = String(e?.message || e || 'Unknown database error').slice(0, 500)
+        console.error('Quorlyth community creation failed:', error)
+        toast('Community creation failed: ' + error)
+        return { ok: false, error }
+      }
+    }
     const up = async (path: string, patch: any) => {
   try {
     await st!.update(path, patch)
@@ -263,6 +278,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       canPost: () => owner || !data.settings?.appr || data.decisions[me?.id || '']?.status === 'approved',
       claimOwner: () => w(() => st!.set('config/owner', { id: me!.id }), 'You now own this space'),
       createCommunity: c => w(() => st!.set('communities/' + slug(), { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() }), 'Community created'),
+      createCommunityDetailed,
       saveCommunity: (id, p) => w(() => up('communities/' + id, p), 'Saved'),
       deleteCommunity: id => w(() => st!.delete('communities/' + id), 'Community deleted'),
       join: (cid, on) => w(() => up('members/' + me!.id, { c: { [cid]: on } }), on ? 'You joined' : 'You left'),
