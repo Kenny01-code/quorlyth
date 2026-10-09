@@ -55,6 +55,8 @@ export function QuorlythBot() {
   const log = useRef<HTMLDivElement>(null)
   const ctl = useRef<AbortController | null>(null)
   const rt = useRef<Awaited<ReturnType<typeof startRealtime>> | null>(null)
+  const liveFallback = useRef(false)
+  const liveRecognition = useRef<any>(null)
   const audio = useRef<{ stop(): void } | null>(null)
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'compact' | 'large' | 'full' | 'custom'>('full')
@@ -298,11 +300,65 @@ export function QuorlythBot() {
     if (live) return stopLive()
     if (!a.me) return a.toast('Sign in to talk live')
     setLive({ state: 'connecting', user: '', bot: '' })
+    liveFallback.current = false
     const v = VOICES.find(x => x.id === bs.vid) || VOICES[0]
     let c = cur
+    const browserLive = () => {
+      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (!SR || !('speechSynthesis' in window)) {
+        liveFallback.current = false
+        setLive(null)
+        a.toast('Live voice needs microphone speech recognition and speech output. Try Chrome or Edge, or enable the OpenAI Realtime key.')
+        return
+      }
+      if (!liveFallback.current) return
+      const recognition = new SR()
+      liveRecognition.current = recognition
+      recognition.lang = navigator.language || 'en-US'
+      recognition.interimResults = false
+      recognition.continuous = false
+      recognition.onstart = () => setLive(l => l ? { ...l, state: 'listening' } : l)
+      recognition.onerror = (event: any) => {
+        liveRecognition.current = null
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          liveFallback.current = false; setLive(null); a.toast('Microphone permission was denied. Allow microphone access in your browser settings.')
+        } else if (liveFallback.current) {
+          setLive(l => l ? { ...l, state: 'listening' } : l)
+          window.setTimeout(browserLive, 500)
+        }
+      }
+      recognition.onresult = async (event: any) => {
+        const spoken = String(event.results?.[0]?.[0]?.transcript || '').trim()
+        liveRecognition.current = null
+        if (!spoken || !liveFallback.current) { if (liveFallback.current) browserLive(); return }
+        setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
+        c = add(c, { r: 'u', t: spoken }, 'Live conversation')
+        try {
+          let first = true
+          const answer = await streamChat(c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t })), {
+            system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a voice conversation. Speak naturally in short sentences. You can help with the app, but do not claim to execute an action unless the app has actually done it.',
+            tier: bs.model,
+            onText: full => { if (first) first = false; setLive(l => l ? { ...l, state: 'speaking', bot: full } : l) },
+          })
+          c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }] }
+          persist(c)
+          setLive(l => l ? { ...l, state: 'speaking', bot: answer } : l)
+          await new Promise<void>(resolve => {
+            speakText(answer.slice(0, 900), v.ai, () => robot.current?.talk(true), () => { robot.current?.talk(false); resolve() })
+              .catch(() => { try { const utterance = new SpeechSynthesisUtterance(answer.slice(0, 900)); utterance.lang = navigator.language || 'en-US'; utterance.onend = utterance.onerror = () => resolve(); window.speechSynthesis.speak(utterance) } catch { resolve() } })
+          })
+        } catch (error: any) {
+          const message = error?.message || 'I could not finish that voice reply. Please try again.'
+          a.toast(message)
+          c = { ...c, msgs: [...c.msgs, { r: 'a', t: message }] }; persist(c)
+        }
+        if (liveFallback.current) browserLive()
+      }
+      try { recognition.start() } catch { liveRecognition.current = null; if (liveFallback.current) window.setTimeout(browserLive, 500) }
+    }
     try {
       rt.current = await startRealtime({
-        instructions: buildContext(a, bs, loc.pathname, project) + '\nThis is a live spoken conversation, like a phone call. Reply in one to three short natural sentences, the way a warm person would speak. Use contractions. No lists or markdown. You can call the tools to take the person to a page or open an idea.',
+        instructions: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a live spoken conversation, like a phone call. Reply in one to three short natural sentences, the way a warm person would speak. Use contractions. No lists or markdown. You can call the tools to take the person to a page or open an idea.',
         voice: v.ai,
         tools: [
           { type: 'function', name: 'navigate', description: 'Take the person to a page of the app.', parameters: { type: 'object', properties: { page: { type: 'string', enum: ['home', 'dashboard', 'communities', 'queue', 'promote', 'analytics', 'settings', 'profile'] } }, required: ['page'] } },
@@ -310,19 +366,30 @@ export function QuorlythBot() {
         ],
         onTool: (name, args) => {
           if (name === 'navigate') { const m: any = { home: '/', dashboard: '/dashboard', communities: '/communities', queue: '/queue', promote: '/promote', analytics: '/analytics', settings: '/settings', profile: '/me' }; nav(m[args.page] || '/'); return { ok: true } }
-          if (name === 'open_idea') { nav('/idea/' + args.idea_id); return { ok: true } }
+          if (name === 'open_idea') { if (!a.data.ideas.some(i => i.id === args.idea_id)) return { ok: false, error: 'Idea not found' }; nav('/idea/' + args.idea_id); return { ok: true } }
           return { ok: false }
         },
         onEvent: e => {
           if (e.type === 'state') { setLive(l => (e.state === 'closed' ? null : { ...(l || { user: '', bot: '' }), state: e.state })); robot.current?.listen(e.state === 'listening'); robot.current?.think(e.state === 'thinking'); robot.current?.talk(e.state === 'speaking') }
-          if (e.type === 'user') { c = add(c, { r: 'u', t: e.text }, 'Live: ' + e.text); setLive(l => l && { ...l, user: e.text }) }
+          if (e.type === 'user') { c = add(c, { r: 'u', t: e.text }, 'Live conversation'); setLive(l => l && { ...l, user: e.text }) }
           if (e.type === 'bot') { setLive(l => l && { ...l, bot: e.text }); setCaption(e.text.slice(-140)); if (e.done) { c = add(c, { r: 'a', t: e.text }); persist(c!); robot.current?.bump() } }
           if (e.type === 'error') a.toast(e.message)
         },
       })
-    } catch (e: any) { setLive(null); a.toast(/NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : e.message || 'Live voice could not start') }
+    } catch (e: any) {
+      rt.current = null
+      if ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) {
+        liveFallback.current = true
+        setLive({ state: 'listening', user: '', bot: '' })
+        a.toast('Using browser voice with Gemini chat. Allow microphone access to speak.')
+        browserLive()
+      } else {
+        setLive(null)
+        a.toast(/NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : e.message || 'Live voice could not start')
+      }
+    }
   }
-  function stopLive() { rt.current?.stop(); rt.current = null; setLive(null); setCaption('') }
+  function stopLive() { liveFallback.current = false; try { liveRecognition.current?.stop() } catch {}; liveRecognition.current = null; rt.current?.stop(); rt.current = null; try { window.speechSynthesis?.cancel() } catch {}; setLive(null); setCaption('') }
   useEffect(() => () => { rt.current?.stop() }, [])
 
   // ----- dictation -----
