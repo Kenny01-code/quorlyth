@@ -15,9 +15,9 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; guest
   { path: '/analytics', label: 'Analytics', icon: 'insight' },
   { path: '/communities', label: 'Communities', icon: 'community' },
   { path: '/messages', label: 'Messages', icon: 'message' },
-  { path: '/queue', label: 'Review queue', icon: 'queue' },
-  { path: '/promote', label: 'Promote', icon: 'promote' },
-  { path: '/settings', label: 'Settings', icon: 'settings' },
+  { path: '/queue', label: 'Review queue', icon: 'queue', owner: true },
+  { path: '/promote', label: 'Promote', icon: 'promote', owner: true },
+  { path: '/settings', label: 'Settings', icon: 'settings', owner: true },
   { path: '/me', label: 'My space', icon: 'member' },
   { path: '/database', label: 'Database', icon: 'db', owner: true },
 ]
