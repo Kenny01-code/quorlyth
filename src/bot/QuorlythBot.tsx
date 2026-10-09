@@ -266,7 +266,7 @@ export function QuorlythBot() {
               ok = result.ok
               message = ok ? `Submitted “${action.title}”. Opening ${community.name} now.` : `I couldn't submit “${action.title}”: ${result.error || 'The database rejected the write.'}`
             } else {
-              if (!a.owner) throw new Error('Only the space owner can change a community cover.')
+              if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can change its cover.')
               ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
               message = ok ? 'Community cover updated.' : 'I could not update that cover.'
             }
@@ -685,16 +685,16 @@ export function QuorlythBot() {
     const lower = s.toLowerCase()
 
     // Destructive actions are always previewed and require an explicit confirmation click.
-    if (a.owner && /\b(delete|remove|permanently delete|destroy)\b/i.test(s) && /\bcommunity\b/i.test(s)) {
+    if (a.me && /\b(delete|remove|permanently delete|destroy)\b/i.test(s) && /\bcommunity\b/i.test(s)) {
       const community = a.data.communities
         .filter(x => lower.includes(x.name.toLowerCase()))
         .sort((x, y) => y.name.length - x.name.length)[0]
-      if (community) {
+      if (community && a.canManageCommunity(community.id)) {
         return { type: 'deleteCommunity', cid: community.id, name: community.name, ideaCount: a.data.ideas.filter(i => i.cid === community.id).length }
       }
     }
 
-    const createCommunity = /\b(create|make|start|set up)\b/i.test(s) && /\bcommunity\b/i.test(s) && a.owner
+    const createCommunity = /\b(create|make|start|set up)\b/i.test(s) && /\bcommunity\b/i.test(s) && !!a.me
     if (createCommunity) {
       const quoted = s.match(/\b(?:called|named)\s+["“]([^"”]+)["”]/i)
       const named = s.match(/\b(?:called|named)\s+(.+?)(?=\s+(?:about|for)\b|[,;]|$)/i)
@@ -707,11 +707,11 @@ export function QuorlythBot() {
     }
 
     const coverMatch = s.match(/\b(?:change|set|switch|update)\b[\s\S]*?\bcover\b[\s\S]*?\b(?:to|style)\s+(aurora|halo|grid|dusk)\b/i)
-    if (coverMatch && a.owner) {
+    if (coverMatch && a.me) {
       const pathId = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1]
       const nameMention = a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x, y) => y.name.length - x.name.length)[0]
       const community = a.data.communities.find(x => x.id === pathId) || nameMention
-      if (community) return { type: 'cover', cid: community.id, cover: ({ aurora: 'a', halo: 'b', grid: 'c', dusk: 'd' } as Record<string, string>)[coverMatch[1].toLowerCase()] }
+      if (community && a.canManageCommunity(community.id)) return { type: 'cover', cid: community.id, cover: ({ aurora: 'a', halo: 'b', grid: 'c', dusk: 'd' } as Record<string, string>)[coverMatch[1].toLowerCase()] }
     }
 
     const wantsIdea = /\b(create|write|submit|post|add)\b/i.test(s) && /\bidea\b/i.test(s)
@@ -753,7 +753,7 @@ export function QuorlythBot() {
     let ok = false
     try {
       if (action.type === 'community') {
-        if (!a.owner) throw new Error('Only the space owner can create a community.')
+        if (!a.me) throw new Error('Sign in before creating a community.')
         const result = await a.createCommunityDetailed(action)
         ok = result.ok
         if (!ok) throw new Error(result.error || 'Community creation failed.')
@@ -772,7 +772,7 @@ export function QuorlythBot() {
         if (!a.owner) throw new Error('Only the space owner can change a community cover.')
         ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
       } else if (action.type === 'deleteCommunity') {
-        if (!a.owner) throw new Error('Only the space owner can delete a community.')
+        if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can delete it.')
         if (!a.data.communities.some(c => c.id === action.cid)) throw new Error('That community no longer exists.')
         ok = await a.deleteCommunity(action.cid)
       }
