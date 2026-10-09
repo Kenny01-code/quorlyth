@@ -673,3 +673,68 @@ nav .lgb{flex:none}nav b{flex:none}
 .community-badge-select option{background:#111;color:#fff}
 @media(max-width:760px){.community-member-row{align-items:flex-start;flex-wrap:wrap}.community-member-row>.t{min-width:calc(100% - 60px)}.community-member-actions{width:100%;padding-left:54px}.community-badge-select,.community-badge-select select{width:100%;max-width:none}.platform-verified-shield>span{font-size:7px}}
 @media(prefers-reduced-motion:reduce){.platform-verified-shield:before,.platform-verified-shield svg{animation:none!important}}
+
+
+/* Quorlyth Style 03 — liquid monochrome glass messaging */
+.chat-page{
+  --chat-glass:rgba(255,255,255,.035);
+  --chat-edge:rgba(255,255,255,.14);
+  position:relative;isolation:isolate;color:#fff;
+  background:radial-gradient(ellipse 68% 38% at 82% 0%,rgba(255,255,255,.075),transparent 72%),
+             radial-gradient(ellipse 44% 32% at 4% 90%,rgba(255,255,255,.035),transparent 75%),
+             #000;
+  border-radius:28px;padding:clamp(16px,2.6vw,30px);
+  overflow:hidden;min-height:min(78vh,900px);
+}
+.chat-page:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(115deg,transparent 12%,rgba(255,255,255,.018) 38%,transparent 62%),radial-gradient(ellipse at 50% -20%,rgba(255,255,255,.045),transparent 62%)}
+.chat-topline{gap:18px;align-items:center}
+.chat-title{color:#fff;text-shadow:0 0 32px rgba(255,255,255,.12)}
+.chat-title span{color:rgba(255,255,255,.5)}
+.chat-eyebrow{letter-spacing:.24em;color:#aaa}
+.chat-page .mut,.chat-page .dim{color:#a1a1a1}
+.chat-page .glass,.chat-create,.chat-sidebar,.chat-thread,.chat-empty-state,.chat-signin{
+  background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.018) 48%,rgba(255,255,255,.035));
+  border:1px solid var(--chat-edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.17),inset 0 0 28px rgba(255,255,255,.012),0 24px 70px -38px #fff;
+  -webkit-backdrop-filter:blur(30px) saturate(125%);backdrop-filter:blur(30px) saturate(125%);
+}
+.chat-layout{gap:16px;align-items:stretch}
+.chat-sidebar,.chat-thread{min-width:0;border-radius:24px;overflow:hidden;position:relative}
+.chat-sidebar{background:linear-gradient(160deg,rgba(255,255,255,.065),rgba(255,255,255,.012) 65%),#030303}
+.chat-thread{background:radial-gradient(ellipse 70% 40% at 55% 0%,rgba(255,255,255,.055),transparent 80%),rgba(2,2,2,.96)}
+.chat-sidebar-head,.chat-thread-head,.chat-create-head{border-color:rgba(255,255,255,.11)}
+.chat-conversation,.chat-person{border:1px solid transparent;border-radius:17px;transition:background .28s,border-color .28s,transform .28s,box-shadow .28s}
+.chat-conversation:hover,.chat-person:hover{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.1)}
+.chat-conversation.active,.chat-conversation.on{background:linear-gradient(110deg,rgba(255,255,255,.105),rgba(255,255,255,.025));border-color:rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 28px -24px #fff}
+.chat-avatar,.chat-page .av{border:1px solid rgba(255,255,255,.23);box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 0 22px -12px #fff}
+.chat-avatar{cursor:pointer;transition:transform .25s,box-shadow .25s}
+.chat-avatar:hover,.chat-page .av:hover{transform:translateY(-1px) scale(1.045);box-shadow:0 0 0 2px rgba(255,255,255,.12),0 0 24px -8px #fff}
+.chat-unread,.chat-badge,.chat-unread-count{background:#fff!important;color:#000!important;border:1px solid #fff;box-shadow:0 0 20px -8px rgba(255,255,255,.8);font-weight:650}
+.chat-bubble{max-width:min(78%,680px);border:1px solid rgba(255,255,255,.13);border-radius:21px;background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.035));box-shadow:inset 0 1px 0 rgba(255,255,255,.11),0 12px 30px -28px #fff;overflow-wrap:anywhere}
+.chat-bubble.mine,.chat-bubble.own,.chat-message.mine .chat-bubble{color:#050505;background:linear-gradient(145deg,#fff,#e8e8e8);border-color:rgba(255,255,255,.9);box-shadow:0 10px 32px -24px rgba(255,255,255,.8)}
+.chat-composer,.chat-input-wrap,.chat-compose{background:rgba(0,0,0,.58);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 12px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.07);border-radius:20px}
+.chat-page input,.chat-page textarea{background:rgba(0,0,0,.55);border-color:rgba(255,255,255,.15);color:#fff}
+.chat-page input:focus,.chat-page textarea:focus{border-color:rgba(255,255,255,.48);box-shadow:0 0 0 3px rgba(255,255,255,.045),inset 0 1px 12px rgba(0,0,0,.7)}
+.chat-page .btn{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.17);color:#fff}
+.chat-page .btn:hover{background:rgba(255,255,255,.105);box-shadow:0 0 28px -15px #fff}
+.chat-page .btn.p{background:#fff;color:#000;border-color:#fff}
+.chat-page .btn.p:hover{background:#e9e9e9}
+.chat-icon-btn,.chat-page button[aria-label="Close"]{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.035);color:#fff;border-radius:12px}
+.chat-icon-btn:hover,.chat-page button[aria-label="Close"]:hover{background:rgba(255,255,255,.1)}
+.chat-error{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.24);border-radius:16px;color:#fff}
+.chat-signin{width:min(620px,100%);margin:28px auto;padding:clamp(24px,5vw,48px);border-radius:28px}
+.chat-orb{background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.24),rgba(255,255,255,.025) 65%);border:1px solid rgba(255,255,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 0 55px -30px #fff}
+.chat-page button:focus-visible,.chat-page a:focus-visible,.chat-page input:focus-visible,.chat-page textarea:focus-visible{outline:2px solid #fff;outline-offset:3px}
+@media(max-width:760px){
+ .chat-page{padding:14px;border-radius:22px;min-height:0}
+ .chat-topline{align-items:flex-start}
+ .chat-top-actions{width:100%;display:flex;flex-wrap:wrap}
+ .chat-top-actions .btn{flex:1;justify-content:center}
+ .chat-layout{grid-template-columns:minmax(0,1fr)!important}
+ .chat-sidebar,.chat-thread{border-radius:20px}
+ .chat-bubble{max-width:88%}
+}
+@media(prefers-reduced-motion:reduce){
+ .chat-page *,.chat-page *:before,.chat-page *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+ .chat-avatar:hover,.chat-page .av:hover,.chat-conversation:hover,.chat-person:hover{transform:none!important}
+}
