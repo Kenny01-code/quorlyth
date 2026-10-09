@@ -28,6 +28,7 @@ export function Messages() {
   const [error, setError] = useState('')
   const [workspaceSize, setWorkspaceSize] = useState<'compact' | 'standard' | 'expanded'>(() => (localStorage.getItem('qmessages:size') as 'compact' | 'standard' | 'expanded') || 'standard')
   const [rotatingLine, setRotatingLine] = useState(0)
+  const [rotatingIcon, setRotatingIcon] = useState(0)
   const bottom = useRef<HTMLDivElement>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const store = a.backend?.store
@@ -69,8 +70,9 @@ export function Messages() {
   }
 
   useEffect(() => {
-    const timer = window.setInterval(() => setRotatingLine(n => (n + 1) % 6), 3600)
-    return () => window.clearInterval(timer)
+    const lineTimer = window.setInterval(() => setRotatingLine(n => (n + 1) % 6), 3600)
+    const iconTimer = window.setInterval(() => setRotatingIcon(n => (n + 1) % 5), 2800)
+    return () => { window.clearInterval(lineTimer); window.clearInterval(iconTimer) }
   }, [])
 
   useEffect(() => {
@@ -136,22 +138,16 @@ export function Messages() {
         {groupOpen && <div className="chat-create-footer"><span className="dim">{selectedPeople.length} selected · choose at least 2</span><button className="btn p" disabled={selectedPeople.length < 2 || !groupName.trim()} onClick={() => void createGroup()}>Create group <Icon name="arrow" size={16} /></button></div>}
       </div>}
       <div className={cn('chat-workspace', 'size-' + workspaceSize)}>
-        <div className="chat-size-controls" role="group" aria-label="Conversation layout size">
-          <span>LAYOUT</span>
-          <button className={workspaceSize === 'compact' ? 'selected' : ''} onClick={() => { setWorkspaceSize('compact'); localStorage.setItem('qmessages:size', 'compact') }} aria-label="Compact layout">Mini</button>
-          <button className={workspaceSize === 'standard' ? 'selected' : ''} onClick={() => { setWorkspaceSize('standard'); localStorage.setItem('qmessages:size', 'standard') }} aria-label="Standard layout">Standard</button>
-          <button className={workspaceSize === 'expanded' ? 'selected' : ''} onClick={() => { setWorkspaceSize('expanded'); localStorage.setItem('qmessages:size', 'expanded') }} aria-label="Expanded layout">Expand</button>
-        </div>
         <aside className={cn('glass chat-sidebar', active && 'has-active')}>
           <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
           <label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" /></label>
           <div className="chat-conversation-list">{conversations.filter(c => titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())).map(c => {
             const last = lastMessage(c), unread = unreadCount(c)
-            return <button key={c.id} className={cn('chat-conversation', active?.id === c.id && 'active', unread > 0 && 'unread')} onClick={() => nav('/messages/' + c.id)}>
+            return <div key={c.id} role="button" tabIndex={0} className={cn('chat-conversation', active?.id === c.id && 'active', unread > 0 && 'unread')} onClick={() => nav('/messages/' + c.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav('/messages/' + c.id) } }}>
               {c.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link" title={'View ' + titleOf(c) + "'s public profile"} aria-label={'View ' + titleOf(c) + ' public profile'} onClick={e => { e.stopPropagation(); nav(profileLink(c.members.find(id => id !== meId) || '')) }}><Av id={c.members.find(id => id !== meId) || ''} size={46} />{isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <span className="chat-conversation-copy"><span className="chat-conversation-title"><span className="chat-title-inline"><b>{titleOf(c)}</b>{c.type === 'direct' && isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ OWNER</span>}</span><small>{formatTime(last?.at || c.createdAt)}</small></span><span className="chat-preview">{last ? (last.senderId === meId ? 'You: ' : '') + last.text : c.type === 'group' ? c.members.length + ' people · Start the conversation' : 'Start the conversation'}</span></span>
-              {unread > 0 && <i className="chat-unread-dot" />}
-            </button>
+              {unread > 0 && <span className="chat-unread-count" aria-label={unread + ' unread messages'}>{unread > 99 ? '99+' : unread}</span>}
+            </div>
           })}{!conversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>Your inbox is a blank canvas.</b><p>Start a private conversation or bring your collaborators together.</p><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button></div>}</div>
           <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Private conversations <span className="dim">· standard encryption in transit</span></div>
         </aside>
@@ -173,7 +169,7 @@ export function Messages() {
               <div ref={bottom} />
             </div>
             <form className="chat-composer" onSubmit={sendMessage}><div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
-          </> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><Icon name="message" size={32} /></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
+          </> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'spark'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
             <>Every great thing<br />starts somewhere.</>,
             <>One message can<br />start something real.</>,
             <>Good ideas deserve<br />to find their people.</>,
