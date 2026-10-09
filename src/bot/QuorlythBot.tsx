@@ -207,7 +207,7 @@ export function QuorlythBot() {
       const turns = c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
       let first = true
       const full = await streamChat(turns, {
-        system: buildContext(a, bs, loc.pathname, project) + '\\nBrowser/device context: ' + browserContext(), tier: bs.model, signal: ctl.current.signal,
+        system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext(), tier: bs.model, signal: ctl.current.signal,
         onText: f => {
           if (first) { first = false; robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           const clean = f.replace(/\[\[[\s\S]*$/, '').trim()
