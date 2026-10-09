@@ -10,6 +10,7 @@ const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.L
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
 const Dashboard = lazy(() => import('./screens/Dashboard').then(m => ({ default: m.Dashboard })))
 const Communities = lazy(() => import('./screens/Communities').then(m => ({ default: m.Communities })))
+const Messages = lazy(() => import('./screens/Messages').then(m => ({ default: m.Messages })))
 const IdeaPage = lazy(() => import('./screens/IdeaPage').then(m => ({ default: m.IdeaPage })))
 const Queue = lazy(() => import('./screens/Queue').then(m => ({ default: m.Queue })))
 const Promote = lazy(() => import('./screens/Promote').then(m => ({ default: m.Promote })))
@@ -114,6 +115,8 @@ export default function App() {
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/communities" element={<Communities />} />
               <Route path="/communities/:cid" element={<Communities />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/messages/:conversationId" element={<Messages />} />
               <Route path="/idea/:id" element={<IdeaPage />} />
               <Route path="/queue" element={<Queue />} />
               <Route path="/promote" element={<Promote />} />
