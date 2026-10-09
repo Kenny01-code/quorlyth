@@ -43,6 +43,7 @@ type PendingAction =
   | { type: 'idea'; title: string; body: string; cid: string; tags: string[] }
   | { type: 'promote'; ideaId: string; text: string; credits: string[] }
   | { type: 'cover'; cid: string; cover: string }
+  | { type: 'deleteCommunity'; cid: string; name: string; ideaCount: number }
 
 function pendingActionDetail(action: PendingAction, communities: { id: string; name: string }[], ideas: { id: string; title: string }[]): string {
   switch (action.type) {
@@ -50,6 +51,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'idea': return action.title + ' · ' + (communities.find(x => x.id === action.cid)?.name || 'Community')
     case 'promote': return ideas.find(x => x.id === action.ideaId)?.title || 'Selected idea'
     case 'cover': return (communities.find(x => x.id === action.cid)?.name || 'Community') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
+    case 'deleteCommunity': return action.name + ' · ' + action.ideaCount + ' linked idea' + (action.ideaCount === 1 ? '' : 's')
   }
 }
 
@@ -662,49 +664,65 @@ export function QuorlythBot() {
 
   function planAction(text: string): PendingAction | null {
     const s = text.trim()
+    const lower = s.toLowerCase()
+
+    // Destructive actions are always previewed and require an explicit confirmation click.
+    if (a.owner && /\b(delete|remove|permanently delete|destroy)\b/i.test(s) && /\bcommunity\b/i.test(s)) {
+      const community = a.data.communities
+        .filter(x => lower.includes(x.name.toLowerCase()))
+        .sort((x, y) => y.name.length - x.name.length)[0]
+      if (community) {
+        return { type: 'deleteCommunity', cid: community.id, name: community.name, ideaCount: a.data.ideas.filter(i => i.cid === community.id).length }
+      }
+    }
+
     const createCommunity = /\b(create|make|start|set up)\b/i.test(s) && /\bcommunity\b/i.test(s) && a.owner
     if (createCommunity) {
       const quoted = s.match(/\b(?:called|named)\s+["“]([^"”]+)["”]/i)
-      const named = s.match(/\b(?:called|named)\s+(.+?)(?:\s+(?:about|for)\s+([\s\S]+))?$/i)
+      const named = s.match(/\b(?:called|named)\s+(.+?)(?=\s+(?:about|for)\b|[,;]|$)/i)
       const plain = s.match(/\bcommunity\s+(?!called\b|named\b)(.+?)\s*$/i)
       const rawName = quoted?.[1] || named?.[1] || plain?.[1]
       if (rawName?.trim()) {
         const name = rawName.trim().replace(/^['"“]|['"”]$/g, '').replace(/\s+(?:about|for)\s+[\s\S]+$/i, '').slice(0, 60)
-        if (name) return { type: 'community', name, purpose: (named?.[2] || '').trim().slice(0, 300), cover: 'a', vis: 'listed', post: 'anyone' }
+        if (name) return { type: 'community', name, purpose: '', cover: 'a', vis: 'listed', post: 'anyone' }
       }
     }
+
     const coverMatch = s.match(/\b(?:change|set|switch|update)\b[\s\S]*?\bcover\b[\s\S]*?\b(?:to|style)\s+(aurora|halo|grid|dusk)\b/i)
     if (coverMatch && a.owner) {
       const pathId = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1]
-      const nameMention = a.data.communities.find(x => s.toLowerCase().includes(x.name.toLowerCase()))
+      const nameMention = a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x, y) => y.name.length - x.name.length)[0]
       const community = a.data.communities.find(x => x.id === pathId) || nameMention
       if (community) return { type: 'cover', cid: community.id, cover: ({ aurora: 'a', halo: 'b', grid: 'c', dusk: 'd' } as Record<string, string>)[coverMatch[1].toLowerCase()] }
     }
-    let ideaMatch = s.match(/\b(?:create|write|submit|post|add)\s+(?:an?\s+)?(?:new\s+)?idea\s+(?:called|named)\s+["“]?(.+?)["”]?(?:\s+(?:about|describing)\s+([\s\S]+))?$/i)
-    let reversedCommunity: typeof a.data.communities[number] | undefined
-    let reversedTitle = ''
-    if (!ideaMatch) {
-      const reversed = s.match(/\b(?:create|write|submit|post|add)\s+(?:an?\s+)?(?:new\s+)?idea\s+(?:in|for|to)\s+(.+?)\s+(?:called|named)\s+["“]?(.+?)["”]?\s*$/i)
-      if (reversed) {
-        reversedCommunity = a.data.communities.find(x => x.name.toLowerCase() === reversed[1].trim().toLowerCase())
-        reversedTitle = reversed[2].trim().replace(/^['"“]|['"”]$/g, '')
-      }
-    }
-    if ((ideaMatch || reversedCommunity) && a.me) {
+
+    const wantsIdea = /\b(create|write|submit|post|add)\b/i.test(s) && /\bidea\b/i.test(s)
+    if (wantsIdea && a.me) {
       const pathCid = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1]
-      const mentioned = reversedCommunity || a.data.communities.filter(x => s.toLowerCase().includes(x.name.toLowerCase())).sort((x, y) => y.name.length - x.name.length)[0]
-      const community = a.data.communities.find(x => x.id === pathCid) || mentioned || a.data.communities[0]
-      let title = (reversedTitle || ideaMatch?.[1] || '').trim().replace(/^['"“]|['"”]$/g, '')
-      if (mentioned && !reversedTitle) {
-        const suffix = new RegExp('\\s+(?:to|in|for)\\s+' + mentioned.name.replace(/[.*+?^$()|[\]\\]/g, '\\$&') + '$', 'i')
-        title = title.replace(suffix, '').trim()
+      const mentioned = a.data.communities
+        .filter(x => lower.includes(x.name.toLowerCase()))
+        .sort((x, y) => y.name.length - x.name.length)[0]
+      const community = (pathCid && a.data.communities.find(x => x.id === pathCid)) || mentioned
+
+      // Keep the title separate from its destination and the description instructions.
+      const titleMatch = s.match(/\bidea\s+(?:called|named)\s+["“]?([\s\S]+?)(?=["”]?\s+(?:in|for|to)\s+|[,;]\s*(?:with|and)\s+(?:a\s+)?description\b|\s+with\s+(?:a\s+)?description\b|\s+describing\b|$)/i)
+      let title = titleMatch?.[1]?.trim().replace(/^['"“]|['"”]$/g, '') || ''
+      if (!title && /\bidea\s*:/i.test(s)) title = s.split(/\bidea\s*:/i)[1]?.trim().split(/[,;]\s*(?:with|and)\s+(?:a\s+)?description\b/i)[0] || ''
+
+      const descriptionMatch = s.match(/\b(?:with|and)\s+(?:a\s+)?description\s+(?:explaining|describing|saying|about|that\s+says)?\s*([\s\S]+)$/i)
+        || s.match(/\bdescribing\s+([\s\S]+)$/i)
+      const body = (descriptionMatch?.[1] || '').trim().replace(/[.\s]+$/, '')
+
+      const allowed = !!community && !community.arch && a.canPost() &&
+        (a.owner || (community.post !== 'owner' && (community.post !== 'members' || a.joined(community.id))))
+      if (community && allowed && title) {
+        return { type: 'idea', title: title.slice(0, 120), body: body.slice(0, 2000), cid: community.id, tags: [] }
       }
-      const allowed = !!community && !community.arch && a.canPost() && (a.owner || (community.post !== 'owner' && (community.post !== 'members' || a.joined(community.id))))
-      if (community && allowed && title) return { type: 'idea', title: title.slice(0, 120), body: (ideaMatch?.[2] || '').trim().slice(0, 2000), cid: community.id, tags: [] }
     }
+
     if (a.owner && /\b(publish|promote|push)\b/i.test(s) && /\bidea\b/i.test(s)) {
-      const requested = a.data.ideas.find(x => s.toLowerCase().includes(x.title.toLowerCase()))
-      const best = requested || [...a.data.ideas].filter(x => a.statusOf(x.id) === 'selected').sort((x,y) => (a.data.reviews[y.id]?.score || 0) - (a.data.reviews[x.id]?.score || 0))[0]
+      const requested = a.data.ideas.find(x => lower.includes(x.title.toLowerCase()))
+      const best = requested || [...a.data.ideas].filter(x => a.statusOf(x.id) === 'selected').sort((x, y) => (a.data.reviews[y.id]?.score || 0) - (a.data.reviews[x.id]?.score || 0))[0]
       if (best && a.statusOf(best.id) !== 'declined') return { type: 'promote', ideaId: best.id, text: [best.title, best.body || '', 'Shared from the Quorlyth community.'].filter(Boolean).join('\n\n'), credits: [best.authorId] }
     }
     return null
@@ -718,11 +736,15 @@ export function QuorlythBot() {
     try {
       if (action.type === 'community') {
         if (!a.owner) throw new Error('Only the space owner can create a community.')
-        ok = await a.createCommunity(action)
+        const result = await a.createCommunityDetailed(action)
+        ok = result.ok
+        if (!ok) throw new Error(result.error || 'Community creation failed.')
       } else if (action.type === 'idea') {
         const community = a.data.communities.find(x => x.id === action.cid)
         if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
-        ok = await a.postIdea({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
+        const result = await a.postIdeaDetailed({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
+        ok = result.ok
+        if (!ok) throw new Error(result.error || 'Idea submission failed.')
       } else if (action.type === 'promote') {
         if (!a.owner) throw new Error('Only the space owner can promote ideas.')
         const idea = a.data.ideas.find(x => x.id === action.ideaId)
@@ -731,12 +753,22 @@ export function QuorlythBot() {
       } else if (action.type === 'cover') {
         if (!a.owner) throw new Error('Only the space owner can change a community cover.')
         ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
+      } else if (action.type === 'deleteCommunity') {
+        if (!a.owner) throw new Error('Only the space owner can delete a community.')
+        if (!a.data.communities.some(c => c.id === action.cid)) throw new Error('That community no longer exists.')
+        ok = await a.deleteCommunity(action.cid)
       }
       if (ok) {
-        const labels = { community: 'Community created successfully.', idea: 'Idea submitted successfully.', promote: 'Idea marked as promoted in Quorlyth. It has not been posted to an external platform.', cover: 'Community cover updated successfully.' }
+        const labels: Record<PendingAction['type'], string> = {
+          community: 'Community created successfully.',
+          idea: 'Idea submitted successfully.',
+          promote: 'Idea marked as promoted in Quorlyth. It has not been posted to an external platform.',
+          cover: 'Community cover updated successfully.',
+          deleteCommunity: 'Community deleted. Any ideas linked to it are not automatically deleted.'
+        }
         const next = add(cur, { r: 'a', t: labels[action.type] })
         persist(next); setPendingAction(null)
-        if (action.type === 'community') nav('/communities')
+        if (action.type === 'community' || action.type === 'deleteCommunity') nav('/communities')
         if (action.type === 'idea') nav('/communities/' + action.cid)
       }
     } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
@@ -829,7 +861,7 @@ export function QuorlythBot() {
                     </div>
                   )
                 ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
-                {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style' } as any)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">Review the details, then confirm. QuorlythBot will use your signed-in account permissions.</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+                {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style', deleteCommunity: 'Delete community' } as any)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity' ? 'This is destructive. Confirm only if you want to remove this community. Linked ideas will remain saved but will no longer belong to an existing community.' : 'Review the details, then confirm. QuorlythBot will use your signed-in account permissions.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
                 <div className="bc">
