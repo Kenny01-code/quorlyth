@@ -79,6 +79,7 @@ export function QuorlythBot() {
   const [stage, setStage] = useState<'std' | 'big' | 'off'>('std')
   const [caption, setCaption] = useState('')
   const [status, setStatus] = useState('Online')
+  const [thinkingTask, setThinkingTask] = useState('')
   const [q, setQ] = useState('')
   const [menu, setMenu] = useState<null | { id: string | null; x: number; y: number }>(null)
   const [ren, setRen] = useState('')
@@ -210,6 +211,16 @@ export function QuorlythBot() {
     setCur(next); return next
   }
 
+  function taskPreview(text: string) {
+    if (/\b(create|make|start|set up)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Creating your community'
+    if (/\b(add|create|write|submit|post)\b/i.test(text) && /\bidea\b/i.test(text)) return 'Preparing your idea'
+    if (/\b(open|show|take me to|go to|view|enter)\b/i.test(text)) return 'Opening the right place'
+    if (/\b(weather|forecast|temperature|latest|current|today|right now|live|news|search|look up|source)\b/i.test(text)) return 'Checking current information'
+    if (/\b(review|score|rank|analy[sz]e|analytics|summari[sz]e|compare)\b/i.test(text)) return 'Reviewing the available information'
+    if (/\b(write|draft|rewrite|improve|generate|design|plan)\b/i.test(text)) return 'Working on your request'
+    return 'Finding the most useful answer'
+  }
+
   async function send(text?: string, raw = false) {
     const t = (text ?? input).trim()
     if (!t || busy) return
@@ -269,7 +280,7 @@ export function QuorlythBot() {
     }
     audio.current?.stop(); setView('chat')
     let c = add(cur, { r: 'u', t })
-    setBusy(true); robot.current?.think(true); setStatus('Thinking'); setCaption('')
+    setBusy(true); robot.current?.think(true); setStatus('Thinking'); setThinkingTask(taskPreview(t)); setCaption('')
     ctl.current = new AbortController()
     try {
       const turns = c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
@@ -278,7 +289,7 @@ export function QuorlythBot() {
       const full = await streamChat(turns, {
         system: buildContext(a, bs, loc.pathname, project) + '\\nBrowser/device context: ' + browserContext() + (liveContext ? '\\nLocation and live weather context: ' + liveContext : ''), tier: bs.model, signal: ctl.current.signal,
         onText: f => {
-          if (first) { first = false; robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
+          if (first) { first = false; setThinkingTask(''); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           const clean = f.replace(/\[\[[\s\S]*$/, '').trim()
           setCaption(clean.slice(-140))
           setCur(prev => prev ? { ...prev, msgs: prev.msgs.filter(m => !(m as any).live).concat([{ r: 'a', t: clean, live: true } as any]) } : prev)
@@ -298,7 +309,7 @@ export function QuorlythBot() {
       if (e.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: e.message?.includes('OPENAI_API_KEY') ? 'The AI key is missing on the server. Add OPENAI_API_KEY to your .env file and restart npm run dev:ai.' : 'Sorry, that did not go through. ' + (e.message || '') }] }; persist(c) }
       else setCur(c)
     }
-    setBusy(false); setStatus('Online'); ctl.current = null
+    setBusy(false); setThinkingTask(''); setStatus('Online'); ctl.current = null
   }
 
   async function skill(id: string, arg = '') {
@@ -541,7 +552,10 @@ export function QuorlythBot() {
     }
     const openList = /\b(open|show|take me to|go to|view|browse)\b/i.test(s) && /\b(communities|all communities|community list)\b/i.test(s) && !/\bcommunity\s+(?:called|named)\b/i.test(s)
     if (openList) return go('/communities', 'Opening the communities page now.')
-    const askedToOpen = /\b(open|show|take me to|go to|view|enter)\b/i.test(s) && /\bcommunity\b/i.test(s)
+    const wantsOpen = /\b(open|show|take me to|go to|view|enter|visit)\b/i.test(s)
+    const matchedNamedCommunity = wantsOpen ? a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x,y) => y.name.length-x.name.length)[0] : undefined
+    if (matchedNamedCommunity && !/\b(community list|all communities)\b/i.test(s)) return go('/communities/' + matchedNamedCommunity.id, 'Opening ' + matchedNamedCommunity.name + ' now.')
+    const askedToOpen = wantsOpen && /\bcommunity\b/i.test(s)
     if (askedToOpen) {
       const explicit = s.match(/\b(?:community|called|named)\s+["“]?(.+?)["”]?\s*$/i)
       const byName = explicit?.[1] ? a.data.communities.find(x => x.name.toLowerCase() === explicit[1].trim().replace(/["“”]+$/g, '').toLowerCase()) : undefined
@@ -727,7 +741,7 @@ export function QuorlythBot() {
                             {i === msgs.length - 1 && !busy && <button aria-label="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /></button>}</div>
                         </div>
                       ))}
-                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma typing" role="status" aria-label="QuorlythBot is thinking"><span>QuorlythBot is thinking</span><i /><i /><i /></div>}
+                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma typing" role="status" aria-label="QuorlythBot is thinking"><span>QuorlythBot is thinking</span>{thinkingTask && <small className="qbot-task-status">{thinkingTask}</small>}<i /><i /><i /></div>}
                     </div>
                   )
                 ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
