@@ -115,12 +115,13 @@ function Public({ id }: { id: string }) {
     return acc
   }, {})).sort((x, y) => y.backings - x.backings || y.ideas - x.ideas).slice(0, 5)
   const isPlatformOwner = id === a.data.ownerId || !!(q as any)?.platformAdmin
+  const isCommunityCreator = created.length > 0
   return (
     <>
       <div className="head"><div><button className="chip" onClick={() => nav(-1)}>Back</button></div><div className="public-profile-actions">{id === a.me?.id && <button className="btn" onClick={() => nav('/me')}><Icon name="edit" size={16} />Edit profile</button>}<button className="btn" onClick={() => nav('/messages')}><Icon name="message" size={16} />Messages</button></div></div>
       <div className="glass pad">
         <div className="pw"><span className="avx" style={{ width: 112, height: 112 }}><Av id={id} size={112} /></span>
-          <div style={{ minWidth: 0 }}><div className="profile-name-row"><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{isPlatformOwner && <span className="owner-badge profile-owner-badge" title="Verified platform owner"><span aria-hidden="true">✦</span> PLATFORM OWNER</span>}</div>{created.length > 0 && <p className="dim" style={{ marginTop: 6 }}>{created.length} community creator</p>}{q?.head && <p className="mut" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
+          <div style={{ minWidth: 0 }}><div className="profile-name-row"><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{isPlatformOwner && <span className="owner-badge profile-owner-badge" title="Verified platform owner"><span aria-hidden="true">✦</span> PLATFORM OWNER</span>}{isCommunityCreator && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}</div>{created.length > 0 && <div className="profile-creator-proof"><span className="creator-badge"><span aria-hidden="true">✦</span> COMMUNITY CREATOR</span><p className="dim">{created.length} {created.length === 1 ? 'community' : 'communities'} started</p></div>}{q?.head && <p className="mut" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
         <div className="stat3" style={{ marginTop: 28 }}><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{communities.length}</p></div></div>
       </div>
       <ShareCard title="Profile link" url={location.origin + '/me/' + id} sub="Scan or open to view this profile." />
