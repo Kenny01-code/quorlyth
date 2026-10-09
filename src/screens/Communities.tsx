@@ -33,14 +33,19 @@ function Pick({ label, value, onChange, opts }: { label: string; value: string; 
 function List() {
   const a = useApp()
   const nav = useNavigate()
-  const { data, owner } = a
+  const { data } = a
+  const [filter, setFilter] = useState<'all' | 'owned' | 'joined' | 'discover'>('all')
   const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone' }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const members = (id: string) => Object.keys(data.members).filter(u => data.members[u]?.[id]).length
-  const shown = data.communities.filter(c => c.vis !== 'unlisted' || a.canManageCommunity(c.id) || a.joined(c.id))
+  const visible = data.communities.filter(c => c.vis !== 'unlisted' || a.canManageCommunity(c.id) || a.joined(c.id))
+  const shown = visible.filter(c => filter === 'owned' ? a.canManageCommunity(c.id) : filter === 'joined' ? a.joined(c.id) && !a.canManageCommunity(c.id) : filter === 'discover' ? !a.joined(c.id) && !a.canManageCommunity(c.id) && c.vis !== 'unlisted' : true)
   return (
     <>
       <Head kicker="Communities" title="Where ideas gather." right={a.me ? <button className="btn p" onClick={() => document.getElementById('newc')?.scrollIntoView({ behavior: 'smooth' })}><Icon name="contribute" size={16} />New community</button> : null} />
+      <div className="acts" style={{ margin: '12px 0 18px', flexWrap: 'wrap' }}>
+        {([['all', 'All communities'], ['owned', 'My communities'], ['joined', 'Joined'], ['discover', 'Discover']] as const).map(([key, label]) => <button key={key} className={cn('chip', filter === key && 'on')} onClick={() => setFilter(key)}>{label}</button>)}
+      </div>
       {shown.length ? (
         <div className="grid g3">
           {shown.map(c => {
@@ -86,7 +91,7 @@ type Preview = null | 'visitor' | 'member'
 function Detail({ cid }: { cid: string }) {
   const a = useApp()
   const nav = useNavigate()
-  const { data, owner } = a
+  const { data } = a
   const c = data.communities.find(x => x.id === cid)
   const [tab, setTab] = useState(0)
   const [preview, setPreview] = useState<Preview>(() => (new URLSearchParams(location.search).get('preview') as Preview) || null)
