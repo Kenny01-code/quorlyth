@@ -17,7 +17,21 @@ export function Dashboard() {
 function Inner() {
   const a = useApp()
   const nav = useNavigate()
-  const { data, owner, me } = a
+  const { data: rawData, owner, me } = a
+  const ownedCommunities = rawData.communities.filter(c => a.ownsCommunity(c.id))
+  const communityOwner = !owner && ownedCommunities.length > 0
+  const ownedCommunityIds = new Set(ownedCommunities.map(c => c.id))
+  const scopedIdeas = communityOwner ? rawData.ideas.filter(i => ownedCommunityIds.has(i.cid)) : rawData.ideas
+  const scopedIdeaIds = new Set(scopedIdeas.map(i => i.id))
+  const data = communityOwner ? {
+    ...rawData,
+    communities: ownedCommunities,
+    ideas: scopedIdeas,
+    reviews: Object.fromEntries(Object.entries(rawData.reviews).filter(([id]) => scopedIdeaIds.has(id))),
+    promotions: rawData.promotions.filter(p => scopedIdeaIds.has(p.ideaId)),
+  } : rawData
+  const scopedMemberIds = new Set(Object.entries(rawData.members).filter(([, memberships]) => Object.entries(memberships || {}).some(([cid, joined]) => joined && (communityOwner ? ownedCommunityIds.has(cid) : true))).map(([uid]) => uid))
+  const memberCount = communityOwner ? scopedMemberIds.size : Object.keys(data.members).length
   const initialSetup = { name: '', firstCommunity: '' }
   const [setupDraft, setSetupDraft, clearSetupDraft] = useDraftState(`q-draft:${a.me?.id}:dashboard-setup`, initialSetup)
   const { name, firstCommunity: c1 } = setupDraft
@@ -53,18 +67,18 @@ function Inner() {
     .sort((x, y) => y.votes - x.votes || y.idea.at - x.idea.at).slice(0, 3)
   const list = ranked.length ? ranked : recent
   const dd = (() => { const d = 864e5, t0 = new Date().setHours(0, 0, 0, 0), v: number[] = [], t: number[] = []; for (let i = 29; i >= 0; i--) { const st = t0 - i * d; v.push(data.ideas.filter(x => x.at >= st && x.at < st + d).length); t.push(st) } return { v, d: t } })()
-  const stats: [string, number][] = [['Waiting for review', pending], ['Ideas shared', data.ideas.length], ['Members', Object.keys(data.members).length], ['Ready to share', data.promotions.length]]
+  const stats: [string, number][] = [['Waiting for review', pending], ['Ideas shared', data.ideas.length], ['Members', memberCount], ['Ready to share', data.promotions.length]]
 
   return (
     <>
-      <Head kicker={s?.name || 'Your space'} title={owner ? (pending ? `${pending} idea${pending === 1 ? ' is' : 's are'} waiting for you.` : 'You are all caught up.') : `Welcome, ${me!.name.split(' ')[0]}.`}
-        right={<button className="btn p" onClick={() => nav(owner ? '/queue' : '/communities')}><Icon name={owner ? 'queue' : 'community'} />{owner ? 'Open review queue' : 'Browse communities'}</button>} />
+      <Head kicker={communityOwner ? (data.communities.length === 1 ? data.communities[0].name : 'My communities') : s?.name || 'Your space'} title={owner ? (pending ? `${pending} idea${pending === 1 ? ' is' : 's are'} waiting for you.` : 'You are all caught up.') : communityOwner ? 'Your community is taking shape.' : `Welcome, ${me!.name.split(' ')[0]}.`}
+        right={<button className="btn p" onClick={() => nav(owner ? '/queue' : communityOwner ? '/analytics' : '/communities')}><Icon name={owner ? 'queue' : communityOwner ? 'insight' : 'community'} />{owner ? 'Open review queue' : communityOwner ? 'View analytics' : 'Browse communities'}</button>} />
       {s?.ann && <div className="glass pad" style={{ marginBottom: 18, display: 'flex', gap: 14 }}><Icon name="spark" size={20} /><div><p className="dim">Announcement</p><p style={{ marginTop: 4 }}>{s.ann}</p></div></div>}
       <div className="grid g4" style={{ marginBottom: 18 }}>
         {stats.map(([l, v]) => <div key={l} className="glass pad"><p className="dim">{l}</p><Num n={v} /></div>)}
       </div>
       <div className="grid g32">
-      <div className="glass pad"><div className="head" style={{ marginBottom: 10 }}><div><h3>Ideas over time</h3><p className="dim">Last 30 days</p></div>{owner && <button className="chip" onClick={() => nav('/analytics')}>Open analytics</button>}</div>
+      <div className="glass pad"><div className="head" style={{ marginBottom: 10 }}><div><h3>Ideas over time</h3><p className="dim">Last 30 days</p></div>{(owner || communityOwner) && <button className="chip" onClick={() => nav('/analytics')}>Open analytics</button>}</div>
         {data.ideas.length ? <div className="chs"><AreaChart dd={dd} o={{ sm: true, pts: false, lab: false, avg: false, ma: false, grid: true }} /></div> : <Empty icon="insight" title="No ideas yet" text="Ideas will appear here as members share them." />}</div>
       <div className="glass pad">
         <h3 style={{ marginBottom: 8 }}>{ranked.length ? 'Top picks from QuorlythBot' : 'Latest ideas'}</h3>
