@@ -228,10 +228,20 @@ function CommunitySettings({ c }: { c: Community }) {
   return (
     <div className="glass pad" style={{ maxWidth: 760 }}>
       <h3>Community settings</h3><p className="dim" style={{ marginTop: 4 }}>Your unfinished changes are saved as a draft on this device.</p>
+      <div style={{ margin: '16px 0 20px' }}>
+        <Cover c={{ ...c, cover: f.cover }} big />
+        <p className="dim" style={{ marginTop: 8 }}>Live preview. Choosing a cover style saves it to the community immediately; use Save changes for the other settings.</p>
+      </div>
       <label className="field"><span>Name</span><input value={f.name} maxLength={60} onChange={e => setF({ ...f, name: e.target.value })} /></label>
       <label className="field"><span>What is it for</span><textarea value={f.purpose} maxLength={300} onChange={e => setF({ ...f, purpose: e.target.value })} /></label>
       <Pick label="Icon" value={f.icon} onChange={v => setF({ ...f, icon: v })} opts={ICONS.map(i => [i, <Icon key={i} name={i} size={18} />])} />
-      <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={() => setF({ ...f, cover: key })}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
+      <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={async () => {
+          setF({ ...f, cover: key })
+          if (key !== (c.cover || 'a')) {
+            const saved = await a.saveCommunity(c.id, { cover: key })
+            if (!saved) setF(current => ({ ...current, cover: c.cover || 'a' }))
+          }
+        }}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
       <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v as any })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
       <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v as any })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner only']]} />
       <label className="field"><span>Welcome message</span><textarea value={f.welcome} maxLength={400} onChange={e => setF({ ...f, welcome: e.target.value })} placeholder="Shown to new members" /></label>
