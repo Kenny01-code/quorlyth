@@ -37,10 +37,10 @@ function List() {
   const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone' }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const members = (id: string) => Object.keys(data.members).filter(u => data.members[u]?.[id]).length
-  const shown = data.communities.filter(c => owner || c.vis !== 'unlisted' || a.joined(c.id))
+  const shown = data.communities.filter(c => c.vis !== 'unlisted' || a.canManageCommunity(c.id) || a.joined(c.id))
   return (
     <>
-      <Head kicker="Communities" title="Where ideas gather." right={owner ? <button className="btn p" onClick={() => document.getElementById('newc')?.scrollIntoView({ behavior: 'smooth' })}><Icon name="contribute" size={16} />New community</button> : null} />
+      <Head kicker="Communities" title="Where ideas gather." right={a.me ? <button className="btn p" onClick={() => document.getElementById('newc')?.scrollIntoView({ behavior: 'smooth' })}><Icon name="contribute" size={16} />New community</button> : null} />
       {shown.length ? (
         <div className="grid g3">
           {shown.map(c => {
@@ -49,21 +49,22 @@ function List() {
               <div key={c.id} className="glass lift ccl">
                 <Cover c={c} />
                 <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{c.vis === 'unlisted' && <span className="chip">Unlisted</span>}{c.arch && <span className="chip on">Archived</span>}</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{c.vis === 'unlisted' && <span className="chip">Unlisted</span>}{c.arch && <span className="chip on">Archived</span>}{a.canManageCommunity(c.id) && <span className="chip">Owned by you</span>}</div>
                   <h3 style={{ fontSize: 20, fontWeight: 300 }}>{c.name}</h3>
                   <p className="mut">{c.purpose}</p>
+                  <p className="dim">Created by {c.ownerId || c.createdBy ? a.nm((c.ownerId || c.createdBy)!) : 'Community creator'}</p>
                   <p className="dim" style={{ marginTop: 'auto' }}>{m} member{m === 1 ? '' : 's'}, {n} idea{n === 1 ? '' : 's'}</p>
                   <div className="acts" style={{ margin: 0 }}>
                     <button className="btn p" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id)}>Open</button>
-                    {owner && <button className="btn" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id + '?preview=member')}><Icon name="eye2" size={16} />View community</button>}
+                    {a.canManageCommunity(c.id) && <button className="btn" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id + '?preview=member')}><Icon name="eye2" size={16} />View community</button>}
                   </div>
                 </div>
               </div>
             )
           })}
         </div>
-      ) : <Empty icon="community" title="No communities yet" text={owner ? 'Create the first one below.' : 'The owner has not created any yet.'} />}
-      {owner && (
+      ) : <Empty icon="community" title="No communities yet" text={a.me ? 'Create a community or discover one shared by others.' : 'Sign in to create and join communities.'} />}
+      {a.me && (
         <div className="glass pad" id="newc" style={{ marginTop: 22, maxWidth: 720 }}>
           <h3>New community</h3>
           <p className="dim" style={{ marginTop: 4 }}>Your unfinished changes are saved as a draft on this device.</p>
@@ -95,7 +96,7 @@ function Detail({ cid }: { cid: string }) {
   const [f, setF, clearIdeaDraft] = useDraftState(`q-draft:${a.me?.id}:idea:${cid}`, emptyIdea)
   if (!c) return <Empty icon="community" title="Community not found" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back</button></Empty>
 
-  const own = owner && !preview
+  const own = a.canManageCommunity(cid) && !preview
   const joined = preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid)
   const spaceOk = preview ? preview === 'member' || !data.settings?.appr : a.canPost()
   const rule = c.post || 'anyone'
