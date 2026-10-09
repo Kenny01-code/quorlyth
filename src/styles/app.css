@@ -650,3 +650,26 @@ nav .lgb{flex:none}nav b{flex:none}
   .profile-owner-badge{white-space:normal}
 }
 @media(prefers-reduced-motion:reduce){.creator-badge:after{animation:none}}
+
+
+/* Custom identity system: platform verification is distinct from community status. */
+.platform-verified-shield{position:relative;display:inline-flex;align-items:center;gap:7px;padding:6px 10px 6px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.27);background:linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.025) 55%,rgba(255,255,255,.09));box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 0 0 1px rgba(255,255,255,.025),0 0 28px -17px rgba(255,255,255,.8);color:#fff;white-space:nowrap;overflow:hidden}
+.platform-verified-shield:before{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.14) 47%,transparent 65%);transform:translateX(-120%);animation:platformShieldSweep 7s ease-in-out infinite;pointer-events:none}
+.platform-verified-shield svg{width:25px;height:28px;flex:none;fill:rgba(255,255,255,.09);stroke:#fff;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(255,255,255,.28));animation:platformShieldPulse 4s ease-in-out infinite}
+.platform-verified-shield>span{font-size:8px;font-weight:700;letter-spacing:.13em}
+@keyframes platformShieldSweep{0%,65%{transform:translateX(-120%)}85%,100%{transform:translateX(120%)}}
+@keyframes platformShieldPulse{0%,100%{filter:drop-shadow(0 0 3px rgba(255,255,255,.16))}50%{filter:drop-shadow(0 0 8px rgba(255,255,255,.45))}}
+.creator-badge{border-color:rgba(255,255,255,.2);background:linear-gradient(120deg,rgba(255,255,255,.09),rgba(255,255,255,.018));}
+.community-member-panel{overflow:hidden}
+.community-member-row{gap:13px;align-items:center;padding:15px 0;border-bottom:1px solid rgba(255,255,255,.075)}
+.community-member-row:last-child{border-bottom:0}
+.community-member-row>.t{min-width:150px;flex:1}
+.community-member-badge{display:inline-flex;align-items:center;gap:5px;max-width:100%;width:max-content;margin-top:7px;padding:4px 8px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.015));color:#ddd;font-size:9px;letter-spacing:.04em;box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.community-member-badge>span{color:#fff}
+.community-member-actions{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.community-badge-select{margin:0;min-width:175px}
+.community-badge-select>span{font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.community-badge-select select{min-width:175px;max-width:220px;padding:9px 10px;border:1px solid rgba(255,255,255,.16);border-radius:11px;background:#101010;color:#f5f5f5;font:inherit;font-size:11px}
+.community-badge-select option{background:#111;color:#fff}
+@media(max-width:760px){.community-member-row{align-items:flex-start;flex-wrap:wrap}.community-member-row>.t{min-width:calc(100% - 60px)}.community-member-actions{width:100%;padding-left:54px}.community-badge-select,.community-badge-select select{width:100%;max-width:none}.platform-verified-shield>span{font-size:7px}}
+@media(prefers-reduced-motion:reduce){.platform-verified-shield:before,.platform-verified-shield svg{animation:none!important}}
