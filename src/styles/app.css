@@ -595,3 +595,58 @@ nav .lgb{flex:none}nav b{flex:none}
 @media(max-width:900px){.chat-workspace{grid-template-columns:minmax(230px,280px) minmax(0,1fr);gap:10px}.chat-thread-head{padding:15px}}
 @media(max-width:700px){.chat-size-controls{justify-content:center}.chat-workspace{display:block;height:min(76dvh,780px);min-height:540px}.chat-workspace>.chat-sidebar,.chat-workspace>.chat-thread{height:100%;min-height:0}.chat-sidebar.has-active{display:none}.chat-thread:not(.has-active){display:none}.public-community-grid{grid-template-columns:1fr}.profile-impact-grid{grid-template-columns:1fr}.profile-impact-card{padding:16px}.public-profile-actions{justify-content:flex-end}.profile-section-heading{align-items:flex-start}.profile-section-mark{width:37px;height:37px}.public-community-card .pw{align-items:flex-start}.public-community-card .qrb{width:74px;height:74px}}
 @media(prefers-reduced-motion:reduce){.owner-badge,.owner-badge:before,.admin-orbit,.chat-orbit,.chat-orbit-core,.profile-impact-card,.public-community-card,.profile-leader-row{animation:none!important;transition:none!important}}
+
+
+/* Creator identity system */
+.creator-badge{position:relative;isolation:isolate;display:inline-flex;align-items:center;gap:5px;max-width:100%;width:max-content;padding:4px 8px;border:1px solid rgba(255,255,255,.21);border-radius:999px;background:linear-gradient(120deg,rgba(255,255,255,.105),rgba(255,255,255,.025));color:#e6e6e6;font-size:8px;font-weight:600;letter-spacing:.11em;line-height:1.25;white-space:nowrap;box-shadow:inset 0 1px 0 rgba(255,255,255,.13);overflow:hidden}
+.creator-badge:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 20%,rgba(255,255,255,.12) 48%,transparent 68%);transform:translateX(-120%);animation:creatorBadgeSweep 7s ease-in-out infinite}
+@keyframes creatorBadgeSweep{0%,72%{transform:translateX(-120%)}92%,100%{transform:translateX(120%)}}
+.profile-creator-proof{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:9px}
+.profile-creator-proof .dim{margin:0;font-size:11px}
+.community-creator-identity{display:flex;align-items:center;gap:10px;min-width:0}
+.community-creator-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.community-creator-name{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.community-creator-name .lk{font-size:12px}
+.chat-person-copy .creator-badge{margin-top:4px;align-self:flex-start}
+.chat-person-copy{min-width:0}
+.chat-people-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+.chat-person{min-width:0;overflow:hidden}
+.chat-person-copy b{max-width:100%}
+.chat-workspace{width:100%;min-width:0}
+.chat-sidebar,.chat-thread{min-width:0;min-height:0}
+.chat-thread{display:flex;flex-direction:column}
+.chat-thread-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.chat-composer{flex:none;position:relative;z-index:2}
+.chat-conversation-copy{min-width:0;flex:1}
+.chat-conversation-title{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chat-title-inline{display:flex;align-items:center;min-width:0;gap:5px;flex-wrap:wrap}
+.chat-title-inline b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-preview{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-error{word-break:break-word;white-space:pre-wrap}
+@media(max-width:700px){
+  .chat-workspace{width:100%;height:calc(100dvh - 230px);min-height:440px;max-height:850px}
+  .chat-sidebar,.chat-thread{width:100%;height:100%;max-height:100%}
+  .chat-sidebar-head,.chat-thread-head{min-width:0}
+  .chat-conversation{gap:10px;padding:11px}
+  .chat-conversation-title{align-items:flex-start}
+  .chat-conversation-title .owner-badge{display:none}
+  .chat-create{max-height:calc(100dvh - 200px);overflow:hidden;display:flex;flex-direction:column}
+  .chat-people-list{grid-template-columns:1fr;min-height:80px;max-height:min(34dvh,300px);overflow:auto}
+  .chat-person{padding:9px}
+  .chat-person .av{flex:none}
+  .chat-create-footer{flex:none}
+  .chat-thread-body{padding-bottom:18px}
+  .public-community-card .qrb{object-fit:contain}
+  .profile-name-row h2{overflow-wrap:anywhere}
+}
+@media(max-width:420px){
+  .chat-size-controls{gap:4px}
+  .chat-size-controls>span{font-size:8px;margin-right:1px}
+  .chat-size-controls button{padding:6px 8px;font-size:9px}
+  .chat-topline{gap:10px}
+  .chat-top-actions .btn{padding:10px 8px!important;font-size:11px}
+  .chat-title{font-size:36px}
+  .chat-workspace{height:calc(100dvh - 215px);min-height:420px}
+  .profile-owner-badge{white-space:normal}
+}
+@media(prefers-reduced-motion:reduce){.creator-badge:after{animation:none}}
