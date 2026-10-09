@@ -160,6 +160,18 @@ export function Messages() {
         {groupOpen && <div className="chat-create-footer"><span className="dim">{selectedPeople.length} selected · choose at least 2</span><button className="btn p" disabled={selectedPeople.length < 2 || !groupName.trim()} onClick={() => void createGroup()}>Create group <Icon name="arrow" size={16} /></button></div>}
       </div>}
       <div className={cn('chat-workspace', 'size-' + workspaceSize)}>
+        <nav className="chat-rail" aria-label="Quorlyth navigation">
+          <button className="chat-rail-brand" onClick={() => nav('/dashboard')} aria-label="Quorlyth home">Q</button>
+          <div className="chat-rail-links">
+            <button className="chat-rail-link" onClick={() => nav('/dashboard')} title="Dashboard" aria-label="Dashboard"><Icon name="grid" size={19} /></button>
+            <button className="chat-rail-link" onClick={() => nav('/communities')} title="Communities" aria-label="Communities"><Icon name="users" size={19} /></button>
+            <button className="chat-rail-link" onClick={() => nav('/ideas')} title="Ideas" aria-label="Ideas"><Icon name="idea" size={19} /></button>
+            <button className="chat-rail-link active" onClick={() => nav('/messages')} title="Messages" aria-label="Messages"><Icon name="message" size={19} /></button>
+            <button className="chat-rail-link" onClick={() => nav('/queue')} title="Review queue" aria-label="Review queue"><Icon name="layers" size={19} /></button>
+            <button className="chat-rail-link" onClick={() => nav('/analytics')} title="Analytics" aria-label="Analytics"><Icon name="chart" size={19} /></button>
+          </div>
+          <button className="chat-rail-bottom" onClick={() => nav('/settings')} title="Settings" aria-label="Settings"><Icon name="settings" size={19} /></button>
+        </nav>
         <aside className={cn('glass chat-sidebar', active && 'has-active')}>
           <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
           <label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" /></label>
@@ -200,6 +212,32 @@ export function Messages() {
             <>Say the thing<br />worth sharing.</>
           ][rotatingLine]}</h2><p className="mut">Choose a conversation or start a new one. Share a thought, build on an idea, make something happen.</p><div className="chat-no-actions"><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={16} />Start a conversation</button><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false) }}><Icon name="users" size={16} />Create a group</button></div></div>}
         </div>
+        <aside className="glass chat-details" aria-label="Conversation details">
+          {active ? <>
+            <div className="chat-details-cover"><span className="chat-details-orbit"><Icon name={active.type === 'group' ? 'users' : 'message'} size={25} /></span><span className="chat-details-kicker">CONVERSATION SPACE</span></div>
+            <div className="chat-details-identity">
+              {active.type === 'group' ? <span className="chat-details-avatar"><Icon name="users" size={25} /></span> : <Av id={active.members.find(id => id !== meId) || ''} size={62} />}
+              <h3>{titleOf(active)}</h3><p>{active.type === 'group' ? 'Group conversation' : 'Private conversation'}</p>
+              <span className="chat-detail-status"><i />{active.type === 'group' ? active.members.length + ' members' : 'Direct connection'}</span>
+            </div>
+            <div className="chat-details-section"><span className="chat-details-label">SPACE DETAILS</span>
+              <div className="chat-detail-row"><span className="chat-detail-icon"><Icon name="lock" size={15} /></span><span><b>Private by design</b><small>Visible only to conversation members</small></span></div>
+              <div className="chat-detail-row"><span className="chat-detail-icon"><Icon name="calendar" size={15} /></span><span><b>Created</b><small>{formatTime(active.createdAt) || 'Recently'}</small></span></div>
+              <div className="chat-detail-row"><span className="chat-detail-icon"><Icon name="message" size={15} /></span><span><b>Messages</b><small>{activeMessages.length} in this conversation</small></span></div>
+            </div>
+            <div className="chat-details-section chat-details-members"><span className="chat-details-label">PEOPLE HERE <span>{active.members.length}</span></span>
+              {active.members.map(id => <button key={id} className="chat-detail-member" onClick={() => nav(profileLink(id))}><Av id={id} size={34} /><span><b>{a.nm(id)}{id === meId ? ' (you)' : ''}</b><small>{isPlatformAdmin(id) ? 'Platform owner' : isCommunityCreator(id) ? 'Community creator' : 'Quorlyth member'}</small></span><Icon name="arrow-up-right" size={15} /></button>)}
+            </div>
+            <div className="chat-details-note"><span className="chat-details-note-mark"><Icon name="spark" size={15} /></span><p>Good ideas start with people. Keep the conversation thoughtful and build something together.</p></div>
+          </> : <>
+            <div className="chat-details-cover"><span className="chat-details-orbit"><Icon name="spark" size={25} /></span><span className="chat-details-kicker">YOUR SPACE</span></div>
+            <div className="chat-details-empty"><h3>Every connection starts somewhere.</h3><p>Choose a conversation to see its people, activity, and details here.</p></div>
+            <div className="chat-details-section"><span className="chat-details-label">QUICK ACTIONS</span>
+              <button className="chat-detail-action" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={16} />Start a conversation<Icon name="arrow-up-right" size={15} /></button>
+              <button className="chat-detail-action" onClick={() => { setGroupOpen(true); setPeopleOpen(false) }}><Icon name="users" size={16} />Create a group<Icon name="arrow-up-right" size={15} /></button>
+            </div>
+          </>}
+        </aside>
       </div>
       <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
     </div>
