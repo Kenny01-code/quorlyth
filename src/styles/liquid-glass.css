@@ -1,0 +1,305 @@
+/* Quorlyth Liquid Glass — messaging and assistant phase 1.
+   Scoped overrides: preserve component behavior and existing theme tokens. */
+:root {
+  --q-liquid-ink: #030303;
+  --q-liquid-surface: rgba(255,255,255,.035);
+  --q-liquid-surface-hi: rgba(255,255,255,.075);
+  --q-liquid-edge: rgba(255,255,255,.16);
+  --q-liquid-edge-soft: rgba(255,255,255,.085);
+  --q-liquid-specular: rgba(255,255,255,.24);
+  --q-liquid-shadow: 0 28px 90px rgba(0,0,0,.58);
+}
+.chat-page {
+  isolation: isolate;
+  position: relative;
+  color: rgba(255,255,255,.92);
+}
+.chat-page:before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 18% 12%, rgba(255,255,255,.045), transparent 38%),
+    radial-gradient(ellipse at 84% 82%, rgba(255,255,255,.025), transparent 36%),
+    #030303;
+}
+.chat-page .chat-sidebar,
+.chat-page .chat-thread,
+.chat-page .chat-create,
+.chat-page .chat-signin {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    linear-gradient(148deg, rgba(255,255,255,.075) 0%, rgba(255,255,255,.025) 26%, rgba(255,255,255,.012) 62%, rgba(255,255,255,.045) 100%) !important;
+  border: 1px solid var(--q-liquid-edge) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    inset 1px 0 0 rgba(255,255,255,.045),
+    inset 0 -1px 0 rgba(255,255,255,.055),
+    0 30px 80px rgba(0,0,0,.48),
+    0 2px 8px rgba(0,0,0,.35) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(135%);
+  backdrop-filter: blur(34px) saturate(135%);
+}
+.chat-page .chat-sidebar:before,
+.chat-page .chat-thread:before,
+.chat-page .chat-create:before,
+.chat-page .chat-signin:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(132deg, rgba(255,255,255,.23), transparent 22%, transparent 65%, rgba(255,255,255,.07));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: .8;
+  z-index: 2;
+}
+.chat-page .chat-workspace { gap: 14px; }
+.chat-page .chat-sidebar { border-radius: 25px !important; }
+.chat-page .chat-thread { border-radius: 27px !important; }
+.chat-page .chat-create { border-radius: 23px !important; }
+.chat-page .chat-topline { margin-bottom: 18px; }
+.chat-page .chat-heading-mark,
+.chat-page .chat-icon-btn,
+.chat-page .chat-group-avatar,
+.chat-page .chat-empty-icon {
+  background: linear-gradient(145deg, rgba(255,255,255,.13), rgba(255,255,255,.025)) !important;
+  border: 1px solid rgba(255,255,255,.17) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 8px 24px rgba(0,0,0,.25) !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.chat-page .chat-icon-btn { transition: transform .25s ease, background .25s ease, border-color .25s ease, box-shadow .25s ease; }
+.chat-page .chat-icon-btn:hover { transform: translateY(-2px); background: rgba(255,255,255,.13) !important; border-color: rgba(255,255,255,.3) !important; }
+.chat-page .chat-filter,
+.chat-page .chat-search {
+  background: rgba(0,0,0,.32) !important;
+  border: 1px solid rgba(255,255,255,.105) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 8px 22px rgba(0,0,0,.14);
+  transition: border-color .25s ease, background .25s ease, box-shadow .25s ease;
+}
+.chat-page .chat-filter:focus-within,
+.chat-page .chat-search:focus-within {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.27) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 3px rgba(255,255,255,.035);
+}
+.chat-page .chat-conversation,
+.chat-page .chat-person {
+  position: relative;
+  border: 1px solid transparent !important;
+  border-radius: 17px !important;
+  transition: background .28s ease, border-color .28s ease, transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s ease !important;
+}
+.chat-page .chat-conversation:hover,
+.chat-page .chat-person:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(255,255,255,.075), rgba(255,255,255,.018)) !important;
+  border-color: rgba(255,255,255,.095) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.085), 0 12px 28px rgba(0,0,0,.24) !important;
+}
+.chat-page .chat-conversation.active {
+  background: linear-gradient(135deg, rgba(255,255,255,.105), rgba(255,255,255,.035)) !important;
+  border-color: rgba(255,255,255,.19) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 26px rgba(255,255,255,.018), 0 10px 30px rgba(0,0,0,.25) !important;
+}
+.chat-page .chat-thread-head {
+  background: linear-gradient(180deg, rgba(255,255,255,.035), transparent) !important;
+  border-bottom-color: rgba(255,255,255,.085) !important;
+}
+.chat-page .chat-thread-body {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.025), transparent 54%),
+    transparent !important;
+}
+.chat-page .chat-bubble {
+  border-radius: 19px !important;
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+.chat-page .chat-bubble.theirs {
+  background: linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.022) 76%) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.105), inset 0 -1px 0 rgba(255,255,255,.025), 0 12px 28px rgba(0,0,0,.17) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+.chat-page .chat-bubble.mine {
+  background: linear-gradient(145deg, #f8f8f8 0%, #d9d9d9 58%, #bdbdbd 100%) !important;
+  border: 1px solid rgba(255,255,255,.85) !important;
+  color: #080808 !important;
+  box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(0,0,0,.08), 0 10px 30px rgba(255,255,255,.075) !important;
+}
+.chat-page .chat-compose-glass {
+  background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.018) 60%, rgba(255,255,255,.04)) !important;
+  border: 1px solid rgba(255,255,255,.19) !important;
+  border-radius: 22px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.17), inset 0 -1px 0 rgba(255,255,255,.035), 0 18px 45px rgba(0,0,0,.32) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(140%);
+  backdrop-filter: blur(30px) saturate(140%);
+}
+.chat-page .chat-compose-glass:focus-within {
+  border-color: rgba(255,255,255,.3) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 0 0 3px rgba(255,255,255,.035), 0 18px 45px rgba(0,0,0,.36) !important;
+}
+.chat-page .chat-send {
+  background: linear-gradient(145deg, #fff, #cfcfcf) !important;
+  color: #050505 !important;
+  border: 1px solid rgba(255,255,255,.9) !important;
+  box-shadow: inset 0 1px 0 #fff, 0 8px 24px rgba(255,255,255,.1) !important;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.chat-page .chat-send:hover:not(:disabled) { transform: translateY(-1px) scale(1.025); filter: brightness(1.04); }
+.chat-page .chat-error { border-color: rgba(255,255,255,.18) !important; }
+.chat-page button:focus-visible,
+.chat-page [role="button"]:focus-visible,
+.chat-page input:focus-visible,
+.chat-page textarea:focus-visible {
+  outline: 2px solid rgba(255,255,255,.72);
+  outline-offset: 3px;
+}
+/* Assistant shell: black optical glass, with silver edge reflections around the live canvas. */
+.bot .ast-stage,
+.bot .bstage {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 48% 18%, rgba(255,255,255,.115), transparent 37%),
+    radial-gradient(ellipse at 50% 105%, rgba(255,255,255,.045), transparent 54%),
+    linear-gradient(145deg, rgba(255,255,255,.065), rgba(255,255,255,.008) 38%, rgba(255,255,255,.025) 72%, rgba(255,255,255,.055)),
+    #020202 !important;
+  border: 1px solid rgba(255,255,255,.2) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 50px rgba(255,255,255,.025), 0 28px 85px rgba(0,0,0,.62) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(130%);
+  backdrop-filter: blur(24px) saturate(130%);
+}
+.bot .ast-stage:after,
+.bot .bstage:after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(130deg, rgba(255,255,255,.1), transparent 20%, transparent 78%, rgba(255,255,255,.045));
+  opacity: .85;
+  z-index: 2;
+}
+.bot .ast-stage canvas,
+.bot .bstage canvas {
+  filter: contrast(1.07) brightness(1.04) saturate(.18);
+}
+.bot .ast-cap,
+.bot .bnm { text-shadow: 0 2px 20px rgba(0,0,0,.9); }
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .chat-page .chat-sidebar,
+  .chat-page .chat-thread,
+  .chat-page .chat-create {
+    animation: q-liquid-glint 10s ease-in-out infinite;
+  }
+  .chat-page .chat-thread { animation-delay: -3s; }
+  .chat-page .chat-create { animation-delay: -5s; }
+}
+@keyframes q-liquid-glint {
+  0%,100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.19), inset 1px 0 0 rgba(255,255,255,.04), 0 30px 80px rgba(0,0,0,.48); }
+  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 1px 0 0 rgba(255,255,255,.055), 0 32px 84px rgba(0,0,0,.52); }
+}
+@media(max-width:760px) {
+  .chat-page .chat-sidebar,.chat-page .chat-thread,.chat-page .chat-create { border-radius: 21px !important; }
+  .chat-page .chat-workspace { gap: 10px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .chat-page .chat-sidebar,.chat-page .chat-thread,.chat-page .chat-create { animation: none !important; }
+}
+
+
+/* HARDENED PASS — stronger optical-glass treatment, targeting actual component classes. */
+.chat-page {
+  width: min(100% - 36px, 1440px) !important;
+  padding: clamp(18px, 2.5vw, 36px) 0 42px !important;
+  color: #f7f7f7 !important;
+}
+.chat-page .chat-sidebar,
+.chat-page .chat-thread,
+.chat-page .chat-create,
+.chat-page .chat-signin {
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(255,255,255,.105), transparent 35%),
+    radial-gradient(ellipse at 100% 100%, rgba(255,255,255,.035), transparent 42%),
+    linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.025) 30%, rgba(255,255,255,.008) 62%, rgba(255,255,255,.05)),
+    rgba(4,4,4,.86) !important;
+  border: 1px solid rgba(255,255,255,.23) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 1px 0 0 rgba(255,255,255,.065), inset 0 -1px 0 rgba(255,255,255,.07), inset 0 0 44px rgba(255,255,255,.022), 0 34px 100px rgba(0,0,0,.72), 0 1px 0 rgba(255,255,255,.04) !important;
+}
+.chat-page .chat-sidebar:after,
+.chat-page .chat-thread:after,
+.chat-page .chat-create:after,
+.chat-page .chat-signin:after {
+  content: ""; position: absolute; inset: 1px; border-radius: inherit; pointer-events: none; z-index: 1; opacity: .7;
+  background: linear-gradient(118deg, rgba(255,255,255,.055), transparent 17%, transparent 74%, rgba(255,255,255,.035));
+}
+.chat-page .chat-sidebar-head,
+.chat-page .chat-thread-head,
+.chat-page .chat-compose-glass {
+  -webkit-backdrop-filter: blur(36px) saturate(145%) !important;
+  backdrop-filter: blur(36px) saturate(145%) !important;
+}
+.chat-page .chat-conversation,
+.chat-page .chat-person { background: rgba(255,255,255,.012) !important; }
+.chat-page .chat-conversation.active {
+  background: radial-gradient(ellipse at 0% 50%, rgba(255,255,255,.09), transparent 70%), linear-gradient(120deg, rgba(255,255,255,.105), rgba(255,255,255,.025)) !important;
+  border-color: rgba(255,255,255,.25) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 12px 34px rgba(0,0,0,.35) !important;
+}
+.chat-page .chat-bubble { position: relative; overflow: hidden; }
+.chat-page .chat-bubble:after {
+  content: ""; position: absolute; inset: 0 0 auto; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+}
+.chat-page .chat-bubble.theirs {
+  background: radial-gradient(ellipse at 0% 0%, rgba(255,255,255,.09), transparent 72%), linear-gradient(145deg, rgba(255,255,255,.09), rgba(255,255,255,.018) 80%) !important;
+  border-color: rgba(255,255,255,.18) !important;
+}
+.chat-page .chat-bubble.mine { background: linear-gradient(145deg, #fff, #e7e7e7 45%, #bcbcbc) !important; color: #050505 !important; }
+.chat-page .chat-compose-glass {
+  background: radial-gradient(ellipse at 10% 0%, rgba(255,255,255,.09), transparent 60%), linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.015) 65%, rgba(255,255,255,.04)), rgba(0,0,0,.65) !important;
+  border-color: rgba(255,255,255,.24) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 0 -1px 0 rgba(255,255,255,.04), 0 22px 58px rgba(0,0,0,.48) !important;
+}
+.chat-page .chat-compose-glass textarea,
+.chat-page .chat-search input,
+.chat-page .chat-group-name input { background: transparent !important; color: #fff !important; }
+.chat-page .chat-heading-mark,
+.chat-page .chat-icon-btn,
+.chat-page .chat-group-avatar,
+.chat-page .chat-empty-icon {
+  background: linear-gradient(145deg, rgba(255,255,255,.18), rgba(255,255,255,.025)) !important;
+  border-color: rgba(255,255,255,.24) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 12px 30px rgba(0,0,0,.32) !important;
+}
+.bot .bstage {
+  position: relative !important; isolation: isolate !important;
+  background: radial-gradient(ellipse at 50% 12%, rgba(255,255,255,.16), transparent 34%), radial-gradient(ellipse at 50% 100%, rgba(255,255,255,.065), transparent 58%), linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.012) 42%, rgba(255,255,255,.045)), #020202 !important;
+  border: 1px solid rgba(255,255,255,.25) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), inset 0 0 65px rgba(255,255,255,.035), 0 28px 90px rgba(0,0,0,.72) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(135%) !important; backdrop-filter: blur(32px) saturate(135%) !important;
+}
+.bot .bstage:before {
+  content: ""; position: absolute; inset: 1px; z-index: 1; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(125deg, rgba(255,255,255,.13), transparent 21%, transparent 73%, rgba(255,255,255,.055));
+}
+.bot .bstage canvas { position: relative; z-index: 0; filter: contrast(1.12) brightness(1.09) saturate(.12) drop-shadow(0 18px 35px rgba(255,255,255,.055)); }
+.bot .bh, .bot .bv, .bot .bc, .bot .ast-in, .bot .ast-log, .bot .bsl {
+  background-color: rgba(4,4,4,.82) !important; border-color: rgba(255,255,255,.16) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.11), 0 24px 70px rgba(0,0,0,.5) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(140%) !important; backdrop-filter: blur(34px) saturate(140%) !important;
+}
+@media (max-width: 760px) {
+  .chat-page { width: min(100% - 20px, 1440px) !important; padding-top: 14px !important; }
+  .chat-page .chat-sidebar, .chat-page .chat-thread, .chat-page .chat-create { border-radius: 23px !important; }
+}
