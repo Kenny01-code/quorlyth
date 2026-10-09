@@ -241,7 +241,7 @@ export function QuorlythBot() {
         audio.current?.stop(); setView('chat')
         if (action.type === 'community' || action.type === 'idea' || action.type === 'cover') {
           const draft = add(cur, { r: 'u', t })
-          setBusy(true); setStatus('Applying action'); robot.current?.think(true)
+          setBusy(true); setStatus('Applying action'); setThinkingTask(taskPreview(t)); robot.current?.think(true)
           try {
             let ok = false
             let message = ''
@@ -269,7 +269,7 @@ export function QuorlythBot() {
             }
           } catch (e: any) {
             persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: e?.message || 'That action could not be completed.' }] })
-          } finally { setBusy(false); setStatus('Online'); robot.current?.think(false) }
+          } finally { setBusy(false); setThinkingTask(''); setStatus('Online'); robot.current?.think(false) }
           return
         }
         let draft = add(cur, { r: 'u', t })
