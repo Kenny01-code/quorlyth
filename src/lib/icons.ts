@@ -1,5 +1,16 @@
 // Custom Quorlyth icon set: 24 unit grid, 1.25 stroke, round caps, outline only.
 export const ICONS: Record<string, string> = {
+  "message": "<path d=\"M4 5.5h16v11H11l-5 4v-4H4z\"/><path d=\"M8 9.5h8M8 13h5\"/>",
+  "share": "<circle cx=\"18\" cy=\"5\" r=\"2.5\"/><circle cx=\"6\" cy=\"12\" r=\"2.5\"/><circle cx=\"18\" cy=\"19\" r=\"2.5\"/><path d=\"M8.2 10.8l7.5-4.4M8.2 13.2l7.5 4.4\"/>",
+  "lock": "<rect x=\"4.5\" y=\"10\" width=\"15\" height=\"10.5\" rx=\"2.5\"/><path d=\"M8 10V7a4 4 0 0 1 8 0v3M12 14v2.5\"/>",
+  "arrow-up": "<path d=\"M12 19V5M6 11l6-6 6 6\"/>",
+  "arrow-up-right": "<path d=\"M7 17L17 7M7 7h10v10\"/>",
+  "arrow-left": "<path d=\"M19 12H5M12 19l-7-7 7-7\"/>",
+  "arrow": "<path d=\"M4 12h16M13 5l7 7-7 7\"/>",
+  "check": "<path d=\"M5 12.5l4.5 4.5L19 7\"/>",
+  "x": "<path d=\"M6 6l12 12M18 6L6 18\"/>",
+  "users": "<path d=\"M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20\"/><circle cx=\"9.5\" cy=\"7\" r=\"3.5\"/><path d=\"M17 11a3.5 3.5 0 0 0 0-7M17 14.5h.5a4 4 0 0 1 4 4V20\"/>",
+
   "community": "<circle cx=\"9\" cy=\"12\" r=\"6\"/><circle cx=\"15\" cy=\"12\" r=\"6\"/>",
   "idea": "<circle cx=\"12\" cy=\"12\" r=\"3.5\"/><path d=\"M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4\"/>",
   "collab": "<path d=\"M3 12h6.5M14.5 12H21\"/><circle cx=\"12\" cy=\"12\" r=\"2.5\"/><path d=\"M12 4v5M12 15v5\"/>",
