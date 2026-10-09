@@ -34,7 +34,7 @@ function List() {
   const a = useApp()
   const nav = useNavigate()
   const { data, owner } = a
-  const emptyCommunity = { name: '', purpose: '', icon: 'community', vis: 'listed', post: 'anyone' }
+  const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone' }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const members = (id: string) => Object.keys(data.members).filter(u => data.members[u]?.[id]).length
   const shown = data.communities.filter(c => owner || c.vis !== 'unlisted' || a.joined(c.id))
@@ -70,6 +70,7 @@ function List() {
           <label className="field"><span>Name</span><input value={f.name} maxLength={60} onChange={e => setF({ ...f, name: e.target.value })} placeholder="For example, Behind the scenes" /></label>
           <label className="field"><span>What is it for</span><textarea value={f.purpose} maxLength={300} onChange={e => setF({ ...f, purpose: e.target.value })} placeholder="Share ideas for what I make next" /></label>
           <Pick label="Icon" value={f.icon} onChange={v => setF({ ...f, icon: v })} opts={ICONS.map(i => [i, <Icon key={i} name={i} size={18} />])} />
+          <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={() => setF({ ...f, cover: key })}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
           <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
           <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner only']]} />
           <div className="acts"><button className="btn p" onClick={async () => { if (!f.name.trim()) return a.toast('Give it a name'); if (await a.createCommunity({ ...f, name: f.name.trim() } as any)) clearDraft(emptyCommunity) }}>Create community</button><button className="btn" onClick={() => clearDraft(emptyCommunity)}>Discard draft</button></div>
@@ -230,7 +231,7 @@ function CommunitySettings({ c }: { c: Community }) {
       <label className="field"><span>Name</span><input value={f.name} maxLength={60} onChange={e => setF({ ...f, name: e.target.value })} /></label>
       <label className="field"><span>What is it for</span><textarea value={f.purpose} maxLength={300} onChange={e => setF({ ...f, purpose: e.target.value })} /></label>
       <Pick label="Icon" value={f.icon} onChange={v => setF({ ...f, icon: v })} opts={ICONS.map(i => [i, <Icon key={i} name={i} size={18} />])} />
-      <Pick label="Cover style" value={f.cover} onChange={v => setF({ ...f, cover: v })} opts={COVERS as [string, string][]} />
+      <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={() => setF({ ...f, cover: key })}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
       <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v as any })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
       <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v as any })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner only']]} />
       <label className="field"><span>Welcome message</span><textarea value={f.welcome} maxLength={400} onChange={e => setF({ ...f, welcome: e.target.value })} placeholder="Shown to new members" /></label>
