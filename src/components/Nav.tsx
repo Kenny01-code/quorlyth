@@ -14,6 +14,7 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; guest
   { path: '/access', label: 'Request access', icon: 'invite' },
   { path: '/analytics', label: 'Analytics', icon: 'insight' },
   { path: '/communities', label: 'Communities', icon: 'community' },
+  { path: '/messages', label: 'Messages', icon: 'message' },
   { path: '/queue', label: 'Review queue', icon: 'queue' },
   { path: '/promote', label: 'Promote', icon: 'promote' },
   { path: '/settings', label: 'Settings', icon: 'settings' },
