@@ -1,5 +1,3 @@
-const OWNER_EMAIL = 'ighiledivine77@gmail.com'
-
 function send(res, status, body) {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -15,9 +13,9 @@ async function bodyOf(req) {
 }
 
 /**
- * Owner-only endpoint. The browser's signed-in JWT is verified by Supabase.
- * The SQL SECURITY DEFINER RPC performs the cascade after independently
- * checking public.is_owner(). No service-role key is used or exposed.
+ * Authenticated endpoint. The browser's signed-in JWT is verified by Supabase.
+ * The SQL SECURITY DEFINER RPC independently checks community ownership or
+ * platform-admin status. No service-role key is used or exposed.
  */
 export async function adminCommunity(req, res) {
   if (req.method !== 'DELETE' && req.method !== 'POST') return send(res, 405, { error: 'Use DELETE to remove a community.' })
@@ -35,9 +33,7 @@ export async function adminCommunity(req, res) {
     })
     const user = await authResponse.json()
     if (!authResponse.ok || !user?.id) return send(res, 401, { error: 'Your session expired. Sign in again.' })
-    if (String(user.email || '').trim().toLowerCase() !== OWNER_EMAIL || !user.email_confirmed_at) {
-      return send(res, 403, { error: 'Only the verified Quorlyth owner account can perform this action.' })
-    }
+    if (!user.email_confirmed_at) return send(res, 403, { error: 'Confirm your email before performing this action.' })
 
     const { cid } = await bodyOf(req)
     if (typeof cid !== 'string' || !/^[a-zA-Z0-9_-]{1,120}$/.test(cid)) {
