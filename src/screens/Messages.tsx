@@ -4,6 +4,7 @@ import { Icon } from '../lib/Icon'
 import { Av, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { cn } from '../lib/util'
+import { chime } from '../lib/notifs'
 
 type Conversation = { id: string; title?: string; type: 'direct' | 'group'; members: string[]; createdBy: string; createdAt: number }
 type Message = { id: string; conversationId: string; senderId: string; text: string; at: number; replyTo?: string }
@@ -26,6 +27,9 @@ export function Messages() {
   const [selectedPeople, setSelectedPeople] = useState<string[]>([])
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
+  const [workspaceSize, setWorkspaceSize] = useState<'compact' | 'standard' | 'expanded'>(() => (localStorage.getItem('qmessages:size') as 'compact' | 'standard' | 'expanded') || 'standard')
+  const [rotatingLine, setRotatingLine] = useState(0)
+  const seenIncoming = useRef<Set<string> | null>(null)
   const bottom = useRef<HTMLDivElement>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const store = a.backend?.store
@@ -41,6 +45,8 @@ export function Messages() {
   }, [store, meId])
 
   const active = conversations.find(c => c.id === conversationId) || null
+  const isPlatformAdmin = (id: string) => id === a.data.ownerId || !!(a.data.profiles[id] as any)?.platformAdmin || (!!a.me && id === a.me.id && a.owner)
+  const profileLink = (id: string) => '/me/' + encodeURIComponent(id)
   const activeMessages = useMemo(() => messages.filter(m => m.conversationId === active?.id), [messages, active?.id])
   const people = useMemo(() => {
     const ids = new Set<string>([
@@ -63,6 +69,31 @@ export function Messages() {
     const today = new Date()
     return d.toDateString() === today.toDateString() ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
   }
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setRotatingLine(n => (n + 1) % 6), 3600)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (!messages.length || !meId) return
+    if (seenIncoming.current === null) {
+      seenIncoming.current = new Set(messages.map(m => m.id))
+      return
+    }
+    const incoming = messages.filter(m => m.senderId !== meId && !seenIncoming.current!.has(m.id))
+    for (const m of messages) seenIncoming.current.add(m.id)
+    if (incoming.length) {
+      const latest = incoming[incoming.length - 1]
+      const convo = conversations.find(c => c.id === latest.conversationId)
+      const sender = a.nm(latest.senderId)
+      a.toast('New message from ' + sender + (convo ? ' · ' + titleOf(convo) : ''))
+      chime()
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
+        try { new Notification('New message from ' + sender, { body: latest.text.slice(0, 120), tag: latest.conversationId }) } catch {}
+      }
+    }
+  }, [messages, conversations, meId, a.nm, a.toast])
 
   useEffect(() => {
     if (!active || !store || !meId) return
@@ -126,14 +157,20 @@ export function Messages() {
         <div className="chat-people-list">{visiblePeople.map(p => <button className="chat-person" key={p.id} onClick={() => groupOpen ? setSelectedPeople(old => old.includes(p.id) ? old.filter(x => x !== p.id) : [...old, p.id]) : void startDirect(p.id)}><Av id={p.id} size={42} /><span className="chat-person-copy"><b>{p.name}</b><small>{a.data.profiles[p.id]?.head || 'Quorlyth member'}</small></span>{groupOpen ? <span className={cn('chat-check', selectedPeople.includes(p.id) && 'on')}>{selectedPeople.includes(p.id) && <Icon name="check" size={14} />}</span> : <Icon name="arrow-up-right" size={17} />}</button>)}{!visiblePeople.length && <p className="mut chat-empty">No matching members found yet. People appear here after their profiles or community activity is available.</p>}</div>
         {groupOpen && <div className="chat-create-footer"><span className="dim">{selectedPeople.length} selected · choose at least 2</span><button className="btn p" disabled={selectedPeople.length < 2 || !groupName.trim()} onClick={() => void createGroup()}>Create group <Icon name="arrow" size={16} /></button></div>}
       </div>}
-      <div className="chat-workspace">
+      <div className={cn('chat-workspace', 'size-' + workspaceSize)}>
+        <div className="chat-size-controls" role="group" aria-label="Conversation layout size">
+          <span>LAYOUT</span>
+          <button className={workspaceSize === 'compact' ? 'selected' : ''} onClick={() => { setWorkspaceSize('compact'); localStorage.setItem('qmessages:size', 'compact') }} aria-label="Compact layout">Mini</button>
+          <button className={workspaceSize === 'standard' ? 'selected' : ''} onClick={() => { setWorkspaceSize('standard'); localStorage.setItem('qmessages:size', 'standard') }} aria-label="Standard layout">Standard</button>
+          <button className={workspaceSize === 'expanded' ? 'selected' : ''} onClick={() => { setWorkspaceSize('expanded'); localStorage.setItem('qmessages:size', 'expanded') }} aria-label="Expanded layout">Expand</button>
+        </div>
         <aside className={cn('glass chat-sidebar', active && 'has-active')}>
           <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
           <label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" /></label>
           <div className="chat-conversation-list">{conversations.filter(c => titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())).map(c => {
             const last = lastMessage(c), unread = unreadCount(c)
             return <button key={c.id} className={cn('chat-conversation', active?.id === c.id && 'active', unread > 0 && 'unread')} onClick={() => nav('/messages/' + c.id)}>
-              {c.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <Av id={c.members.find(id => id !== meId) || ''} size={46} />}
+              {c.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link" title={'View ' + titleOf(c) + "'s public profile"} aria-label={'View ' + titleOf(c) + ' public profile'} onClick={e => { e.stopPropagation(); nav(profileLink(c.members.find(id => id !== meId) || '')) }}><Av id={c.members.find(id => id !== meId) || ''} size={46} />{isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <span className="chat-conversation-copy"><span className="chat-conversation-title"><b>{titleOf(c)}</b><small>{formatTime(last?.at || c.createdAt)}</small></span><span className="chat-preview">{last ? (last.senderId === meId ? 'You: ' : '') + last.text : c.type === 'group' ? c.members.length + ' people · Start the conversation' : 'Start the conversation'}</span></span>
               {unread > 0 && <i className="chat-unread-dot" />}
             </button>
@@ -143,7 +180,7 @@ export function Messages() {
         <div className={cn('glass chat-thread', active && 'has-active')}>
           {active ? <>
             <header className="chat-thread-head"><button className="chat-back-mobile" onClick={() => nav('/messages')} aria-label="Back to inbox"><Icon name="arrow-left" size={18} /></button>
-              {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <Av id={active.members.find(id => id !== meId) || ''} size={44} />}
+              {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
               <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
             </header>
@@ -153,12 +190,19 @@ export function Messages() {
                 const mine = m.senderId === meId
                 const prev = activeMessages[i - 1]
                 const showAuthor = active.type === 'group' && !mine && (!prev || prev.senderId !== m.senderId)
-                return <div key={m.id} className={cn('chat-message-row', mine && 'mine', showAuthor && 'with-author')}>{showAuthor && <div className="chat-message-author"><Av id={m.senderId} size={23} />{a.nm(m.senderId)}</div>}<div className={cn('chat-bubble', mine ? 'mine' : 'theirs')}><p>{m.text}</p><time>{formatTime(m.at)}</time></div></div>
+                return <div key={m.id} className={cn('chat-message-row', mine && 'mine', showAuthor && 'with-author')}>{showAuthor && <div className="chat-message-author"><button className="chat-author-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"}><Av id={m.senderId} size={23} /><span>{a.nm(m.senderId)}</span>{isPlatformAdmin(m.senderId) && <span className="owner-badge" title="Platform owner">✦ OWNER</span>}</button></div>}<div className={cn('chat-bubble', mine ? 'mine' : 'theirs')}><p>{m.text}</p><time>{formatTime(m.at)}</time></div></div>
               })}
               <div ref={bottom} />
             </div>
             <form className="chat-composer" onSubmit={sendMessage}><div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
-          </> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><Icon name="message" size={32} /></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2>Every great thing<br />starts somewhere.</h2><p className="mut">Choose a conversation or start a new one. Share a thought, build on an idea, make something happen.</p><div className="chat-no-actions"><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={16} />Start a conversation</button><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false) }}><Icon name="users" size={16} />Create a group</button></div></div>}
+          </> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><Icon name="message" size={32} /></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
+            <>Every great thing<br />starts somewhere.</>,
+            <>One message can<br />start something real.</>,
+            <>Good ideas deserve<br />to find their people.</>,
+            <>Build something<br />bigger together.</>,
+            <>Your next chapter<br />could start here.</>,
+            <>Say the thing<br />worth sharing.</>
+          ][rotatingLine]}</h2><p className="mut">Choose a conversation or start a new one. Share a thought, build on an idea, make something happen.</p><div className="chat-no-actions"><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={16} />Start a conversation</button><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false) }}><Icon name="users" size={16} />Create a group</button></div></div>}
         </div>
       </div>
       <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
