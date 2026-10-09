@@ -16,8 +16,14 @@ export async function createSupabaseStore(url: string, key: string) {
       return data?.data ?? null
     },
     async set(path, data) {
-      const { error } = await sb.from('docs').upsert({ path, data })
-      if (error) throw error
+      // Chat records are append-only. INSERT avoids Postgres requiring an UPDATE
+      // policy for PostgREST upserts, while preserving upsert behavior for mutable docs.
+      const collection = path.split('/')[0]
+      const isAppendOnlyChatRecord = (collection === 'conversations' || collection === 'messages') && path.split('/').length === 2
+      const { error } = isAppendOnlyChatRecord
+        ? await sb.from('docs').insert({ path, data })
+        : await sb.from('docs').upsert({ path, data })
+      if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the write')
     },
     async update(path, patch) {
       const cur = await store.get(path)
