@@ -37,7 +37,8 @@ function List() {
   const [filter, setFilter] = useState<'owned' | 'joined' | 'discover'>('discover')
   const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone' }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
-  const members = (id: string) => Object.keys(data.members).filter(u => data.members[u]?.[id]).length
+  const creatorId = (community: Community) => community.ownerId || community.createdBy || ''
+  const members = (id: string) => { const community = data.communities.find(x => x.id === id); const creator = community ? creatorId(community) : ''; return Object.keys(data.members).filter(u => data.members[u]?.[id] && u !== creator).length }
   const visible = data.communities.filter(c => c.vis !== 'unlisted' || a.canManageCommunity(c.id) || a.joined(c.id))
   const shown = visible.filter(c => filter === 'owned' ? a.ownsCommunity(c.id) : filter === 'joined' ? a.joined(c.id) && !a.ownsCommunity(c.id) : !a.ownsCommunity(c.id) && !a.joined(c.id) && c.vis !== 'unlisted')
   return (
@@ -102,11 +103,12 @@ function Detail({ cid }: { cid: string }) {
   if (!c) return <Empty icon="community" title="Community not found" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back</button></Empty>
 
   const own = a.canManageCommunity(cid) && !preview
-  const joined = preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid)
+  const joined = own ? false : preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid)
   const spaceOk = preview ? preview === 'member' || !data.settings?.appr : a.canPost()
   const rule = c.post || 'anyone'
   const canPost = !c.arch && (rule === 'owner' ? own : rule === 'members' ? own || joined : true) && (own || spaceOk)
-  const mem = Object.keys(data.members).filter(u => data.members[u]?.[cid])
+  const communityCreatorId = c.ownerId || c.createdBy || ''
+  const mem = Object.keys(data.members).filter(u => data.members[u]?.[cid] && u !== communityCreatorId)
   let list = data.ideas.filter(i => i.cid === cid)
   if (tag) list = list.filter(i => i.tags?.includes(tag))
   list = [...list].sort(sort === 1 ? (x, y) => a.votesOf(y.id) - a.votesOf(x.id) : sort === 2 ? (x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1) : (x, y) => y.at - x.at)
@@ -141,8 +143,9 @@ function Detail({ cid }: { cid: string }) {
           </div>
           <h2>{c.name}</h2>
           <p className="mut" style={{ marginTop: 8, maxWidth: 620 }}>{c.purpose}</p>
-          <div className="pw" style={{ marginTop: 18 }}>
-            <span style={{ display: 'flex' }}>{mem.slice(0, 5).map(u => <Av key={u} id={u} size={28} />)}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}><Av id={creatorId(c)} size={36} /><div><p className="dim" style={{ fontSize: 10, letterSpacing: '.08em' }}>CREATED BY</p><button className="lk" onClick={() => creatorId(c) && nav('/me/' + creatorId(c))}>{creatorId(c) ? a.nm(creatorId(c)) : 'Community creator'}</button></div></div>
+            <span style={{ display: 'flex', marginLeft: 8 }}>{mem.filter(u => u !== creatorId(c)).slice(0, 5).map(u => <Av key={u} id={u} size={28} />)}</span>
             <span className="dim">{mem.length} member{mem.length === 1 ? '' : 's'}</span>
             {!own && <button className={cn('btn', !joined && 'p')} style={{ marginLeft: 'auto' }} onClick={() => preview ? a.toast('This is a preview. Nothing is saved.') : a.join(cid, !joined)}><Icon name={joined ? 'approve' : 'community'} size={16} />{joined ? 'Joined' : 'Join community'}</button>}
           </div>
