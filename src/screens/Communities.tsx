@@ -144,7 +144,7 @@ function Detail({ cid }: { cid: string }) {
           <h2>{c.name}</h2>
           <p className="mut" style={{ marginTop: 8, maxWidth: 620 }}>{c.purpose}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}><Av id={creatorId(c)} size={36} /><div><p className="dim" style={{ fontSize: 10, letterSpacing: '.08em' }}>CREATED BY</p><button className="lk" onClick={() => creatorId(c) && nav('/me/' + creatorId(c))}>{creatorId(c) ? a.nm(creatorId(c)) : 'Community creator'}</button></div></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}><Av id={communityCreatorId} size={36} /><div><p className="dim" style={{ fontSize: 10, letterSpacing: '.08em' }}>CREATED BY</p><button className="lk" onClick={() => communityCreatorId && nav('/me/' + communityCreatorId)}>{communityCreatorId ? a.nm(communityCreatorId) : 'Community creator'}</button></div></div>
             <span style={{ display: 'flex', marginLeft: 8 }}>{mem.filter(u => u !== creatorId(c)).slice(0, 5).map(u => <Av key={u} id={u} size={28} />)}</span>
             <span className="dim">{mem.length} member{mem.length === 1 ? '' : 's'}</span>
             {!own && <button className={cn('btn', !joined && 'p')} style={{ marginLeft: 'auto' }} onClick={() => preview ? a.toast('This is a preview. Nothing is saved.') : a.join(cid, !joined)}><Icon name={joined ? 'approve' : 'community'} size={16} />{joined ? 'Joined' : 'Join community'}</button>}
