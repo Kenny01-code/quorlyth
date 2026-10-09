@@ -141,7 +141,7 @@ function Public({ id }: { id: string }) {
           const items = a.data.ideas.filter(i => i.cid === c.id)
           const backs = items.reduce((n, i) => n + a.votesOf(i.id), 0)
           return <article className="glass public-community-card" key={c.id}>
-            <button className="public-community-open" onClick={() => nav('/communities/' + c.id)}><span className="public-community-icon"><Icon name="community" size={21} /></span><span className="public-community-copy"><b>{c.name}</b><small>{created.some(own => own.id === c.id) ? 'Created by this member' : 'Member of this community'} · {items.length} {items.length === 1 ? 'idea' : 'ideas'} · {backs} backings</small></span><Icon name="arrow-up-right" size={17} /></button>
+            <button className="public-community-open" onClick={() => nav('/communities/' + c.id)}><span className="public-community-icon"><Icon name="community" size={21} /></span><span className="public-community-copy"><b>{c.name}</b><small>{created.some(own => own.id === c.id) ? 'Created by this member' : 'Member of this community'} · {items.length} {items.length === 1 ? 'idea' : 'ideas'} · {backs} backings</small>{!created.some(own => own.id === c.id) && c.memberBadges?.[id] && <span className="community-member-badge"><span aria-hidden="true">✧</span>{c.memberBadges[id]}</span>}</span><Icon name="arrow-up-right" size={17} /></button>
             {c.purpose && <p className="mut public-community-purpose">{c.purpose}</p>}
             <ShareCard title={c.name + ' link'} url={location.origin + '/communities/' + c.id} sub="Share this community with its direct link or QR code." />
           </article>
