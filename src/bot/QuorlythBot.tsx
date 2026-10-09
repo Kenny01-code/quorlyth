@@ -103,7 +103,6 @@ export function QuorlythBot() {
     const resize = () => {
       const isNarrow = window.innerWidth <= 860
       setViewportNarrow(isNarrow)
-      setSide(!isNarrow)
       setSize(current => {
         if (!current) return current
         const maxW = Math.max(240, window.innerWidth - 24)
@@ -779,7 +778,7 @@ export function QuorlythBot() {
         if (!idea || a.statusOf(idea.id) === 'declined') throw new Error('That idea is no longer available to promote.')
         ok = await a.publish(action.ideaId, action.text, action.credits)
       } else if (action.type === 'cover') {
-        if (!a.owner) throw new Error('Only the space owner can change a community cover.')
+        if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can change its cover.')
         ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
       } else if (action.type === 'deleteCommunity') {
         if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can delete it.')
