@@ -9,7 +9,8 @@ language sql
 stable
 security definer
 set search_path = ''
-as $$
+set row_security = off
+as $
   select exists (
     select 1
     from public.docs
