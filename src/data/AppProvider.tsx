@@ -19,6 +19,7 @@ export interface App {
   nm: (id: string) => string; avatar: (id: string) => string
   votesOf: (ideaId: string) => number; iVoted: (ideaId: string) => boolean; statusOf: (ideaId: string) => Status
   joined: (cid: string) => boolean
+  ownsCommunity: (cid: string) => boolean
   canManageCommunity: (cid: string) => boolean
   canPost: () => boolean
   claimOwner: () => Promise<boolean>
@@ -250,7 +251,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false
       }
     }
-    const canManageCommunity = (cid: string) => !!me && (owner || data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id)))
+    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id))
+    const canManageCommunity = (cid: string) => !!me && (owner || ownsCommunity(cid))
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
       try {
@@ -298,6 +300,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       iVoted: id => !!(me && data.votes[me.id]?.[id]),
       statusOf: id => data.reviews[id]?.status || 'review',
       joined: cid => !!(me && data.members[me.id]?.[cid]),
+      ownsCommunity,
       canManageCommunity,
       canPost: () => owner || !data.settings?.appr || data.decisions[me?.id || '']?.status === 'approved',
       claimOwner: () => w(() => st!.set('config/owner', { id: me!.id }), 'You now own this space'),
