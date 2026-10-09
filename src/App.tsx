@@ -44,6 +44,7 @@ export default function App() {
   const ownDecision = a.me && a.data.decisions[a.me.id]
   const accessSent = !!(!a.owner && ownRequest && (!ownDecision || ownDecision.at < ownRequest.at))
   const known = useRef<Set<string> | null>(null)
+  const knownMessages = useRef<Set<string> | null>(null)
   const g = useRef(0)
 
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
@@ -64,6 +65,37 @@ export default function App() {
     const fresh = notifs.filter(n => n.unread && !known.current!.has(n.key))
     if (fresh.length) { if (sound) chime(); a.toast(fresh[0].text); fresh.forEach(n => known.current!.add(n.key)) }
   }, [notifs, a.ready])
+
+  // Message notifications are account-scoped and work from every page, not only the inbox.
+  useEffect(() => {
+    const store = a.backend?.store
+    const uid = a.me?.id
+    if (!store || !uid || a.demo) { knownMessages.current = null; return }
+    let conversations: any[] = []
+    const offConversations = store.subscribe('conversations', docs => {
+      conversations = docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(uid))
+    }, e => console.warn('Could not load conversations for notifications', e))
+    const offMessages = store.subscribe('messages', docs => {
+      const all = docs.map(d => ({ id: d.id, ...d.data })).filter(m => typeof m.conversationId === 'string' && typeof m.senderId === 'string' && typeof m.text === 'string')
+      if (knownMessages.current === null) {
+        knownMessages.current = new Set(all.map(m => m.id))
+        return
+      }
+      const incoming = all.filter(m => m.senderId !== uid && !knownMessages.current!.has(m.id) && conversations.some(c => c.id === m.conversationId))
+      for (const m of all) knownMessages.current.add(m.id)
+      if (!incoming.length) return
+      const latest = incoming[incoming.length - 1]
+      const convo = conversations.find(c => c.id === latest.conversationId)
+      const title = convo?.type === 'group' ? (convo.title || 'group chat') : 'your private chat'
+      const sender = a.nm(latest.senderId)
+      a.toast('New message from ' + sender + ' · ' + title)
+      if (sound) chime()
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
+        try { new Notification('New message from ' + sender, { body: latest.text.slice(0, 120), tag: latest.conversationId }) } catch {}
+      }
+    }, e => console.warn('Could not load messages for notifications', e))
+    return () => { offConversations(); offMessages(); knownMessages.current = null }
+  }, [a.backend, a.me?.id, a.demo, a.nm, a.toast, sound])
 
   // keyboard: Ctrl K, /, ?, g then a letter, Escape
   useEffect(() => {
