@@ -31,7 +31,9 @@ function Mine() {
   const [menu, setMenu] = useState(false)
   const file = useRef<HTMLInputElement>(null)
   const my = a.data.ideas.filter(i => i.authorId === me.id).sort((x, y) => y.at - x.at)
-  const joined = a.data.communities.filter(c => a.joined(c.id))
+  const created = a.data.communities.filter(c => a.ownsCommunity(c.id))
+  const joined = a.data.communities.filter(c => a.joined(c.id) && !a.ownsCommunity(c.id))
+  const communities = [...created, ...joined]
   const rc = my.reduce((n, i) => n + a.votesOf(i.id), 0)
   const url = location.origin + '/me/' + me.id
   const photo = photoPreview || q.photo || q.authAvatarUrl || me.avatarUrl || ''
@@ -64,7 +66,7 @@ function Mine() {
                 </div>
               )}
             </div>
-            <div><span className="chip">{a.owner ? 'Owner' : 'Member'}</span></div>
+            <div><span className="chip">{a.owner ? 'Platform admin' : created.length ? 'Community creator' : 'Member'}</span></div>
           </div>
           <input ref={file} type="file" accept="image/*" className="hide" onChange={e => { const fl = e.target.files?.[0]; e.target.value = ''; if (fl) fl.size > 12e6 ? a.toast('That image is too large') : setCrop(fl) }} />
           <p className="dim" style={{ margin: '12px 0 0' }}>Profile edits are saved as a draft on this device until you save them.</p>
@@ -74,10 +76,10 @@ function Mine() {
           <div className="acts"><button className="btn p" onClick={async () => { if (await a.saveProfile(f)) clearProfileDraft(f) }}><Icon name="edit" size={16} />Save profile</button><button className="btn" onClick={() => clearProfileDraft(profileBase)}><Icon name="rotate" size={16} />Discard draft</button></div>
         </div>
         <div style={{ display: 'grid', gap: 18, alignContent: 'start' }}>
-          <div className="glass pad"><div className="stat3"><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{joined.length}</p></div></div></div>
+          <div className="glass pad"><div className="stat3"><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{communities.length}</p></div></div></div>
           <ShareCard title="Your profile link" url={url} sub="Anyone with the link can see your profile." />
           <div className="glass pad"><h3 style={{ marginBottom: 8 }}>Communities</h3>
-            {joined.length ? joined.map(c => <div key={c.id} className="row" onClick={() => nav('/communities/' + c.id)}><Icon name="community" /><div className="t"><h3 style={{ fontSize: 15 }}>{c.name}</h3></div></div>) : <><p className="mut">You have not joined any yet.</p><div className="acts"><button className="btn p" onClick={() => nav('/communities')}>Browse communities</button></div></>}</div>
+            {communities.length ? communities.map(c => <div key={c.id} className="row" onClick={() => nav('/communities/' + c.id)}><Icon name="community" /><div className="t"><h3 style={{ fontSize: 15 }}>{c.name}</h3><p className="dim">{a.ownsCommunity(c.id) ? 'Created by you' : 'Joined'}</p></div></div>) : <><p className="mut">You have not created or joined any yet.</p><div className="acts"><button className="btn p" onClick={() => nav('/communities')}>Discover communities</button></div></>}</div>
         </div>
       </div>
       <h3 style={{ margin: '34px 0 16px' }}>What you have access to</h3>
@@ -99,14 +101,16 @@ function Public({ id }: { id: string }) {
   const q = a.data.profiles[id]
   const my = a.data.ideas.filter(i => i.authorId === id).sort((x, y) => y.at - x.at)
   const rc = my.reduce((n, i) => n + a.votesOf(i.id), 0)
-  const jc = a.data.communities.filter(c => a.data.members[id]?.[c.id])
+  const jc = a.data.communities.filter(c => a.data.members[id]?.[c.id] && !(c.ownerId === id || c.createdBy === id))
+  const created = a.data.communities.filter(c => c.ownerId === id || c.createdBy === id)
+  const communities = [...created, ...jc]
   return (
     <>
       <div className="head"><div><button className="chip" onClick={() => nav(-1)}>Back</button></div>{id === a.me?.id && <button className="btn" onClick={() => nav('/me')}><Icon name="edit" size={16} />Edit profile</button>}</div>
       <div className="glass pad">
         <div className="pw"><span className="avx" style={{ width: 112, height: 112 }}><Av id={id} size={112} /></span>
-          <div style={{ minWidth: 0 }}><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{q?.head && <p className="mut" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
-        <div className="stat3" style={{ marginTop: 28 }}><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{jc.length}</p></div></div>
+          <div style={{ minWidth: 0 }}><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{created.length > 0 && <p className="dim" style={{ marginTop: 6 }}>{created.length} community creator</p>}{q?.head && <p className="mut" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
+        <div className="stat3" style={{ marginTop: 28 }}><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{communities.length}</p></div></div>
       </div>
       <ShareCard title="Profile link" url={location.origin + '/me/' + id} sub="Scan or open to view this profile." />
       <h3 style={{ margin: '30px 0 14px' }}>Ideas</h3>
