@@ -1,0 +1,116 @@
+/* QUORLYTHBOT — obsidian Liquid Glass identity */
+#ast .astp.bot,
+#ast .astp.bot.m-large,
+#ast .astp.bot.m-full {
+  color: #f7f7f7 !important;
+  background:
+    radial-gradient(ellipse 72% 36% at 50% 0%,rgba(255,255,255,.075),transparent 76%),
+    linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.008) 48%,rgba(255,255,255,.028)),
+    #030303 !important;
+  border: 1px solid rgba(255,255,255,.19) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    inset 1px 0 0 rgba(255,255,255,.035),
+    inset 0 -1px 0 rgba(255,255,255,.025),
+    0 34px 100px rgba(0,0,0,.82) !important;
+  -webkit-backdrop-filter: blur(38px) saturate(135%);
+  backdrop-filter: blur(38px) saturate(135%);
+}
+#ast .astp.bot::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(128deg,rgba(255,255,255,.11),transparent 23%,transparent 73%,rgba(255,255,255,.035));
+}
+#ast .astp.bot > * { position: relative; z-index: 1; }
+.bot .bh, .bot .bv, .bot .bc, .bot .ast-in, .bot .ast-log, .bot .bsl,
+.bot .bstage, .bot .ast-stage {
+  border-color: rgba(255,255,255,.15) !important;
+}
+.bot .bh, .bot .ast-in, .bot .bc {
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.012) 58%,rgba(255,255,255,.03)),
+    rgba(3,3,3,.91) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16),0 16px 38px -30px #fff;
+  -webkit-backdrop-filter: blur(30px) saturate(135%);
+  backdrop-filter: blur(30px) saturate(135%);
+}
+.bot .bstage, .bot .ast-stage {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  border-radius: 27px !important;
+  background:
+    radial-gradient(ellipse 66% 46% at 50% 18%,rgba(255,255,255,.105),transparent 70%),
+    linear-gradient(145deg,rgba(255,255,255,.06),rgba(255,255,255,.008) 56%,rgba(255,255,255,.03)),
+    #020202 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.25),
+    inset 0 0 44px rgba(255,255,255,.022),
+    0 26px 68px -34px rgba(0,0,0,.95) !important;
+  overflow: hidden;
+}
+.bot .bstage::after, .bot .ast-stage::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 1px;
+  border: 1px solid rgba(255,255,255,.025);
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(132deg,rgba(255,255,255,.095),transparent 25%,transparent 70%,rgba(255,255,255,.03));
+}
+.bot .ast-stage canvas, .bot .bstage canvas {
+  filter: contrast(1.06) brightness(.94) saturate(.65);
+}
+.bot .ast-in textarea, .bot textarea {
+  color: #fff !important;
+  caret-color: #fff;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-radius: 17px !important;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.04),rgba(0,0,0,.82)),
+    #050505 !important;
+  box-shadow: inset 0 2px 13px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.055) !important;
+  transition: border-color .28s ease,box-shadow .3s ease,background .28s ease !important;
+}
+.bot .ast-in textarea:focus, .bot textarea:focus {
+  border-color: rgba(255,255,255,.4) !important;
+  box-shadow: inset 0 2px 13px rgba(0,0,0,.72),0 0 0 3px rgba(255,255,255,.035),0 0 30px -20px rgba(255,255,255,.5) !important;
+}
+.bot .chip, .bot .bsi, .bot .bci {
+  border-color: rgba(255,255,255,.14);
+  background: linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  transition: border-color .25s ease,background .25s ease,box-shadow .25s ease,transform .25s ease;
+}
+.bot .chip:hover, .bot .bsi:hover, .bot .bci:hover,
+.bot .chip.on, .bot .bsi.on, .bot .bci.on {
+  border-color: rgba(255,255,255,.25);
+  background: rgba(255,255,255,.075) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+.bot .ast-in .btn.p, .bot .btn.p {
+  color: #030303 !important;
+  border: 1px solid #fff !important;
+  background: linear-gradient(145deg,#fff,#dedede) !important;
+  box-shadow: inset 0 1px 0 #fff,0 8px 28px -20px rgba(255,255,255,.9) !important;
+}
+.bot .ast-in .btn.p:hover, .bot .btn.p:hover { background: #fff !important; transform: translateY(-1px); }
+.bot .ast-stage.speaking, .bot .bstage.speaking { animation: qBotSpeaking 2.1s ease-in-out infinite; }
+@keyframes qBotSpeaking {
+  0%,100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.23),0 0 0 1px rgba(255,255,255,.08),0 20px 58px -38px #fff; }
+  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.32),0 0 0 1px rgba(255,255,255,.16),0 20px 66px -32px rgba(255,255,255,.35); }
+}
+@media (max-width: 760px) {
+  #ast .astp.bot, #ast .astp.bot.m-large, #ast .astp.bot.m-full {
+    border-radius: 0 !important;
+    border-inline: 0 !important;
+  }
+  .bot .bstage, .bot .ast-stage { border-radius: 22px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bot .ast-stage.speaking, .bot .bstage.speaking { animation: none !important; }
+}
