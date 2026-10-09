@@ -465,7 +465,7 @@ export function QuorlythBot() {
           return { ok: false }
         },
         onEvent: e => {
-          if (e.type === 'state') { setLive(l => (e.state === 'closed' ? null : { ...(l || { user: '', bot: '' }), state: e.state })); robot.current?.listen(e.state === 'listening'); robot.current?.think(e.state === 'thinking'); robot.current?.talk(e.state === 'speaking') }
+          if (e.type === 'state') { setLive(l => (e.state === 'closed' ? null : { ...(l || { user: '', bot: '' }), ...(e.state === 'listening' ? { user: '' } : {}), state: e.state })); robot.current?.listen(e.state === 'listening'); robot.current?.think(e.state === 'thinking'); robot.current?.talk(e.state === 'speaking') }
           if (e.type === 'user_preview') setLive(l => l && { ...l, state: 'listening', user: e.text })
           if (e.type === 'user') { c = add(c, { r: 'u', t: e.text }, 'Live conversation'); setLive(l => l && { ...l, state: 'thinking', user: e.text }) }
           if (e.type === 'bot') { setLive(l => l && { ...l, bot: e.text }); setCaption(e.text.slice(-140)); if (e.done) { c = add(c, { r: 'a', t: e.text }); persist(c!); robot.current?.bump() } }
@@ -852,7 +852,7 @@ export function QuorlythBot() {
               {live && (
                 <div className="blive">
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
-                  <div className="blc">{live.state === 'speaking' || live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Say something. I am listening.</span>}</div>
+                  <div className="blc">{live.state === 'listening' ? (live.user ? <><span className="dim">You · live transcript</span><br />{live.user}</> : <span className="dim">Listening to you… start speaking whenever you’re ready.</span>) : live.state === 'thinking' ? (live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Thinking…</span>) : live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : <span className="dim">Connecting your conversation…</span>}</div>
                   <div className="acts" style={{ justifyContent: 'center', margin: 0 }}>
                     <span className="dim" style={{ fontSize: 12 }}>Hands-free conversation · Tap Talk live again to end</span>
                   </div>
