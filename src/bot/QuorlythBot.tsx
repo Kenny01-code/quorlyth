@@ -228,14 +228,41 @@ export function QuorlythBot() {
       const action = planAction(t)
       if (action) {
         audio.current?.stop(); setView('chat')
-        let draft = add(cur, { r: 'u', t })
-        let summary = ''
-        switch (action.type) {
-          case 'community': summary = `I can create “${action.name}” with a ${({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora'} cover. Nothing will be saved until you confirm.`; break
-          case 'idea': summary = `I have prepared “${action.title}” for ${a.data.communities.find(x => x.id === action.cid)?.name || 'your community'}. Nothing will be posted until you confirm.`; break
-          case 'promote': summary = `I can mark “${a.data.ideas.find(x => x.id === action.ideaId)?.title || 'this idea'}” as promoted inside Quorlyth. This does not publish to an external social platform. Confirm before I proceed.`; break
-          case 'cover': summary = `I can change the cover to ${({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora'} for ${a.data.communities.find(x => x.id === action.cid)?.name || 'this community'}. Nothing will change until you confirm.`; break
+        if (action.type === 'community' || action.type === 'idea' || action.type === 'cover') {
+          const draft = add(cur, { r: 'u', t })
+          setBusy(true); setStatus('Applying action'); robot.current?.think(true)
+          try {
+            let ok = false
+            let message = ''
+            if (action.type === 'community') {
+              if (!a.owner) throw new Error('Only the space owner can create a community. Sign in with the owner account and try again.')
+              ok = await a.createCommunity(action)
+              message = ok ? `Created ${action.name}. Opening your communities now so you can enter it and add ideas.` : 'I could not save that community. Check the message from Quorlyth and try again.'
+            } else if (action.type === 'idea') {
+              const community = a.data.communities.find(x => x.id === action.cid)
+              if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
+              ok = await a.postIdea({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
+              message = ok ? `Submitted “${action.title}”. Opening ${community.name} now.` : 'I could not submit that idea. Check your permissions and try again.'
+            } else {
+              if (!a.owner) throw new Error('Only the space owner can change a community cover.')
+              ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
+              message = ok ? 'Community cover updated.' : 'I could not update that cover.'
+            }
+            if (ok) {
+              const next = { ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] }
+              persist(next)
+              if (action.type === 'community') nav('/communities')
+              if (action.type === 'idea') nav('/communities/' + action.cid)
+            } else {
+              persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+            }
+          } catch (e: any) {
+            persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: e?.message || 'That action could not be completed.' }] })
+          } finally { setBusy(false); setStatus('Online'); robot.current?.think(false) }
+          return
         }
+        let draft = add(cur, { r: 'u', t })
+        const summary = `I have prepared this in-app promotion for review. It will not be posted to an external social network. Confirm to mark the idea as promoted inside Quorlyth.`
         draft = { ...draft, msgs: [...draft.msgs, { r: 'a', t: summary }] }
         persist(draft); setPendingAction(action); return
       }
