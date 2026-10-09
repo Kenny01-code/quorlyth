@@ -28,6 +28,10 @@ function Inner() {
   const r = a.data.reviews[idea.id]
   const s = a.statusOf(idea.id)
   const voted = a.iVoted(idea.id)
+  const communityOwner = a.canManageCommunity(idea.cid)
+  const backers = Object.entries(a.data.votes)
+    .filter(([, ideas]) => !!ideas?.[idea.id])
+    .map(([uid]) => uid)
   const cname = a.data.communities.find(c => c.id === idea.cid)?.name || 'Community'
   const row = (l: string, v?: number) => v == null ? null : <div style={{ marginTop: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{l}</span><span>{v}</span></div><Bar value={v} /></div>
   const postReply = async () => {
@@ -53,13 +57,17 @@ function Inner() {
             <div key={c.id} className="msg"><Av id={c.authorId} size={30} />
               <div><h3 style={{ fontSize: 15 }}><button className="lk" onClick={() => nav('/me/' + c.authorId)}>{a.nm(c.authorId)}</button> <span className="dim">{when(c.at)}</span></h3><p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{c.text}</p></div></div>
           )) : <p className="mut" style={{ padding: '14px 0' }}>No replies yet. Start the conversation.</p>}
-          <label className="field"><span>Add to the idea</span><input value={text} maxLength={1000} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && text.trim()) { e.preventDefault(); void postReply() } }} placeholder="Build on this" /></label>
+          <label className="field"><span>{communityOwner ? 'Reply to this idea as the community owner' : 'Add to the idea'}</span><input value={text} maxLength={1000} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && text.trim()) { e.preventDefault(); void postReply() } }} placeholder="Build on this" /></label>
           <p className="dim">Unfinished replies are saved as drafts on this device.</p>
-          <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={postReply}><Icon name="collab" />Post reply</button><button className="chip" onClick={() => clearReplyDraft('')}>Discard draft</button></div>
+          <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={postReply}><Icon name={communityOwner ? 'send' : 'collab'} />{communityOwner ? 'Reply as owner' : 'Post reply'}</button><button className="chip" onClick={() => clearReplyDraft('')}>Discard draft</button></div>
         </div>
         <div className="glass pad">
           <button className={voted ? 'btn' : 'btn p'} style={{ width: '100%', justifyContent: 'center' }} onClick={() => a.vote(idea.id)}><Icon name="support" />{voted ? 'Backed' : 'Back this idea'}</button>
           <p className="num" style={{ textAlign: 'center' }}>{a.votesOf(idea.id)}</p><p className="dim" style={{ textAlign: 'center' }}>members backing</p>
+          <div style={{ marginTop: 18 }}>
+            <h3 style={{ marginBottom: 10 }}>People backing this idea</h3>
+            {backers.length ? <div style={{ display: 'grid', gap: 10 }}>{backers.map(uid => <div key={uid} style={{ display: 'flex', alignItems: 'center', gap: 9 }}><Av id={uid} size={30} /><div style={{ minWidth: 0, flex: 1 }}><button className="lk" onClick={() => nav('/me/' + uid)}>{a.nm(uid)}</button><p className="dim" style={{ fontSize: 12 }}>Supporting this idea</p></div></div>)}</div> : <p className="mut" style={{ fontSize: 14 }}>No one has backed this idea yet.</p>}
+          </div>
           <button className="btn" style={{ width: '100%', justifyContent: 'center', marginTop: 14 }} onClick={() => us.patch({ saved: { [idea.id]: !us.st.saved?.[idea.id] } })}><Icon name="save" />{us.st.saved?.[idea.id] ? 'Saved' : 'Save for later'}</button>
           {r?.score != null && <>{row('Originality', r.o)}{row('Feasibility', r.f)}{row('Relevance', r.r)}</>}
           {a.owner && (
