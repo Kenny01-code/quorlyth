@@ -73,6 +73,7 @@ export async function askJson<T = any>(prompt: string, o: { system?: string; tie
 
 export type RealtimeEvent =
   | { type: 'state'; state: 'connecting' | 'listening' | 'thinking' | 'speaking' | 'closed' }
+  | { type: 'user_preview'; text: string }
   | { type: 'user'; text: string }
   | { type: 'bot'; text: string; done: boolean }
   | { type: 'tool'; name: string; args: any }
@@ -115,6 +116,9 @@ export async function startRealtime(opts: {
         opts.onEvent({ type: 'state', state: 'listening' }); break
       case 'input_audio_buffer.speech_stopped':
         opts.onEvent({ type: 'state', state: 'thinking' }); break
+      case 'conversation.item.input_audio_transcription.delta':
+        if (m.delta) opts.onEvent({ type: 'user_preview', text: String(m.delta) })
+        break
       case 'conversation.item.input_audio_transcription.completed':
         if (m.transcript?.trim()) opts.onEvent({ type: 'user', text: m.transcript.trim() }); break
       case 'response.audio_transcript.delta':
