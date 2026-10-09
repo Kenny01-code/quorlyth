@@ -74,3 +74,6 @@ $$;
 
 revoke all on function public.admin_delete_community(text) from public, anon;
 grant execute on function public.admin_delete_community(text) to authenticated;
+
+-- Make the new RPC immediately available through Supabase REST.
+notify pgrst, 'reload schema';
