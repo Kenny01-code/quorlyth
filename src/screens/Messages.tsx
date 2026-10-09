@@ -4,7 +4,6 @@ import { Icon } from '../lib/Icon'
 import { Av, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { cn } from '../lib/util'
-import { chime } from '../lib/notifs'
 
 type Conversation = { id: string; title?: string; type: 'direct' | 'group'; members: string[]; createdBy: string; createdAt: number }
 type Message = { id: string; conversationId: string; senderId: string; text: string; at: number; replyTo?: string }
@@ -29,7 +28,6 @@ export function Messages() {
   const [error, setError] = useState('')
   const [workspaceSize, setWorkspaceSize] = useState<'compact' | 'standard' | 'expanded'>(() => (localStorage.getItem('qmessages:size') as 'compact' | 'standard' | 'expanded') || 'standard')
   const [rotatingLine, setRotatingLine] = useState(0)
-  const seenIncoming = useRef<Set<string> | null>(null)
   const bottom = useRef<HTMLDivElement>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const store = a.backend?.store
@@ -74,26 +72,6 @@ export function Messages() {
     const timer = window.setInterval(() => setRotatingLine(n => (n + 1) % 6), 3600)
     return () => window.clearInterval(timer)
   }, [])
-
-  useEffect(() => {
-    if (!messages.length || !meId) return
-    if (seenIncoming.current === null) {
-      seenIncoming.current = new Set(messages.map(m => m.id))
-      return
-    }
-    const incoming = messages.filter(m => m.senderId !== meId && !seenIncoming.current!.has(m.id))
-    for (const m of messages) seenIncoming.current.add(m.id)
-    if (incoming.length) {
-      const latest = incoming[incoming.length - 1]
-      const convo = conversations.find(c => c.id === latest.conversationId)
-      const sender = a.nm(latest.senderId)
-      a.toast('New message from ' + sender + (convo ? ' · ' + titleOf(convo) : ''))
-      chime()
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
-        try { new Notification('New message from ' + sender, { body: latest.text.slice(0, 120), tag: latest.conversationId }) } catch {}
-      }
-    }
-  }, [messages, conversations, meId, a.nm, a.toast])
 
   useEffect(() => {
     if (!active || !store || !meId) return
