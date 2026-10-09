@@ -62,7 +62,7 @@ export async function adminCommunity(req, res) {
     if (typeof cid !== 'string' || !/^[a-zA-Z0-9_-]{1,120}$/.test(cid)) return send(res, 400, { error: 'A valid community ID is required.' })
 
     const q = value => encodeURIComponent(value)
-    const rows = await rest(url, serviceKey, '?select=path,data&path=like.ideas/%')
+    const rows = await rest(url, serviceKey, '?select=path,data&path=like.ideas%2F%25')
     const ideas = (rows || []).filter(row => row.path === 'ideas/' + cid || row.path.startsWith('ideas/' + cid + '/'))
     const ideaIds = new Set(ideas.filter(row => /^ideas\/[^/]+$/.test(row.path)).filter(row => row.data?.cid === cid).map(row => row.path.slice('ideas/'.length)))
     const deletePaths = new Set(['communities/' + cid])
@@ -74,10 +74,10 @@ export async function adminCommunity(req, res) {
       if (ideaIds.has(id)) deletePaths.add(row.path)
     }
 
-    const related = await rest(url, serviceKey, '?select=path,data&path=like.reviews/%')
+    const related = await rest(url, serviceKey, '?select=path,data&path=like.reviews%2F%25')
     for (const row of related || []) if (ideaIds.has(row.path.slice('reviews/'.length)) || [...ideaIds].some(id => row.path.startsWith('reviews/' + id + '/'))) deletePaths.add(row.path)
 
-    const otherRows = await rest(url, serviceKey, '?select=path,data&or=(path.like.projects/%,path.like.volunteers/%,path.like.promotions/%,path.like.milestones/%)')
+    const otherRows = await rest(url, serviceKey, '?select=path,data&or=(path.like.projects%2F%25,path.like.volunteers%2F%25,path.like.promotions%2F%25,path.like.milestones%2F%25)')
     const projectIds = new Set()
     for (const row of otherRows || []) {
       const d = row.data || {}
@@ -92,7 +92,7 @@ export async function adminCommunity(req, res) {
 
     // Remove this community from each member's membership map without
     // deleting the member's other community memberships.
-    const memberRows = await rest(url, serviceKey, '?select=path,data&path=like.members/%')
+    const memberRows = await rest(url, serviceKey, '?select=path,data&path=like.members%2F%25')
     for (const row of memberRows || []) {
       const memberships = row.data?.c
       if (memberships && Object.prototype.hasOwnProperty.call(memberships, cid)) {
