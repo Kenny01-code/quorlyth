@@ -11,10 +11,17 @@ type ReadState = { id: string; userId: string; conversationId: string; lastReadA
 
 function readableChatError(error: unknown): string {
   if (error && typeof error === 'object') {
-    const e = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown }
-    const message = [e.message, e.details, e.hint].filter(v => typeof v === 'string' && v.trim()).join(' · ')
-    if (message) return e.code ? message + ' (code ' + String(e.code) + ')' : message
-    try { return JSON.stringify(error) } catch { /* use fallback below */ }
+    const e = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown; status?: unknown; error_description?: unknown }
+    const message = [e.message, e.details, e.hint, e.error_description].filter(v => typeof v === 'string' && v.trim()).join(' · ')
+    if (message) return (e.code ? message + ' (code ' + String(e.code) + ')' : message).slice(0, 420)
+    try {
+      const json = JSON.stringify(error)
+      if (json && json !== '{}') return json.slice(0, 420)
+    } catch { /* use fallback below */ }
+    const props = Object.getOwnPropertyNames(error).map(k => {
+      try { return k + ': ' + String((error as any)[k]) } catch { return '' }
+    }).filter(Boolean)
+    if (props.length) return props.join(' · ').slice(0, 420)
   }
   return error instanceof Error ? error.message : String(error)
 }
@@ -118,7 +125,11 @@ export function Messages() {
       await store.set('conversations/' + id, { title: groupName.trim().slice(0, 60), type: 'group', members, createdBy: meId, createdAt: Date.now() })
       nav('/messages/' + id)
       setGroupOpen(false); setSelectedPeople([]); setGroupName(''); setQuery('')
-    } catch (e) { setError('Could not create the group. ' + readableChatError(e)) }
+    } catch (e) {
+      const detail = readableChatError(e)
+      console.error('Quorlyth group creation failed:', e)
+      setError('Could not create the group. ' + (detail && detail !== '[object Object]' ? detail : 'The database rejected the conversation. Confirm the private/group chat migration is applied and try again.'))
+    }
   }
 
   async function sendMessage(event?: FormEvent) {
