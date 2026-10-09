@@ -106,6 +106,7 @@ export async function startRealtime(opts: {
   pc.addTrack(mic.getTracks()[0], mic)
   const dc = pc.createDataChannel('oai-events')
   let botText = ''
+  let userText = ''
   const send = (o: any) => dc.readyState === 'open' && dc.send(JSON.stringify(o))
 
   dc.onmessage = async ev => {
@@ -113,14 +114,18 @@ export async function startRealtime(opts: {
     try { m = JSON.parse(ev.data) } catch { return }
     switch (m.type) {
       case 'input_audio_buffer.speech_started':
+        userText = ''
         opts.onEvent({ type: 'state', state: 'listening' }); break
       case 'input_audio_buffer.speech_stopped':
         opts.onEvent({ type: 'state', state: 'thinking' }); break
       case 'conversation.item.input_audio_transcription.delta':
-        if (m.delta) opts.onEvent({ type: 'user_preview', text: String(m.delta) })
+        userText += String(m.delta || '')
+        if (userText) opts.onEvent({ type: 'user_preview', text: userText })
         break
       case 'conversation.item.input_audio_transcription.completed':
-        if (m.transcript?.trim()) opts.onEvent({ type: 'user', text: m.transcript.trim() }); break
+        if (m.transcript?.trim()) opts.onEvent({ type: 'user', text: m.transcript.trim() })
+        userText = ''
+        break
       case 'response.audio_transcript.delta':
         botText += m.delta || ''
         opts.onEvent({ type: 'state', state: 'speaking' })
