@@ -247,8 +247,9 @@ export function QuorlythBot() {
             let message = ''
             if (action.type === 'community') {
               if (!a.owner) throw new Error('Only the space owner can create a community. Sign in with the owner account and try again.')
-              ok = await a.createCommunity(action)
-              message = ok ? `Created ${action.name}. Opening your communities now so you can enter it and add ideas.` : 'I could not save that community. Check the message from Quorlyth and try again.'
+              const result = await a.createCommunityDetailed(action)
+              ok = result.ok
+              message = ok ? `Created ${action.name}. Opening your communities now so you can enter it and add ideas.` : `I couldn't save ${action.name}: ${result.error || 'The save failed for an unknown reason.'}`
             } else if (action.type === 'idea') {
               const community = a.data.communities.find(x => x.id === action.cid)
               if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
