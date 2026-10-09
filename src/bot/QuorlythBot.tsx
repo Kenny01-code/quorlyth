@@ -495,9 +495,14 @@ export function QuorlythBot() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return a.toast('Voice notes need speech recognition. Try Chrome or Edge and allow microphone access.')
     if (recRef.current) {
-      // The same microphone icon stops capture. onend submits the recognized note.
+      // Update the UI synchronously on tap; browser speech engines may emit onend later.
       window.clearTimeout(noteSilenceTimer.current || undefined)
-      recRef.current.stop()
+      setRecordingNote(false)
+      setStatus('Finishing voice note')
+      try { recRef.current.stop() } catch {
+        recRef.current = null
+        setStatus('Online')
+      }
       return
     }
     const r = new SR()
@@ -527,10 +532,10 @@ export function QuorlythBot() {
       noteSilenceTimer.current = null
       recRef.current = null
       setRecordingNote(false)
-      setStatus('Online')
       robot.current?.listen(false)
       const transcript = dictationText.current.trim()
       if (transcript && !busy) {
+        setStatus('Sending voice note')
         setInput('')
         void send(transcript)
       } else if (transcript) {
