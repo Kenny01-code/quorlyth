@@ -249,7 +249,7 @@ export function QuorlythBot() {
               message = ok ? 'Community cover updated.' : 'I could not update that cover.'
             }
             if (ok) {
-              const next = { ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] }
+              const next = { ...draft, msgs: [...draft.msgs, { r: 'a' as const, t: message }] }
               persist(next)
               if (action.type === 'community') nav('/communities')
               if (action.type === 'idea') nav('/communities/' + action.cid)
