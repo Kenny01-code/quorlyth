@@ -251,7 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false
       }
     }
-    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id))
+    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (owner && !c.ownerId && !c.createdBy)))
     const canManageCommunity = (cid: string) => !!me && (owner || ownsCommunity(cid))
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
