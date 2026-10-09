@@ -38,6 +38,20 @@ function usePlaceholder(role: 'owner' | 'member' | 'visitor', active: boolean) {
 
 type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
 type Live = null | { state: string; user: string; bot: string }
+type PendingAction =
+  | { type: 'community'; name: string; purpose: string; cover: string; vis: 'listed' | 'unlisted'; post: 'anyone' | 'members' | 'owner' }
+  | { type: 'idea'; title: string; body: string; cid: string; tags: string[] }
+  | { type: 'promote'; ideaId: string; text: string; credits: string[] }
+  | { type: 'cover'; cid: string; cover: string }
+
+function pendingActionDetail(action: PendingAction, communities: { id: string; name: string }[], ideas: { id: string; title: string }[]): string {
+  switch (action.type) {
+    case 'community': return action.name + (action.purpose ? ' · ' + action.purpose : '') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
+    case 'idea': return action.title + ' · ' + (communities.find(x => x.id === action.cid)?.name || 'Community')
+    case 'promote': return ideas.find(x => x.id === action.ideaId)?.title || 'Selected idea'
+    case 'cover': return (communities.find(x => x.id === action.cid)?.name || 'Community') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
+  }
+}
 
 export function QuorlythBot() {
   const a = useApp()
@@ -50,6 +64,8 @@ export function QuorlythBot() {
   const log = useRef<HTMLDivElement>(null)
   const ctl = useRef<AbortController | null>(null)
   const rt = useRef<Awaited<ReturnType<typeof startRealtime>> | null>(null)
+  const liveFallback = useRef(false)
+  const liveRecognition = useRef<any>(null)
   const audio = useRef<{ stop(): void } | null>(null)
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'compact' | 'large' | 'full' | 'custom'>('full')
@@ -63,12 +79,14 @@ export function QuorlythBot() {
   const [stage, setStage] = useState<'std' | 'big' | 'off'>('std')
   const [caption, setCaption] = useState('')
   const [status, setStatus] = useState('Online')
+  const [thinkingTask, setThinkingTask] = useState('')
   const [q, setQ] = useState('')
   const [menu, setMenu] = useState<null | { id: string | null; x: number; y: number }>(null)
   const [ren, setRen] = useState('')
   const [showArch, setShowArch] = useState(false)
   const [live, setLive] = useState<Live>(null)
   const [pend, setPend] = useState('')
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [tour, setTour] = useState(-1)
   const [greet, setGreet] = useState('')
   const [size, setSize] = useState<null | { w: number; h: number }>(null)
@@ -128,6 +146,36 @@ export function QuorlythBot() {
     setTimeout(() => { setCaption(msg); first ? robot.current?.welcome() : robot.current?.wave(); say(msg); setTimeout(() => setCaption(''), 6000) }, 700)
   }
 
+  async function requestLiveContext(text: string) {
+    const asksLocalWeather = /\b(weather|forecast|temperature)\b/i.test(text) && !/\b(?:in|at|for)\s+[A-Z][a-z]+/i.test(text)
+    const asksLocation = /\b(near me|my location|where am i|weather here|forecast here|temperature here|local weather|nearby)\b/i.test(text)
+    if (!asksLocalWeather && !asksLocation) return ''
+    if (!navigator.geolocation) return 'The browser does not support geolocation. Ask the user to name their city for local weather or nearby results.'
+    try {
+      const position: GeolocationPosition = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }))
+      if (asksLocalWeather) {
+        const { latitude, longitude } = position.coords
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(String(latitude)) + '&longitude=' + encodeURIComponent(String(longitude)) + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto'
+        const response = await fetch(url)
+        if (!response.ok) return 'Location permission was granted, but the live weather service is unavailable. Do not invent weather; ask the user to try again or name a city.'
+        const weather = await response.json()
+        return 'The user explicitly requested local weather and granted browser location permission. Live weather data from Open-Meteo for their approximate current coordinates: ' + JSON.stringify({ timezone: weather.timezone, current: weather.current, units: weather.current_units }) + '. Use these values as current weather, state that they are approximate to the browser location, and do not claim a more precise address.'
+      }
+      return 'The user explicitly requested location-based results and granted browser location permission. Approximate current coordinates: latitude ' + position.coords.latitude.toFixed(3) + ', longitude ' + position.coords.longitude.toFixed(3) + '. Use these only for the requested nearby/location task; do not infer a street address.'
+    } catch {
+      return 'The user did not share browser location or the location request timed out. Do not guess their location; ask them for a city or permission if location-based results are needed.'
+    }
+  }
+
+  function browserContext() {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown timezone'
+    const lang = navigator.language || 'unknown language'
+    const localTime = new Date().toLocaleString(lang, { dateStyle: 'full', timeStyle: 'long' })
+    const speech = 'speechSynthesis' in window
+    const recognition = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+    return `Browser language: ${lang}. Device time zone: ${zone}. Current local date and time: ${localTime}. Browser online: ${navigator.onLine ? 'yes' : 'no'}. Browser speech output: ${speech ? 'available' : 'unavailable'}. Browser speech recognition: ${recognition ? 'available' : 'unavailable'}. Precise device location has not been read; ask before requesting location permission and never pretend to know GPS coordinates.`
+  }
+
   function say(text: string) {
     const clean = text.replace(/\[\[.*?\]\]/g, '').trim()
     if (!clean) return
@@ -163,23 +211,85 @@ export function QuorlythBot() {
     setCur(next); return next
   }
 
+  function taskPreview(text: string) {
+    if (/\b(create|make|start|set up)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Creating your community'
+    if (/\b(add|create|write|submit|post)\b/i.test(text) && /\bidea\b/i.test(text)) return 'Preparing your idea'
+    if (/\b(open|show|take me to|go to|view|enter)\b/i.test(text)) return 'Opening the right place'
+    if (/\b(weather|forecast|temperature|latest|current|today|right now|live|news|search|look up|source)\b/i.test(text)) return 'Checking current information'
+    if (/\b(review|score|rank|analy[sz]e|analytics|summari[sz]e|compare)\b/i.test(text)) return 'Reviewing the available information'
+    if (/\b(write|draft|rewrite|improve|generate|design|plan)\b/i.test(text)) return 'Working on your request'
+    return 'Finding the most useful answer'
+  }
+
   async function send(text?: string, raw = false) {
     const t = (text ?? input).trim()
     if (!t || busy) return
     setInput('')
     if (!raw && t.startsWith('/')) { const m = t.match(/^\/(\w+)\s*(.*)$/s); if (m && SKILLS.some(s => s.id === m[1])) return skill(m[1], m[2]) }
     if (!raw && a.owner && /^(please\s+)?(can you\s+)?(run|start|do|perform|review|score)\b/i.test(t) && /\b(review|score|ideas?|queue)\b/i.test(t)) return skill('review')
+    if (!raw) {
+      const direct = handleDirectNavigation(t)
+      if (direct) return
+      if (/\b(create|make|start|set up)\b/i.test(t) && /\bcommunity\b/i.test(t) && !a.owner) {
+        const draft = add(cur, { r: 'u', t })
+        const msg = !a.me ? 'Sign in first. Creating a community requires the space owner account.' : 'Your current account is not recognized as the space owner, so I cannot create a community from this session. Sign in with the owner account, then ask me again. I can still open communities and help draft ideas where you have permission.'
+        persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: msg }] })
+        return
+      }
+      const action = planAction(t)
+      if (action) {
+        audio.current?.stop(); setView('chat')
+        if (action.type === 'community' || action.type === 'idea' || action.type === 'cover') {
+          const draft = add(cur, { r: 'u', t })
+          setBusy(true); setStatus('Applying action'); robot.current?.think(true)
+          try {
+            let ok = false
+            let message = ''
+            if (action.type === 'community') {
+              if (!a.owner) throw new Error('Only the space owner can create a community. Sign in with the owner account and try again.')
+              ok = await a.createCommunity(action)
+              message = ok ? `Created ${action.name}. Opening your communities now so you can enter it and add ideas.` : 'I could not save that community. Check the message from Quorlyth and try again.'
+            } else if (action.type === 'idea') {
+              const community = a.data.communities.find(x => x.id === action.cid)
+              if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
+              ok = await a.postIdea({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
+              message = ok ? `Submitted “${action.title}”. Opening ${community.name} now.` : 'I could not submit that idea. Check your permissions and try again.'
+            } else {
+              if (!a.owner) throw new Error('Only the space owner can change a community cover.')
+              ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
+              message = ok ? 'Community cover updated.' : 'I could not update that cover.'
+            }
+            if (ok) {
+              const next = { ...draft, msgs: [...draft.msgs, { r: 'a' as const, t: message }] }
+              persist(next)
+              if (action.type === 'community') nav('/communities')
+              if (action.type === 'idea') nav('/communities/' + action.cid)
+            } else {
+              persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+            }
+          } catch (e: any) {
+            persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: e?.message || 'That action could not be completed.' }] })
+          } finally { setBusy(false); setStatus('Online'); robot.current?.think(false) }
+          return
+        }
+        let draft = add(cur, { r: 'u', t })
+        const summary = `I have prepared this in-app promotion for review. It will not be posted to an external social network. Confirm to mark the idea as promoted inside Quorlyth.`
+        draft = { ...draft, msgs: [...draft.msgs, { r: 'a', t: summary }] }
+        persist(draft); setPendingAction(action); return
+      }
+    }
     audio.current?.stop(); setView('chat')
     let c = add(cur, { r: 'u', t })
-    setBusy(true); robot.current?.think(true); setStatus('Thinking'); setCaption('')
+    setBusy(true); robot.current?.think(true); setStatus('Thinking'); setThinkingTask(taskPreview(t)); setCaption('')
     ctl.current = new AbortController()
     try {
       const turns = c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
+      const liveContext = await requestLiveContext(t)
       let first = true
       const full = await streamChat(turns, {
-        system: buildContext(a, bs, loc.pathname, project), tier: bs.model, signal: ctl.current.signal,
+        system: buildContext(a, bs, loc.pathname, project) + '\\nBrowser/device context: ' + browserContext() + (liveContext ? '\\nLocation and live weather context: ' + liveContext : ''), tier: bs.model, signal: ctl.current.signal,
         onText: f => {
-          if (first) { first = false; robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
+          if (first) { first = false; setThinkingTask(''); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           const clean = f.replace(/\[\[[\s\S]*$/, '').trim()
           setCaption(clean.slice(-140))
           setCur(prev => prev ? { ...prev, msgs: prev.msgs.filter(m => !(m as any).live).concat([{ r: 'a', t: clean, live: true } as any]) } : prev)
@@ -199,7 +309,7 @@ export function QuorlythBot() {
       if (e.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: e.message?.includes('OPENAI_API_KEY') ? 'The AI key is missing on the server. Add OPENAI_API_KEY to your .env file and restart npm run dev:ai.' : 'Sorry, that did not go through. ' + (e.message || '') }] }; persist(c) }
       else setCur(c)
     }
-    setBusy(false); setStatus('Online'); ctl.current = null
+    setBusy(false); setThinkingTask(''); setStatus('Online'); ctl.current = null
   }
 
   async function skill(id: string, arg = '') {
@@ -268,11 +378,79 @@ export function QuorlythBot() {
     if (live) return stopLive()
     if (!a.me) return a.toast('Sign in to talk live')
     setLive({ state: 'connecting', user: '', bot: '' })
+    liveFallback.current = false
     const v = VOICES.find(x => x.id === bs.vid) || VOICES[0]
     let c = cur
+    const browserLive = () => {
+      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (!SR || !('speechSynthesis' in window)) {
+        liveFallback.current = false
+        setLive(null)
+        a.toast('Live voice needs microphone speech recognition and speech output. Try Chrome or Edge, or enable the OpenAI Realtime key.')
+        return
+      }
+      if (!liveFallback.current) return
+      const recognition = new SR()
+      liveRecognition.current = recognition
+      recognition.lang = navigator.language || 'en-US'
+      recognition.interimResults = true
+      recognition.continuous = false
+      recognition.onstart = () => setLive(l => l ? { ...l, state: 'listening' } : l)
+      recognition.onerror = (event: any) => {
+        liveRecognition.current = null
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          liveFallback.current = false; setLive(null); a.toast('Microphone permission was denied. Allow microphone access in your browser settings.')
+        } else if (liveFallback.current) {
+          setLive(l => l ? { ...l, state: 'listening' } : l)
+          window.setTimeout(browserLive, 500)
+        }
+      }
+      recognition.onresult = async (event: any) => {
+        const spoken = String(event.results?.[0]?.[0]?.transcript || '').trim()
+        const result = event.results?.[event.resultIndex ?? 0]
+        if (result && !result.isFinal) {
+          setLive(l => l ? { ...l, state: 'listening', user: String(result[0]?.transcript || l.user) } : l)
+          return
+        }
+        liveRecognition.current = null
+        if (!spoken || !liveFallback.current) { if (liveFallback.current) browserLive(); return }
+        setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
+        c = add(c, { r: 'u', t: spoken }, 'Live conversation')
+        try {
+          let first = true
+          const answer = await streamChat(c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t })), {
+            system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a voice conversation. Speak naturally in short sentences. You can help with the app, but do not claim to execute an action unless the app has actually done it.',
+            tier: bs.model,
+            onText: full => { if (first) first = false; setLive(l => l ? { ...l, state: 'speaking', bot: full } : l) },
+          })
+          c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }] }
+          persist(c)
+          setLive(l => l ? { ...l, state: 'speaking', bot: answer } : l)
+          await new Promise<void>(resolve => {
+            speakText(answer.slice(0, 900), v.ai, () => robot.current?.talk(true), () => { robot.current?.talk(false); resolve() })
+              .catch(() => { try { const utterance = new SpeechSynthesisUtterance(answer.slice(0, 900)); utterance.lang = navigator.language || 'en-US'; utterance.onend = utterance.onerror = () => resolve(); window.speechSynthesis.speak(utterance) } catch { resolve() } })
+          })
+        } catch (error: any) {
+          const message = error?.message || 'I could not finish that voice reply. Please try again.'
+          a.toast(message)
+          c = { ...c, msgs: [...c.msgs, { r: 'a', t: message }] }; persist(c)
+        }
+        if (liveFallback.current) browserLive()
+      }
+      try { recognition.start() } catch { liveRecognition.current = null; if (liveFallback.current) window.setTimeout(browserLive, 500) }
+    }
+    const SpeechRecognitionApi = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    // Prefer the browser's available microphone + speech engine for a dependable first connection.
+    // This avoids making live talk depend on OpenAI Realtime credits when text chat is powered by Gemini.
+    if (SpeechRecognitionApi && 'speechSynthesis' in window) {
+      liveFallback.current = true
+      setLive({ state: 'listening', user: '', bot: '' })
+      browserLive()
+      return
+    }
     try {
       rt.current = await startRealtime({
-        instructions: buildContext(a, bs, loc.pathname, project) + '\nThis is a live spoken conversation, like a phone call. Reply in one to three short natural sentences, the way a warm person would speak. Use contractions. No lists or markdown. You can call the tools to take the person to a page or open an idea.',
+        instructions: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a live spoken conversation, like a phone call. Reply in one to three short natural sentences, the way a warm person would speak. Use contractions. No lists or markdown. You can call the tools to take the person to a page or open an idea.',
         voice: v.ai,
         tools: [
           { type: 'function', name: 'navigate', description: 'Take the person to a page of the app.', parameters: { type: 'object', properties: { page: { type: 'string', enum: ['home', 'dashboard', 'communities', 'queue', 'promote', 'analytics', 'settings', 'profile'] } }, required: ['page'] } },
@@ -280,19 +458,30 @@ export function QuorlythBot() {
         ],
         onTool: (name, args) => {
           if (name === 'navigate') { const m: any = { home: '/', dashboard: '/dashboard', communities: '/communities', queue: '/queue', promote: '/promote', analytics: '/analytics', settings: '/settings', profile: '/me' }; nav(m[args.page] || '/'); return { ok: true } }
-          if (name === 'open_idea') { nav('/idea/' + args.idea_id); return { ok: true } }
+          if (name === 'open_idea') { if (!a.data.ideas.some(i => i.id === args.idea_id)) return { ok: false, error: 'Idea not found' }; nav('/idea/' + args.idea_id); return { ok: true } }
           return { ok: false }
         },
         onEvent: e => {
           if (e.type === 'state') { setLive(l => (e.state === 'closed' ? null : { ...(l || { user: '', bot: '' }), state: e.state })); robot.current?.listen(e.state === 'listening'); robot.current?.think(e.state === 'thinking'); robot.current?.talk(e.state === 'speaking') }
-          if (e.type === 'user') { c = add(c, { r: 'u', t: e.text }, 'Live: ' + e.text); setLive(l => l && { ...l, user: e.text }) }
+          if (e.type === 'user') { c = add(c, { r: 'u', t: e.text }, 'Live conversation'); setLive(l => l && { ...l, user: e.text }) }
           if (e.type === 'bot') { setLive(l => l && { ...l, bot: e.text }); setCaption(e.text.slice(-140)); if (e.done) { c = add(c, { r: 'a', t: e.text }); persist(c!); robot.current?.bump() } }
           if (e.type === 'error') a.toast(e.message)
         },
       })
-    } catch (e: any) { setLive(null); a.toast(/NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : e.message || 'Live voice could not start') }
+    } catch (e: any) {
+      rt.current = null
+      if ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) {
+        liveFallback.current = true
+        setLive({ state: 'listening', user: '', bot: '' })
+        a.toast('Using browser voice with Gemini chat. Allow microphone access to speak.')
+        browserLive()
+      } else {
+        setLive(null)
+        a.toast(/NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : e.message || 'Live voice could not start')
+      }
+    }
   }
-  function stopLive() { rt.current?.stop(); rt.current = null; setLive(null); setCaption('') }
+  function stopLive() { liveFallback.current = false; try { liveRecognition.current?.stop() } catch {}; liveRecognition.current = null; rt.current?.stop(); rt.current = null; try { window.speechSynthesis?.cancel() } catch {}; setLive(null); setCaption('') }
   useEffect(() => () => { rt.current?.stop() }, [])
 
   // ----- dictation -----
@@ -364,6 +553,125 @@ export function QuorlythBot() {
   const slash = input.startsWith('/') && !input.includes(' ') ? SKILLS.filter(s => (a.owner || !s.own) && (s.id.startsWith(input.slice(1).toLowerCase()) || s.n.toLowerCase().includes(input.slice(1).toLowerCase()))).slice(0, 6) : []
   const msgs = cur?.msgs || []
   const sideShown = side
+
+  function handleDirectNavigation(text: string): boolean {
+    const s = text.trim()
+    const lower = s.toLowerCase()
+    const go = (path: string, reply: string) => {
+      nav(path)
+      const draft = add(cur, { r: 'u', t: s })
+      persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: reply }] })
+      setView('chat')
+      return true
+    }
+    const openList = /\b(open|show|take me to|go to|view|browse)\b/i.test(s) && /\b(communities|all communities|community list)\b/i.test(s) && !/\bcommunity\s+(?:called|named)\b/i.test(s)
+    if (openList) return go('/communities', 'Opening the communities page now.')
+    const wantsOpen = /\b(open|show|take me to|go to|view|enter|visit)\b/i.test(s)
+    const matchedNamedCommunity = wantsOpen ? a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x,y) => y.name.length-x.name.length)[0] : undefined
+    if (matchedNamedCommunity && !/\b(community list|all communities)\b/i.test(s)) return go('/communities/' + matchedNamedCommunity.id, 'Opening ' + matchedNamedCommunity.name + ' now.')
+    const askedToOpen = wantsOpen && /\bcommunity\b/i.test(s)
+    if (askedToOpen) {
+      const explicit = s.match(/\b(?:community|called|named)\s+["“]?(.+?)["”]?\s*$/i)
+      const byName = explicit?.[1] ? a.data.communities.find(x => x.name.toLowerCase() === explicit[1].trim().replace(/["“”]+$/g, '').toLowerCase()) : undefined
+      const included = a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x,y) => y.name.length-x.name.length)[0]
+      const community = byName || included
+      if (community) return go('/communities/' + community.id, 'Opening ' + community.name + ' now.')
+      return go('/communities', 'I opened the communities list. Choose the community you want, or tell me its exact name and I will open it if it is available to your account.')
+    }
+    const routeRules: [RegExp,string,string][] = [
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(dashboard|home)\b/i, '/dashboard', 'Opening your dashboard.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(review queue|queue|ideas to review)\b/i, '/queue', 'Opening the review queue.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(analytics|insights)\b/i, '/analytics', 'Opening analytics.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(profile|my profile)\b/i, '/me', 'Opening your profile.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(settings)\b/i, '/settings', 'Opening settings.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(promote|promotion)\b/i, '/promote', 'Opening the promotion workspace.'],
+    ]
+    for (const [pattern, path, reply] of routeRules) if (pattern.test(s)) return go(path, reply)
+    return false
+  }
+
+  function planAction(text: string): PendingAction | null {
+    const s = text.trim()
+    const createCommunity = /\b(create|make|start|set up)\b/i.test(s) && /\bcommunity\b/i.test(s) && a.owner
+    if (createCommunity) {
+      const quoted = s.match(/\b(?:called|named)\s+["“]([^"”]+)["”]/i)
+      const named = s.match(/\b(?:called|named)\s+(.+?)(?:\s+(?:about|for)\s+([\s\S]+))?$/i)
+      const plain = s.match(/\bcommunity\s+(?!called\b|named\b)(.+?)\s*$/i)
+      const rawName = quoted?.[1] || named?.[1] || plain?.[1]
+      if (rawName?.trim()) {
+        const name = rawName.trim().replace(/^['"“]|['"”]$/g, '').replace(/\s+(?:about|for)\s+[\s\S]+$/i, '').slice(0, 60)
+        if (name) return { type: 'community', name, purpose: (named?.[2] || '').trim().slice(0, 300), cover: 'a', vis: 'listed', post: 'anyone' }
+      }
+    }
+    const coverMatch = s.match(/\b(?:change|set|switch|update)\b[\s\S]*?\bcover\b[\s\S]*?\b(?:to|style)\s+(aurora|halo|grid|dusk)\b/i)
+    if (coverMatch && a.owner) {
+      const pathId = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1]
+      const nameMention = a.data.communities.find(x => s.toLowerCase().includes(x.name.toLowerCase()))
+      const community = a.data.communities.find(x => x.id === pathId) || nameMention
+      if (community) return { type: 'cover', cid: community.id, cover: ({ aurora: 'a', halo: 'b', grid: 'c', dusk: 'd' } as Record<string, string>)[coverMatch[1].toLowerCase()] }
+    }
+    let ideaMatch = s.match(/\b(?:create|write|submit|post|add)\s+(?:an?\s+)?(?:new\s+)?idea\s+(?:called|named)\s+["“]?(.+?)["”]?(?:\s+(?:about|describing)\s+([\s\S]+))?$/i)
+    let reversedCommunity: typeof a.data.communities[number] | undefined
+    let reversedTitle = ''
+    if (!ideaMatch) {
+      const reversed = s.match(/\b(?:create|write|submit|post|add)\s+(?:an?\s+)?(?:new\s+)?idea\s+(?:in|for|to)\s+(.+?)\s+(?:called|named)\s+["“]?(.+?)["”]?\s*$/i)
+      if (reversed) {
+        reversedCommunity = a.data.communities.find(x => x.name.toLowerCase() === reversed[1].trim().toLowerCase())
+        reversedTitle = reversed[2].trim().replace(/^['"“]|['"”]$/g, '')
+      }
+    }
+    if ((ideaMatch || reversedCommunity) && a.me) {
+      const pathCid = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1]
+      const mentioned = reversedCommunity || a.data.communities.filter(x => s.toLowerCase().includes(x.name.toLowerCase())).sort((x, y) => y.name.length - x.name.length)[0]
+      const community = a.data.communities.find(x => x.id === pathCid) || mentioned || a.data.communities[0]
+      let title = (reversedTitle || ideaMatch?.[1] || '').trim().replace(/^['"“]|['"”]$/g, '')
+      if (mentioned && !reversedTitle) {
+        const suffix = new RegExp('\\s+(?:to|in|for)\\s+' + mentioned.name.replace(/[.*+?^$()|[\]\\]/g, '\\$&') + '$', 'i')
+        title = title.replace(suffix, '').trim()
+      }
+      const allowed = !!community && !community.arch && a.canPost() && (a.owner || (community.post !== 'owner' && (community.post !== 'members' || a.joined(community.id))))
+      if (community && allowed && title) return { type: 'idea', title: title.slice(0, 120), body: (ideaMatch?.[2] || '').trim().slice(0, 2000), cid: community.id, tags: [] }
+    }
+    if (a.owner && /\b(publish|promote|push)\b/i.test(s) && /\bidea\b/i.test(s)) {
+      const requested = a.data.ideas.find(x => s.toLowerCase().includes(x.title.toLowerCase()))
+      const best = requested || [...a.data.ideas].filter(x => a.statusOf(x.id) === 'selected').sort((x,y) => (a.data.reviews[y.id]?.score || 0) - (a.data.reviews[x.id]?.score || 0))[0]
+      if (best && a.statusOf(best.id) !== 'declined') return { type: 'promote', ideaId: best.id, text: [best.title, best.body || '', 'Shared from the Quorlyth community.'].filter(Boolean).join('\n\n'), credits: [best.authorId] }
+    }
+    return null
+  }
+
+  async function confirmPendingAction() {
+    const action = pendingAction
+    if (!action) return
+    setBusy(true); setStatus('Applying action')
+    let ok = false
+    try {
+      if (action.type === 'community') {
+        if (!a.owner) throw new Error('Only the space owner can create a community.')
+        ok = await a.createCommunity(action)
+      } else if (action.type === 'idea') {
+        const community = a.data.communities.find(x => x.id === action.cid)
+        if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
+        ok = await a.postIdea({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
+      } else if (action.type === 'promote') {
+        if (!a.owner) throw new Error('Only the space owner can promote ideas.')
+        const idea = a.data.ideas.find(x => x.id === action.ideaId)
+        if (!idea || a.statusOf(idea.id) === 'declined') throw new Error('That idea is no longer available to promote.')
+        ok = await a.publish(action.ideaId, action.text, action.credits)
+      } else if (action.type === 'cover') {
+        if (!a.owner) throw new Error('Only the space owner can change a community cover.')
+        ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
+      }
+      if (ok) {
+        const labels = { community: 'Community created successfully.', idea: 'Idea submitted successfully.', promote: 'Idea marked as promoted in Quorlyth. It has not been posted to an external platform.', cover: 'Community cover updated successfully.' }
+        const next = add(cur, { r: 'a', t: labels[action.type] })
+        persist(next); setPendingAction(null)
+        if (action.type === 'community') nav('/communities')
+        if (action.type === 'idea') nav('/communities/' + action.cid)
+      }
+    } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
+    finally { setBusy(false); setStatus('Online') }
+  }
 
   function act(b: { a: string; id?: string }) {
     if (b.a === 'go') nav(b.id || '/'); else if (b.a === 'idea') nav('/idea/' + b.id)
@@ -447,10 +755,11 @@ export function QuorlythBot() {
                             {i === msgs.length - 1 && !busy && <button aria-label="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /></button>}</div>
                         </div>
                       ))}
-                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma typing" role="status" aria-label="QuorlythBot is thinking"><span>QuorlythBot is thinking</span><i /><i /><i /></div>}
+                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma typing" role="status" aria-label="QuorlythBot is thinking"><span>QuorlythBot is thinking</span>{thinkingTask && <small className="qbot-task-status">{thinkingTask}</small>}<i /><i /><i /></div>}
                     </div>
                   )
                 ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
+                {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style' } as any)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">Review the details, then confirm. QuorlythBot will use your signed-in account permissions.</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
                 <div className="bc">

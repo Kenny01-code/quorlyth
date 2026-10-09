@@ -262,7 +262,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       joined: cid => !!(me && data.members[me.id]?.[cid]),
       canPost: () => owner || !data.settings?.appr || data.decisions[me?.id || '']?.status === 'approved',
       claimOwner: () => w(() => st!.set('config/owner', { id: me!.id }), 'You now own this space'),
-      createCommunity: c => w(() => st!.set('communities/' + slug(), { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: 'a', at: Date.now() }), 'Community created'),
+      createCommunity: c => w(() => st!.set('communities/' + slug(), { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() }), 'Community created'),
       saveCommunity: (id, p) => w(() => up('communities/' + id, p), 'Saved'),
       deleteCommunity: id => w(() => st!.delete('communities/' + id), 'Community deleted'),
       join: (cid, on) => w(() => up('members/' + me!.id, { c: { [cid]: on } }), on ? 'You joined' : 'You left'),
