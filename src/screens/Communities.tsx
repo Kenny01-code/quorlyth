@@ -251,7 +251,7 @@ function CommunitySettings({ c }: { c: Community }) {
       <div className="acts">
         <button className="btn p" onClick={async () => { if (!f.name.trim()) return a.toast('Give it a name'); if (await a.saveCommunity(c.id, { ...f, name: f.name.trim() } as any)) clearDraft(f) }}>Save changes</button>
         <button className="btn" onClick={() => clearDraft(initial)}><Icon name="rotate" size={16} />Discard draft</button>
-        <button className="btn" onClick={async () => { if (!del) return setDel(true); await a.deleteCommunity(c.id); nav('/communities') }}>{del ? 'Confirm delete' : 'Delete'}</button>
+        <button className="btn" onClick={async () => { if (!del) return setDel(true); const ok = await a.deleteCommunity(c.id); if (ok) nav('/communities'); else setDel(false) }}>{del ? 'Confirm delete' : 'Delete'}</button>
       </div>
     </div>
   )
