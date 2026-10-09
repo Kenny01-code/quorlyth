@@ -39,6 +39,10 @@ export function Messages() {
   const [draft, setDraft] = useState('')
   const [peopleOpen, setPeopleOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [peopleQuery, setPeopleQuery] = useState('')
+  const [conversationFilter, setConversationFilter] = useState<'all' | 'groups' | 'unread'>('all')
   const [groupName, setGroupName] = useState('')
   const [selectedPeople, setSelectedPeople] = useState<string[]>([])
   const [sending, setSending] = useState(false)
@@ -78,7 +82,7 @@ export function Messages() {
     ids.delete(meId)
     return [...ids].map(id => ({ id, name: a.nm(id) })).sort((x, y) => x.name.localeCompare(y.name))
   }, [a.data.profiles, a.data.members, a.data.communities, a.data.ideas, a.nm, meId])
-  const visiblePeople = people.filter(p => p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase()))
+  const visiblePeople = people.filter(p => p.name.toLowerCase().includes(peopleQuery.toLowerCase()) || p.id.toLowerCase().includes(peopleQuery.toLowerCase()))
   const readAt = (id: string) => reads.find(r => r.conversationId === id)?.lastReadAt || 0
   const unreadCount = (c: Conversation) => messages.filter(m => m.conversationId === c.id && m.senderId !== meId && m.at > readAt(c.id)).length
   const titleOf = (c: Conversation) => c.type === 'group' ? (c.title || 'Untitled group') : a.nm(c.members.find(id => id !== meId) || '')
@@ -117,12 +121,12 @@ export function Messages() {
     if (!store || !meId) return
     setError('')
     const existing = conversations.find(c => c.type === 'direct' && c.members.length === 2 && c.members.includes(personId) && c.members.includes(meId))
-    if (existing) { nav('/messages/' + existing.id); setPeopleOpen(false); setQuery(''); return }
+    if (existing) { nav('/messages/' + existing.id); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); return }
     const id = makeId()
     try {
       await store.set('conversations/' + id, { title: '', type: 'direct', members: [meId, personId], createdBy: meId, createdAt: Date.now() })
       nav('/messages/' + id)
-      setPeopleOpen(false); setQuery('')
+      setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('')
     } catch (e) { setError('Could not start this conversation. ' + readableChatError(e)) }
   }
 
@@ -135,7 +139,7 @@ export function Messages() {
     try {
       await store.set('conversations/' + id, { title: groupName.trim().slice(0, 60), type: 'group', members, createdBy: meId, createdAt: Date.now() })
       nav('/messages/' + id)
-      setGroupOpen(false); setSelectedPeople([]); setGroupName(''); setQuery('')
+      setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setSelectedPeople([]); setGroupName(''); setPeopleQuery('')
     } catch (e) {
       const detail = readableChatError(e)
       console.error('Quorlyth group creation failed:', e)
@@ -161,20 +165,20 @@ export function Messages() {
 
   return (
     <div className="chat-page">
-      <div className="chat-topline"><div className="chat-page-heading"><span className="chat-heading-mark"><Icon name="message" size={17} /></span><div><h2 className="chat-title">Messages</h2><p className="mut">Your conversations</p></div></div><div className="chat-top-actions"><button className="btn" onClick={() => { setGroupOpen(v => !v); setPeopleOpen(false); setError('') }}><Icon name="users" size={16} />New group</button><button className="btn p" onClick={() => { setPeopleOpen(v => !v); setGroupOpen(false); setError('') }}><Icon name="plus" size={16} />New message</button></div></div>
+      <div className="chat-topline"><div className="chat-page-heading"><span className="chat-heading-mark"><Icon name="message" size={17} /></span><div><h2 className="chat-title">Messages</h2><p className="mut">Your conversations, thoughtfully connected</p></div></div><div className="chat-top-actions"><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="users" size={16} />New group</button><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="plus" size={16} />New conversation</button></div></div>
       {error && <div className="chat-error" role="alert"><Icon name="alert" size={16} />{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
-      {(peopleOpen || groupOpen) && <div className="glass chat-create">
-        <div className="chat-create-head"><div><p className="dim">{groupOpen ? 'START A COLLABORATION' : 'FIND YOUR PEOPLE'}</p><h3>{groupOpen ? 'Create a group chat' : 'Start a conversation'}</h3></div><button className="chat-icon-btn" onClick={() => { setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('') }} aria-label="Close"><Icon name="x" size={18} /></button></div>
-        {groupOpen && <label className="chat-group-name"><span>Group name</span><input value={groupName} onChange={e => setGroupName(e.target.value)} maxLength={60} placeholder="e.g. The next big idea" /></label>}
-        <label className="chat-search"><Icon name="search" size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search people by name..." autoFocus /></label>
-        <div className="chat-people-list">{visiblePeople.map(p => <button className="chat-person" key={p.id} onClick={() => groupOpen ? setSelectedPeople(old => old.includes(p.id) ? old.filter(x => x !== p.id) : [...old, p.id]) : void startDirect(p.id)}><Av id={p.id} size={42} /><span className="chat-person-copy"><b>{p.name}</b>{isPlatformAdmin(p.id) && <span className="owner-badge">✦ PLATFORM OWNER</span>}{isCommunityCreator(p.id) && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}<small>{a.data.profiles[p.id]?.head || 'Quorlyth member'}</small></span>{groupOpen ? <span className={cn('chat-check', selectedPeople.includes(p.id) && 'on')}>{selectedPeople.includes(p.id) && <Icon name="check" size={14} />}</span> : <Icon name="arrow-up-right" size={17} />}</button>)}{!visiblePeople.length && <p className="mut chat-empty">No matching members found yet. People appear here after their profiles or community activity is available.</p>}</div>
-        {groupOpen && <div className="chat-create-footer"><span className="dim">{selectedPeople.length} selected · choose at least 2</span><button className="btn p" disabled={selectedPeople.length < 2 || !groupName.trim()} onClick={() => void createGroup()}>Create group <Icon name="arrow" size={16} /></button></div>}
-      </div>}
       <div className={cn('chat-workspace', 'size-' + workspaceSize, (peopleOpen || groupOpen || settingsOpen || profileOpen) && 'with-sidepanel')}>
         <aside className={cn('glass chat-sidebar', active && 'has-active')}>
+          <nav className="chat-utility-nav" aria-label="Messaging navigation">
+            <button className={cn('chat-utility-item', !peopleOpen && !groupOpen && !settingsOpen && !profileOpen && 'on')} onClick={() => { setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setConversationFilter('all') }}><Icon name="message" size={16} /><span>Chats</span></button>
+            <button className={cn('chat-utility-item', peopleOpen && 'on')} onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="users" size={16} /><span>People</span></button>
+            <button className={cn('chat-utility-item', profileOpen && 'on')} onClick={() => { setProfileOpen(true); setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false) }}><Icon name="user" size={16} /><span>Profile</span></button>
+            <button className={cn('chat-utility-item', settingsOpen && 'on')} onClick={() => { setSettingsOpen(true); setPeopleOpen(false); setGroupOpen(false); setProfileOpen(false) }}><Icon name="settings" size={16} /><span>Settings</span></button>
+          </nav>
           <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
           <label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" /></label>
-          <div className="chat-conversation-list">{conversations.filter(c => titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())).map(c => {
+          <div className="chat-filter-tabs" role="group" aria-label="Filter conversations"><button className={cn(conversationFilter === 'all' && 'on')} onClick={() => setConversationFilter('all')}>All</button><button className={cn(conversationFilter === 'groups' && 'on')} onClick={() => setConversationFilter('groups')}>Groups</button><button className={cn(conversationFilter === 'unread' && 'on')} onClick={() => setConversationFilter('unread')}>Unread</button></div>
+          <div className="chat-conversation-list">{conversations.filter(c => conversationFilter === 'all' || (conversationFilter === 'groups' ? c.type === 'group' : unreadCount(c) > 0)).filter(c => titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())).map(c => {
             const last = lastMessage(c), unread = unreadCount(c)
             return <div key={c.id} role="button" tabIndex={0} className={cn('chat-conversation', active?.id === c.id && 'active', unread > 0 && 'unread')} onClick={() => nav('/messages/' + c.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav('/messages/' + c.id) } }}>
               {c.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link" title={'View ' + titleOf(c) + "'s public profile"} aria-label={'View ' + titleOf(c) + ' public profile'} onClick={e => { e.stopPropagation(); nav(profileLink(c.members.find(id => id !== meId) || '')) }}><Av id={c.members.find(id => id !== meId) || ''} size={46} />{isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
@@ -209,8 +213,19 @@ export function Messages() {
             <>Build something<br />bigger together.</>,
             <>Your next chapter<br />could start here.</>,
             <>Make room for<br />something meaningful.</>
-          ][rotatingLine]}</h2><p className="mut">Choose a conversation or start a new one. Share a thought, build on an idea, make something happen.</p><div className="chat-no-actions"><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={16} />Start a conversation</button><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false) }}><Icon name="users" size={16} />Create a group</button></div></div>}
+          ][rotatingLine]}</h2><p className="chat-hero-tagline">Say the thing worth sharing.</p><p className="mut">Choose a conversation or start a new one. Share a thought, build on an idea, make something happen.</p><div className="chat-no-actions"><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('') }}><Icon name="plus" size={16} />Start a conversation</button><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('') }}><Icon name="users" size={16} />Create a group</button></div></div>}
         </div>
+        {(peopleOpen || groupOpen || settingsOpen || profileOpen) && <aside className={cn('glass chat-create', settingsOpen && 'chat-create-settings', profileOpen && 'chat-create-profile')} aria-label={settingsOpen ? 'Message settings' : profileOpen ? 'My profile' : groupOpen ? 'Create group' : 'New conversation'}>
+          <div className="chat-create-head"><div><p className="dim">{settingsOpen ? 'PREFERENCES & CONTROLS' : profileOpen ? 'YOUR QUORLYTH IDENTITY' : groupOpen ? 'START A COLLABORATION' : 'FIND YOUR PEOPLE'}</p><h3>{settingsOpen ? 'Message settings' : profileOpen ? 'My profile' : groupOpen ? 'Create a group chat' : 'New conversation'}</h3></div><button className="chat-icon-btn" onClick={() => { setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('') }} aria-label="Close panel"><Icon name="x" size={18} /></button></div>
+          {(peopleOpen || groupOpen) && <>
+            {groupOpen && <label className="chat-group-name"><span>Group name</span><input value={groupName} onChange={e => setGroupName(e.target.value)} maxLength={60} placeholder="e.g. The next big idea" /></label>}
+            <label className="chat-search"><Icon name="search" size={18} /><input value={peopleQuery} onChange={e => setPeopleQuery(e.target.value)} placeholder="Search people by name..." autoFocus /></label>
+            <div className="chat-people-list">{visiblePeople.map(p => <button className="chat-person" key={p.id} onClick={() => groupOpen ? setSelectedPeople(old => old.includes(p.id) ? old.filter(x => x !== p.id) : [...old, p.id]) : void startDirect(p.id)}><Av id={p.id} size={42} /><span className="chat-person-copy"><b>{p.name}</b>{isPlatformAdmin(p.id) && <span className="owner-badge">✦ PLATFORM OWNER</span>}{isCommunityCreator(p.id) && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}<small>{a.data.profiles[p.id]?.head || 'Quorlyth member'}</small></span>{groupOpen ? <span className={cn('chat-check', selectedPeople.includes(p.id) && 'on')}>{selectedPeople.includes(p.id) && <Icon name="check" size={14} />}</span> : <Icon name="arrow-up-right" size={17} />}</button>)}{!visiblePeople.length && <p className="mut chat-empty">No matching members found yet. People appear here after their profiles or community activity is available.</p>}</div>
+            {groupOpen && <div className="chat-create-footer"><span className="dim">{selectedPeople.length} selected · choose at least 2</span><button className="btn p" disabled={selectedPeople.length < 2 || !groupName.trim()} onClick={() => void createGroup()}>Create group <Icon name="arrow" size={16} /></button></div>}
+          </>}
+          {profileOpen && <div className="chat-panel-profile"><div className="chat-profile-card"><Av id={meId} size={72} /><div><h4>{a.nm(meId)}</h4><p>{a.data.profiles[meId]?.head || 'Quorlyth member'}</p><small>Signed in to Quorlyth</small></div></div><div className="chat-panel-note">Your profile is how people recognize you across conversations and communities.</div><button className="btn p chat-panel-action" onClick={() => nav('/me')}><Icon name="user" size={16} />Open my profile <Icon name="arrow-up-right" size={15} /></button><button className="btn chat-panel-action" onClick={() => nav('/settings')}><Icon name="settings" size={16} />Account settings <Icon name="arrow-up-right" size={15} /></button></div>}
+          {settingsOpen && <div className="chat-panel-settings"><p className="chat-panel-intro">Make your messaging space feel like yours. Full account controls remain available in Quorlyth settings.</p><button className="chat-setting-row" onClick={() => nav('/settings')}><span className="chat-setting-icon"><Icon name="settings" size={17} /></span><span><b>Account & preferences</b><small>Manage your Quorlyth settings</small></span><Icon name="arrow-up-right" size={16} /></button><button className="chat-setting-row" onClick={() => nav('/me')}><span className="chat-setting-icon"><Icon name="user" size={17} /></span><span><b>Profile & identity</b><small>Update how others see you</small></span><Icon name="arrow-up-right" size={16} /></button><button className="chat-setting-row" onClick={() => { setSettingsOpen(false); setPeopleOpen(false); setGroupOpen(false); setProfileOpen(false); setConversationFilter('unread') }}><span className="chat-setting-icon"><Icon name="bell" size={17} /></span><span><b>Unread messages</b><small>Filter your inbox to unread conversations</small></span><Icon name="arrow-up-right" size={16} /></button><div className="chat-panel-note">Only settings that are implemented by the existing account system are shown as account controls. Messaging-specific preferences can be expanded without pretending unsupported features are active.</div></div>}
+        </aside>}
       </div>
       <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
     </div>
