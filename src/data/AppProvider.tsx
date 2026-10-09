@@ -241,7 +241,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const app = useMemo<App>(() => {
     const votesOf = (id: string) => Object.values(data.votes).filter(v => v && v[id]).length
     const w = async (fn: () => Promise<any>, ok?: string) => {
-      try { await fn(); ok && toast(ok); return true } catch (e: any) { toast(e?.message?.includes('row-level') ? 'You do not have permission to do that' : 'That did not go through. Please try again.'); return false }
+      try { await fn(); ok && toast(ok); return true }
+      catch (e: any) {
+        const message = String(e?.message || e || 'Unknown error').slice(0, 280)
+        console.error('Quorlyth action failed:', e)
+        toast(/row.level security|permission denied|not authorized|forbidden/i.test(message) ? 'Permission denied: ' + message : message)
+        return false
+      }
     }
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
@@ -297,15 +303,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createCommunityDetailed,
       saveCommunity: (id, p) => w(() => up('communities/' + id, p), 'Saved'),
       deleteCommunity: id => w(async () => {
-        if (!owner) throw new Error('Only the space owner can delete a community.')
+        if (!me || !owner) throw new Error('Only the signed-in Quorlyth owner can delete a community.')
+        if (!data.communities.some(c => c.id === id)) throw new Error('Community not found. Refresh the page and try again.')
+        if (backend?.auth.mode === 'supabase') {
+          const token = await backend.auth.accessToken?.()
+          if (!token) throw new Error('Your session expired. Sign in again and retry deletion.')
+          const response = await fetch('/api/admin-community', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ cid: id }),
+          })
+          const result = await response.json().catch(() => ({}))
+          if (!response.ok || !result.ok) throw new Error(result.error || 'Server-side community deletion failed (' + response.status + ').')
+          return result
+        }
+        // Local/demo store: delete linked data locally; never use a privileged browser key.
         const linkedIdeas = data.ideas.filter(i => i.cid === id)
+        const ideaIds = new Set(linkedIdeas.map(i => i.id))
         for (const idea of linkedIdeas) {
           await st!.delete('ideas/' + idea.id)
           await st!.delete('reviews/' + idea.id)
           await st!.delete('projects/' + idea.id)
         }
-        const linkedVolunteers = data.volunteers.filter(v => linkedIdeas.some(i => i.id === v.ideaId))
-        for (const application of linkedVolunteers) await st!.delete('volunteers/' + application.id)
+        for (const application of data.volunteers.filter(v => ideaIds.has(v.ideaId))) await st!.delete('volunteers/' + application.id)
+        for (const member of Object.keys(data.members)) if (data.members[member]?.[id]) await st!.update('members/' + member, { c: { [id]: false } })
         await st!.delete('communities/' + id)
       }, 'Community and its linked ideas deleted'),
       join: (cid, on) => w(() => up('members/' + me!.id, { c: { [cid]: on } }), on ? 'You joined' : 'You left'),
