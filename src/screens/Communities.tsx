@@ -95,6 +95,7 @@ function Detail({ cid }: { cid: string }) {
   const { data } = a
   const c = data.communities.find(x => x.id === cid)
   const [tab, setTab] = useState(0)
+  const [shareOpen, setShareOpen] = useState(false)
   const [preview, setPreview] = useState<Preview>(() => (new URLSearchParams(location.search).get('preview') as Preview) || null)
   const [sort, setSort] = useState(0)
   const [tag, setTag] = useState('')
@@ -137,7 +138,7 @@ function Detail({ cid }: { cid: string }) {
       <div className="glass ccard">
         <Cover c={c} big />
         <div className="cbody">
-          <Chip onClick={() => nav('/communities')}>Back to communities</Chip>
+          <div className="community-top-actions"><Chip onClick={() => nav('/communities')}>Back to communities</Chip><button className="btn" style={{ padding: '8px 15px' }} onClick={() => setShareOpen(v => !v)}><Icon name="share" size={15} />{shareOpen ? 'Hide share options' : 'Share community'}</button></div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '14px 0 8px' }}>
             <span className="chip">{c.vis === 'unlisted' ? 'Unlisted' : 'Listed'}</span><span className="chip">{RULE[rule]}</span>{c.arch && <span className="chip on">Archived</span>}
           </div>
@@ -152,6 +153,7 @@ function Detail({ cid }: { cid: string }) {
         </div>
       </div>
       <div className="ctabs">{tabs.map((t, i) => <Chip key={t} on={tab === i} onClick={() => setTab(i)}>{t}</Chip>)}</div>
+      {shareOpen && <ShareCard title={"Share " + c.name} url={window.location.origin + "/communities/" + c.id} sub="Copy the community link or let people scan the QR code. Unlisted communities still require access." />}
 
       {tab === 0 && (
         <>
@@ -203,7 +205,7 @@ function Detail({ cid }: { cid: string }) {
       )}
 
       {tab === 3 && own && <Insights cid={cid} />}
-      {tab === 4 && own && <><CommunitySettings c={c} /><ShareCard title="Community invite link" url={location.origin + '/communities/' + c.id} sub="People with access open this community directly." /></>}
+      {tab === 4 && own && <CommunitySettings c={c} />}
     </>
   )
 }
