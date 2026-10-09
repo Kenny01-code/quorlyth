@@ -217,6 +217,14 @@ export function QuorlythBot() {
     if (!raw && t.startsWith('/')) { const m = t.match(/^\/(\w+)\s*(.*)$/s); if (m && SKILLS.some(s => s.id === m[1])) return skill(m[1], m[2]) }
     if (!raw && a.owner && /^(please\s+)?(can you\s+)?(run|start|do|perform|review|score)\b/i.test(t) && /\b(review|score|ideas?|queue)\b/i.test(t)) return skill('review')
     if (!raw) {
+      const direct = handleDirectNavigation(t)
+      if (direct) return
+      if (/\b(create|make|start|set up)\b/i.test(t) && /\bcommunity\b/i.test(t) && !a.owner) {
+        const draft = add(cur, { r: 'u', t })
+        const msg = !a.me ? 'Sign in first. Creating a community requires the space owner account.' : 'Your current account is not recognized as the space owner, so I cannot create a community from this session. Sign in with the owner account, then ask me again. I can still open communities and help draft ideas where you have permission.'
+        persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: msg }] })
+        return
+      }
       const action = planAction(t)
       if (action) {
         audio.current?.stop(); setView('chat')
@@ -494,6 +502,39 @@ export function QuorlythBot() {
   const msgs = cur?.msgs || []
   const sideShown = side
 
+  function handleDirectNavigation(text: string): boolean {
+    const s = text.trim()
+    const lower = s.toLowerCase()
+    const go = (path: string, reply: string) => {
+      nav(path)
+      const draft = add(cur, { r: 'u', t: s })
+      persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: reply }] })
+      setView('chat')
+      return true
+    }
+    const openList = /\b(open|show|take me to|go to|view|browse)\b/i.test(s) && /\b(communities|all communities|community list)\b/i.test(s) && !/\bcommunity\s+(?:called|named)\b/i.test(s)
+    if (openList) return go('/communities', 'Opening the communities page now.')
+    const askedToOpen = /\b(open|show|take me to|go to|view|enter)\b/i.test(s) && /\bcommunity\b/i.test(s)
+    if (askedToOpen) {
+      const explicit = s.match(/\b(?:community|called|named)\s+["“]?(.+?)["”]?\s*$/i)
+      const byName = explicit?.[1] ? a.data.communities.find(x => x.name.toLowerCase() === explicit[1].trim().replace(/["“”]+$/g, '').toLowerCase()) : undefined
+      const included = a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x,y) => y.name.length-x.name.length)[0]
+      const community = byName || included
+      if (community) return go('/communities/' + community.id, 'Opening ' + community.name + ' now.')
+      return go('/communities', 'I opened the communities list. Choose the community you want, or tell me its exact name and I will open it if it is available to your account.')
+    }
+    const routeRules: [RegExp,string,string][] = [
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(dashboard|home)\b/i, '/dashboard', 'Opening your dashboard.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(review queue|queue|ideas to review)\b/i, '/queue', 'Opening the review queue.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(analytics|insights)\b/i, '/analytics', 'Opening analytics.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(profile|my profile)\b/i, '/me', 'Opening your profile.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(settings)\b/i, '/settings', 'Opening settings.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(promote|promotion)\b/i, '/promote', 'Opening the promotion workspace.'],
+    ]
+    for (const [pattern, path, reply] of routeRules) if (pattern.test(s)) return go(path, reply)
+    return false
+  }
+
   function planAction(text: string): PendingAction | null {
     const s = text.trim()
     const createCommunity = /\b(create|make|start|set up)\b/i.test(s) && /\bcommunity\b/i.test(s) && a.owner
@@ -550,6 +591,8 @@ export function QuorlythBot() {
         const labels = { community: 'Community created successfully.', idea: 'Idea submitted successfully.', promote: 'Idea marked as promoted in Quorlyth. It has not been posted to an external platform.', cover: 'Community cover updated successfully.' }
         const next = add(cur, { r: 'a', t: labels[action.type] })
         persist(next); setPendingAction(null)
+        if (action.type === 'community') nav('/communities')
+        if (action.type === 'idea') nav('/communities/' + action.cid)
       }
     } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
     finally { setBusy(false); setStatus('Online') }
