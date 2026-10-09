@@ -92,7 +92,6 @@ export function QuorlythBot() {
   const [tour, setTour] = useState(-1)
   const [greet, setGreet] = useState('')
   const [size, setSize] = useState<null | { w: number; h: number }>(null)
-  const [muted, setMuted] = useState(false)
   const panel = useRef<HTMLDivElement>(null)
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
@@ -451,15 +450,7 @@ export function QuorlythBot() {
       }
       try { recognition.start() } catch { liveRecognition.current = null; if (liveFallback.current) window.setTimeout(browserLive, 500) }
     }
-    const SpeechRecognitionApi = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    // Prefer the browser's available microphone + speech engine for a dependable first connection.
-    // This avoids making live talk depend on OpenAI Realtime credits when text chat is powered by Gemini.
-    if (SpeechRecognitionApi && 'speechSynthesis' in window) {
-      liveFallback.current = true
-      setLive({ state: 'listening', user: '', bot: '' })
-      browserLive()
-      return
-    }
+    // Prefer the low-latency Realtime API; fall back to browser recognition only if it cannot connect.
     try {
       rt.current = await startRealtime({
         instructions: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a live spoken conversation, like a phone call. Reply in one to three short natural sentences, the way a warm person would speak. Use contractions. No lists or markdown. You can call the tools to take the person to a page or open an idea.',
