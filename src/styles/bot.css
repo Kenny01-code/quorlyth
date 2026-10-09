@@ -154,6 +154,25 @@
   .bot .ast-in textarea { flex-basis: 100%; }
   .bot .ast-in > .btn { flex: 1; }
 }
+/* Slow, restrained specular movement gives the obsidian shell a glass-like finish. */
+.bot .bstage, .bot .ast-stage { transform: translateZ(0); }
+.bot .bstage::before, .bot .ast-stage::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: -32% -45%;
+  pointer-events: none;
+  background: linear-gradient(112deg,transparent 35%,rgba(255,255,255,.065) 47%,rgba(255,255,255,.13) 50%,rgba(255,255,255,.035) 53%,transparent 65%);
+  transform: translateX(-55%) rotate(8deg);
+  animation: qBotSpecular 13s cubic-bezier(.45,0,.55,1) infinite;
+  mix-blend-mode: screen;
+}
+.bot .bstage::after, .bot .ast-stage::after { pointer-events: none; }
+@keyframes qBotSpecular {
+  0%, 15% { transform: translateX(-58%) rotate(8deg); opacity: 0; }
+  35% { opacity: .72; }
+  62%, 100% { transform: translateX(58%) rotate(8deg); opacity: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .bot .ast-stage.speaking, .bot .bstage.speaking { animation: none !important; }
+  .bot .ast-stage.speaking, .bot .bstage.speaking, .bot .bstage::before, .bot .ast-stage::before { animation: none !important; }
 }
