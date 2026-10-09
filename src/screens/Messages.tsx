@@ -119,7 +119,7 @@ export function Messages() {
     <div className="chat-page">
       <div className="chat-topline"><div><p className="dim chat-eyebrow">QUORLYTH / MESSAGES</p><h1 className="chat-title">Conversations<span>.</span></h1><p className="mut">Private spaces for ideas to become something real.</p></div><div className="chat-top-actions"><button className="btn" onClick={() => { setGroupOpen(v => !v); setPeopleOpen(false); setError('') }}><Icon name="users" size={16} />New group</button><button className="btn p" onClick={() => { setPeopleOpen(v => !v); setGroupOpen(false); setError('') }}><Icon name="plus" size={16} />New message</button></div></div>
       {error && <div className="chat-error" role="alert"><Icon name="alert" size={16} />{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
-      {(peopleOpen || groupOpen) && <section className="glass chat-create">
+      {(peopleOpen || groupOpen) && <div className="glass chat-create">
         <div className="chat-create-head"><div><p className="dim">{groupOpen ? 'START A COLLABORATION' : 'FIND YOUR PEOPLE'}</p><h3>{groupOpen ? 'Create a group chat' : 'Start a conversation'}</h3></div><button className="chat-icon-btn" onClick={() => { setPeopleOpen(false); setGroupOpen(false); setQuery('') }} aria-label="Close"><Icon name="x" size={18} /></button></div>
         {groupOpen && <label className="chat-group-name"><span>Group name</span><input value={groupName} onChange={e => setGroupName(e.target.value)} maxLength={60} placeholder="e.g. The next big idea" /></label>}
         <label className="chat-search"><Icon name="search" size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search people by name..." autoFocus /></label>
@@ -140,7 +140,7 @@ export function Messages() {
           })}{!conversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>Your inbox is a blank canvas.</b><p>Start a private conversation or bring your collaborators together.</p><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button></div>}</div>
           <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Private conversations <span className="dim">· standard encryption in transit</span></div>
         </aside>
-        <section className={cn('glass chat-thread', active && 'has-active')}>
+        <div className={cn('glass chat-thread', active && 'has-active')}>
           {active ? <>
             <header className="chat-thread-head"><button className="chat-back-mobile" onClick={() => nav('/messages')} aria-label="Back to inbox"><Icon name="arrow-left" size={18} /></button>
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <Av id={active.members.find(id => id !== meId) || ''} size={44} />}
@@ -159,7 +159,7 @@ export function Messages() {
             </div>
             <form className="chat-composer" onSubmit={sendMessage}><div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
           </> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><Icon name="message" size={32} /></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2>Every great thing<br />starts somewhere.</h2><p className="mut">Choose a conversation or start a new one. Share a thought, build on an idea, make something happen.</p><div className="chat-no-actions"><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={16} />Start a conversation</button><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false) }}><Icon name="users" size={16} />Create a group</button></div></div>}
-        </section>
+        </div>
       </div>
       <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
     </div>
