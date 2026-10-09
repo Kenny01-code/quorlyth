@@ -44,6 +44,15 @@ type PendingAction =
   | { type: 'promote'; ideaId: string; text: string; credits: string[] }
   | { type: 'cover'; cid: string; cover: string }
 
+function pendingActionDetail(action: PendingAction, communities: { id: string; name: string }[], ideas: { id: string; title: string }[]): string {
+  switch (action.type) {
+    case 'community': return action.name + (action.purpose ? ' · ' + action.purpose : '') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
+    case 'idea': return action.title + ' · ' + (communities.find(x => x.id === action.cid)?.name || 'Community')
+    case 'promote': return ideas.find(x => x.id === action.ideaId)?.title || 'Selected idea'
+    case 'cover': return (communities.find(x => x.id === action.cid)?.name || 'Community') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
+  }
+}
+
 export function QuorlythBot() {
   const a = useApp()
   const nav = useNavigate()
@@ -212,13 +221,14 @@ export function QuorlythBot() {
       if (action) {
         audio.current?.stop(); setView('chat')
         let draft = add(cur, { r: 'u', t })
-        const summaries: Record<PendingAction['type'], string> = {
-          community: `I can create “${action.name}” with a ${action.cover} cover. Nothing will be saved until you confirm.`,
-          idea: `I have prepared “${action.title}” for ${a.data.communities.find(x => x.id === action.cid)?.name || 'your community'}. Nothing will be posted until you confirm.`,
-          promote: `I can mark “${a.data.ideas.find(x => x.id === action.ideaId)?.title || 'this idea'}” as promoted inside Quorlyth. This does not publish to an external social platform. Confirm before I proceed.`,
-          cover: `I can change the cover to ${action.cover} for ${a.data.communities.find(x => x.id === action.cid)?.name || 'this community'}. Nothing will change until you confirm.`,
+        let summary = ''
+        switch (action.type) {
+          case 'community': summary = `I can create “${action.name}” with a ${({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora'} cover. Nothing will be saved until you confirm.`; break
+          case 'idea': summary = `I have prepared “${action.title}” for ${a.data.communities.find(x => x.id === action.cid)?.name || 'your community'}. Nothing will be posted until you confirm.`; break
+          case 'promote': summary = `I can mark “${a.data.ideas.find(x => x.id === action.ideaId)?.title || 'this idea'}” as promoted inside Quorlyth. This does not publish to an external social platform. Confirm before I proceed.`; break
+          case 'cover': summary = `I can change the cover to ${({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora'} for ${a.data.communities.find(x => x.id === action.cid)?.name || 'this community'}. Nothing will change until you confirm.`; break
         }
-        draft = { ...draft, msgs: [...draft.msgs, { r: 'a', t: summaries[action.type] }] }
+        draft = { ...draft, msgs: [...draft.msgs, { r: 'a', t: summary }] }
         persist(draft); setPendingAction(action); return
       }
     }
@@ -631,7 +641,7 @@ export function QuorlythBot() {
                     </div>
                   )
                 ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
-                {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style' } as any)[pendingAction.type]}</h3><p className="mut">{pendingAction.type === 'community' ? pendingAction.name + (pendingAction.purpose ? ' · ' + pendingAction.purpose : '') : pendingAction.type === 'idea' ? pendingAction.title : pendingAction.type === 'promote' ? (a.data.ideas.find(x => x.id === pendingAction.ideaId)?.title || 'Selected idea') : (a.data.communities.find(x => x.id === pendingAction.cid)?.name || 'Community') + ' · ' + ({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[pendingAction.cover]}</p><p className="dim">Review the details, then confirm. QuorlythBot will use your signed-in account permissions.</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+                {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style' } as any)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">Review the details, then confirm. QuorlythBot will use your signed-in account permissions.</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
                 <div className="bc">
