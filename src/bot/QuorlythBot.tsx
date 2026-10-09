@@ -487,15 +487,61 @@ export function QuorlythBot() {
 
   // ----- dictation -----
   const recRef = useRef<any>(null)
+  const dictationText = useRef('')
+  const [recordingNote, setRecordingNote] = useState(false)
   function dictate() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return a.toast('Voice input is not supported in this browser. Try Chrome, Edge or Safari.')
-    if (recRef.current) { recRef.current.stop(); return }
-    const r = new SR(); recRef.current = r; r.lang = 'en-US'; r.interimResults = true
-    r.onresult = (e: any) => setInput(Array.from(e.results).map((x: any) => x[0].transcript).join(''))
-    r.onend = () => { recRef.current = null; setStatus('Online'); robot.current?.listen(false); setInput(v => { if (v.trim()) setTimeout(() => send(v), 50); return v }) }
-    r.onerror = (e: any) => { recRef.current = null; if (e.error === 'not-allowed') a.toast('The microphone is blocked. Allow it in your browser settings.') }
-    setStatus('Listening'); robot.current?.listen(true); r.start()
+    if (!SR) return a.toast('Voice notes need speech recognition. Try Chrome or Edge and allow microphone access.')
+    if (recRef.current) {
+      // Tap a second time to finish the voice note; it stays in the composer for review.
+      recRef.current.stop()
+      return
+    }
+    const r = new SR()
+    recRef.current = r
+    dictationText.current = ''
+    r.lang = navigator.language || 'en-US'
+    r.interimResults = true
+    r.continuous = true
+    r.onresult = (e: any) => {
+      const pieces: string[] = []
+      for (let i = 0; i < e.results.length; i++) {
+        const item = e.results[i]
+        if (item?.[0]?.transcript) pieces.push(String(item[0].transcript))
+      }
+      dictationText.current = pieces.join(' ').replace(/\\s+/g, ' ').trim()
+      setInput(dictationText.current)
+    }
+    r.onend = () => {
+      recRef.current = null
+      setRecordingNote(false)
+      setStatus('Online')
+      robot.current?.listen(false)
+      const transcript = dictationText.current.trim()
+      if (transcript) {
+        setInput(transcript)
+        a.toast('Voice note ready. Review it, then tap Send.')
+      }
+    }
+    r.onerror = (e: any) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        recRef.current = null
+        setRecordingNote(false)
+        setStatus('Online')
+        a.toast('Microphone permission was denied. Allow microphone access in your browser settings.')
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        a.toast('Voice note stopped. Try recording again.')
+      }
+    }
+    setRecordingNote(true)
+    setStatus('Recording voice note')
+    robot.current?.listen(true)
+    try { r.start() } catch {
+      recRef.current = null
+      setRecordingNote(false)
+      setStatus('Online')
+      a.toast('Could not start recording. Check microphone permission and try again.')
+    }
   }
 
   // ----- chat list actions -----
@@ -769,7 +815,7 @@ export function QuorlythBot() {
                   <div className="ast-in">
                     <textarea rows={1} value={input} placeholder={ph} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
-                    <button className={cn('btn', recRef.current && 'rec')} aria-label="Dictate" title="Dictate" style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
+                    <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Stop voice note and keep the transcript' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name={recordingNote ? 'square' : 'mic'} size={18} /></button>
                     <button className="btn" aria-label="Talk live" title="Talk live" style={{ padding: 12 }} onClick={startLive}><Icon name="live" size={18} /></button>
                     <button className="btn p" aria-label="Send" style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
                   </div>
