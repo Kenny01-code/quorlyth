@@ -47,6 +47,9 @@ export function Messages() {
   const [rotatingLine, setRotatingLine] = useState(0)
   const [rotatingIcon, setRotatingIcon] = useState(0)
   const bottom = useRef<HTMLDivElement>(null)
+  const threadBody = useRef<HTMLDivElement>(null)
+  const shouldStickToBottom = useRef(true)
+  const lastConversationId = useRef<string | undefined>(undefined)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const store = a.backend?.store
   const meId = a.me?.id || ''
@@ -100,7 +103,15 @@ export function Messages() {
     void store.set('chatReads/' + id, { userId: meId, conversationId: active.id, lastReadAt: now }).catch(e => console.warn('Could not update chat read state', e))
   }, [active?.id, store, meId, activeMessages.length])
 
-  useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [active?.id, activeMessages.length])
+  useEffect(() => {
+    const pane = threadBody.current
+    if (!pane) return
+    if (lastConversationId.current !== active?.id) {
+      lastConversationId.current = active?.id
+      shouldStickToBottom.current = true
+    }
+    if (shouldStickToBottom.current) pane.scrollTop = pane.scrollHeight
+  }, [active?.id, activeMessages.length])
 
   async function startDirect(personId: string) {
     if (!store || !meId) return
@@ -180,7 +191,7 @@ export function Messages() {
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
               <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
             </header>
-            <div className="chat-thread-body">
+            <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 120 }}>
               <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
               {activeMessages.map((m, i) => {
                 const mine = m.senderId === meId
