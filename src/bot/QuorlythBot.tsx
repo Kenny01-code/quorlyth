@@ -214,6 +214,7 @@ export function QuorlythBot() {
   }
 
   function taskPreview(text: string) {
+    if (/\b(delete|remove|destroy)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Preparing a deletion confirmation'
     if (/\b(create|make|start|set up)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Creating your community'
     if (/\b(add|create|write|submit|post)\b/i.test(text) && /\bidea\b/i.test(text)) return 'Preparing your idea'
     if (/\b(open|show|take me to|go to|view|enter)\b/i.test(text)) return 'Opening the right place'
@@ -241,6 +242,13 @@ export function QuorlythBot() {
       const action = planAction(t)
       if (action) {
         audio.current?.stop(); setView('chat')
+        if (action.type === 'deleteCommunity') {
+          const draft = add(cur, { r: 'u', t })
+          const prompt = `I found ${action.name}. It has ${action.ideaCount} linked idea${action.ideaCount === 1 ? '' : 's'}. Review the confirmation below before I delete the community.`
+          persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+          setPendingAction(action)
+          return
+        }
         if (action.type === 'community' || action.type === 'idea' || action.type === 'cover') {
           const draft = add(cur, { r: 'u', t })
           setBusy(true); setStatus('Applying action'); setThinkingTask(taskPreview(t)); robot.current?.think(true)
