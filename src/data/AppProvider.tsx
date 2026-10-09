@@ -19,6 +19,7 @@ export interface App {
   nm: (id: string) => string; avatar: (id: string) => string
   votesOf: (ideaId: string) => number; iVoted: (ideaId: string) => boolean; statusOf: (ideaId: string) => Status
   joined: (cid: string) => boolean
+  canManageCommunity: (cid: string) => boolean
   canPost: () => boolean
   claimOwner: () => Promise<boolean>
   createCommunity: (c: Partial<Community>) => Promise<boolean>
@@ -249,11 +250,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false
       }
     }
+    const canManageCommunity = (cid: string) => !!me && (owner || data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id)))
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
-      if (!owner) return { ok: false, error: 'Your current account is not recognized as the Quorlyth owner.' }
       try {
-        await st!.set('communities/' + slug(), { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
+        await st!.set('communities/' + slug(), { name: c.name, ownerId: me.id, createdBy: me.id, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
         toast('Community created')
         return { ok: true }
       } catch (e: any) {
@@ -297,13 +298,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       iVoted: id => !!(me && data.votes[me.id]?.[id]),
       statusOf: id => data.reviews[id]?.status || 'review',
       joined: cid => !!(me && data.members[me.id]?.[cid]),
+      canManageCommunity,
       canPost: () => owner || !data.settings?.appr || data.decisions[me?.id || '']?.status === 'approved',
       claimOwner: () => w(() => st!.set('config/owner', { id: me!.id }), 'You now own this space'),
-      createCommunity: c => w(() => st!.set('communities/' + slug(), { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() }), 'Community created'),
+      createCommunity: c => createCommunityDetailed(c).then(r => r.ok),
       createCommunityDetailed,
-      saveCommunity: (id, p) => w(() => up('communities/' + id, p), 'Saved'),
+      saveCommunity: (id, p) => w(async () => {
+        if (!canManageCommunity(id)) throw new Error('Only this community’s owner or a platform administrator can manage it.')
+        await up('communities/' + id, p)
+      }, 'Saved'),
       deleteCommunity: id => w(async () => {
-        if (!me || !owner) throw new Error('Only the signed-in Quorlyth owner can delete a community.')
+        if (!me || !canManageCommunity(id)) throw new Error('Only this community’s owner or a platform administrator can delete it.')
         if (!data.communities.some(c => c.id === id)) throw new Error('Community not found. Refresh the page and try again.')
         if (backend?.auth.mode === 'supabase') {
           const token = await backend.auth.accessToken?.()
