@@ -539,8 +539,14 @@ export function QuorlythBot() {
     const s = text.trim()
     const createCommunity = /\b(create|make|start|set up)\b/i.test(s) && /\bcommunity\b/i.test(s) && a.owner
     if (createCommunity) {
-      const m = s.match(/\b(?:called|named)\s+["“]?(.+?)["”]?(?:\s+(?:about|for)\s+([\s\S]+))?$/i)
-      if (m?.[1]?.trim()) return { type: 'community', name: m[1].trim().replace(/["“”]+$/g, '').slice(0, 60), purpose: (m[2] || '').trim().slice(0, 300), cover: 'a', vis: 'listed', post: 'anyone' }
+      const quoted = s.match(/\b(?:called|named)\s+["“]([^"”]+)["”]/i)
+      const named = s.match(/\b(?:called|named)\s+(.+?)(?:\s+(?:about|for)\s+([\s\S]+))?$/i)
+      const plain = s.match(/\bcommunity\s+(?!called\b|named\b)(.+?)\s*$/i)
+      const rawName = quoted?.[1] || named?.[1] || plain?.[1]
+      if (rawName?.trim()) {
+        const name = rawName.trim().replace(/^['"“]|['"”]$/g, '').replace(/\s+(?:about|for)\s+[\s\S]+$/i, '').slice(0, 60)
+        if (name) return { type: 'community', name, purpose: (named?.[2] || '').trim().slice(0, 300), cover: 'a', vis: 'listed', post: 'anyone' }
+      }
     }
     const coverMatch = s.match(/\b(?:change|set|switch|update)\b[\s\S]*?\bcover\b[\s\S]*?\b(?:to|style)\s+(aurora|halo|grid|dusk)\b/i)
     if (coverMatch && a.owner) {
@@ -549,13 +555,27 @@ export function QuorlythBot() {
       const community = a.data.communities.find(x => x.id === pathId) || nameMention
       if (community) return { type: 'cover', cid: community.id, cover: ({ aurora: 'a', halo: 'b', grid: 'c', dusk: 'd' } as Record<string, string>)[coverMatch[1].toLowerCase()] }
     }
-    const ideaMatch = s.match(/\b(?:create|write|submit|post)\s+(?:an?\s+)?idea\s+(?:called|named)\s+["“]?(.+?)["”]?(?:\s+(?:about|describing)\s+([\s\S]+))?$/i)
-    if (ideaMatch && a.me) {
+    let ideaMatch = s.match(/\b(?:create|write|submit|post|add)\s+(?:an?\s+)?(?:new\s+)?idea\s+(?:called|named)\s+["“]?(.+?)["”]?(?:\s+(?:about|describing)\s+([\s\S]+))?$/i)
+    let reversedCommunity: typeof a.data.communities[number] | undefined
+    let reversedTitle = ''
+    if (!ideaMatch) {
+      const reversed = s.match(/\b(?:create|write|submit|post|add)\s+(?:an?\s+)?(?:new\s+)?idea\s+(?:in|for|to)\s+(.+?)\s+(?:called|named)\s+["“]?(.+?)["”]?\s*$/i)
+      if (reversed) {
+        reversedCommunity = a.data.communities.find(x => x.name.toLowerCase() === reversed[1].trim().toLowerCase())
+        reversedTitle = reversed[2].trim().replace(/^['"“]|['"”]$/g, '')
+      }
+    }
+    if ((ideaMatch || reversedCommunity) && a.me) {
       const pathCid = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1]
-      const mentioned = a.data.communities.find(x => s.toLowerCase().includes(x.name.toLowerCase()))
+      const mentioned = reversedCommunity || a.data.communities.filter(x => s.toLowerCase().includes(x.name.toLowerCase())).sort((x, y) => y.name.length - x.name.length)[0]
       const community = a.data.communities.find(x => x.id === pathCid) || mentioned || a.data.communities[0]
+      let title = (reversedTitle || ideaMatch?.[1] || '').trim().replace(/^['"“]|['"”]$/g, '')
+      if (mentioned && !reversedTitle) {
+        const suffix = new RegExp('\\s+(?:to|in|for)\\s+' + mentioned.name.replace(/[.*+?^$()|[\]\\]/g, '\\$&') + '$', 'i')
+        title = title.replace(suffix, '').trim()
+      }
       const allowed = !!community && !community.arch && a.canPost() && (a.owner || (community.post !== 'owner' && (community.post !== 'members' || a.joined(community.id))))
-      if (community && allowed && ideaMatch[1]?.trim()) return { type: 'idea', title: ideaMatch[1].trim().replace(/["“”]+$/g, '').slice(0, 120), body: (ideaMatch[2] || '').trim().slice(0, 2000), cid: community.id, tags: [] }
+      if (community && allowed && title) return { type: 'idea', title: title.slice(0, 120), body: (ideaMatch?.[2] || '').trim().slice(0, 2000), cid: community.id, tags: [] }
     }
     if (a.owner && /\b(publish|promote|push)\b/i.test(s) && /\bidea\b/i.test(s)) {
       const requested = a.data.ideas.find(x => s.toLowerCase().includes(x.title.toLowerCase()))
