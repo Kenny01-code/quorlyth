@@ -62,7 +62,7 @@ export function Messages() {
 
   const active = conversations.find(c => c.id === conversationId) || null
   const isPlatformAdmin = (id: string) => id === a.data.ownerId || !!(a.data.profiles[id] as any)?.platformAdmin || (!!a.me && id === a.me.id && a.owner)
-  const isCommunityCreator = (id: string) => a.data.communities.some(c => c.ownerId === id || c.createdBy === id)
+  const isCommunityCreator = (id: string) => id !== a.data.ownerId && !(a.me && id === a.me.id && a.owner) && a.data.communities.some(c => c.ownerId === id || c.createdBy === id)
   const profileLink = (id: string) => '/me/' + encodeURIComponent(id)
   const activeMessages = useMemo(() => messages.filter(m => m.conversationId === active?.id), [messages, active?.id])
   const people = useMemo(() => {
