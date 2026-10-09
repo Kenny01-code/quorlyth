@@ -67,7 +67,7 @@ export function Landing() {
       <div className="sec rv"><div className="glass cta lift"><div className="hmark" style={{ marginTop: -20 }}><i className="hh" /><Logo size={72} breathe /></div>
         <h2>Bring order to your fans.</h2><p className="mut" style={{ margin: '14px auto 30px', maxWidth: 420 }}>Request access to join a space, or sign in if you already have it.</p>
         <div className="acts"><button className="btn p" onClick={() => me ? nav('/access') : (enterDemo(), nav('/dashboard'))}>{me ? 'Request access' : 'Explore Demo Space'}</button><button className="btn" onClick={() => nav('/signin')}>Sign in</button></div></div>
-        <div className="ft"><span>Quorlyth</span><span className="dim">Built for creators and their communities</span></div></div>
+        <footer className="ft" aria-label="Quorlyth creator credit"><span>Quorlyth</span><span className="dim">Built for creators and their communities</span><span className="creator-credit">Created by Ighile Divine</span></footer></div>
     </>
   )
 }
