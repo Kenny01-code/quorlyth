@@ -2248,3 +2248,13 @@ input, textarea, select, button { touch-action: manipulation; }
   .chat-page .chat-create .chat-person,
   .chat-page .chat-setting-row { transition: none !important; }
 }
+
+
+.chat-page .chat-create > * { position: relative; z-index: 1; }
+.chat-page .chat-create .chat-create-head { flex: 0 0 auto; }
+.chat-page .chat-create .chat-people-list::-webkit-scrollbar,
+.chat-page .chat-panel-profile::-webkit-scrollbar,
+.chat-page .chat-panel-settings::-webkit-scrollbar { width: 5px; }
+.chat-page .chat-create .chat-people-list::-webkit-scrollbar-thumb,
+.chat-page .chat-panel-profile::-webkit-scrollbar-thumb,
+.chat-page .chat-panel-settings::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 999px; }
