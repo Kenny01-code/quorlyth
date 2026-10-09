@@ -568,6 +568,7 @@ main:has(.chat-page) > .on { width: 100%; min-width: 0; }
   background: linear-gradient(118deg,rgba(255,255,255,.08),transparent 25%,transparent 74%,rgba(255,255,255,.025));
   opacity: .8;
 }
+.chat-bubble > * { position: relative; z-index: 1; }
 .chat-bubble:hover {
   border-color: rgba(255,255,255,.23);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.18),0 18px 38px -29px rgba(255,255,255,.28);
@@ -681,7 +682,7 @@ main:has(.chat-page) > .on { width: 100%; min-width: 0; }
   .chat-composer { padding-inline: 23px; }
   .chat-compose-glass { padding: 14px 15px 11px; }
 }
-@media (max-width: 1120px) and (min-width: 761px) {
+@media (max-width: 1120px) and (min-width: 981px) {
   .chat-workspace.with-sidepanel { grid-template-columns: minmax(205px,25%) minmax(0,1fr) minmax(230px,28%); }
   .chat-thread-body { padding-inline: 20px; }
 }
