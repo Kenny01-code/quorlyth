@@ -104,15 +104,50 @@ function Public({ id }: { id: string }) {
   const jc = a.data.communities.filter(c => a.data.members[id]?.[c.id] && !(c.ownerId === id || c.createdBy === id))
   const created = a.data.communities.filter(c => c.ownerId === id || c.createdBy === id)
   const communities = [...created, ...jc]
+  const createdIds = new Set(created.map(c => c.id))
+  const communityIdeas = a.data.ideas.filter(i => createdIds.has(i.cid))
+  const communityBackings = communityIdeas.reduce((n, i) => n + a.votesOf(i.id), 0)
+  const contributors = Object.values(communityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
+    const current = acc[idea.authorId] || { id: idea.authorId, ideas: 0, backings: 0 }
+    current.ideas += 1
+    current.backings += a.votesOf(idea.id)
+    acc[idea.authorId] = current
+    return acc
+  }, {})).sort((x, y) => y.backings - x.backings || y.ideas - x.ideas).slice(0, 5)
+  const isPlatformOwner = id === a.data.ownerId || !!(q as any)?.platformAdmin
   return (
     <>
-      <div className="head"><div><button className="chip" onClick={() => nav(-1)}>Back</button></div>{id === a.me?.id && <button className="btn" onClick={() => nav('/me')}><Icon name="edit" size={16} />Edit profile</button>}</div>
+      <div className="head"><div><button className="chip" onClick={() => nav(-1)}>Back</button></div><div className="public-profile-actions">{id === a.me?.id && <button className="btn" onClick={() => nav('/me')}><Icon name="edit" size={16} />Edit profile</button>}<button className="btn" onClick={() => nav('/messages')}><Icon name="message" size={16} />Messages</button></div></div>
       <div className="glass pad">
         <div className="pw"><span className="avx" style={{ width: 112, height: 112 }}><Av id={id} size={112} /></span>
-          <div style={{ minWidth: 0 }}><div className="profile-name-row"><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{(id === a.data.ownerId || !!(q as any)?.platformAdmin) && <span className="owner-badge profile-owner-badge" title="Verified platform owner"><span aria-hidden="true">✦</span> PLATFORM OWNER</span>}</div>{created.length > 0 && <p className="dim" style={{ marginTop: 6 }}>{created.length} community creator</p>}{q?.head && <p className="mut" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
+          <div style={{ minWidth: 0 }}><div className="profile-name-row"><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{isPlatformOwner && <span className="owner-badge profile-owner-badge" title="Verified platform owner"><span aria-hidden="true">✦</span> PLATFORM OWNER</span>}</div>{created.length > 0 && <p className="dim" style={{ marginTop: 6 }}>{created.length} community creator</p>}{q?.head && <p className="mut" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
         <div className="stat3" style={{ marginTop: 28 }}><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{communities.length}</p></div></div>
       </div>
       <ShareCard title="Profile link" url={location.origin + '/me/' + id} sub="Scan or open to view this profile." />
+      <section className="public-profile-impact">
+        <div className="profile-section-heading"><div><p className="dim">COMMUNITY IMPACT</p><h3>Ideas in motion</h3></div><span className="profile-section-mark"><Icon name="audience" size={19} /></span></div>
+        <div className="profile-impact-grid">
+          <div className="glass profile-impact-card"><span>Ideas in your communities</span><strong>{communityIdeas.length}</strong><small>Ideas shared inside communities you created</small></div>
+          <div className="glass profile-impact-card"><span>Community backings</span><strong>{communityBackings}</strong><small>Support received by those ideas</small></div>
+          <div className="glass profile-impact-card"><span>Communities created</span><strong>{created.length}</strong><small>Community spaces started by this member</small></div>
+        </div>
+      </section>
+      {created.length > 0 && <section className="public-created-communities">
+        <div className="profile-section-heading"><div><p className="dim">OPEN THE DOOR</p><h3>Communities & share links</h3><p className="mut">Explore each community or scan its QR code to open the space.</p></div><span className="profile-section-mark"><Icon name="community" size={19} /></span></div>
+        <div className="public-community-grid">{created.map(c => {
+          const items = a.data.ideas.filter(i => i.cid === c.id)
+          const backs = items.reduce((n, i) => n + a.votesOf(i.id), 0)
+          return <article className="glass public-community-card" key={c.id}>
+            <button className="public-community-open" onClick={() => nav('/communities/' + c.id)}><span className="public-community-icon"><Icon name="community" size={21} /></span><span className="public-community-copy"><b>{c.name}</b><small>{items.length} {items.length === 1 ? 'idea' : 'ideas'} · {backs} backings</small></span><Icon name="arrow-up-right" size={17} /></button>
+            {c.purpose && <p className="mut public-community-purpose">{c.purpose}</p>}
+            <ShareCard title={c.name + ' link'} url={location.origin + '/communities/' + c.id} sub="Share this community with its direct link or QR code." />
+          </article>
+        })}</div>
+      </section>}
+      {contributors.length > 0 && <section className="public-contributors">
+        <div className="profile-section-heading"><div><p className="dim">COMMUNITY RECOGNITION</p><h3>Top contributors</h3><p className="mut">Ranked by support earned, with idea count as the tie-breaker.</p></div><span className="profile-section-mark"><Icon name="rank" size={19} /></span></div>
+        <div className="glass profile-leaderboard">{contributors.map((person, index) => <button key={person.id} className="profile-leader-row" onClick={() => nav('/me/' + person.id)}><span className="profile-rank">{String(index + 1).padStart(2, '0')}</span><Av id={person.id} size={39} /><span className="profile-leader-copy"><b>{a.nm(person.id)}{(person.id === a.data.ownerId || !!(a.data.profiles[person.id] as any)?.platformAdmin) && <span className="owner-badge">✦ OWNER</span>}</b><small>{person.ideas} {person.ideas === 1 ? 'idea' : 'ideas'} contributed</small></span><span className="profile-leader-score"><b>{person.backings}</b><small>backings</small></span><Icon name="arrow-up-right" size={16} /></button>)}</div>
+      </section>}
       <h3 style={{ margin: '30px 0 14px' }}>Ideas</h3>
       {my.length ? <div className="grid g3">{my.map(i => <IdeaCard key={i.id} idea={i} />)}</div> : <Empty icon="idea" title="No ideas yet" text="Ideas this person shares will appear here." />}
     </>
