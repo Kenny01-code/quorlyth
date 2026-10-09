@@ -393,7 +393,7 @@ export function QuorlythBot() {
       const recognition = new SR()
       liveRecognition.current = recognition
       recognition.lang = navigator.language || 'en-US'
-      recognition.interimResults = false
+      recognition.interimResults = true
       recognition.continuous = false
       recognition.onstart = () => setLive(l => l ? { ...l, state: 'listening' } : l)
       recognition.onerror = (event: any) => {
@@ -407,6 +407,11 @@ export function QuorlythBot() {
       }
       recognition.onresult = async (event: any) => {
         const spoken = String(event.results?.[0]?.[0]?.transcript || '').trim()
+        const result = event.results?.[event.resultIndex ?? 0]
+        if (result && !result.isFinal) {
+          setLive(l => l ? { ...l, state: 'listening', user: String(result[0]?.transcript || l.user) } : l)
+          return
+        }
         liveRecognition.current = null
         if (!spoken || !liveFallback.current) { if (liveFallback.current) browserLive(); return }
         setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
@@ -433,6 +438,15 @@ export function QuorlythBot() {
         if (liveFallback.current) browserLive()
       }
       try { recognition.start() } catch { liveRecognition.current = null; if (liveFallback.current) window.setTimeout(browserLive, 500) }
+    }
+    const SpeechRecognitionApi = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    // Prefer the browser's available microphone + speech engine for a dependable first connection.
+    // This avoids making live talk depend on OpenAI Realtime credits when text chat is powered by Gemini.
+    if (SpeechRecognitionApi && 'speechSynthesis' in window) {
+      liveFallback.current = true
+      setLive({ state: 'listening', user: '', bot: '' })
+      browserLive()
+      return
     }
     try {
       rt.current = await startRealtime({
