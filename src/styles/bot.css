@@ -1178,40 +1178,32 @@ body > .qbot-drawer-portal.bot .bs-l { flex: 1 1 auto !important; min-height: 0 
   body > .qbot-drawer-portal.bot > .bs { animation: none !important; }
 }
 
-
-/* Keep the drawer portal separate from the bot panel and its centered layout rules. */
+/* Viewport drawer: keep its root separate from the centered bot panel. */
 body > .qbot-drawer-portal {
   position: fixed !important;
   inset: 0 !important;
+  z-index: 2147483646 !important;
   width: 100vw !important;
   height: 100vh !important;
   height: 100dvh !important;
   margin: 0 !important;
   padding: 0 !important;
-  display: block !important;
   overflow: visible !important;
   transform: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  contain: none !important;
   isolation: isolate !important;
-  border: 0 !important;
-  border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
   pointer-events: none !important;
-  z-index: 2147483646 !important;
 }
 body > .qbot-drawer-portal::before { content: none !important; }
 body > .qbot-drawer-portal > .qbot-drawer-surface {
   position: absolute !important;
   inset: 0 !important;
+  display: block !important;
   width: 100% !important;
   height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
-  display: block !important;
   overflow: visible !important;
   transform: none !important;
   border: 0 !important;
@@ -1219,7 +1211,6 @@ body > .qbot-drawer-portal > .qbot-drawer-surface {
   background: transparent !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
   pointer-events: none !important;
 }
 body > .qbot-drawer-portal > .qbot-drawer-surface > .qbot-drawer-scrim {
@@ -1231,13 +1222,9 @@ body > .qbot-drawer-portal > .qbot-drawer-surface > .qbot-drawer-scrim {
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
-  border-radius: 0 !important;
   background: rgba(0,0,0,.18) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
   pointer-events: auto !important;
   z-index: 0 !important;
-  animation: none !important;
 }
 body > .qbot-drawer-portal > .qbot-drawer-surface > .bs {
   position: absolute !important;
@@ -1247,7 +1234,6 @@ body > .qbot-drawer-portal > .qbot-drawer-surface > .bs {
   max-width: 88vw !important;
   height: 100% !important;
   min-height: 0 !important;
-  max-height: none !important;
   margin: 0 !important;
   padding: 12px !important;
   flex: 0 0 auto !important;
@@ -1263,7 +1249,6 @@ body > .qbot-drawer-portal > .qbot-drawer-surface > .bs {
   background: rgba(5,5,6,.985) !important;
   box-shadow: 18px 0 48px rgba(0,0,0,.42) !important;
   backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 }
 body > .qbot-drawer-portal > .qbot-drawer-surface .bs-l {
   flex: 1 1 auto !important;
@@ -1272,12 +1257,7 @@ body > .qbot-drawer-portal > .qbot-drawer-surface .bs-l {
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
 }
-/* The site-wide reveal animation uses scaleY(0) on .bv. It must not collapse the live chat viewport. */
-#bot .bv {
-  min-height: 0;
-  transform: none !important;
-  animation: none !important;
-}
+#bot .bv { min-height: 0; transform: none !important; animation: none !important; }
 @media (max-width: 420px) {
   body > .qbot-drawer-portal > .qbot-drawer-surface > .bs {
     width: min(300px, 88vw) !important;
