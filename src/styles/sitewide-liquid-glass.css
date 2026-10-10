@@ -194,3 +194,194 @@ body {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* FLUID GLASS FINISH — shared by every authenticated, guest and demo route.
+   Apple-inspired material language; monochrome, accessible, and intentionally restrained. */
+:root {
+  --q-fluid-bg: #030303;
+  --q-fluid-pane: rgba(18,18,18,.72);
+  --q-fluid-pane-hi: rgba(255,255,255,.075);
+  --q-fluid-rim: rgba(255,255,255,.17);
+  --q-fluid-rim-hi: rgba(255,255,255,.32);
+  --q-fluid-shadow: 0 28px 80px -42px rgba(0,0,0,.98), 0 1px 0 rgba(255,255,255,.1) inset;
+  --q-fluid-blur: 30px;
+}
+html { background: var(--q-fluid-bg); color-scheme: dark; }
+body {
+  background:
+    radial-gradient(ellipse 62% 38% at 50% -12%, rgba(255,255,255,.105), transparent 72%),
+    radial-gradient(ellipse 44% 48% at 100% 46%, rgba(255,255,255,.035), transparent 75%),
+    radial-gradient(ellipse 42% 42% at 0% 100%, rgba(255,255,255,.045), transparent 72%),
+    #030303;
+  background-attachment: fixed;
+}
+body::after {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  opacity: .2;
+  background: linear-gradient(118deg, transparent 0%, rgba(255,255,255,.025) 42%, transparent 57%);
+  background-size: 220% 100%;
+  animation: qFluidAmbientSheen 28s ease-in-out infinite alternate;
+}
+#nav, nav.glass {
+  position: sticky;
+  isolation: isolate;
+  border: 1px solid rgba(255,255,255,.18);
+  background:
+    radial-gradient(ellipse 60% 150% at 50% 0%, rgba(255,255,255,.105), transparent 78%),
+    linear-gradient(155deg, rgba(255,255,255,.095), rgba(255,255,255,.025) 46%, rgba(255,255,255,.055)),
+    rgba(5,5,5,.78);
+  -webkit-backdrop-filter: blur(36px) saturate(155%);
+  backdrop-filter: blur(36px) saturate(155%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.24), inset 0 -1px 0 rgba(255,255,255,.035), 0 22px 70px -42px #fff, 0 25px 70px -35px #000;
+}
+#nav::after, nav.glass::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(122deg, rgba(255,255,255,.09), transparent 20%, transparent 72%, rgba(255,255,255,.035));
+  opacity: .85;
+}
+#nav > *, nav.glass > * { position: relative; z-index: 1; }
+#nav .navmain button, #nav .navend button, #nav .lgb {
+  transition: background .24s ease, color .24s ease, border-color .24s ease, box-shadow .28s ease, transform .28s ease;
+}
+#nav .navmain button:hover, #nav .navend button:hover, #nav .lgb:hover {
+  background: rgba(255,255,255,.075);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.11);
+}
+#nav .navmain button.on {
+  color: #050505;
+  background: linear-gradient(145deg, #fff, #dcdcdc);
+  box-shadow: inset 0 1px 0 #fff, 0 5px 24px -17px #fff;
+}
+#main {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+#main > section.on {
+  animation: qFluidRouteEnter .42s cubic-bezier(.2,.75,.25,1) both;
+}
+#main .glass,
+#main .card,
+#main [class*="glass-card"],
+#main [class*="surface-card"],
+#main [class*="panel"],
+#main [class*="modal"],
+#main [class*="dialog"],
+#main [class*="popover"] {
+  position: relative;
+  isolation: isolate;
+  border-color: var(--q-fluid-rim);
+  background:
+    radial-gradient(ellipse 100% 70% at 0% 0%, rgba(255,255,255,.075), transparent 72%),
+    linear-gradient(148deg, rgba(255,255,255,.075), rgba(255,255,255,.018) 48%, rgba(255,255,255,.045)),
+    rgba(5,5,5,.76);
+  -webkit-backdrop-filter: blur(var(--q-fluid-blur)) saturate(145%);
+  backdrop-filter: blur(var(--q-fluid-blur)) saturate(145%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 1px 0 0 rgba(255,255,255,.035), inset 0 -1px 0 rgba(255,255,255,.035), var(--q-fluid-shadow);
+}
+#main .glass::before,
+#main .card::before,
+#main [class*="glass-card"]::before,
+#main [class*="surface-card"]::before {
+  pointer-events: none;
+}
+#main .glass:hover,
+#main .card:hover,
+#main [class*="glass-card"]:hover,
+#main [class*="surface-card"]:hover {
+  border-color: rgba(255,255,255,.23);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 42px rgba(255,255,255,.018), 0 28px 80px -42px #000, 0 0 46px -38px rgba(255,255,255,.65);
+}
+#main .btn, #main button, #nav button {
+  -webkit-tap-highlight-color: transparent;
+}
+#main .btn:not(.p), #main button.chip, #main .chip {
+  border-color: rgba(255,255,255,.15);
+  background-image: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.008));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055);
+}
+#main .btn.p {
+  background: linear-gradient(150deg, #fff 0%, #ededed 52%, #cfcfcf 100%);
+  border-color: rgba(255,255,255,.95);
+  color: #030303;
+  box-shadow: inset 0 1px 0 #fff, 0 8px 30px -23px rgba(255,255,255,.95);
+}
+#main :is(input, textarea, select, [contenteditable="true"]) {
+  border-radius: 15px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.045), transparent 60%),
+    rgba(0,0,0,.58);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), inset 0 3px 14px rgba(0,0,0,.56);
+}
+#main :is(input, textarea, select):focus {
+  border-color: rgba(255,255,255,.42);
+  box-shadow: inset 0 2px 12px rgba(0,0,0,.5), 0 0 0 3px rgba(255,255,255,.045), 0 0 28px -22px #fff;
+}
+#main :is(.row, .idea, .msg, [class*="list-item"], [class*="listItem"]) {
+  transition: background .24s ease, border-color .24s ease, box-shadow .24s ease, transform .24s ease;
+}
+#main :is(.row, .idea):hover {
+  background-color: rgba(255,255,255,.045);
+  border-color: rgba(255,255,255,.095);
+}
+#main .chat-page .chat-shell,
+#main .chat-page .chat-sidebar,
+#main .chat-page .chat-main,
+#main .chat-page .chat-detail,
+#main .chat-page [class*="chat-panel"] {
+  border-color: rgba(255,255,255,.15);
+  background:
+    radial-gradient(ellipse 100% 55% at 0% 0%, rgba(255,255,255,.055), transparent 72%),
+    linear-gradient(150deg, rgba(255,255,255,.055), rgba(255,255,255,.012) 55%, rgba(255,255,255,.025)),
+    rgba(3,3,3,.78);
+  -webkit-backdrop-filter: blur(32px) saturate(145%);
+  backdrop-filter: blur(32px) saturate(145%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.17), 0 26px 65px -48px #fff, 0 25px 60px -38px #000;
+}
+#main .chat-page .chat-bubble,
+#main .chat-page [class*="bubble"] {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.085), 0 8px 25px -22px #fff;
+}
+#ast .astp.bot {
+  background:
+    radial-gradient(ellipse 76% 42% at 50% 0%, rgba(255,255,255,.1), transparent 76%),
+    linear-gradient(145deg, rgba(255,255,255,.065), rgba(255,255,255,.012) 52%, rgba(255,255,255,.035)),
+    rgba(3,3,3,.84) !important;
+  border-color: rgba(255,255,255,.23) !important;
+  -webkit-backdrop-filter: blur(38px) saturate(155%);
+  backdrop-filter: blur(38px) saturate(155%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 1px 0 0 rgba(255,255,255,.045), 0 35px 110px rgba(0,0,0,.9), 0 0 55px -45px rgba(255,255,255,.45) !important;
+}
+#ast .astp.bot .bh, #ast .astp.bot .ast-in {
+  border-color: rgba(255,255,255,.14);
+  background: linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.01) 65%), rgba(0,0,0,.46);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+@keyframes qFluidAmbientSheen {
+  from { background-position: 0% 50%; opacity: .12; }
+  to { background-position: 100% 50%; opacity: .24; }
+}
+@keyframes qFluidRouteEnter {
+  from { opacity: .72; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 760px) {
+  #nav, nav.glass { top: max(6px, env(safe-area-inset-top, 0px)); max-width: calc(100% - 12px); }
+  #main .glass, #main .card, #main [class*="panel"], #main [class*="modal"] {
+    -webkit-backdrop-filter: blur(22px) saturate(135%);
+    backdrop-filter: blur(22px) saturate(135%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none !important; }
+  #main > section.on { animation: none !important; }
+}
