@@ -12,7 +12,7 @@ const COLLS = ['communities', 'ideas', 'reviews', 'votes', 'members', 'profiles'
 const cell = (v: any) => v == null ? '' : typeof v === 'number' && v > 1e12 && v < 4e12 ? new Date(v).toLocaleString() : typeof v === 'object' ? JSON.stringify(v) : String(v)
 
 export function Database() {
-  return <Gate owner><Inner /></Gate>
+  return <Gate platformOwnerOnly><Inner /></Gate>
 }
 
 function Inner() {

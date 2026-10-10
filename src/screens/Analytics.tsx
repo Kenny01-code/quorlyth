@@ -11,13 +11,27 @@ import { STATUS_LABEL } from '../lib/types'
 import { cn } from '../lib/util'
 
 export function Analytics() {
-  return <Gate owner><Inner /></Gate>
+  return <Gate><Inner /></Gate>
 }
 
 function Inner() {
   const a = useApp()
   const nav = useNavigate()
-  const { data } = a
+  const { data: rawData } = a
+  const ownedCommunities = useMemo(() => rawData.communities.filter(c => a.ownsCommunity(c.id)), [rawData.communities, a.ownsCommunity])
+  const data = useMemo(() => {
+    if (a.owner) return rawData
+    const communityIds = new Set(ownedCommunities.map(c => c.id))
+    const ideas = rawData.ideas.filter(i => communityIds.has(i.cid))
+    const ideaIds = new Set(ideas.map(i => i.id))
+    return {
+      ...rawData,
+      communities: ownedCommunities,
+      ideas,
+      reviews: Object.fromEntries(Object.entries(rawData.reviews).filter(([id]) => ideaIds.has(id))),
+      promotions: rawData.promotions.filter(p => ideaIds.has(p.ideaId)),
+    }
+  }, [rawData, a.owner, ownedCommunities])
   const { cs, set, reset } = useChartSettings()
   const [rg, setRg] = useState(30)
   const [open, setOpen] = useState<ChartKey | null>(null)
@@ -26,10 +40,14 @@ function Inner() {
     const sc: Record<string, number> = { review: 0, selected: 0, held: 0, declined: 0, promoted: 0 }
     const auth: Record<string, number> = {}, back: Record<string, number> = {}
     let tv = 0
-    data.ideas.forEach(i => { sc[a.statusOf(i.id)]++; auth[i.authorId] = (auth[i.authorId] || 0) + 1; back[i.authorId] = (back[i.authorId] || 0) + a.votesOf(i.id) })
-    Object.values(data.votes).forEach(v => Object.values(v).forEach(x => x && tv++))
-    return { sc, auth, back, tv, mem: Object.keys(data.members).length }
-  }, [data])
+    data.ideas.forEach(i => { sc[a.statusOf(i.id)]++; auth[i.authorId] = (auth[i.authorId] || 0) + 1; back[i.authorId] = (back[i.authorId] || 0) + a.votesOf(i.id); tv += a.votesOf(i.id) })
+    const communityIds = new Set(data.communities.map(c => c.id))
+    const memberIds = new Set<string>()
+    Object.entries(data.members).forEach(([uid, memberships]) => {
+      if (Object.entries(memberships || {}).some(([cid, joined]) => joined && communityIds.has(cid))) memberIds.add(uid)
+    })
+    return { sc, auth, back, tv, mem: memberIds.size }
+  }, [data, a.statusOf, a.votesOf])
 
   const daily = (n: number): Daily => {
     const d = 864e5, t0 = new Date().setHours(0, 0, 0, 0), v: number[] = [], dt: number[] = []
@@ -54,6 +72,8 @@ function Inner() {
   const funnel: [string, number][] = [['Members', X.mem], ['Contributors', Object.keys(X.auth).length], ['Ideas', data.ideas.length], ['Selected', X.sc.selected + X.sc.promoted], ['Ready to share', data.promotions.length]]
   const src = cs.top.m === 'backs' ? X.back : X.auth
   const topIds = Object.keys(src).sort((x, y) => src[y] - src[x]).slice(0, cs.top.n)
+
+  if (!a.owner && ownedCommunities.length === 0) return <Empty icon="insight" title="Community-owner analytics" text="Analytics is available to the owners of communities. Create a community or open one you manage to see its activity here."><button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Open my communities</button></Empty>
 
   function body(g: ChartKey) {
     if (g === 'area') return <div className="chs"><AreaChart dd={dd} o={cs.area} /></div>
@@ -81,7 +101,7 @@ function Inner() {
     const T = (s: any, n = 0) => { s = String(s ?? '').replace(/[^\x20-\x7E\u00A0-\u00FF]/g, ''); return n && s.length > n ? s.slice(0, n - 1) + '...' : s }
     const ck = (h: number) => { if (y + h > 278) { d.addPage(); y = 20 } }
     d.setFillColor(0, 0, 0); d.rect(0, 0, W, 40, 'F'); d.setTextColor(255, 255, 255); d.setFont('helvetica', 'bold'); d.setFontSize(22); d.text('QUORLYTH', M, 22)
-    d.setFont('helvetica', 'normal'); d.setFontSize(10); d.text(T(data.settings?.name || 'Community report'), M, 30); d.text(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) + `   Last ${rg} days`, W - M, 30, { align: 'right' })
+    d.setFont('helvetica', 'normal'); d.setFontSize(10); d.text(T(a.owner ? (data.settings?.name || 'Platform report') : data.communities.length === 1 ? data.communities[0].name : 'My communities report'), M, 30); d.text(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) + `   Last ${rg} days`, W - M, 30, { align: 'right' })
     const H1 = (t: string) => { ck(14); d.setTextColor(0, 0, 0); d.setFont('helvetica', 'bold'); d.setFontSize(13); d.text(t, M, y); d.setDrawColor(0, 0, 0); d.setLineWidth(0.3); d.line(M, y + 2, W - M, y + 2); y += 10; d.setFont('helvetica', 'normal') }
     ;[['Ideas in range', dd.v.reduce((x, z) => x + z, 0)], ['Members', X.mem], ['Backings', X.tv], ['Ready to share', data.promotions.length]].forEach((k, i) => { const x = M + i * 45.5; d.setDrawColor(0, 0, 0); d.setLineWidth(0.3); d.roundedRect(x, y, 42, 24, 3, 3); d.setFontSize(8); d.setTextColor(110, 110, 110); d.text(String(k[0]), x + 4, y + 8); d.setFontSize(18); d.setTextColor(0, 0, 0); d.text(String(k[1]), x + 4, y + 19) })
     y += 34; H1('Ideas per day')
@@ -108,7 +128,7 @@ function Inner() {
 
   return (
     <>
-      <Head kicker="Analytics" title="Your community in numbers." right={<>{[7, 30, 90].map(d => <span key={d}><Chip on={rg === d} onClick={() => setRg(d)}>{d} days</Chip>{' '}</span>)}<button className="btn" style={{ padding: '9px 20px', marginLeft: 8 }} onClick={csv}><Icon name="publish" size={16} />CSV</button>{' '}<button className="btn p" style={{ padding: '9px 20px' }} onClick={pdf}><Icon name="publish" size={16} />Export PDF</button></>} />
+      <Head kicker="Analytics" title={a.owner ? 'Your platform in numbers.' : data.communities.length === 1 ? `${data.communities[0].name} in numbers.` : 'Your communities in numbers.'} right={<>{[7, 30, 90].map(d => <span key={d}><Chip on={rg === d} onClick={() => setRg(d)}>{d} days</Chip>{' '}</span>)}<button className="btn" style={{ padding: '9px 20px', marginLeft: 8 }} onClick={csv}><Icon name="publish" size={16} />CSV</button>{' '}<button className="btn p" style={{ padding: '9px 20px' }} onClick={pdf}><Icon name="publish" size={16} />Export PDF</button></>} />
       <div className="grid g4" style={{ marginBottom: 18 }}>
         {([['Ideas in range', dd.v.reduce((x, y) => x + y, 0)], ['Members', X.mem], ['Backings', X.tv], ['Ready to share', data.promotions.length]] as [string, number][]).map(([l, v]) => <div key={l} className="glass pad"><p className="dim">{l}</p><p className="num" style={{ fontSize: 42 }}>{v}</p></div>)}
       </div>

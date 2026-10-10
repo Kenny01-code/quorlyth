@@ -25,6 +25,25 @@ import { useApp } from './data/AppProvider'
 import { useUserState } from './lib/userState'
 import { chime, useNotifs } from './lib/notifs'
 
+function DemoRedirect() {
+  const a = useApp()
+  const nav = useNavigate()
+  useEffect(() => {
+    if (!a.demo) a.enterDemo()
+    nav('/dashboard', { replace: true })
+  }, [a.demo, a.enterDemo, nav])
+  return <div className="route-loading" role="status" aria-label="Opening demo"><span className="ast-ld"><i /><i /><i /></span></div>
+}
+
+function MissingRoute() {
+  const nav = useNavigate()
+  return <div className="glass pad" style={{ maxWidth: 560, margin: '48px auto' }}>
+    <p className="dim">404 · QUORLYTH</p><h2 style={{ marginTop: 8, fontSize: 28, fontWeight: 300 }}>This page could not be found.</h2>
+    <p className="mut" style={{ marginTop: 8 }}>The link may be outdated, or this page may have moved.</p>
+    <button className="btn p" style={{ marginTop: 18 }} onClick={() => nav('/dashboard')}>Return to Quorlyth</button>
+  </div>
+}
+
 export default function App() {
   const a = useApp()
   const loc = useLocation()
@@ -142,6 +161,7 @@ export default function App() {
           <Suspense fallback={<div className="route-loading" role="status" aria-label="Loading page"><span className="ast-ld"><i /><i /><i /></span></div>}>
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/demo" element={<DemoRedirect />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/onboarding" element={<Onboarding />} />
@@ -159,6 +179,7 @@ export default function App() {
               <Route path="/request-access" element={<Access />} />
               <Route path="/me" element={<Me />} />
               <Route path="/me/:id" element={<Me />} />
+              <Route path="*" element={<MissingRoute />} />
             </Routes>
           </Suspense>
         </section>

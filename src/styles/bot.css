@@ -1,0 +1,178 @@
+/* QUORLYTHBOT — obsidian Liquid Glass identity */
+#ast .astp.bot,
+#ast .astp.bot.m-large,
+#ast .astp.bot.m-full {
+  color: #f7f7f7 !important;
+  background:
+    radial-gradient(ellipse 72% 36% at 50% 0%,rgba(255,255,255,.075),transparent 76%),
+    linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.008) 48%,rgba(255,255,255,.028)),
+    #030303 !important;
+  border: 1px solid rgba(255,255,255,.19) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    inset 1px 0 0 rgba(255,255,255,.035),
+    inset 0 -1px 0 rgba(255,255,255,.025),
+    0 34px 100px rgba(0,0,0,.82) !important;
+  -webkit-backdrop-filter: blur(38px) saturate(135%);
+  backdrop-filter: blur(38px) saturate(135%);
+}
+#ast .astp.bot::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(128deg,rgba(255,255,255,.11),transparent 23%,transparent 73%,rgba(255,255,255,.035));
+}
+#ast .astp.bot > * { position: relative; z-index: 1; }
+.bot .bh, .bot .bv, .bot .bc, .bot .ast-in, .bot .ast-log, .bot .bsl,
+.bot .bstage, .bot .ast-stage {
+  border-color: rgba(255,255,255,.15) !important;
+}
+.bot .bh, .bot .ast-in, .bot .bc {
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.012) 58%,rgba(255,255,255,.03)),
+    rgba(3,3,3,.91) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16),0 16px 38px -30px #fff;
+  -webkit-backdrop-filter: blur(30px) saturate(135%);
+  backdrop-filter: blur(30px) saturate(135%);
+}
+.bot .bstage, .bot .ast-stage {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  border-radius: 27px !important;
+  background:
+    radial-gradient(ellipse 66% 46% at 50% 18%,rgba(255,255,255,.105),transparent 70%),
+    linear-gradient(145deg,rgba(255,255,255,.06),rgba(255,255,255,.008) 56%,rgba(255,255,255,.03)),
+    #020202 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.25),
+    inset 0 0 44px rgba(255,255,255,.022),
+    0 26px 68px -34px rgba(0,0,0,.95) !important;
+  overflow: hidden;
+}
+.bot .bstage::after, .bot .ast-stage::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 1px;
+  border: 1px solid rgba(255,255,255,.025);
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(132deg,rgba(255,255,255,.095),transparent 25%,transparent 70%,rgba(255,255,255,.03));
+}
+.bot .ast-stage canvas, .bot .bstage canvas {
+  filter: contrast(1.06) brightness(.94) saturate(.65);
+}
+.bot .ast-in textarea, .bot textarea {
+  color: #fff !important;
+  caret-color: #fff;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-radius: 17px !important;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.04),rgba(0,0,0,.82)),
+    #050505 !important;
+  box-shadow: inset 0 2px 13px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.055) !important;
+  transition: border-color .28s ease,box-shadow .3s ease,background .28s ease !important;
+}
+.bot .ast-in textarea:focus, .bot textarea:focus {
+  border-color: rgba(255,255,255,.4) !important;
+  box-shadow: inset 0 2px 13px rgba(0,0,0,.72),0 0 0 3px rgba(255,255,255,.035),0 0 30px -20px rgba(255,255,255,.5) !important;
+}
+.bot .chip, .bot .bsi, .bot .bci {
+  border-color: rgba(255,255,255,.14);
+  background: linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  transition: border-color .25s ease,background .25s ease,box-shadow .25s ease,transform .25s ease;
+}
+.bot .chip:hover, .bot .bsi:hover, .bot .bci:hover,
+.bot .chip.on, .bot .bsi.on, .bot .bci.on {
+  border-color: rgba(255,255,255,.25);
+  background: rgba(255,255,255,.075) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+}
+.bot .ast-in .btn.p, .bot .btn.p {
+  color: #030303 !important;
+  border: 1px solid #fff !important;
+  background: linear-gradient(145deg,#fff,#dedede) !important;
+  box-shadow: inset 0 1px 0 #fff,0 8px 28px -20px rgba(255,255,255,.9) !important;
+}
+.bot .ast-in .btn.p:hover, .bot .btn.p:hover { background: #fff !important; transform: translateY(-1px); }
+.bot .ast-stage.speaking, .bot .bstage.speaking { animation: qBotSpeaking 2.1s ease-in-out infinite; }
+@keyframes qBotSpeaking {
+  0%,100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.23),0 0 0 1px rgba(255,255,255,.08),0 20px 58px -38px #fff; }
+  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.32),0 0 0 1px rgba(255,255,255,.16),0 20px 66px -32px rgba(255,255,255,.35); }
+}
+@media (max-width: 760px) {
+  #ast .astp.bot.m-full { border-radius: 0 !important; border-inline: 0 !important; }
+  #ast .astp.bot.m-large { border-radius: 22px !important; }
+  #ast .astp.bot.m-compact, #ast .astp.bot.m-custom { border-radius: 24px !important; }
+  .bot .bstage, .bot .ast-stage { border-radius: 22px !important; }
+}
+
+/* Size-aware layout: custom resizing adapts to the bot panel, not only the browser. */
+#ast .astp.bot { box-sizing: border-box; min-width: 0; min-height: 0; }
+.bot .bm { container-type: size; container-name: qbot-panel; }
+.bot .bm, .bot .bv, .bot .ast-log, .bot .bc, .bot .ast-in, .bot .bh { min-width: 0; }
+.bot .ast-in textarea { width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.bot .bv { overscroll-behavior: contain; }
+@container qbot-panel (max-width: 520px) {
+  .bot .bm { padding: 9px; }
+  .bot .bh { gap: 5px; }
+  .bot .bha { gap: 0; }
+  .bot .bha .bib { width: 31px; height: 32px; }
+  .bot .bwm.big { font-size: 14px; letter-spacing: .1em; }
+  .bot .bst { font-size: 10px; }
+  .bot .bhero { padding: 15px 4px; }
+  .bot .bhero h3 { font-size: clamp(20px, 5cqw, 26px); }
+  .bot .bsk { padding: 11px; }
+  .bot .bsk b { font-size: 12px; }
+  .bot .bc { padding-top: 5px; }
+  .bot .ast-in { gap: 5px; }
+  .bot .ast-in textarea { padding: 10px 11px; font-size: 13px; }
+  .bot .ast-in > .btn { padding: 10px !important; }
+}
+@container qbot-panel (max-height: 620px) {
+  .bot .bstage.std { height: clamp(120px, 24cqh, 190px); }
+  .bot .bstage.big { height: clamp(145px, 31cqh, 235px); }
+  .bot .bv { margin-top: 6px; }
+  .bot .bhero { padding-block: 10px; }
+  .bot .bhero h3 { font-size: 21px; }
+  .bot .bc { padding-top: 4px; }
+  .bot .ast-in textarea { min-height: 36px; max-height: 76px; }
+}
+@container qbot-panel (max-width: 380px) {
+  .bot .bm { padding: 7px; }
+  .bot .bha .bib { width: 27px; height: 30px; }
+  .bot .bwm.big { font-size: 12px; letter-spacing: .06em; }
+  .bot .bstage.std { height: clamp(112px, 21cqh, 160px); }
+  .bot .bgrid.sm { grid-template-columns: 1fr; gap: 6px; }
+  .bot .bsk { flex-direction: row; align-items: center; min-height: 44px; }
+  .bot .bski { width: 32px; height: 32px; }
+  .bot .ast-in { flex-wrap: wrap; }
+  .bot .ast-in textarea { flex-basis: 100%; }
+  .bot .ast-in > .btn { flex: 1; }
+}
+/* Slow, restrained specular movement gives the obsidian shell a glass-like finish. */
+.bot .bstage, .bot .ast-stage { transform: translateZ(0); }
+.bot .bstage::before, .bot .ast-stage::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: -32% -45%;
+  pointer-events: none;
+  background: linear-gradient(112deg,transparent 35%,rgba(255,255,255,.065) 47%,rgba(255,255,255,.13) 50%,rgba(255,255,255,.035) 53%,transparent 65%);
+  transform: translateX(-55%) rotate(8deg);
+  animation: qBotSpecular 13s cubic-bezier(.45,0,.55,1) infinite;
+  mix-blend-mode: screen;
+}
+.bot .bstage::after, .bot .ast-stage::after { pointer-events: none; }
+@keyframes qBotSpecular {
+  0%, 15% { transform: translateX(-58%) rotate(8deg); opacity: 0; }
+  35% { opacity: .72; }
+  62%, 100% { transform: translateX(58%) rotate(8deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bot .ast-stage.speaking, .bot .bstage.speaking, .bot .bstage::before, .bot .ast-stage::before { animation: none !important; }
+}

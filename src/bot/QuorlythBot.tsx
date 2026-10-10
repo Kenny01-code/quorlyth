@@ -62,6 +62,7 @@ export function QuorlythBot() {
   const bd = useBotData()
   const { settings: bs } = bd
   const role = !a.me ? 'visitor' : a.owner ? 'owner' : 'member'
+  const communityOwner = !!a.me && a.data.communities.some(c => a.ownsCommunity(c.id))
   const robot = useRef<RobotApi | null>(null)
   const log = useRef<HTMLDivElement>(null)
   const ctl = useRef<AbortController | null>(null)
@@ -96,18 +97,27 @@ export function QuorlythBot() {
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
   const theme = bs.theme
-  const narrow = mode === 'compact' || viewportNarrow
+  const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 860)
   const wide = !narrow
 
   useEffect(() => {
     const resize = () => {
       const isNarrow = window.innerWidth <= 860
       setViewportNarrow(isNarrow)
-      setSide(!isNarrow)
+      setSize(current => {
+        if (!current) return current
+        const maxW = Math.max(240, window.innerWidth - 24)
+        const maxH = Math.max(300, window.innerHeight - 24)
+        return { w: Math.min(current.w, maxW), h: Math.min(current.h, maxH) }
+      })
     }
     window.addEventListener('resize', resize)
     return () => window.removeEventListener('resize', resize)
   }, [])
+
+  useEffect(() => {
+    if (narrow) setSide(false)
+  }, [narrow])
 
   useEffect(() => {
     if (!a.me || !bd.doc('botset')) return
@@ -325,7 +335,7 @@ export function QuorlythBot() {
 
   async function skill(id: string, arg = '') {
     setView('chat')
-    if (SKILLS.find(s => s.id === id)?.own && !a.owner) { setCur(add(cur, { r: 'a', t: 'That skill is for the owner of the space.' })); return }
+    if (SKILLS.find(s => s.id === id)?.own && !a.owner && !(id === 'analytics' && communityOwner)) { setCur(add(cur, { r: 'a', t: 'That skill is for the owner of the space.' })); return }
     if (id === 'tour') return startTour()
     if ((id === 'find' || id === 'improve') && !arg) { setInput('/' + id + ' '); return }
     if (id === 'review') {
@@ -640,7 +650,7 @@ export function QuorlythBot() {
   }
 
   const [slashSel, setSlashSel] = useState(0)
-  const slash = input.startsWith('/') && !input.includes(' ') ? SKILLS.filter(s => (a.owner || !s.own) && (s.id.startsWith(input.slice(1).toLowerCase()) || s.n.toLowerCase().includes(input.slice(1).toLowerCase()))).slice(0, 6) : []
+  const slash = input.startsWith('/') && !input.includes(' ') ? SKILLS.filter(s => (a.owner || !s.own || (communityOwner && s.id === 'analytics')) && (s.id.startsWith(input.slice(1).toLowerCase()) || s.n.toLowerCase().includes(input.slice(1).toLowerCase()))).slice(0, 6) : []
   const msgs = cur?.msgs || []
   const sideShown = side
 
@@ -769,7 +779,7 @@ export function QuorlythBot() {
         if (!idea || a.statusOf(idea.id) === 'declined') throw new Error('That idea is no longer available to promote.')
         ok = await a.publish(action.ideaId, action.text, action.credits)
       } else if (action.type === 'cover') {
-        if (!a.owner) throw new Error('Only the space owner can change a community cover.')
+        if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can change its cover.')
         ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
       } else if (action.type === 'deleteCommunity') {
         if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can delete it.')
@@ -808,7 +818,7 @@ export function QuorlythBot() {
           <div id="bot" className={cn('astp glass bot', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
             {mode !== 'full' && <div className="bresz" title="Drag to resize" onPointerDown={e => {
               e.preventDefault(); const el = panel.current!, sx = e.clientX, sy = e.clientY, sw = el.offsetWidth, sh = el.offsetHeight
-              const mv = (ev: PointerEvent) => { setMode('custom' as any); setSize({ w: Math.max(340, Math.min(innerWidth - 24, sw + (sx - ev.clientX))), h: Math.max(420, Math.min(innerHeight - 24, sh + (sy - ev.clientY))) }) }
+              const mv = (ev: PointerEvent) => { setMode('custom'); setSize({ w: Math.max(340, Math.min(innerWidth - 24, sw + (sx - ev.clientX))), h: Math.max(420, Math.min(innerHeight - 24, sh + (sy - ev.clientY))) }) }
               const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up) }
               addEventListener('pointermove', mv); addEventListener('pointerup', up)
             }} />}
@@ -831,7 +841,7 @@ export function QuorlythBot() {
               </div>
               <div className="bs-f">
                 <button className={cn('bsb', view === 'settings' && 'on')} onClick={() => { setView('settings'); if (narrow) setSide(false) }}><Icon name="settings" size={18} />Settings</button>
-                <button className="bsu" onClick={() => { nav('/me'); if (narrow) setSide(false) }}>{a.me ? <Av id={a.me.id} size={34} /> : <Icon name="member" size={18} />}<span><b>{a.me ? a.nm(a.me.id) : 'Visitor'}</b><i>{role === 'owner' ? 'Owner' : role === 'member' ? 'Member' : 'Signed out'}</i></span></button>
+                <button className="bsu" onClick={() => { nav('/me'); if (narrow) setSide(false) }}>{a.me ? <Av id={a.me.id} size={34} /> : <Icon name="member" size={18} />}<span><b>{a.me ? a.nm(a.me.id) : 'Visitor'}</b><i>{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Signed out'}</i></span></button>
               </div>
             </aside>
             <section className="bm">
@@ -861,8 +871,8 @@ export function QuorlythBot() {
               <div className="bv" style={view === 'chat' ? undefined : { padding: '6px 4px' }}>
                 {view === 'chat' ? (
                   !msgs.length ? (
-                    <div className="bhero"><p className="dim">{role === 'owner' ? 'Owner' : role === 'member' ? 'Member' : 'Visitor'}</p><h3>{project ? project.name : 'How can I help?'}</h3><p className="mut">Ask anything about your space, or pick a skill.</p>
-                      <div className="bgrid sm">{SKILLS.filter(s => a.owner || !s.own).slice(0, 6).map(s => <button key={s.id} className="bsk" onClick={() => skill(s.id)}><span className="bski"><Icon name={s.icon} size={20} /></span><b>{s.n}</b></button>)}</div></div>
+                    <div className="bhero"><p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p><h3>{project ? project.name : 'How can I help?'}</h3><p className="mut">Ask anything about your space, or pick a skill.</p>
+                      <div className="bgrid sm">{SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map(s => <button key={s.id} className="bsk" onClick={() => skill(s.id)}><span className="bski"><Icon name={s.icon} size={20} /></span><b>{s.n}</b></button>)}</div></div>
                   ) : (
                     <div className="ast-log" ref={log} aria-live="polite">
                       {msgs.map((m, i) => m.r === 'u' ? <div key={i} className="am mu">{m.t}</div> : (
