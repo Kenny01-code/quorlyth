@@ -761,3 +761,49 @@
   z-index: 7 !important;
   flex: none !important;
 }
+
+
+/* SIDEBAR EDGE FIX — when the bot is compact/narrow, the opened drawer belongs
+   to the viewport edge, not the centered bot card. Keep the backdrop scoped to
+   the bot while pinning the actual drawer to the left screen edge. */
+#ast .astp.bot.narrow.side-on .bs {
+  position: fixed !important;
+  inset: 0 auto 0 max(0px, env(safe-area-inset-left, 0px)) !important;
+  z-index: 1002 !important;
+  width: min(320px, 88vw) !important;
+  max-width: 88vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  transform: translateX(0) !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  border-radius: 0 22px 22px 0 !important;
+  border-left: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  background:
+    radial-gradient(ellipse 120% 42% at 0% 0%, rgba(255,255,255,.075), transparent 72%),
+    linear-gradient(145deg, rgba(14,14,15,.98), rgba(3,3,4,.99)) !important;
+  box-shadow: 24px 0 80px rgba(0,0,0,.62), inset -1px 0 0 rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.09) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(135%) !important;
+  backdrop-filter: blur(34px) saturate(135%) !important;
+}
+#ast .astp.bot.narrow.side-on .bsscrim {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1001 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+  background: rgba(0,0,0,.48) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+  backdrop-filter: blur(5px) !important;
+}
+@media (max-width: 420px) {
+  #ast .astp.bot.narrow.side-on .bs {
+    width: min(300px, 88vw) !important;
+    max-width: 88vw !important;
+  }
+}
