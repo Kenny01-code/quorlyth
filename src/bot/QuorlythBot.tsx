@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -73,8 +72,8 @@ export function QuorlythBot() {
   const audio = useRef<{ stop(): void } | null>(null)
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'compact' | 'large' | 'full' | 'custom'>('full')
-  const [viewportNarrow, setViewportNarrow] = useState(() => window.innerWidth <= 980)
-  const [side, setSide] = useState(() => window.innerWidth > 980)
+  const [viewportNarrow, setViewportNarrow] = useState(() => window.innerWidth <= 760)
+  const [side, setSide] = useState(() => window.innerWidth > 760)
   const [view, setView] = useState<View>('chat')
   const [cur, setCur] = useState<Chat | null>(null)
   const [pj, setPj] = useState('')
@@ -111,7 +110,7 @@ export function QuorlythBot() {
 
   useEffect(() => {
     const resize = () => {
-      const isNarrow = window.innerWidth <= 980
+      const isNarrow = window.innerWidth <= 760
       setViewportNarrow(isNarrow)
       setSize(current => {
         if (!current) return current
@@ -898,15 +897,10 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {/* Desktop uses the sidebar as the first flex pane; narrow layouts portal it to the viewport. */}
-            {!narrow && sideShown && sidebar}
-            {narrow && sideShown && createPortal(
-              <div className="qbot-sidebar-layer" role="presentation">
-                <button className="qbot-sidebar-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
-                {sidebar}
-              </div>,
-              document.body,
-            )}
+            {/* On narrow layouts, dim only the bot's interior while its sidebar is open. */}
+            {narrow && sideShown && <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />}
+            {/* Keep chat history inside the QuorlythBot frame at every viewport size. */}
+            {sideShown && sidebar}
             <section className="bm">
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
