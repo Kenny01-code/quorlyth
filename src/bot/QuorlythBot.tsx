@@ -987,7 +987,7 @@ export function QuorlythBot() {
             </section>
           </div>
           {sideShown && createPortal(
-            <div className="astp bot qbot-drawer-portal">
+            <div className="bot qbot-drawer-portal">
               <button className="qbot-drawer-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
               {sidebar}
             </div>,
