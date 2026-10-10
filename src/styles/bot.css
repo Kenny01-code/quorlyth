@@ -176,3 +176,30 @@
 @media (prefers-reduced-motion: reduce) {
   .bot .ast-stage.speaking, .bot .bstage.speaking, .bot .bstage::before, .bot .ast-stage::before { animation: none !important; }
 }
+
+
+/* Viewport-aware layout for the bot's two-pane shell. The component switches
+   to its overlay sidebar below 980px; these rules keep the remaining pane usable. */
+@media (max-width: 980px) {
+  #ast .astp.bot.m-large { width: min(1000px, calc(100vw - 16px)); }
+  .bot.narrow .bm { padding: clamp(7px, 1.4vw, 12px); }
+  .bot.narrow .bh { gap: 5px; }
+  .bot.narrow .bha { gap: 0; }
+  .bot.narrow .bha .bib { width: 32px; height: 32px; }
+  .bot.narrow .bwm.big { font-size: clamp(11px, 2.4vw, 15px); letter-spacing: .07em; }
+  .bot.narrow .bgrid.sm { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-height: 760px) {
+  .bot .bstage.std { height: clamp(120px, 25dvh, 220px); }
+  .bot .bstage.big { height: clamp(140px, 34dvh, 300px); }
+  .bot .bv { margin-top: 6px; }
+  .bot .bhero { padding-block: 12px; }
+  .bot .bhero h3 { font-size: clamp(19px, 3.2dvh, 24px); }
+  .bot .ast-in textarea { min-height: 36px; max-height: 76px; }
+}
+@media (max-width: 420px) {
+  .bot.narrow .bgrid.sm { grid-template-columns: 1fr; }
+  .bot .bh { gap: 3px; }
+  .bot .bha .bib { width: 29px; height: 30px; }
+  .bot .bwm.big { font-size: 11px; letter-spacing: .035em; }
+}
