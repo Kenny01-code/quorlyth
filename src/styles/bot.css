@@ -203,3 +203,34 @@
   .bot .bha .bib { width: 29px; height: 30px; }
   .bot .bwm.big { font-size: 11px; letter-spacing: .035em; }
 }
+
+
+/* Fluid QuorlythBot layout across touch, narrow, landscape and desktop viewports. */
+#ast, #ast .astp, #ast .bot { box-sizing:border-box; }
+#ast { max-width:100vw; max-height:100dvh; }
+#ast .astp { max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); min-width:0; }
+#ast .bot { min-width:0; max-width:100%; }
+#ast .bot .bm, #ast .bot .bv, #ast .bot .bc, #ast .bot .bbody { min-width:0; }
+#ast .bot .bbody { overflow-x:hidden; overscroll-behavior:contain; }
+#ast .bot .bnav, #ast .bot .bside, #ast .bot .bmenu { min-width:0; max-width:100%; }
+#ast .bot button, #ast .bot [role=button] { touch-action:manipulation; }
+@media (max-width: 760px) {
+  #ast { padding:0; }
+  #ast .astp { width:calc(100vw - 12px) !important; max-width:calc(100vw - 12px) !important; max-height:calc(100dvh - 12px) !important; border-radius:22px; }
+  #ast .bot { max-height:calc(100dvh - 12px); }
+  #ast .bot .bh { flex-wrap:wrap; }
+  #ast .bot .bmain, #ast .bot .bcontent, #ast .bot .bscroll { min-width:0; max-width:100%; }
+  #ast .bot .bgrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 420px) {
+  #ast .astp { width:calc(100vw - 8px) !important; max-width:calc(100vw - 8px) !important; max-height:calc(100dvh - 8px) !important; border-radius:18px; }
+  #ast .bot .bgrid { grid-template-columns:minmax(0,1fr); }
+  #ast .bot .bh { gap:4px; }
+}
+@media (max-height: 600px) {
+  #ast .astp { max-height:calc(100dvh - 8px) !important; }
+  #ast .bot .bstage.std { height:clamp(92px,22dvh,150px); }
+  #ast .bot .bstage.big { height:clamp(110px,28dvh,190px); }
+  #ast .bot .bhero { padding-block:8px; }
+}
+@media (prefers-reduced-motion: reduce) { #ast .bot *, #ast .bot *::before, #ast .bot *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } }
