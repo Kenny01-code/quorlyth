@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from '../lib/Icon'
 import { Chat } from '../lib/types'
 import { THEMES } from './config'
@@ -21,7 +22,7 @@ export function ChatMenu({ chat, x, y, projects, act, onClose }: { chat: Chat | 
   const item = (icon: string, label: string, fn: () => void, cls = '') => (
     <button role="menuitem" className={cls} onClick={() => { fn(); onClose() }}><Icon name={icon} size={16} />{label}</button>
   )
-  return (
+  return createPortal((
     <>
       <div className="cmx-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
       <div className="cmx glass" role="menu" style={{ left, top, width, minWidth: width, maxWidth: width, maxHeight: Math.min(height, innerHeight - top - 8) }} onKeyDown={e => e.key === 'Escape' && onClose()}>
@@ -51,5 +52,5 @@ export function ChatMenu({ chat, x, y, projects, act, onClose }: { chat: Chat | 
         </>}
       </div>
     </>
-  )
+  ), document.body)
 }
