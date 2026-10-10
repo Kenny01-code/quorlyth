@@ -852,3 +852,72 @@
     max-width: 88vw !important;
   }
 }
+
+
+/* QuorlythBot sidebar architecture: independent viewport layer, never positioned by the centered bot panel. */
+.qbot-sidebar-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  z-index: 2147483000 !important;
+  pointer-events: none !important;
+  isolation: isolate;
+  transform: none !important;
+  contain: none !important;
+}
+.qbot-sidebar-scrim {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  display: block !important;
+  z-index: 0 !important;
+  pointer-events: auto !important;
+  background: rgba(0,0,0,.48) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+}
+.qbot-sidebar-drawer {
+  position: fixed !important;
+  inset: 0 auto 0 0 !important;
+  z-index: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: min(310px, calc(100vw - 44px)) !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 24px) !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  transform: translateX(0) !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  background: #080809 !important;
+  border: 0 !important;
+  border-right: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 0 18px 18px 0 !important;
+  box-shadow: 22px 0 64px rgba(0,0,0,.58) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  transition: none !important;
+  margin: 0 !important;
+}
+.qbot-sidebar-drawer .bs-l { flex: 1 1 auto !important; min-height: 0 !important; overflow-x: hidden !important; overflow-y: auto !important; overscroll-behavior: contain; }
+.qbot-sidebar-drawer .bs-t,
+.qbot-sidebar-drawer .bs-n,
+.qbot-sidebar-drawer .bs-s,
+.qbot-sidebar-drawer .bs-f { flex-shrink: 0; min-width: 0; }
+@media (max-width: 600px) {
+  .qbot-sidebar-drawer { width: min(300px, calc(100vw - 48px)) !important; border-radius: 0 14px 14px 0 !important; }
+}
