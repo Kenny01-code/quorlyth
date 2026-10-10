@@ -753,3 +753,11 @@
 @media (prefers-reduced-motion: reduce) {
   #ast .astp.bot, #ast .astp.bot * { scroll-behavior: auto !important; }
 }
+
+
+/* The resize grip is a positioned overlay, never a flex/grid child. */
+#ast .astp.bot > .bresz {
+  position: absolute !important;
+  z-index: 7 !important;
+  flex: none !important;
+}
