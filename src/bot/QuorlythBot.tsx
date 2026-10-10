@@ -111,7 +111,7 @@ export function QuorlythBot() {
 
   useEffect(() => {
     const resize = () => {
-      const isNarrow = window.innerWidth <= 980
+      const isNarrow = window.innerWidth <= 760
       setViewportNarrow(isNarrow)
       setSize(current => {
         if (!current) return current
