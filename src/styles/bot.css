@@ -662,46 +662,57 @@
   flex: none !important;
 }
 
-/* QuorlythBot sidebar layout — one source of truth.
-   Desktop: sidebar is the first flex column inside #bot.
-   Narrow/compact/custom-small: React portals the drawer to document.body,
-   so the centered panel and its transforms cannot become its containing block. */
-#bot {
-  display: flex !important;
-  flex-direction: row !important;
+/* QuorlythBot sidebar: explicit grid, not flex sizing.
+   Desktop always reserves a real left column for chat options.
+   Narrow mode renders the drawer through the viewport-level portal. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot):not(.narrow) {
+  display: grid !important;
+  grid-template-columns: clamp(248px, 25vw, 300px) minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
   align-items: stretch !important;
+  justify-items: stretch !important;
   min-width: 0 !important;
   min-height: 0 !important;
 }
-#bot > .bs:not(.qbot-sidebar-drawer) {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot):not(.narrow) > .bs:not(.qbot-sidebar-drawer) {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
   position: relative !important;
   inset: auto !important;
-  order: 0 !important;
-  flex: 0 0 clamp(248px, 25%, 300px) !important;
-  width: clamp(248px, 25%, 300px) !important;
-  min-width: 220px !important;
-  max-width: 34% !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
   height: 100% !important;
   min-height: 0 !important;
   max-height: none !important;
-  align-self: stretch !important;
+  margin: 0 !important;
   transform: none !important;
   visibility: visible !important;
   pointer-events: auto !important;
+  overflow: hidden !important;
   border-radius: 0 !important;
 }
-#bot > .bm {
-  order: 1 !important;
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot):not(.narrow) > .bm {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
   display: flex !important;
-  flex: 1 1 0% !important;
+  flex-direction: column !important;
   width: auto !important;
   min-width: 0 !important;
   min-height: 0 !important;
+  max-width: none !important;
   height: 100% !important;
+  margin: 0 !important;
 }
-#bot.narrow > .bm {
-  width: 100% !important;
-  flex: 1 1 100% !important;
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
 }
 .qbot-sidebar-layer {
   position: fixed !important;
@@ -786,7 +797,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .qbot-sidebar-layer *,
-  #bot > .bs {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) > .bs {
     transition: none !important;
     animation: none !important;
   }
