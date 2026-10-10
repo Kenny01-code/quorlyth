@@ -853,25 +853,30 @@
   }
 }
 
-
-/* REAL VIEWPORT DRAWER — rendered through a React portal outside #bot.
-   This avoids fixed-position containing blocks created by the bot's glass/filter styles. */
+/* QuorlythBot sidebar: one body-level drawer contract, independent of the centered bot panel. */
 body > .qbot-drawer-portal {
   position: fixed !important;
   inset: 0 !important;
+  display: block !important;
   width: 100vw !important;
   height: 100vh !important;
   height: 100dvh !important;
-  max-width: none !important;
-  max-height: none !important;
   margin: 0 !important;
   padding: 0 !important;
-  z-index: 2147483000 !important;
-  pointer-events: none !important;
   overflow: visible !important;
-  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  contain: none !important;
+  isolation: isolate !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  z-index: 2147483646 !important;
 }
+
 body > .qbot-drawer-portal > .qbot-drawer-scrim {
+  appearance: none !important;
   display: block !important;
   position: absolute !important;
   inset: 0 !important;
@@ -881,390 +886,75 @@ body > .qbot-drawer-portal > .qbot-drawer-scrim {
   padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
-  z-index: 0 !important;
+  background: rgba(0, 0, 0, .24) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   pointer-events: auto !important;
-  background: rgba(0,0,0,.52) !important;
-  animation: qbotScrimIn .2s ease both;
+  cursor: pointer;
+  z-index: 0 !important;
+  animation: none !important;
 }
-body > .qbot-drawer-portal > .bs {
-  display: flex !important;
+
+body > .qbot-drawer-portal > .qbot-drawer-panel {
   position: absolute !important;
   inset: 0 auto 0 0 !important;
-  width: min(320px, 88vw) !important;
-  max-width: 88vw !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  z-index: 1 !important;
+  display: flex !important;
   flex: 0 0 auto !important;
   flex-direction: column !important;
-  overflow: hidden !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-  transform: translate3d(0,0,0);
-  border: 0 !important;
-  border-right: 1px solid rgba(255,255,255,.16) !important;
-  border-radius: 0 22px 22px 0 !important;
-  background: radial-gradient(ellipse 120% 42% at 0% 0%, rgba(255,255,255,.075), transparent 72%), linear-gradient(145deg, rgba(14,14,15,.99), rgba(3,3,4,.995)) !important;
-  box-shadow: 24px 0 80px rgba(0,0,0,.62), inset -1px 0 0 rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.09) !important;
-  -webkit-backdrop-filter: blur(34px) saturate(135%) !important;
-  backdrop-filter: blur(34px) saturate(135%) !important;
-  animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both;
-}
-body > .qbot-drawer-portal .bs-l {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain;
-}
-body > .qbot-drawer-portal .bs-t,
-body > .qbot-drawer-portal .bs-n,
-body > .qbot-drawer-portal .bs-s,
-body > .qbot-drawer-portal .bs-f { flex-shrink: 0; min-width: 0; }
-@keyframes qbotDrawerEnter {
-  from { transform: translate3d(-100%,0,0); }
-  to { transform: translate3d(0,0,0); }
-}
-@media (max-width: 420px) {
-  body > .qbot-drawer-portal > .bs { width: min(300px, 88vw) !important; max-width: 88vw !important; border-radius: 0 18px 18px 0 !important; }
-}
-@media (prefers-reduced-motion: reduce) {
-  body > .qbot-drawer-portal > .bs,
-  body > .qbot-drawer-portal > .qbot-drawer-scrim { animation: none !important; transition: none !important; }
-}
-
-
-/* Portal root keeps the existing .astp.bot selector scope for every sidebar
-   child style, while the fixed root itself spans the viewport rather than centering. */
-body > .qbot-drawer-portal.bot {
-  position: fixed !important;
-  inset: 0 !important;
-  display: block !important;
-  width: 100vw !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: visible !important;
-  transform: none !important;
-  filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  contain: none !important;
-  will-change: auto !important;
-  isolation: isolate !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  pointer-events: none !important;
-  z-index: 2147483000 !important;
-}
-body > .qbot-drawer-portal.bot > .qbot-drawer-scrim {
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 0 !important;
-  pointer-events: auto !important;
-}
-body > .qbot-drawer-portal.bot > .bs {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: auto !important;
-  bottom: 0 !important;
-  height: 100% !important;
-  max-height: none !important;
-  margin: 0 !important;
-  transform: translate3d(0,0,0);
-  pointer-events: auto !important;
-  z-index: 1 !important;
-}
-
-
-/* Viewport-root drawer hardening. This element is a direct child of body,
-   so panel transforms, centering, and glass filters cannot redefine its origin. */
-body > .qbot-drawer-portal.bot {
-  position: fixed !important;
-  inset: 0 !important;
-  display: block !important;
-  width: 100vw !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: visible !important;
-  transform: none !important;
-  transform-origin: initial !important;
-  animation: none !important;
-  filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  contain: none !important;
-  will-change: auto !important;
-  isolation: isolate !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  pointer-events: none !important;
-  z-index: 2147483646 !important;
-}
-body > .qbot-drawer-portal.bot > .qbot-drawer-scrim {
-  display: block !important;
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  transform: none !important;
-  z-index: 0 !important;
-  pointer-events: auto !important;
-}
-body > .qbot-drawer-portal.bot > .bs {
-  display: flex !important;
-  position: absolute !important;
-  inset: 0 auto 0 0 !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: auto !important;
-  bottom: 0 !important;
   width: min(320px, 88vw) !important;
   max-width: 88vw !important;
   height: 100% !important;
   min-height: 0 !important;
   max-height: none !important;
+  box-sizing: border-box !important;
   margin: 0 !important;
   padding: 12px !important;
-  transform: translate3d(0,0,0);
-  visibility: visible !important;
-  pointer-events: auto !important;
-  flex: 0 0 auto !important;
-  flex-direction: column !important;
   overflow: hidden !important;
+  visibility: visible !important;
+  transform: translate3d(0, 0, 0) !important;
   border: 0 !important;
-  border-right: 1px solid rgba(255,255,255,.16) !important;
-  border-radius: 0 22px 22px 0 !important;
-  background: radial-gradient(ellipse 120% 42% at 0% 0%, rgba(255,255,255,.075), transparent 72%), linear-gradient(145deg, rgba(14,14,15,.99), rgba(3,3,4,.995)) !important;
-  box-shadow: 24px 0 80px rgba(0,0,0,.62), inset -1px 0 0 rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.09) !important;
-  -webkit-backdrop-filter: blur(34px) saturate(135%) !important;
-  backdrop-filter: blur(34px) saturate(135%) !important;
+  border-right: 1px solid rgba(255, 255, 255, .16) !important;
+  border-radius: 0 20px 20px 0 !important;
+  background: #080808 !important;
+  box-shadow: 18px 0 44px rgba(0, 0, 0, .42) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  pointer-events: auto !important;
   z-index: 1 !important;
-  animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both !important;
+  animation: qbotDrawerEnter .24s cubic-bezier(.2, .75, .2, 1) both !important;
 }
-body > .qbot-drawer-portal.bot .bs-l {
+
+body > .qbot-drawer-portal > .qbot-drawer-panel .bs-l {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
 }
-body > .qbot-drawer-portal.bot .bs-t,
-body > .qbot-drawer-portal.bot .bs-n,
-body > .qbot-drawer-portal.bot .bs-s,
-body > .qbot-drawer-portal.bot .bs-f {
+
+body > .qbot-drawer-portal > .qbot-drawer-panel .bs-t,
+body > .qbot-drawer-portal > .qbot-drawer-panel .bs-n,
+body > .qbot-drawer-portal > .qbot-drawer-panel .bs-s,
+body > .qbot-drawer-portal > .qbot-drawer-panel .bs-f {
   flex-shrink: 0 !important;
   min-width: 0 !important;
 }
+
+@keyframes qbotDrawerEnter {
+  from { transform: translate3d(-100%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
 @media (max-width: 420px) {
-  body > .qbot-drawer-portal.bot > .bs {
+  body > .qbot-drawer-portal > .qbot-drawer-panel {
     width: min(300px, 88vw) !important;
     max-width: 88vw !important;
-    border-radius: 0 18px 18px 0 !important;
+    border-radius: 0 16px 16px 0 !important;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  body > .qbot-drawer-portal.bot > .bs,
-  body > .qbot-drawer-portal.bot > .qbot-drawer-scrim {
+  body > .qbot-drawer-portal > .qbot-drawer-panel {
     animation: none !important;
-    transition: none !important;
   }
-}
-
-
-/* Match the original sidebar styling specificity without inheriting the bot's
-   narrow/side-on panel-centering rules. The transform remains animatable. */
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) > .bs {
-  transform: translate3d(0,0,0);
-  animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both;
-}
-
-
-/* FINAL SIDEBAR CONTRACT: a body-level, viewport-fixed drawer. No page/chat blur. */
-body > .qbot-drawer-portal.bot {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-width: none !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: block !important;
-  overflow: visible !important;
-  transform: none !important;
-  filter: none !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  contain: none !important;
-  isolation: isolate !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  pointer-events: none !important;
-  z-index: 2147483646 !important;
-}
-body > .qbot-drawer-portal.bot > .qbot-drawer-scrim {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: rgba(0,0,0,.18) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  pointer-events: auto !important;
-  z-index: 0 !important;
-  animation: none !important;
-}
-body > .qbot-drawer-portal.bot > .bs {
-  display: flex !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: auto !important;
-  bottom: 0 !important;
-  width: min(320px, 88vw) !important;
-  max-width: 88vw !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 12px !important;
-  flex: 0 0 auto !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-  transform: translate3d(0,0,0);
-  z-index: 1 !important;
-  border: 0 !important;
-  border-right: 1px solid rgba(255,255,255,.16) !important;
-  border-radius: 0 22px 22px 0 !important;
-  background: radial-gradient(ellipse 120% 42% at 0% 0%, rgba(255,255,255,.075), transparent 72%), linear-gradient(145deg, rgba(14,14,15,.99), rgba(3,3,4,.995)) !important;
-  box-shadow: 24px 0 80px rgba(0,0,0,.62), inset -1px 0 0 rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.09) !important;
-  animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both !important;
-}
-body > .qbot-drawer-portal.bot .bs-l { flex: 1 1 auto !important; min-height: 0 !important; overflow-x: hidden !important; overflow-y: auto !important; overscroll-behavior: contain !important; }
-@media (prefers-reduced-motion: reduce) {
-  body > .qbot-drawer-portal.bot > .bs { animation: none !important; }
-}
-
-/* Viewport drawer: keep its root separate from the centered bot panel. */
-body > .qbot-drawer-portal {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 2147483646 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: visible !important;
-  transform: none !important;
-  isolation: isolate !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  pointer-events: none !important;
-}
-body > .qbot-drawer-portal::before { content: none !important; }
-body > .qbot-drawer-portal > .qbot-drawer-surface {
-  position: absolute !important;
-  inset: 0 !important;
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: visible !important;
-  transform: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-  pointer-events: none !important;
-}
-body > .qbot-drawer-portal > .qbot-drawer-surface > .qbot-drawer-scrim {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  background: rgba(0,0,0,.18) !important;
-  pointer-events: auto !important;
-  z-index: 0 !important;
-}
-body > .qbot-drawer-portal > .qbot-drawer-surface > .bs {
-  position: absolute !important;
-  inset: 0 auto 0 0 !important;
-  display: flex !important;
-  width: min(320px, 88vw) !important;
-  max-width: 88vw !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  padding: 12px !important;
-  flex: 0 0 auto !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-  transform: none !important;
-  z-index: 1 !important;
-  border: 0 !important;
-  border-right: 1px solid rgba(255,255,255,.16) !important;
-  border-radius: 0 22px 22px 0 !important;
-  background: rgba(5,5,6,.985) !important;
-  box-shadow: 18px 0 48px rgba(0,0,0,.42) !important;
-  backdrop-filter: none !important;
-}
-body > .qbot-drawer-portal > .qbot-drawer-surface .bs-l {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important;
-}
-#bot .bv { min-height: 0; transform: none !important; animation: none !important; }
-@media (max-width: 420px) {
-  body > .qbot-drawer-portal > .qbot-drawer-surface > .bs {
-    width: min(300px, 88vw) !important;
-    max-width: 88vw !important;
-    border-radius: 0 18px 18px 0 !important;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  body > .qbot-drawer-portal > .qbot-drawer-surface > .bs { animation: none !important; }
 }
