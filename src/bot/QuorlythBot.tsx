@@ -897,6 +897,8 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
+            {/* On narrow layouts, dim only the bot's interior while its sidebar is open. */}
+            {narrow && sideShown && <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />}
             {/* Keep chat history inside the QuorlythBot frame at every viewport size. */}
             {sideShown && sidebar}
             <section className="bm">
