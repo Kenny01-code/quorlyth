@@ -517,106 +517,6 @@
 }
 
 
-/* Narrow-panel audit: respond to the bot's actual size, not just the browser width.
-   This fixes the desktop resize/minimize case where React marks the bot narrow
-   but viewport-only media queries leave the desktop sidebar in the layout. */
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow {
-  min-width: 0;
-  min-height: 0;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs {
-  position: absolute !important;
-  inset: 0 auto 0 0 !important;
-  z-index: 40 !important;
-  display: flex;
-  flex-direction: column;
-  width: min(300px, 84%) !important;
-  max-width: calc(100% - 40px) !important;
-  height: 100% !important;
-  flex: 0 0 auto !important;
-  transform: translateX(-105%);
-  visibility: hidden;
-  pointer-events: none;
-  overflow: hidden;
-  background: #080809 !important;
-  border-right: 1px solid rgba(255,255,255,.16) !important;
-  box-shadow: 22px 0 50px rgba(0,0,0,.52) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  transition: transform .22s cubic-bezier(.2,.75,.2,1), visibility .22s;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bs {
-  transform: translateX(0);
-  visibility: visible;
-  pointer-events: auto;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bm {
-  width: 100% !important;
-  flex: 1 1 100% !important;
-  min-width: 0;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bsscrim,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bsscrim {
-  display: block !important;
-  position: absolute;
-  inset: 0;
-  z-index: 30;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: inherit;
-  background: rgba(0,0,0,.46) !important;
-  opacity: 1;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  animation: none !important;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow:not(.side-on) .bsscrim { display: none !important; }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs { isolation: isolate; }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs-t,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs-n,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs-s,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs-l,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs-f { flex-shrink: 0; min-width: 0; }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs-l {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs input,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs button,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs .bct { filter: none !important; opacity: 1; }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bwm.big {
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bh,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bc,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .qbot-conversation { min-width: 0; }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .qbot-conversation {
-  flex: 1 1 0%;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-@media (max-width: 980px) {
-  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs {
-    width: min(300px, 84%) !important;
-    max-width: calc(100% - 40px) !important;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bs,
-  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bsscrim { transition: none !important; }
-}
-
-
 /* Correct panel sizing: full means full available viewport, not a capped dialog. */
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).m-full {
   width: calc(100vw - 24px) !important;
@@ -762,99 +662,47 @@
   flex: none !important;
 }
 
-
-/* SIDEBAR EDGE FIX — when the bot is compact/narrow, the opened drawer belongs
-   to the viewport edge, not the centered bot card. Keep the backdrop scoped to
-   the bot while pinning the actual drawer to the left screen edge. */
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bs {
-  position: fixed !important;
-  inset: 0 auto 0 max(0px, env(safe-area-inset-left, 0px)) !important;
-  z-index: 1002 !important;
-  width: min(320px, 88vw) !important;
-  max-width: 88vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-height: 100dvh !important;
-  transform: translateX(0) !important;
+/* QuorlythBot sidebar layout — one source of truth.
+   Desktop: sidebar is the first flex column inside #bot.
+   Narrow/compact/custom-small: React portals the drawer to document.body,
+   so the centered panel and its transforms cannot become its containing block. */
+#bot {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+#bot > .bs:not(.qbot-sidebar-drawer) {
+  position: relative !important;
+  inset: auto !important;
+  order: 0 !important;
+  flex: 0 0 clamp(248px, 25%, 300px) !important;
+  width: clamp(248px, 25%, 300px) !important;
+  min-width: 220px !important;
+  max-width: 34% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  align-self: stretch !important;
+  transform: none !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  border-radius: 0 22px 22px 0 !important;
-  border-left: 0 !important;
-  border-top: 0 !important;
-  border-bottom: 0 !important;
-  background:
-    radial-gradient(ellipse 120% 42% at 0% 0%, rgba(255,255,255,.075), transparent 72%),
-    linear-gradient(145deg, rgba(14,14,15,.98), rgba(3,3,4,.99)) !important;
-  box-shadow: 24px 0 80px rgba(0,0,0,.62), inset -1px 0 0 rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.09) !important;
-  -webkit-backdrop-filter: blur(34px) saturate(135%) !important;
-  backdrop-filter: blur(34px) saturate(135%) !important;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bsscrim {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 1001 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
   border-radius: 0 !important;
-  background: rgba(0,0,0,.48) !important;
 }
-@media (max-width: 420px) {
-  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bs {
-    width: min(300px, 88vw) !important;
-    max-width: 88vw !important;
-  }
+#bot > .bm {
+  order: 1 !important;
+  display: flex !important;
+  flex: 1 1 0% !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
 }
-
-
-/* SIDEBAR VIEWPORT ANCHOR — backdrop-filter on the centered bot creates a containing block
-   for fixed descendants in Chromium/WebKit. Remove that containing block while the
-   drawer is open so the drawer and scrim truly attach to the viewport's left edge. */
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on {
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  filter: none !important;
-  transform: none !important;
-  contain: none !important;
-  will-change: auto !important;
+#bot.narrow > .bm {
+  width: 100% !important;
+  flex: 1 1 100% !important;
 }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bs {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: auto !important;
-  bottom: 0 !important;
-  margin: 0 !important;
-  width: min(320px, 88vw) !important;
-  max-width: 88vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-height: 100dvh !important;
-  border-radius: 0 22px 22px 0 !important;
-  transform: translate3d(0, 0, 0) !important;
-  z-index: 2147483001 !important;
-}
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bsscrim {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-height: none !important;
-  z-index: 2147483000 !important;
-}
-@media (max-width: 420px) {
-  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bs {
-    width: min(300px, 88vw) !important;
-    max-width: 88vw !important;
-  }
-}
-
-
-/* QuorlythBot sidebar architecture: independent viewport layer, never positioned by the centered bot panel. */
 .qbot-sidebar-layer {
   position: fixed !important;
   inset: 0 !important;
@@ -862,106 +710,84 @@
   height: 100vh !important;
   height: 100dvh !important;
   z-index: 2147483000 !important;
-  pointer-events: none !important;
-  isolation: isolate;
+  display: block !important;
+  pointer-events: auto !important;
+  isolation: isolate !important;
   transform: none !important;
+  filter: none !important;
   contain: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 .qbot-sidebar-scrim {
-  position: fixed !important;
+  position: absolute !important;
   inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100dvh !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
-  display: block !important;
   z-index: 0 !important;
   pointer-events: auto !important;
-  background: rgba(0,0,0,.48) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
+  background: rgba(0,0,0,.52) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  backdrop-filter: blur(4px) !important;
   animation: none !important;
 }
-.qbot-sidebar-drawer {
-  position: fixed !important;
+.qbot-sidebar-layer .qbot-sidebar-drawer {
+  position: absolute !important;
   inset: 0 auto 0 0 !important;
   z-index: 1 !important;
   display: flex !important;
   flex-direction: column !important;
+  flex: 0 0 auto !important;
   width: min(310px, calc(100vw - 44px)) !important;
   min-width: 0 !important;
   max-width: calc(100vw - 24px) !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-height: 100vh !important;
-  max-height: 100dvh !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
-  transform: translateX(0) !important;
+  margin: 0 !important;
+  transform: none !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  background: #080809 !important;
   border: 0 !important;
   border-right: 1px solid rgba(255,255,255,.16) !important;
   border-radius: 0 18px 18px 0 !important;
+  background: #080809 !important;
   box-shadow: 22px 0 64px rgba(0,0,0,.58) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-  transition: none !important;
-  margin: 0 !important;
 }
-.qbot-sidebar-drawer .bs-l { flex: 1 1 auto !important; min-height: 0 !important; overflow-x: hidden !important; overflow-y: auto !important; overscroll-behavior: contain; }
-.qbot-sidebar-drawer .bs-t,
-.qbot-sidebar-drawer .bs-n,
-.qbot-sidebar-drawer .bs-s,
-.qbot-sidebar-drawer .bs-f { flex-shrink: 0; min-width: 0; }
-@media (max-width: 600px) {
-  .qbot-sidebar-drawer { width: min(300px, calc(100vw - 48px)) !important; border-radius: 0 14px 14px 0 !important; }
+.qbot-sidebar-layer .qbot-sidebar-drawer .bs-l {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
 }
-
-
-/* Responsive sidebar correction: desktop is a genuine left column in the bot;
-   only narrow viewports use the independent body-level drawer. */
-#bot > .bs:not(.qbot-sidebar-drawer) {
-  position: relative !important;
-  inset: auto !important;
-  flex: 0 0 280px !important;
-  width: 280px !important;
-  min-width: 240px !important;
-  max-width: 34% !important;
-  height: 100% !important;
-  max-height: none !important;
-  transform: none !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-  border-radius: 0 !important;
-  z-index: 2 !important;
-}
-#bot > .bm { min-width: 0; flex: 1 1 0%; }
-.qbot-sidebar-layer .qbot-sidebar-drawer {
-  position: fixed !important;
-  inset: 0 auto 0 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  width: min(310px, calc(100vw - 44px)) !important;
+.qbot-sidebar-layer .qbot-sidebar-drawer .bs-t,
+.qbot-sidebar-layer .qbot-sidebar-drawer .bs-n,
+.qbot-sidebar-layer .qbot-sidebar-drawer .bs-s,
+.qbot-sidebar-layer .qbot-sidebar-drawer .bs-f {
+  flex: 0 0 auto !important;
   min-width: 0 !important;
-  max-width: calc(100vw - 24px) !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-height: 100dvh !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-  transform: none !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-  z-index: 1 !important;
-  margin: 0 !important;
 }
 @media (max-width: 600px) {
   .qbot-sidebar-layer .qbot-sidebar-drawer {
     width: min(300px, calc(100vw - 48px)) !important;
+    max-width: calc(100vw - 24px) !important;
+    border-radius: 0 14px 14px 0 !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qbot-sidebar-layer *,
+  #bot > .bs {
+    transition: none !important;
+    animation: none !important;
   }
 }
