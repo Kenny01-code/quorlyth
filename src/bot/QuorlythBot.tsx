@@ -987,11 +987,9 @@ export function QuorlythBot() {
             </section>
           </div>
           {sideShown && createPortal(
-            <div className="qbot-drawer-portal" aria-label="QuorlythBot sidebar layer">
-              <div className="bot narrow side-on qbot-drawer-surface">
-                <button className="qbot-drawer-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
-                {sidebar}
-              </div>
+            <div className="bot narrow side-on qbot-drawer-portal" aria-label="QuorlythBot sidebar layer">
+              <button className="qbot-drawer-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
+              {sidebar}
             </div>,
             document.body
           )}
