@@ -663,3 +663,93 @@
 #ast .astp.bot:not(.m-full) .bh:active { cursor: grabbing; }
 #ast .astp.bot .bh button,
 #ast .astp.bot .bh input { cursor: pointer; }
+
+
+/* QBOT FINAL AUDIT — consistent black Liquid Glass, correct drag direction, reliable viewport sizing. */
+#ast .astp.bot {
+  color: #f7f7f7 !important;
+  background:
+    radial-gradient(ellipse 76% 34% at 50% 0%, rgba(255,255,255,.075), transparent 74%),
+    linear-gradient(145deg, rgba(255,255,255,.05), rgba(255,255,255,.009) 48%, rgba(255,255,255,.03)),
+    #030303 !important;
+  border: 1px solid rgba(255,255,255,.2) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.23), inset 0 0 0 1px rgba(255,255,255,.025), 0 34px 100px rgba(0,0,0,.82) !important;
+  -webkit-backdrop-filter: blur(38px) saturate(140%);
+  backdrop-filter: blur(38px) saturate(140%);
+}
+#ast .astp.bot.m-full {
+  position: fixed !important;
+  inset: 0 !important;
+  transform: none !important;
+  margin: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 100vw !important;
+  max-height: 100dvh !important;
+  border-radius: 0 !important;
+}
+#ast .astp.bot.m-custom {
+  width: var(--qbot-custom-width, min(1180px, calc(100vw - 24px))) !important;
+  height: var(--qbot-custom-height, min(860px, calc(100dvh - 24px))) !important;
+  max-width: calc(100vw - 16px) !important;
+  max-height: calc(100dvh - 16px) !important;
+}
+#ast .astp.bot:not(.m-full) .bresz {
+  left: auto !important;
+  top: auto !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 30px !important;
+  height: 30px !important;
+  cursor: nwse-resize !important;
+  touch-action: none;
+  border-radius: 0 0 18px 0;
+  background: linear-gradient(135deg, transparent 45%, rgba(255,255,255,.025) 100%);
+}
+#ast .astp.bot:not(.m-full) .bresz::after {
+  left: auto !important;
+  top: auto !important;
+  right: 8px !important;
+  bottom: 8px !important;
+  width: 10px !important;
+  height: 10px !important;
+  border: 0 !important;
+  border-right: 1.5px solid rgba(255,255,255,.65) !important;
+  border-bottom: 1.5px solid rgba(255,255,255,.65) !important;
+  border-radius: 0 0 3px 0 !important;
+  opacity: .8;
+}
+#ast .astp.bot:not(.m-full) .bresz:hover::after {
+  border-color: #fff !important;
+  opacity: 1;
+}
+#ast .astp.bot:not(.m-full) .bh { cursor: grab; touch-action: none; }
+#ast .astp.bot:not(.m-full) .bh:active { cursor: grabbing; }
+#ast .astp.bot .bh button,
+#ast .astp.bot .bh input,
+#ast .astp.bot .bh select { cursor: pointer; touch-action: manipulation; }
+@media (max-width: 980px) {
+  #ast .astp.bot.m-custom {
+    width: min(var(--qbot-custom-width, calc(100vw - 16px)), calc(100vw - 16px)) !important;
+    height: min(var(--qbot-custom-height, calc(100dvh - 16px)), calc(100dvh - 16px)) !important;
+  }
+}
+@media (max-width: 600px) {
+  #ast .astp.bot.m-full {
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+  }
+  #ast .astp.bot:not(.m-full) .bresz { display: block !important; }
+  #ast .astp.bot.m-custom {
+    width: min(var(--qbot-custom-width, calc(100vw - 16px)), calc(100vw - 16px)) !important;
+    height: min(var(--qbot-custom-height, calc(100dvh - 16px)), calc(100dvh - 16px)) !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ast .astp.bot, #ast .astp.bot * { scroll-behavior: auto !important; }
+}
