@@ -273,10 +273,7 @@ nav .lgb{flex:none}nav b{flex:none}
 #ast .astp.bot.m-large{width:min(1000px,calc(100vw - 24px));height:min(800px,calc(100dvh - 24px))}
 #ast .astp.bot.m-full{top:12px;left:12px;right:12px;bottom:12px;width:auto;height:auto}
 .bs{width:clamp(280px,17vw,326px);flex:none;display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(24,24,24,.96),rgba(7,7,7,.98) 45%,rgba(3,3,3,.98));padding:12px;min-height:0;gap:8px;box-shadow:inset -1px 0 rgba(255,255,255,.025)}
-.bot:not(.side-on) .bs{display:none}
-.bot.narrow .bs{display:flex;position:absolute;left:0;top:0;bottom:0;z-index:6;transform:translateX(-105%);transition:transform .4s cubic-bezier(.2,.8,.2,1);background:rgba(8,8,8,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:20px 0 60px rgba(0,0,0,.6)}
-.bot.narrow.side-on .bs{transform:none}
-.bot.narrow .bs{width:min(326px,calc(100vw - 56px));max-width:calc(100vw - 56px)}.bsscrim{all:unset;position:absolute;inset:0;z-index:5;display:block;background:rgba(0,0,0,.52);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);cursor:pointer;touch-action:manipulation}
+/* Sidebar positioning is centralized in bot.css; keep only shared sidebar visuals here. */
 .bm{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px;min-height:0;position:relative}
 .bh{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 2px 10px;flex:none}.bht{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;padding:0 6px}.bha{display:flex;gap:2px;flex:none}
 .bib{all:unset;cursor:pointer;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;color:var(--g5);transition:.3s;flex:none}.bib:hover,.bib.on{background:rgba(255,255,255,.1);color:#fff}.bib:focus-visible{outline:1px solid #fff}

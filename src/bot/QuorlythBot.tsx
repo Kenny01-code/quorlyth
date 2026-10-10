@@ -898,7 +898,7 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {/* Keep the drawer outside the bot's flex layout at every size. This prevents the centered/resized panel from becoming its positioning context. */}
+            {/* Desktop uses the sidebar as the first flex pane; narrow layouts portal it to the viewport. */}
             {!narrow && sideShown && sidebar}
             {narrow && sideShown && createPortal(
               <div className="qbot-sidebar-layer" role="presentation">
