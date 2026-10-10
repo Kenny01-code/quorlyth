@@ -281,3 +281,237 @@
   #ast .astp.bot .ast-in > .btn { min-width:31px; padding:6px !important; }
 }
 @media (prefers-reduced-motion:reduce) { #ast .astp.bot .bs, #ast .astp.bot .ast-in, #ast .astp.bot .ast-in > .btn, #ast .astp.bot .bsscrim { transition:none !important; animation:none !important; } }
+
+
+/* RESPONSIVE AUDIT FIX — final, authoritative QuorlythBot layout rules.
+   Keep these scoped to the bot so page styling elsewhere remains untouched. */
+#ast {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  padding: 12px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+#ast .astp.bot {
+  position: relative;
+  inset: auto;
+  display: flex;
+  width: min(1180px, calc(100vw - 32px));
+  height: min(860px, calc(100dvh - 32px));
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  transform: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+#ast .astp.bot .bs {
+  flex: 0 0 258px;
+  width: 258px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+#ast .astp.bot .bs-l {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#ast .astp.bot .bm {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+#ast .astp.bot .bh,
+#ast .astp.bot .bc {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+#ast .astp.bot .bstage {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+#ast .astp.bot .bv {
+  flex: 1 1 0%;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#ast .astp.bot .ast-log {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+#ast .astp.bot .am,
+#ast .astp.bot .mt,
+#ast .astp.bot .bhero,
+#ast .astp.bot .qbot-action {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+#ast .astp.bot .bc {
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+}
+#ast .astp.bot .ast-in {
+  width: 100%;
+  max-width: 100%;
+}
+#ast .astp.bot .ast-in textarea {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 16px;
+}
+#ast .astp.bot .bsscrim { display: none; }
+
+@media (max-width: 980px) {
+  #ast { padding: 8px; }
+  #ast .astp.bot {
+    width: calc(100vw - 16px) !important;
+    height: calc(100dvh - 16px);
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    border-radius: 22px !important;
+  }
+  #ast .astp.bot .bs {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: min(82%, 300px);
+    max-width: calc(100% - 42px);
+    height: 100%;
+    flex: 0 0 auto;
+    transform: translateX(-110%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform .24s cubic-bezier(.2,.75,.2,1), visibility .24s;
+    background: rgba(5,5,6,.98);
+    border-right: 1px solid rgba(255,255,255,.14);
+    box-shadow: 24px 0 60px rgba(0,0,0,.42);
+  }
+  #ast .astp.bot.side-on .bs {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+  #ast .astp.bot .bm { width: 100%; flex-basis: 100%; }
+  #ast .astp.bot .bsscrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: inherit;
+    background: rgba(0,0,0,.62);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+  }
+  #ast .astp.bot:not(.side-on) .bsscrim { display: none; }
+  #ast .astp.bot .bh { flex-wrap: nowrap; }
+  #ast .astp.bot .bht { flex: 1 1 auto; min-width: 0; }
+  #ast .astp.bot .bwm.big { overflow: hidden; text-overflow: ellipsis; }
+  #ast .astp.bot .bha { flex: 0 0 auto; min-width: 0; }
+}
+@media (max-width: 600px) {
+  #ast { padding: 0; }
+  #ast .astp.bot {
+    width: 100vw !important;
+    height: 100dvh;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border-inline: 0 !important;
+  }
+  #ast .astp.bot .bh {
+    padding-top: max(8px, env(safe-area-inset-top, 0px));
+    padding-inline: 9px;
+    gap: 3px;
+  }
+  #ast .astp.bot .bha { gap: 0; }
+  #ast .astp.bot .bha .bib,
+  #ast .astp.bot .bh > .bib {
+    width: 34px;
+    min-width: 34px;
+    height: 36px;
+    flex: 0 0 34px;
+  }
+  #ast .astp.bot .bwm.big {
+    max-width: 36vw;
+    font-size: clamp(11px, 3.3vw, 14px);
+    letter-spacing: .02em;
+  }
+  #ast .astp.bot .bstage { border-radius: 16px !important; }
+  #ast .astp.bot .ast-in {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 3px;
+    padding: 4px !important;
+    border-radius: 16px !important;
+  }
+  #ast .astp.bot .ast-in textarea {
+    flex: 1 1 0%;
+    width: 0;
+    min-width: 0;
+    min-height: 42px;
+    max-height: 120px;
+    padding: 10px 8px !important;
+    font-size: 16px !important;
+  }
+  #ast .astp.bot .ast-in > .btn,
+  #ast .astp.bot .ast-in > .btn.p {
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 7px !important;
+  }
+  #ast .astp.bot .bc { padding-inline: 8px; }
+  #ast .astp.bot .bgrid.sm { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  #ast .astp.bot .bsk { min-width: 0; overflow-wrap: anywhere; }
+}
+@media (max-width: 360px) {
+  #ast .astp.bot .bwm.big { max-width: 30vw; font-size: 11px; }
+  #ast .astp.bot .bha .bib[aria-label="Robot size"],
+  #ast .astp.bot .bha .bib[aria-label="Voice"] { display: none; }
+  #ast .astp.bot .bgrid.sm { grid-template-columns: minmax(0,1fr); }
+  #ast .astp.bot .ast-in > .btn,
+  #ast .astp.bot .ast-in > .btn.p { flex-basis: 32px; width: 32px; min-width: 32px; }
+}
+@media (max-height: 560px) and (min-width: 601px) {
+  #ast { padding: 6px; }
+  #ast .astp.bot { height: calc(100dvh - 12px); }
+  #ast .astp.bot .bstage.std { height: clamp(90px, 20dvh, 150px); }
+  #ast .astp.bot .bstage.big { height: clamp(100px, 25dvh, 180px); }
+  #ast .astp.bot .bhero { padding-block: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ast .astp.bot .bs,
+  #ast .astp.bot .bsscrim { transition: none !important; }
+}
