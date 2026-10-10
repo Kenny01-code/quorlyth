@@ -22,8 +22,10 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
   const areaRight = Number.isFinite(rightBound) ? Math.min(viewportRight, rightBound! - 8) : viewportRight
   const width = Math.max(0, Math.min(360, areaRight - areaLeft))
   const menuRef = useRef<HTMLDivElement>(null)
-  const botFrame = anchor?.closest<HTMLElement>('.astp.bot')
-    ?? document.querySelector<HTMLElement>('#ast .astp.bot, body > .qbot-drawer-portal.bot')
+  // The options menu belongs to the chat sidebar, not the whole bot panel.
+  // Resolve the exact sidebar from the clicked options button to avoid targeting
+  // another mounted/hidden QuorlythBot instance.
+  const sidebarFrame = anchor?.closest<HTMLElement>('.bs') ?? null
   const [position, setPosition] = useState({ left: Math.max(areaLeft, Math.min(areaRight - Math.min(width, 260), x - Math.min(width, 260))), top: Math.max(8, Math.min(window.innerHeight - 80, y)), width: Math.min(width, 260) })
   const [panelMaxHeight, setPanelMaxHeight] = useState(Math.max(80, window.innerHeight - 16))
 
@@ -31,36 +33,27 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
     const menu = menuRef.current
     if (!menu) return
     const place = () => {
-      // The menu is portalled to body, so derive its geometry from the live
-      // chat row/sidebar and the bot frame instead of stale viewport coordinates.
+      // Position the menu in the same coordinate space as its actual portal:
+      // the sidebar. Never calculate relative to the wider bot panel.
       const anchorRect = anchor?.isConnected ? anchor.getBoundingClientRect() : null
-      const sidebar = anchor?.closest<HTMLElement>('.bs') ?? null
-      const sidebarRect = sidebar?.getBoundingClientRect()
-      // Resolve the panel from the clicked chat's own DOM tree. A document-wide
-      // query can accidentally choose a different/hidden bot panel when more
-      // than one launcher or preview is mounted.
-      const frameRect = botFrame?.getBoundingClientRect()
-      const frameLeft = Math.max(8, (frameRect?.left ?? 0) + 8)
-      const frameRight = Math.min(window.innerWidth - 8, (frameRect?.right ?? window.innerWidth) - 8)
-      const liveLeft = Math.max(frameLeft, sidebarRect ? sidebarRect.left + 8 : frameLeft)
-      const liveRight = Math.min(frameRight, sidebarRect ? sidebarRect.right - 8 : frameRight)
-      const liveWidth = Math.max(0, Math.min(260, liveRight - liveLeft))
+      const sidebarRect = sidebarFrame?.getBoundingClientRect()
+      const frameLeft = Math.max(8, sidebarRect?.left ?? 8)
+      const frameRight = Math.min(window.innerWidth - 8, sidebarRect?.right ?? window.innerWidth - 8)
+      const frameTop = Math.max(8, sidebarRect?.top ?? 8)
+      const frameBottom = Math.min(window.innerHeight - 8, sidebarRect?.bottom ?? window.innerHeight - 8)
+      const liveWidth = Math.max(0, Math.min(260, frameRight - frameLeft))
       const liveX = anchorRect ? anchorRect.left + (offsetX ?? anchorRect.width) : x
       const liveY = anchorRect ? anchorRect.top + (offsetY ?? 0) : y
-      const topBound = Math.max(8, (frameRect?.top ?? 0) + 8)
-      const bottomBound = Math.min(window.innerHeight - 8, (frameRect?.bottom ?? window.innerHeight) - 8)
-      const maxHeight = Math.max(80, bottomBound - topBound)
+      const maxHeight = Math.max(80, frameBottom - frameTop)
       const rect = menu.getBoundingClientRect()
       const measuredHeight = Math.min(rect.height, maxHeight)
-      // Clamp both edges to the actual bot panel, then place the menu against
-      // the clicked row's right edge so it cannot drift outside the sidebar.
-      const safeWidth = Math.min(liveWidth, Math.max(0, frameRight - frameLeft))
+      // Clamp all four edges to the sidebar's visible rectangle.
+      const safeWidth = liveWidth
       const viewportLeft = Math.max(frameLeft, Math.min(frameRight - safeWidth, liveX - safeWidth))
-      const viewportTop = Math.max(topBound, Math.min(bottomBound - measuredHeight, liveY))
-      // Coordinates must be relative to the panel because the menu is rendered
-      // inside that panel. This makes overflow clipping and stacking deterministic.
-      const left = botFrame && frameRect ? viewportLeft - frameRect.left : viewportLeft
-      const top = botFrame && frameRect ? viewportTop - frameRect.top : viewportTop
+      const viewportTop = Math.max(frameTop, Math.min(frameBottom - measuredHeight, liveY))
+      // The sidebar is the portal parent and is explicitly positioned relative.
+      const left = sidebarFrame && sidebarRect ? viewportLeft - sidebarRect.left : viewportLeft
+      const top = sidebarFrame && sidebarRect ? viewportTop - sidebarRect.top : viewportTop
       setPanelMaxHeight(current => current === maxHeight ? current : maxHeight)
       setPosition(current => current.left === left && current.top === top && current.width === safeWidth ? current : { left, top, width: safeWidth })
     }
@@ -68,7 +61,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
     window.addEventListener('resize', place)
     window.addEventListener('scroll', place, true)
     // Reposition when the panel/sidebar changes size, not just on window resize.
-    const observed = [anchor, anchor?.closest('.bs'), anchor?.closest('.astp.bot')]
+    const observed = [anchor, sidebarFrame]
       .filter((node): node is Element => !!node)
     const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null
     observed.forEach(node => resizeObserver?.observe(node))
@@ -83,8 +76,8 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
   )
   return createPortal((
     <>
-      <div className="cmx-backdrop" style={{ position: botFrame ? 'absolute' : 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
-      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: botFrame ? 'absolute' : 'fixed', inset: 'auto', left: position.left, top: position.top, width: position.width, minWidth: position.width, maxWidth: position.width, boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none', zIndex: 97 }} onKeyDown={e => e.key === 'Escape' && onClose()}>
+      <div className="cmx-backdrop" style={{ position: sidebarFrame ? 'absolute' : 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
+      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: sidebarFrame ? 'absolute' : 'fixed', inset: 'auto', left: position.left, top: position.top, width: position.width, minWidth: position.width, maxWidth: position.width, boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none', zIndex: 97 }} onKeyDown={e => e.key === 'Escape' && onClose()}>
         {chat && <div className="cmh">{chat.title.slice(0, 40)}</div>}
         {chat && item('pin', chat.pin ? 'Unpin chat' : 'Pin chat', act.pin)}
         {chat && item('edit', 'Rename', act.rename)}
@@ -111,5 +104,5 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
         </>}
       </div>
     </>
-  ), botFrame ?? document.body)
+  ), sidebarFrame ?? document.body)
 }
