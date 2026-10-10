@@ -31,7 +31,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   const main = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const thumb = useRef<HTMLElement>(null)
-  const active = (p: string) => (p === '/' ? loc.pathname === '/' : loc.pathname.startsWith(p))
+  const active = (p: string) => p === '/' ? loc.pathname === '/' : loc.pathname === p || loc.pathname.startsWith(p + '/')
 
   useEffect(() => {
     const m = main.current!, w = wrap.current!, th = thumb.current!

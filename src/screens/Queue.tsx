@@ -24,7 +24,8 @@ function Inner() {
   const ctl = useRef<AbortController | null>(null)
   const { data } = a
   const w = { o: data.settings?.wo ?? 40, f: data.settings?.wf ?? 25, r: data.settings?.wr ?? 35 }
-  const inScope = data.ideas.filter(i => !qc || i.cid === qc)
+  const managedCommunityIds = new Set(data.communities.filter(c => a.ownsCommunity(c.id)).map(c => c.id))
+  const inScope = data.ideas.filter(i => (a.owner || managedCommunityIds.has(i.cid)) && (!qc || i.cid === qc))
   const list = inScope.filter(i => ['review', 'held', 'selected'].includes(a.statusOf(i.id))).sort((x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1))
   const d = list.find(i => i.id === sel) || list[0]
   const unreviewed = list.filter(i => data.reviews[i.id]?.score == null).length
