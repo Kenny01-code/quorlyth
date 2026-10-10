@@ -9,7 +9,7 @@ import { STATUS_LABEL } from '../lib/types'
 import { cn } from '../lib/util'
 
 export function Queue() {
-  return <Gate owner communityOwner><Inner /></Gate>
+  return <Gate owner><Inner /></Gate>
 }
 
 
