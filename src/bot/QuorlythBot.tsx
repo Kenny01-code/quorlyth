@@ -835,7 +835,7 @@ export function QuorlythBot() {
 
   // Portal narrow sidebar outside the centered bot panel to anchor it to the viewport.
   const sidebar = (
-            <aside className="bs">
+            <aside className="bs qbot-sidebar-drawer">
               <div className="bs-t"><span className="astm2"><Logo size={24} /></span><b className="bwm">{wm('Quorlyth')}</b><button className="bib" aria-label="Close sidebar" onClick={() => setSide(false)}><Icon name="panel" size={18} /></button></div>
               <div className="bs-n">
                 <button className="bsb p" onClick={() => { if (busy) return; setCur(null); setView('chat') }}><Icon name="plus" size={18} />New chat</button>
@@ -900,8 +900,8 @@ export function QuorlythBot() {
             }} />}
             {/* Keep the drawer outside the bot's flex layout at every size. This prevents the centered/resized panel from becoming its positioning context. */}
             {sideShown && createPortal(
-              <div className="qbot-drawer-portal bot narrow side-on" style={{ display: 'contents' }}>
-                <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
+              <div className="qbot-sidebar-layer" role="presentation">
+                <button className="qbot-sidebar-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
                 {sidebar}
               </div>,
               document.body,
