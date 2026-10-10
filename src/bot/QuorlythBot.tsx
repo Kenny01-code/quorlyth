@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -832,6 +833,31 @@ export function QuorlythBot() {
     else if (b.a === 'apply') { const p = JSON.parse(pend || '{}'); a.saveCommunity(p.cid, { welcome: p.welcome, rules: p.rules }) }
   }
 
+  // Portal narrow sidebar outside the centered bot panel to anchor it to the viewport.
+  const sidebar = (
+            <aside className="bs">
+              <div className="bs-t"><span className="astm2"><Logo size={24} /></span><b className="bwm">{wm('Quorlyth')}</b><button className="bib" aria-label="Close sidebar" onClick={() => setSide(false)}><Icon name="panel" size={18} /></button></div>
+              <div className="bs-n">
+                <button className="bsb p" onClick={() => { if (busy) return; setCur(null); setView('chat') }}><Icon name="plus" size={18} />New chat</button>
+                {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
+              </div>
+              <div className="bs-s"><div className="iw"><Icon name="search" size={18} /><input placeholder="Search chats" aria-label="Search chats" value={q} onChange={e => setQ(e.target.value)} /></div></div>
+              <div className="bs-l">
+                {project && <div className="bpj"><span><Icon name="folder" size={14} />{project.name}</span><button className="chip" onClick={() => setPj('')}>Clear</button></div>}
+                {query ? <><p className="bgh">Results</p>{searchResults.length ? searchResults.map(item) : <p className="dim" style={{ padding: '8px 10px' }}>No chats match.</p>}</> : <>
+                  {pinned.length > 0 && <><p className="bgh">Pinned</p>{pinned.map(item)}</>}
+                  <p className="bgh">Recents</p>
+                  {recent.length ? recent.map(item) : <p className="dim" style={{ padding: '8px 10px' }}>No chats yet. Start one.</p>}
+                  {arch.length > 0 && <><button className="bgh bga" onClick={() => setShowArch(!showArch)}><Icon name="book" size={13} />Archived ({arch.length})<span>{showArch ? 'Hide' : 'Show'}</span></button>{showArch && arch.map(item)}</>}
+                </>}
+              </div>
+              <div className="bs-f">
+                <button className={cn('bsb', view === 'settings' && 'on')} onClick={() => { setView('settings'); if (narrow) setSide(false) }}><Icon name="settings" size={18} />Settings</button>
+                <button className="bsu" onClick={() => { nav('/me'); if (narrow) setSide(false) }}>{a.me ? <Av id={a.me.id} size={34} /> : <Icon name="member" size={18} />}<span><b>{a.me ? a.nm(a.me.id) : 'Visitor'}</b><i>{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Signed out'}</i></span></button>
+              </div>
+            </aside>
+  )
+
   return (
     <>
       <button id="astl" className={cn('astl', open && 'hide')} aria-label="Open QuorlythBot" onClick={openPanel}>
@@ -872,28 +898,7 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {narrow && sideShown && <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />}
-            <aside className="bs">
-              <div className="bs-t"><span className="astm2"><Logo size={24} /></span><b className="bwm">{wm('Quorlyth')}</b><button className="bib" aria-label="Close sidebar" onClick={() => setSide(false)}><Icon name="panel" size={18} /></button></div>
-              <div className="bs-n">
-                <button className="bsb p" onClick={() => { if (busy) return; setCur(null); setView('chat') }}><Icon name="plus" size={18} />New chat</button>
-                {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
-              </div>
-              <div className="bs-s"><div className="iw"><Icon name="search" size={18} /><input placeholder="Search chats" aria-label="Search chats" value={q} onChange={e => setQ(e.target.value)} /></div></div>
-              <div className="bs-l">
-                {project && <div className="bpj"><span><Icon name="folder" size={14} />{project.name}</span><button className="chip" onClick={() => setPj('')}>Clear</button></div>}
-                {query ? <><p className="bgh">Results</p>{searchResults.length ? searchResults.map(item) : <p className="dim" style={{ padding: '8px 10px' }}>No chats match.</p>}</> : <>
-                  {pinned.length > 0 && <><p className="bgh">Pinned</p>{pinned.map(item)}</>}
-                  <p className="bgh">Recents</p>
-                  {recent.length ? recent.map(item) : <p className="dim" style={{ padding: '8px 10px' }}>No chats yet. Start one.</p>}
-                  {arch.length > 0 && <><button className="bgh bga" onClick={() => setShowArch(!showArch)}><Icon name="book" size={13} />Archived ({arch.length})<span>{showArch ? 'Hide' : 'Show'}</span></button>{showArch && arch.map(item)}</>}
-                </>}
-              </div>
-              <div className="bs-f">
-                <button className={cn('bsb', view === 'settings' && 'on')} onClick={() => { setView('settings'); if (narrow) setSide(false) }}><Icon name="settings" size={18} />Settings</button>
-                <button className="bsu" onClick={() => { nav('/me'); if (narrow) setSide(false) }}>{a.me ? <Av id={a.me.id} size={34} /> : <Icon name="member" size={18} />}<span><b>{a.me ? a.nm(a.me.id) : 'Visitor'}</b><i>{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Signed out'}</i></span></button>
-              </div>
-            </aside>
+            {!narrow && sidebar}
             <section className="bm">
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
@@ -981,6 +986,13 @@ export function QuorlythBot() {
               )}
             </section>
           </div>
+          {narrow && sideShown && createPortal(
+            <div className="qbot-drawer-portal">
+              <button className="qbot-drawer-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
+              {sidebar}
+            </div>,
+            document.getElementById('ast')!
+          )}
           {menu && <ChatMenu chat={menuChat} x={menu.x} y={menu.y} projects={bd.projects} act={actions as any} onClose={() => setMenu(null)} />}
         </div>
       )}
