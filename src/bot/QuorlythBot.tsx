@@ -93,6 +93,14 @@ export function QuorlythBot() {
   const [tour, setTour] = useState(-1)
   const [greet, setGreet] = useState('')
   const [size, setSize] = useState<null | { w: number; h: number }>(null)
+  const [position, setPosition] = useState<null | { x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('qbot-panel-position-v1')
+      if (!saved) return null
+      const parsed = JSON.parse(saved)
+      return Number.isFinite(parsed?.x) && Number.isFinite(parsed?.y) ? { x: parsed.x, y: parsed.y } : null
+    } catch { return null }
+  })
   const panel = useRef<HTMLDivElement>(null)
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
@@ -110,10 +118,26 @@ export function QuorlythBot() {
         const maxH = Math.max(300, window.innerHeight - 24)
         return { w: Math.min(current.w, maxW), h: Math.min(current.h, maxH) }
       })
+      setPosition(current => {
+        if (!current || mode === 'full') return current
+        const el = panel.current
+        const w = el?.offsetWidth || 1180
+        const h = el?.offsetHeight || 860
+        return {
+          x: Math.max(8, Math.min(current.x, window.innerWidth - Math.min(w, window.innerWidth) - 8)),
+          y: Math.max(8, Math.min(current.y, window.innerHeight - Math.min(h, window.innerHeight) - 8)),
+        }
+      })
     }
     window.addEventListener('resize', resize)
     return () => window.removeEventListener('resize', resize)
-  }, [])
+  }, [mode])
+
+  useEffect(() => {
+    try {
+      if (position) localStorage.setItem('qbot-panel-position-v1', JSON.stringify(position))
+    } catch { /* Position still works for this session if storage is unavailable. */ }
+  }, [position])
 
   useEffect(() => {
     if (narrow) setSide(false)
@@ -815,7 +839,7 @@ export function QuorlythBot() {
       </button>
       {open && (
         <div id="ast">
-          <div id="bot" className={cn('astp glass bot', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
+          <div id="bot" className={cn('astp glass bot', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
             {mode !== 'full' && <div className="bresz" title="Drag to resize" onPointerDown={e => {
               e.preventDefault(); const el = panel.current!, sx = e.clientX, sy = e.clientY, sw = el.offsetWidth, sh = el.offsetHeight
               const mv = (ev: PointerEvent) => { const maxW = Math.max(240, window.innerWidth - 24), maxH = Math.max(300, window.innerHeight - 24); setMode('custom'); setSize({ w: Math.max(Math.min(340, maxW), Math.min(maxW, sw + (sx - ev.clientX))), h: Math.max(Math.min(420, maxH), Math.min(maxH, sh + (sy - ev.clientY))) }) }
@@ -845,7 +869,30 @@ export function QuorlythBot() {
               </div>
             </aside>
             <section className="bm">
-              <header className="bh">
+              <header className="bh" onPointerDown={e => {
+                if (mode === 'full' || (e.target as HTMLElement).closest('button, input, textarea, a, [role="button"]')) return
+                const el = panel.current
+                if (!el) return
+                e.preventDefault()
+                const rect = el.getBoundingClientRect()
+                const offsetX = e.clientX - rect.left
+                const offsetY = e.clientY - rect.top
+                const move = (ev: PointerEvent) => {
+                  const w = el.offsetWidth, h = el.offsetHeight
+                  setPosition({
+                    x: Math.max(8, Math.min(ev.clientX - offsetX, window.innerWidth - Math.min(w, window.innerWidth) - 8)),
+                    y: Math.max(8, Math.min(ev.clientY - offsetY, window.innerHeight - Math.min(h, window.innerHeight) - 8)),
+                  })
+                }
+                const end = () => {
+                  window.removeEventListener('pointermove', move)
+                  window.removeEventListener('pointerup', end)
+                  window.removeEventListener('pointercancel', end)
+                }
+                window.addEventListener('pointermove', move)
+                window.addEventListener('pointerup', end)
+                window.addEventListener('pointercancel', end)
+              }}>
                 <button className="bib" aria-label="Sidebar" onClick={e => { e.stopPropagation(); setSide(!side) }}><Icon name="menu" size={18} /></button>
                 <div className="bht"><b className="bwm big">{wm('QuorlythBot')}</b><span className="bst"><i />{live ? ({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live' : status}</span></div>
                 <div className="bha">
