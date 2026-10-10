@@ -12,7 +12,7 @@ export interface MenuActions {
 }
 
 /** Right click menu for a chat. Every action closes it except colour, project and the delete confirmation. */
-export function ChatMenu({ chat, x, y, leftBound, rightBound, projects, act, onClose }: { chat: Chat | null; x: number; y: number; leftBound?: number; rightBound?: number; projects: Project[]; act: MenuActions; onClose: () => void }) {
+export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, offsetY, projects, act, onClose }: { chat: Chat | null; x: number; y: number; leftBound?: number; rightBound?: number; anchor?: HTMLElement; offsetX?: number; offsetY?: number; projects: Project[]; act: MenuActions; onClose: () => void }) {
   const [proj, setProj] = useState(false)
   const [del, setDel] = useState(false)
   const col = chat?.color || ''
@@ -23,14 +23,32 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, projects, act, onC
   const width = Math.max(0, Math.min(360, areaRight - areaLeft))
   const menuRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ left: Math.max(areaLeft, Math.min(areaRight - width, x - width)), top: Math.max(8, Math.min(window.innerHeight - 80, y)) })
+  const [panelMaxHeight, setPanelMaxHeight] = useState(Math.max(80, window.innerHeight - 16))
 
   useLayoutEffect(() => {
     const menu = menuRef.current
     if (!menu) return
     const place = () => {
+      // The menu is portalled to body, so derive its geometry from the live
+      // chat row/sidebar and the bot frame instead of stale viewport coordinates.
+      const anchorRect = anchor?.isConnected ? anchor.getBoundingClientRect() : null
+      const sidebar = anchor?.closest('.bs') as HTMLElement | null
+      const sidebarRect = sidebar?.getBoundingClientRect()
+      const botFrame = document.querySelector<HTMLElement>('.astp.bot, body > .qbot-drawer-portal.bot')
+      const frameRect = botFrame?.getBoundingClientRect()
+      const liveLeft = sidebarRect ? Math.max(8, sidebarRect.left + 8) : areaLeft
+      const liveRight = sidebarRect ? Math.min(window.innerWidth - 8, sidebarRect.right - 8) : areaRight
+      const liveWidth = Math.max(0, Math.min(260, liveRight - liveLeft))
+      const liveX = anchorRect ? anchorRect.left + (offsetX ?? anchorRect.width) : x
+      const liveY = anchorRect ? anchorRect.top + (offsetY ?? 0) : y
+      const topBound = Math.max(8, (frameRect?.top ?? 0) + 8)
+      const bottomBound = Math.min(window.innerHeight - 8, (frameRect?.bottom ?? window.innerHeight) - 8)
+      const maxHeight = Math.max(80, bottomBound - topBound)
       const rect = menu.getBoundingClientRect()
-      const left = Math.max(areaLeft, Math.min(areaRight - rect.width, x - rect.width))
-      const top = Math.max(8, Math.min(window.innerHeight - rect.height - 8, y))
+      const measuredHeight = Math.min(rect.height, maxHeight)
+      const left = Math.max(liveLeft, Math.min(liveRight - liveWidth, liveX - liveWidth))
+      const top = Math.max(topBound, Math.min(bottomBound - measuredHeight, liveY))
+      setPanelMaxHeight(current => current === maxHeight ? current : maxHeight)
       setPosition(current => current.left === left && current.top === top ? current : { left, top })
     }
     place()
@@ -40,14 +58,14 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, projects, act, onC
       window.removeEventListener('resize', place)
       window.removeEventListener('scroll', place, true)
     }
-  }, [x, y, leftBound, rightBound, areaLeft, areaRight, chat?.id, proj, del])
+  }, [x, y, leftBound, rightBound, areaLeft, areaRight, anchor, offsetX, offsetY, chat?.id, proj, del])
   const item = (icon: string, label: string, fn: () => void, cls = '') => (
     <button role="menuitem" className={cls} onClick={() => { fn(); onClose() }}><Icon name={icon} size={16} />{label}</button>
   )
   return createPortal((
     <>
       <div className="cmx-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
-      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: 'fixed', inset: 'auto', left: position.left, top: position.top, width, minWidth: width, maxWidth: width, boxSizing: 'border-box', maxHeight: "calc(100dvh - 16px)", margin: 0, transform: 'none' }} onKeyDown={e => e.key === 'Escape' && onClose()}>
+      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: 'fixed', inset: 'auto', left: position.left, top: position.top, width: Math.min(width, 260), minWidth: Math.min(width, 260), maxWidth: Math.min(width, 260), boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none' }} onKeyDown={e => e.key === 'Escape' && onClose()}>
         {chat && <div className="cmh">{chat.title.slice(0, 40)}</div>}
         {chat && item('pin', chat.pin ? 'Unpin chat' : 'Pin chat', act.pin)}
         {chat && item('edit', 'Rename', act.rename)}
