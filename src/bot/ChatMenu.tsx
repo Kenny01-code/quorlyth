@@ -22,7 +22,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
   const areaRight = Number.isFinite(rightBound) ? Math.min(viewportRight, rightBound! - 8) : viewportRight
   const width = Math.max(0, Math.min(360, areaRight - areaLeft))
   const menuRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({ left: Math.max(areaLeft, Math.min(areaRight - width, x - width)), top: Math.max(8, Math.min(window.innerHeight - 80, y)) })
+  const [position, setPosition] = useState({ left: Math.max(areaLeft, Math.min(areaRight - Math.min(width, 260), x - Math.min(width, 260))), top: Math.max(8, Math.min(window.innerHeight - 80, y)), width: Math.min(width, 260) })
   const [panelMaxHeight, setPanelMaxHeight] = useState(Math.max(80, window.innerHeight - 16))
 
   useLayoutEffect(() => {
@@ -49,7 +49,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       const left = Math.max(liveLeft, Math.min(liveRight - liveWidth, liveX - liveWidth))
       const top = Math.max(topBound, Math.min(bottomBound - measuredHeight, liveY))
       setPanelMaxHeight(current => current === maxHeight ? current : maxHeight)
-      setPosition(current => current.left === left && current.top === top ? current : { left, top })
+      setPosition(current => current.left === left && current.top === top && current.width === liveWidth ? current : { left, top, width: liveWidth })
     }
     place()
     window.addEventListener('resize', place)
@@ -65,7 +65,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
   return createPortal((
     <>
       <div className="cmx-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
-      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: 'fixed', inset: 'auto', left: position.left, top: position.top, width: Math.min(width, 260), minWidth: Math.min(width, 260), maxWidth: Math.min(width, 260), boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none' }} onKeyDown={e => e.key === 'Escape' && onClose()}>
+      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: 'fixed', inset: 'auto', left: position.left, top: position.top, width: position.width, minWidth: position.width, maxWidth: position.width, boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none' }} onKeyDown={e => e.key === 'Escape' && onClose()}>
         {chat && <div className="cmh">{chat.title.slice(0, 40)}</div>}
         {chat && item('pin', chat.pin ? 'Unpin chat' : 'Pin chat', act.pin)}
         {chat && item('edit', 'Rename', act.rename)}
