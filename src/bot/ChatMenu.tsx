@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from '../lib/Icon'
 import { Chat } from '../lib/types'
 import { THEMES } from './config'
@@ -11,20 +12,42 @@ export interface MenuActions {
 }
 
 /** Right click menu for a chat. Every action closes it except colour, project and the delete confirmation. */
-export function ChatMenu({ chat, x, y, projects, act, onClose }: { chat: Chat | null; x: number; y: number; projects: Project[]; act: MenuActions; onClose: () => void }) {
+export function ChatMenu({ chat, x, y, leftBound, rightBound, projects, act, onClose }: { chat: Chat | null; x: number; y: number; leftBound?: number; rightBound?: number; projects: Project[]; act: MenuActions; onClose: () => void }) {
   const [proj, setProj] = useState(false)
   const [del, setDel] = useState(false)
   const col = chat?.color || ''
-  const width = Math.min(360, innerWidth - 16)
-  const height = Math.min(innerHeight - 16, 650)
-  const left = Math.max(8, Math.min(innerWidth - width - 8, x)), top = Math.max(8, Math.min(innerHeight - height - 8, y))
+  const viewportLeft = 8
+  const viewportRight = window.innerWidth - 8
+  const areaLeft = Number.isFinite(leftBound) ? Math.max(viewportLeft, leftBound! + 8) : viewportLeft
+  const areaRight = Number.isFinite(rightBound) ? Math.min(viewportRight, rightBound! - 8) : viewportRight
+  const width = Math.max(0, Math.min(360, areaRight - areaLeft))
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [position, setPosition] = useState({ left: Math.max(areaLeft, Math.min(areaRight - width, x - width)), top: Math.max(8, Math.min(window.innerHeight - 80, y)) })
+
+  useLayoutEffect(() => {
+    const menu = menuRef.current
+    if (!menu) return
+    const place = () => {
+      const rect = menu.getBoundingClientRect()
+      const left = Math.max(areaLeft, Math.min(areaRight - rect.width, x - rect.width))
+      const top = Math.max(8, Math.min(window.innerHeight - rect.height - 8, y))
+      setPosition(current => current.left === left && current.top === top ? current : { left, top })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [x, y, leftBound, rightBound, areaLeft, areaRight, chat?.id, proj, del])
   const item = (icon: string, label: string, fn: () => void, cls = '') => (
     <button role="menuitem" className={cls} onClick={() => { fn(); onClose() }}><Icon name={icon} size={16} />{label}</button>
   )
-  return (
+  return createPortal((
     <>
       <div className="cmx-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
-      <div className="cmx glass" role="menu" style={{ left, top, width, minWidth: width, maxWidth: width, maxHeight: Math.min(height, innerHeight - top - 8) }} onKeyDown={e => e.key === 'Escape' && onClose()}>
+      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: 'fixed', inset: 'auto', left: position.left, top: position.top, width, minWidth: width, maxWidth: width, boxSizing: 'border-box', maxHeight: "calc(100dvh - 16px)", margin: 0, transform: 'none' }} onKeyDown={e => e.key === 'Escape' && onClose()}>
         {chat && <div className="cmh">{chat.title.slice(0, 40)}</div>}
         {chat && item('pin', chat.pin ? 'Unpin chat' : 'Pin chat', act.pin)}
         {chat && item('edit', 'Rename', act.rename)}
@@ -51,5 +74,5 @@ export function ChatMenu({ chat, x, y, projects, act, onClose }: { chat: Chat | 
         </>}
       </div>
     </>
-  )
+  ), document.body)
 }
