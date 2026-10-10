@@ -905,7 +905,7 @@ body > .qbot-drawer-portal > .bs {
   overflow: hidden !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  transform: translate3d(0,0,0) !important;
+  transform: translate3d(0,0,0);
   border: 0 !important;
   border-right: 1px solid rgba(255,255,255,.16) !important;
   border-radius: 0 22px 22px 0 !important;
@@ -1052,7 +1052,7 @@ body > .qbot-drawer-portal.astp.bot > .bs {
   max-height: none !important;
   margin: 0 !important;
   padding: 12px !important;
-  transform: translate3d(0,0,0) !important;
+  transform: translate3d(0,0,0);
   visibility: visible !important;
   pointer-events: auto !important;
   flex: 0 0 auto !important;
@@ -1095,4 +1095,12 @@ body > .qbot-drawer-portal.astp.bot .bs-f {
     animation: none !important;
     transition: none !important;
   }
+}
+
+
+/* Match the original sidebar styling specificity without inheriting the bot's
+   narrow/side-on panel-centering rules. The transform remains animatable. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) > .bs {
+  transform: translate3d(0,0,0);
+  animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both;
 }
