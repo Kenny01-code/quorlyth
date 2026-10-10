@@ -850,6 +850,7 @@ export function QuorlythBot() {
               const sw = rect.width, sh = rect.height
               const originX = Math.max(0, rect.left), originY = Math.max(0, rect.top)
               setPosition({ x: originX, y: originY })
+              setSize({ w: sw, h: sh })
               setMode('custom')
               try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* Window listeners remain as a fallback. */ }
               const mv = (ev: PointerEvent) => {
