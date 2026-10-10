@@ -865,7 +865,7 @@
   pointer-events: none !important;
   isolation: isolate;
   transform: none !important;
-  contain: layout style;
+  contain: none !important;
 }
 .qbot-sidebar-scrim {
   position: fixed !important;
