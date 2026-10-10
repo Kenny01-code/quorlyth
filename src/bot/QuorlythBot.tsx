@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -897,10 +898,14 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {/* Desktop keeps the sidebar in the two-pane layout. On narrow screens, the same sidebar becomes a viewport-anchored drawer above a translucent scrim. */}
-            {!narrow && sideShown && sidebar}
-            {narrow && sideShown && <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />}
-            {narrow && sideShown && sidebar}
+            {/* Keep the drawer outside the bot's flex layout at every size. This prevents the centered/resized panel from becoming its positioning context. */}
+            {sideShown && createPortal(
+              <div className="qbot-drawer-portal bot narrow side-on" style={{ display: 'contents' }}>
+                <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
+                {sidebar}
+              </div>,
+              document.body,
+            )}
             <section className="bm">
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
