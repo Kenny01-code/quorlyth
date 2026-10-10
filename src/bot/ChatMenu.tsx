@@ -22,6 +22,8 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
   const areaRight = Number.isFinite(rightBound) ? Math.min(viewportRight, rightBound! - 8) : viewportRight
   const width = Math.max(0, Math.min(360, areaRight - areaLeft))
   const menuRef = useRef<HTMLDivElement>(null)
+  const botFrame = anchor?.closest<HTMLElement>('.astp.bot')
+    ?? document.querySelector<HTMLElement>('#ast .astp.bot, body > .qbot-drawer-portal.bot')
   const [position, setPosition] = useState({ left: Math.max(areaLeft, Math.min(areaRight - Math.min(width, 260), x - Math.min(width, 260))), top: Math.max(8, Math.min(window.innerHeight - 80, y)), width: Math.min(width, 260) })
   const [panelMaxHeight, setPanelMaxHeight] = useState(Math.max(80, window.innerHeight - 16))
 
@@ -37,8 +39,6 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       // Resolve the panel from the clicked chat's own DOM tree. A document-wide
       // query can accidentally choose a different/hidden bot panel when more
       // than one launcher or preview is mounted.
-      const botFrame = anchor?.closest<HTMLElement>('.astp.bot')
-        ?? document.querySelector<HTMLElement>('#ast .astp.bot, body > .qbot-drawer-portal.bot')
       const frameRect = botFrame?.getBoundingClientRect()
       const frameLeft = Math.max(8, (frameRect?.left ?? 0) + 8)
       const frameRight = Math.min(window.innerWidth - 8, (frameRect?.right ?? window.innerWidth) - 8)
@@ -55,8 +55,12 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       // Clamp both edges to the actual bot panel, then place the menu against
       // the clicked row's right edge so it cannot drift outside the sidebar.
       const safeWidth = Math.min(liveWidth, Math.max(0, frameRight - frameLeft))
-      const left = Math.max(frameLeft, Math.min(frameRight - safeWidth, liveX - safeWidth))
-      const top = Math.max(topBound, Math.min(bottomBound - measuredHeight, liveY))
+      const viewportLeft = Math.max(frameLeft, Math.min(frameRight - safeWidth, liveX - safeWidth))
+      const viewportTop = Math.max(topBound, Math.min(bottomBound - measuredHeight, liveY))
+      // Coordinates must be relative to the panel because the menu is rendered
+      // inside that panel. This makes overflow clipping and stacking deterministic.
+      const left = botFrame && frameRect ? viewportLeft - frameRect.left : viewportLeft
+      const top = botFrame && frameRect ? viewportTop - frameRect.top : viewportTop
       setPanelMaxHeight(current => current === maxHeight ? current : maxHeight)
       setPosition(current => current.left === left && current.top === top && current.width === safeWidth ? current : { left, top, width: safeWidth })
     }
@@ -79,8 +83,8 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
   )
   return createPortal((
     <>
-      <div className="cmx-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
-      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: 'fixed', inset: 'auto', left: position.left, top: position.top, width: position.width, minWidth: position.width, maxWidth: position.width, boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none' }} onKeyDown={e => e.key === 'Escape' && onClose()}>
+      <div className="cmx-backdrop" style={{ position: botFrame ? 'absolute' : 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
+      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: botFrame ? 'absolute' : 'fixed', inset: 'auto', left: position.left, top: position.top, width: position.width, minWidth: position.width, maxWidth: position.width, boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none' }} onKeyDown={e => e.key === 'Escape' && onClose()}>
         {chat && <div className="cmh">{chat.title.slice(0, 40)}</div>}
         {chat && item('pin', chat.pin ? 'Unpin chat' : 'Pin chat', act.pin)}
         {chat && item('edit', 'Rename', act.rename)}
@@ -107,5 +111,5 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
         </>}
       </div>
     </>
-  ), document.body)
+  ), botFrame ?? document.body)
 }
