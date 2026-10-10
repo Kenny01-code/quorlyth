@@ -32,12 +32,18 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       // The menu is portalled to body, so derive its geometry from the live
       // chat row/sidebar and the bot frame instead of stale viewport coordinates.
       const anchorRect = anchor?.isConnected ? anchor.getBoundingClientRect() : null
-      const sidebar = anchor?.closest('.bs') as HTMLElement | null
+      const sidebar = anchor?.closest<HTMLElement>('.bs') ?? null
       const sidebarRect = sidebar?.getBoundingClientRect()
-      const botFrame = document.querySelector<HTMLElement>('.astp.bot, body > .qbot-drawer-portal.bot')
+      // Resolve the panel from the clicked chat's own DOM tree. A document-wide
+      // query can accidentally choose a different/hidden bot panel when more
+      // than one launcher or preview is mounted.
+      const botFrame = anchor?.closest<HTMLElement>('.astp.bot')
+        ?? document.querySelector<HTMLElement>('#ast .astp.bot, body > .qbot-drawer-portal.bot')
       const frameRect = botFrame?.getBoundingClientRect()
-      const liveLeft = sidebarRect ? Math.max(8, sidebarRect.left + 8) : areaLeft
-      const liveRight = sidebarRect ? Math.min(window.innerWidth - 8, sidebarRect.right - 8) : areaRight
+      const frameLeft = Math.max(8, (frameRect?.left ?? 0) + 8)
+      const frameRight = Math.min(window.innerWidth - 8, (frameRect?.right ?? window.innerWidth) - 8)
+      const liveLeft = Math.max(frameLeft, sidebarRect ? sidebarRect.left + 8 : frameLeft)
+      const liveRight = Math.min(frameRight, sidebarRect ? sidebarRect.right - 8 : frameRight)
       const liveWidth = Math.max(0, Math.min(260, liveRight - liveLeft))
       const liveX = anchorRect ? anchorRect.left + (offsetX ?? anchorRect.width) : x
       const liveY = anchorRect ? anchorRect.top + (offsetY ?? 0) : y
@@ -46,17 +52,26 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       const maxHeight = Math.max(80, bottomBound - topBound)
       const rect = menu.getBoundingClientRect()
       const measuredHeight = Math.min(rect.height, maxHeight)
-      const left = Math.max(liveLeft, Math.min(liveRight - liveWidth, liveX - liveWidth))
+      // Clamp both edges to the actual bot panel, then place the menu against
+      // the clicked row's right edge so it cannot drift outside the sidebar.
+      const safeWidth = Math.min(liveWidth, Math.max(0, frameRight - frameLeft))
+      const left = Math.max(frameLeft, Math.min(frameRight - safeWidth, liveX - safeWidth))
       const top = Math.max(topBound, Math.min(bottomBound - measuredHeight, liveY))
       setPanelMaxHeight(current => current === maxHeight ? current : maxHeight)
-      setPosition(current => current.left === left && current.top === top && current.width === liveWidth ? current : { left, top, width: liveWidth })
+      setPosition(current => current.left === left && current.top === top && current.width === safeWidth ? current : { left, top, width: safeWidth })
     }
     place()
     window.addEventListener('resize', place)
     window.addEventListener('scroll', place, true)
+    // Reposition when the panel/sidebar changes size, not just on window resize.
+    const observed = [anchor, anchor?.closest('.bs'), anchor?.closest('.astp.bot')]
+      .filter((node): node is Element => !!node)
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null
+    observed.forEach(node => resizeObserver?.observe(node))
     return () => {
       window.removeEventListener('resize', place)
       window.removeEventListener('scroll', place, true)
+      resizeObserver?.disconnect()
     }
   }, [x, y, leftBound, rightBound, areaLeft, areaRight, anchor, offsetX, offsetY, chat?.id, proj, del])
   const item = (icon: string, label: string, fn: () => void, cls = '') => (
