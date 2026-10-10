@@ -858,7 +858,7 @@
 
 /* REAL VIEWPORT DRAWER — rendered through a React portal outside #bot.
    This avoids fixed-position containing blocks created by the bot's glass/filter styles. */
-body > .qbot-drawer-portal {
+#ast > .qbot-drawer-portal {
   position: fixed !important;
   inset: 0 !important;
   width: 100vw !important;
@@ -873,7 +873,7 @@ body > .qbot-drawer-portal {
   overflow: visible !important;
   isolation: auto !important;
 }
-body > .qbot-drawer-portal > .qbot-drawer-scrim {
+#ast > .qbot-drawer-portal > .qbot-drawer-scrim {
   display: block !important;
   position: absolute !important;
   inset: 0 !important;
@@ -890,7 +890,7 @@ body > .qbot-drawer-portal > .qbot-drawer-scrim {
   backdrop-filter: blur(5px) !important;
   animation: qbotScrimIn .2s ease both;
 }
-body > .qbot-drawer-portal > .bs {
+#ast > .qbot-drawer-portal > .bs {
   display: flex !important;
   position: absolute !important;
   inset: 0 auto 0 0 !important;
@@ -915,25 +915,76 @@ body > .qbot-drawer-portal > .bs {
   backdrop-filter: blur(34px) saturate(135%) !important;
   animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both;
 }
-body > .qbot-drawer-portal .bs-l {
+#ast > .qbot-drawer-portal .bs-l {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain;
 }
-body > .qbot-drawer-portal .bs-t,
-body > .qbot-drawer-portal .bs-n,
-body > .qbot-drawer-portal .bs-s,
-body > .qbot-drawer-portal .bs-f { flex-shrink: 0; min-width: 0; }
+#ast > .qbot-drawer-portal .bs-t,
+#ast > .qbot-drawer-portal .bs-n,
+#ast > .qbot-drawer-portal .bs-s,
+#ast > .qbot-drawer-portal .bs-f { flex-shrink: 0; min-width: 0; }
 @keyframes qbotDrawerEnter {
   from { transform: translate3d(-100%,0,0); }
   to { transform: translate3d(0,0,0); }
 }
 @media (max-width: 420px) {
-  body > .qbot-drawer-portal > .bs { width: min(300px, 88vw) !important; max-width: 88vw !important; border-radius: 0 18px 18px 0 !important; }
+  #ast > .qbot-drawer-portal > .bs { width: min(300px, 88vw) !important; max-width: 88vw !important; border-radius: 0 18px 18px 0 !important; }
 }
 @media (prefers-reduced-motion: reduce) {
-  body > .qbot-drawer-portal > .bs,
-  body > .qbot-drawer-portal > .qbot-drawer-scrim { animation: none !important; transition: none !important; }
+  #ast > .qbot-drawer-portal > .bs,
+  #ast > .qbot-drawer-portal > .qbot-drawer-scrim { animation: none !important; transition: none !important; }
+}
+
+
+/* Portal root keeps the existing .astp.bot selector scope for every sidebar
+   child style, while the fixed root itself spans the viewport rather than centering. */
+#ast > .qbot-drawer-portal.astp.bot {
+  position: fixed !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100vw !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  transform: none !important;
+  filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  contain: none !important;
+  will-change: auto !important;
+  isolation: isolate !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  z-index: 2147483000 !important;
+}
+#ast > .qbot-drawer-portal.astp.bot > .qbot-drawer-scrim {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: auto !important;
+}
+#ast > .qbot-drawer-portal.astp.bot > .bs {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: 0 !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+  transform: translate3d(0,0,0);
+  pointer-events: auto !important;
+  z-index: 1 !important;
 }
