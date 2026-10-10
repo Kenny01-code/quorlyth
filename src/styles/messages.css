@@ -452,3 +452,45 @@ main:has(.chat-page) > .on { width: 100%; min-width: 0; }
   .chat-message-row, .chat-orbit > span, .chat-spinner { animation:none !important; }
   .chat-page button, .chat-conversation, .chat-person { transition:none !important; scroll-behavior:auto !important; }
 }
+
+
+/* Quorlyth premium composer: remove the default-looking input frame and use a soft, responsive glass surface. */
+.chat-compose-glass {
+  position: relative;
+  border: 1px solid rgba(255,255,255,.095);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+  box-shadow: 0 10px 34px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.045);
+  transition: border-color .24s ease, background .24s ease, box-shadow .24s ease, transform .24s ease;
+  overflow: hidden;
+}
+.chat-compose-glass:focus-within {
+  border-color: rgba(255,255,255,.16);
+  background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.028));
+  box-shadow: 0 14px 42px rgba(0,0,0,.24), 0 0 0 3px rgba(255,255,255,.025), inset 0 1px 0 rgba(255,255,255,.07);
+  transform: translateY(-1px);
+}
+.chat-compose-glass textarea {
+  display:block; width:100%; min-width:0; border:0 !important; outline:0 !important; box-shadow:none !important;
+  background:transparent !important; border-radius:0 !important; resize:none; padding:17px 18px 10px;
+  color:inherit; font:inherit; line-height:1.55; appearance:none; -webkit-appearance:none;
+}
+.chat-compose-glass textarea:focus, .chat-compose-glass textarea:focus-visible { outline:none !important; border:0 !important; box-shadow:none !important; }
+.chat-compose-glass textarea::placeholder { opacity:.58; transition:opacity .2s ease; }
+.chat-compose-glass:focus-within textarea::placeholder { opacity:.38; }
+.chat-compose-foot { display:flex; align-items:center; gap:10px; padding:3px 10px 10px 17px; }
+.chat-compose-foot > span { opacity:.56; font-size:11px; }
+.chat-compose-foot > span:nth-child(2) { margin-left:auto; font-variant-numeric:tabular-nums; }
+.chat-send { flex:0 0 auto; display:grid; place-items:center; width:38px; height:38px; border-radius:14px; border:1px solid rgba(255,255,255,.14); background:linear-gradient(145deg,#fff,#d9d9df); color:#08080a; box-shadow:0 5px 18px rgba(0,0,0,.22); transition:transform .18s ease, box-shadow .18s ease, opacity .18s ease; }
+.chat-send:not(:disabled):hover { transform:translateY(-2px) scale(1.035); box-shadow:0 8px 24px rgba(0,0,0,.3); }
+.chat-send:not(:disabled):active { transform:scale(.96); }
+.chat-send:disabled { opacity:.36; box-shadow:none; }
+.chat-composer { min-width:0; }
+@media (max-width: 760px) {
+  .chat-compose-glass { border-radius:19px; }
+  .chat-compose-glass textarea { padding:14px 15px 8px; font-size:16px; }
+  .chat-compose-foot { padding:3px 8px 8px 14px; }
+  .chat-compose-foot > span { font-size:10px; }
+  .chat-send { width:36px; height:36px; border-radius:13px; }
+}
+@media (prefers-reduced-motion: reduce) { .chat-compose-glass, .chat-compose-glass textarea::placeholder, .chat-send { transition:none !important; } }
