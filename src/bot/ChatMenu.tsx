@@ -62,7 +62,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
     window.addEventListener('scroll', place, true)
     // Reposition when the panel/sidebar changes size, not just on window resize.
     const observed = [anchor, sidebarFrame]
-      .filter((node): node is Element => !!node)
+      .filter((node): node is HTMLElement => node instanceof HTMLElement)
     const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null
     observed.forEach(node => resizeObserver?.observe(node))
     return () => {
