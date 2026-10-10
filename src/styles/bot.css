@@ -515,3 +515,103 @@
   #ast .astp.bot .bs,
   #ast .astp.bot .bsscrim { transition: none !important; }
 }
+
+
+/* Narrow-panel audit: respond to the bot's actual size, not just the browser width.
+   This fixes the desktop resize/minimize case where React marks the bot narrow
+   but viewport-only media queries leave the desktop sidebar in the layout. */
+#ast .astp.bot.narrow {
+  min-width: 0;
+  min-height: 0;
+}
+#ast .astp.bot.narrow .bs {
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  z-index: 40 !important;
+  display: flex;
+  flex-direction: column;
+  width: min(300px, 84%) !important;
+  max-width: calc(100% - 40px) !important;
+  height: 100% !important;
+  flex: 0 0 auto !important;
+  transform: translateX(-105%);
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  background: #080809 !important;
+  border-right: 1px solid rgba(255,255,255,.16) !important;
+  box-shadow: 22px 0 50px rgba(0,0,0,.52) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  transition: transform .22s cubic-bezier(.2,.75,.2,1), visibility .22s;
+}
+#ast .astp.bot.narrow.side-on .bs {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+#ast .astp.bot.narrow .bm {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+  min-width: 0;
+}
+#ast .astp.bot.narrow .bsscrim,
+#ast .astp.bot.narrow.side-on .bsscrim {
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: rgba(0,0,0,.46) !important;
+  opacity: 1;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+}
+#ast .astp.bot.narrow:not(.side-on) .bsscrim { display: none !important; }
+#ast .astp.bot.narrow .bs { isolation: isolate; }
+#ast .astp.bot.narrow .bs-t,
+#ast .astp.bot.narrow .bs-n,
+#ast .astp.bot.narrow .bs-s,
+#ast .astp.bot.narrow .bs-l,
+#ast .astp.bot.narrow .bs-f { flex-shrink: 0; min-width: 0; }
+#ast .astp.bot.narrow .bs-l {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#ast .astp.bot.narrow .bs input,
+#ast .astp.bot.narrow .bs button,
+#ast .astp.bot.narrow .bs .bct { filter: none !important; opacity: 1; }
+#ast .astp.bot.narrow .bwm.big {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#ast .astp.bot.narrow .bh,
+#ast .astp.bot.narrow .bc,
+#ast .astp.bot.narrow .bv { min-width: 0; }
+#ast .astp.bot.narrow .bv {
+  flex: 1 1 0%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+@media (max-width: 980px) {
+  #ast .astp.bot.narrow .bs {
+    width: min(300px, 84%) !important;
+    max-width: calc(100% - 40px) !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ast .astp.bot.narrow .bs,
+  #ast .astp.bot.narrow .bsscrim { transition: none !important; }
+}
