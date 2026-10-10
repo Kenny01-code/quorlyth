@@ -807,3 +807,50 @@
     max-width: 88vw !important;
   }
 }
+
+
+/* SIDEBAR VIEWPORT ANCHOR — backdrop-filter on the centered bot creates a containing block
+   for fixed descendants in Chromium/WebKit. Remove that containing block while the
+   drawer is open so the drawer and scrim truly attach to the viewport's left edge. */
+#ast .astp.bot.narrow.side-on {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  filter: none !important;
+  transform: none !important;
+  contain: none !important;
+  will-change: auto !important;
+}
+#ast .astp.bot.narrow.side-on .bs {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: 0 !important;
+  margin: 0 !important;
+  width: min(320px, 88vw) !important;
+  max-width: 88vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  border-radius: 0 22px 22px 0 !important;
+  transform: translate3d(0, 0, 0) !important;
+  z-index: 2147483001 !important;
+}
+#ast .astp.bot.narrow.side-on .bsscrim {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: none !important;
+  z-index: 2147483000 !important;
+}
+@media (max-width: 420px) {
+  #ast .astp.bot.narrow.side-on .bs {
+    width: min(300px, 88vw) !important;
+    max-width: 88vw !important;
+  }
+}
