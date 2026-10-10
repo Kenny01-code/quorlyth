@@ -84,7 +84,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
   return createPortal((
     <>
       <div className="cmx-backdrop" style={{ position: botFrame ? 'absolute' : 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
-      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: botFrame ? 'absolute' : 'fixed', inset: 'auto', left: position.left, top: position.top, width: position.width, minWidth: position.width, maxWidth: position.width, boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none' }} onKeyDown={e => e.key === 'Escape' && onClose()}>
+      <div ref={menuRef} className="cmx glass" role="menu" style={{ position: botFrame ? 'absolute' : 'fixed', inset: 'auto', left: position.left, top: position.top, width: position.width, minWidth: position.width, maxWidth: position.width, boxSizing: 'border-box', maxHeight: panelMaxHeight, margin: 0, transform: 'none', zIndex: 97 }} onKeyDown={e => e.key === 'Escape' && onClose()}>
         {chat && <div className="cmh">{chat.title.slice(0, 40)}</div>}
         {chat && item('pin', chat.pin ? 'Unpin chat' : 'Pin chat', act.pin)}
         {chat && item('edit', 'Rename', act.rename)}
