@@ -651,3 +651,15 @@
 @media (max-height: 650px) {
   #ast .astp.bot .bstage:not(.off) { min-height: 105px; }
 }
+
+
+/* Drag handle for repositioning the floating QuorlythBot panel. Controls remain clickable. */
+#ast .astp.bot:not(.m-full) .bh {
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#ast .astp.bot:not(.m-full) .bh:active { cursor: grabbing; }
+#ast .astp.bot .bh button,
+#ast .astp.bot .bh input { cursor: pointer; }
