@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -898,15 +897,8 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {/* Desktop uses the sidebar as the first flex pane; narrow layouts portal it to the viewport. */}
-            {!narrow && sideShown && sidebar}
-            {narrow && sideShown && createPortal(
-              <div className="qbot-sidebar-layer" role="presentation">
-                <button className="qbot-sidebar-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
-                {sidebar}
-              </div>,
-              document.body,
-            )}
+            {/* Keep chat history inside the QuorlythBot frame at every viewport size. */}
+            {sideShown && sidebar}
             <section className="bm">
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
