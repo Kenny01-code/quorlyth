@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../lib/Icon'
 import { Chat } from '../lib/types'
@@ -16,16 +16,34 @@ export function ChatMenu({ chat, x, y, projects, act, onClose }: { chat: Chat | 
   const [proj, setProj] = useState(false)
   const [del, setDel] = useState(false)
   const col = chat?.color || ''
-  const width = Math.min(360, innerWidth - 16)
-  const height = Math.min(innerHeight - 16, 650)
-  const left = Math.max(8, Math.min(innerWidth - width - 8, x)), top = Math.max(8, Math.min(innerHeight - height - 8, y))
+  const width = Math.max(0, Math.min(360, window.innerWidth - 16))
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [position, setPosition] = useState({ left: Math.max(8, Math.min(window.innerWidth - width - 8, x)), top: Math.max(8, Math.min(window.innerHeight - 80, y)) })
+
+  useLayoutEffect(() => {
+    const menu = menuRef.current
+    if (!menu) return
+    const place = () => {
+      const rect = menu.getBoundingClientRect()
+      const left = Math.max(8, Math.min(window.innerWidth - rect.width - 8, x))
+      const top = Math.max(8, Math.min(window.innerHeight - rect.height - 8, y))
+      setPosition(current => current.left === left && current.top === top ? current : { left, top })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [x, y, chat?.id, proj, del])
   const item = (icon: string, label: string, fn: () => void, cls = '') => (
     <button role="menuitem" className={cls} onClick={() => { fn(); onClose() }}><Icon name={icon} size={16} />{label}</button>
   )
   return createPortal((
     <>
       <div className="cmx-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 96 }} onClick={onClose} onContextMenu={e => { e.preventDefault(); onClose() }} />
-      <div className="cmx glass" role="menu" style={{ left, top, width, minWidth: width, maxWidth: width, maxHeight: Math.min(height, innerHeight - top - 8) }} onKeyDown={e => e.key === 'Escape' && onClose()}>
+      <div ref={menuRef} className="cmx glass" role="menu" style={{ left: position.left, top: position.top, width, minWidth: width, maxWidth: width, maxHeight: "calc(100dvh - 16px)" }} onKeyDown={e => e.key === 'Escape' && onClose()}>
         {chat && <div className="cmh">{chat.title.slice(0, 40)}</div>}
         {chat && item('pin', chat.pin ? 'Unpin chat' : 'Pin chat', act.pin)}
         {chat && item('edit', 'Rename', act.rename)}
