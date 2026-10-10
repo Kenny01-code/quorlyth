@@ -987,11 +987,11 @@ export function QuorlythBot() {
             </section>
           </div>
           {narrow && sideShown && createPortal(
-            <div className="astp bot narrow side-on qbot-drawer-portal">
+            <div className="astp bot qbot-drawer-portal">
               <button className="qbot-drawer-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
               {sidebar}
             </div>,
-            document.getElementById('ast')!
+            document.body
           )}
           {menu && <ChatMenu chat={menuChat} x={menu.x} y={menu.y} projects={bd.projects} act={actions as any} onClose={() => setMenu(null)} />}
         </div>

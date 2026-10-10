@@ -1,7 +1,7 @@
 /* QUORLYTHBOT — obsidian Liquid Glass identity */
-#ast .astp.bot,
-#ast .astp.bot.m-large,
-#ast .astp.bot.m-full {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot),
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-large,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-full {
   color: #f7f7f7 !important;
   background:
     radial-gradient(ellipse 72% 36% at 50% 0%,rgba(255,255,255,.075),transparent 76%),
@@ -16,7 +16,7 @@
   -webkit-backdrop-filter: blur(38px) saturate(135%);
   backdrop-filter: blur(38px) saturate(135%);
 }
-#ast .astp.bot::before {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot)::before {
   content: "";
   position: absolute;
   z-index: 0;
@@ -25,7 +25,7 @@
   pointer-events: none;
   background: linear-gradient(128deg,rgba(255,255,255,.11),transparent 23%,transparent 73%,rgba(255,255,255,.035));
 }
-#ast .astp.bot > * { position: relative; z-index: 1; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) > * { position: relative; z-index: 1; }
 .bot .bh, .bot .bv, .bot .bc, .bot .ast-in, .bot .ast-log, .bot .bsl,
 .bot .bstage, .bot .ast-stage {
   border-color: rgba(255,255,255,.15) !important;
@@ -105,14 +105,14 @@
   50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.32),0 0 0 1px rgba(255,255,255,.16),0 20px 66px -32px rgba(255,255,255,.35); }
 }
 @media (max-width: 760px) {
-  #ast .astp.bot.m-full { border-radius: 0 !important; border-inline: 0 !important; }
-  #ast .astp.bot.m-large { border-radius: 22px !important; }
-  #ast .astp.bot.m-compact, #ast .astp.bot.m-custom { border-radius: 24px !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-full { border-radius: 0 !important; border-inline: 0 !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-large { border-radius: 22px !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-compact, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-custom { border-radius: 24px !important; }
   .bot .bstage, .bot .ast-stage { border-radius: 22px !important; }
 }
 
 /* Size-aware layout: custom resizing adapts to the bot panel, not only the browser. */
-#ast .astp.bot { box-sizing: border-box; min-width: 0; min-height: 0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) { box-sizing: border-box; min-width: 0; min-height: 0; }
 .bot .bm { container-type: size; container-name: qbot-panel; }
 .bot .bm, .bot .bv, .bot .ast-log, .bot .bc, .bot .ast-in, .bot .bh { min-width: 0; }
 .bot .ast-in textarea { width: 100%; min-width: 0; overflow-wrap: anywhere; }
@@ -181,7 +181,7 @@
 /* Viewport-aware layout for the bot's two-pane shell. The component switches
    to its overlay sidebar below 980px; these rules keep the remaining pane usable. */
 @media (max-width: 980px) {
-  #ast .astp.bot.m-large { width: min(1000px, calc(100vw - 16px)); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-large { width: min(1000px, calc(100vw - 16px)); }
   .bot.narrow .bm { padding: clamp(7px, 1.4vw, 12px); }
   .bot.narrow .bh { gap: 5px; }
   .bot.narrow .bha { gap: 0; }
@@ -237,50 +237,50 @@
 
 
 /* Final interaction pass: sidebar becomes a true drawer on narrow panels, while desktop keeps its split layout. */
-#ast .astp.bot { display:flex; overflow:hidden; }
-#ast .astp.bot .bs, #ast .astp.bot .bm { min-height:0; }
-#ast .astp.bot .bs { flex:0 0 auto; }
-#ast .astp.bot .bm { flex:1 1 auto; width:0; min-width:0; }
-#ast .astp.bot .bv, #ast .astp.bot .ast-log { min-height:0; min-width:0; }
-#ast .astp.bot .bc { flex:0 0 auto; min-width:0; }
-#ast .astp.bot .ast-in { display:flex; align-items:flex-end; gap:8px; min-width:0; border:1px solid rgba(255,255,255,.11) !important; border-radius:22px !important; padding:7px !important; background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.018)) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 32px -25px #fff !important; transition:border-color .22s ease,box-shadow .22s ease,background .22s ease !important; }
-#ast .astp.bot .ast-in:focus-within { border-color:rgba(255,255,255,.23) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 3px rgba(255,255,255,.025),0 16px 38px -26px rgba(255,255,255,.3) !important; background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025)) !important; }
-#ast .astp.bot .ast-in textarea, #ast .astp.bot .ast-in textarea:focus, #ast .astp.bot .ast-in textarea:focus-visible { flex:1 1 auto; width:100%; min-width:0; min-height:42px; max-height:160px; padding:10px 11px !important; border:0 !important; outline:0 !important; border-radius:14px !important; background:transparent !important; box-shadow:none !important; resize:none; font-size:14px; line-height:1.5; }
-#ast .astp.bot .ast-in textarea:focus-visible { outline:none !important; }
-#ast .astp.bot .ast-in > .btn { flex:0 0 auto; min-width:38px; min-height:38px; display:inline-flex; align-items:center; justify-content:center; border-radius:14px !important; transition:transform .18s ease,background .18s ease,box-shadow .18s ease !important; }
-#ast .astp.bot .ast-in > .btn:hover { transform:translateY(-1px); }
-#ast .astp.bot .ast-in > .btn.p { min-width:44px; }
-#ast .astp.bot .bsb, #ast .astp.bot .bsu, #ast .astp.bot .bib { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
-#ast .astp.bot .bsb { min-height:42px; }
-#ast .astp.bot .bs-l { min-height:0; overflow-y:auto; overscroll-behavior:contain; }
-#ast .astp.bot .bsscrim { position:absolute; inset:0; z-index:20; width:100%; height:100%; border:0; background:rgba(0,0,0,.58); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); animation:qbotScrimIn .2s ease both; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) { display:flex; overflow:hidden; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bm { min-height:0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs { flex:0 0 auto; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bm { flex:1 1 auto; width:0; min-width:0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bv, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-log { min-height:0; min-width:0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bc { flex:0 0 auto; min-width:0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in { display:flex; align-items:flex-end; gap:8px; min-width:0; border:1px solid rgba(255,255,255,.11) !important; border-radius:22px !important; padding:7px !important; background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.018)) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 32px -25px #fff !important; transition:border-color .22s ease,box-shadow .22s ease,background .22s ease !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in:focus-within { border-color:rgba(255,255,255,.23) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 3px rgba(255,255,255,.025),0 16px 38px -26px rgba(255,255,255,.3) !important; background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025)) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in textarea, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in textarea:focus, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in textarea:focus-visible { flex:1 1 auto; width:100%; min-width:0; min-height:42px; max-height:160px; padding:10px 11px !important; border:0 !important; outline:0 !important; border-radius:14px !important; background:transparent !important; box-shadow:none !important; resize:none; font-size:14px; line-height:1.5; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in textarea:focus-visible { outline:none !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn { flex:0 0 auto; min-width:38px; min-height:38px; display:inline-flex; align-items:center; justify-content:center; border-radius:14px !important; transition:transform .18s ease,background .18s ease,box-shadow .18s ease !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn:hover { transform:translateY(-1px); }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn.p { min-width:44px; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsb, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsu, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bib { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsb { min-height:42px; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs-l { min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsscrim { position:absolute; inset:0; z-index:20; width:100%; height:100%; border:0; background:rgba(0,0,0,.58); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); animation:qbotScrimIn .2s ease both; }
 @keyframes qbotScrimIn { from { opacity:0 } to { opacity:1 } }
 @media (max-width:980px) {
-  #ast .astp.bot { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); }
-  #ast .astp.bot .bs { position:absolute; z-index:30; inset:0 auto 0 0; width:min(84%,310px); max-width:calc(100% - 44px); height:100%; transform:translateX(-105%); transition:transform .28s cubic-bezier(.2,.75,.2,1); box-shadow:24px 0 60px rgba(0,0,0,.38); border-right:1px solid rgba(255,255,255,.12); background:rgba(5,5,6,.97); backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px); }
-  #ast .astp.bot.side-on .bs { transform:translateX(0); }
-  #ast .astp.bot .bm { width:100%; }
-  #ast .astp.bot .bh { flex-wrap:nowrap; }
-  #ast .astp.bot .bht { min-width:0; }
-  #ast .astp.bot .bwm.big { white-space:nowrap; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs { position:absolute; z-index:30; inset:0 auto 0 0; width:min(84%,310px); max-width:calc(100% - 44px); height:100%; transform:translateX(-105%); transition:transform .28s cubic-bezier(.2,.75,.2,1); box-shadow:24px 0 60px rgba(0,0,0,.38); border-right:1px solid rgba(255,255,255,.12); background:rgba(5,5,6,.97); backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).side-on .bs { transform:translateX(0); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bm { width:100%; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh { flex-wrap:nowrap; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bht { min-width:0; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bwm.big { white-space:nowrap; }
 }
 @media (max-width:520px) {
-  #ast .astp.bot { border-radius:20px !important; }
-  #ast .astp.bot .bh { padding-inline:8px; gap:4px; }
-  #ast .astp.bot .bha { gap:1px; }
-  #ast .astp.bot .bha .bib, #ast .astp.bot .bh > .bib { width:32px; min-width:32px; height:34px; }
-  #ast .astp.bot .bwm.big { font-size:13px; letter-spacing:.04em; }
-  #ast .astp.bot .ast-in { gap:4px; padding:5px !important; border-radius:18px !important; }
-  #ast .astp.bot .ast-in textarea, #ast .astp.bot .ast-in textarea:focus { min-height:40px; padding:9px 8px !important; font-size:16px; }
-  #ast .astp.bot .ast-in > .btn { min-width:34px; min-height:36px; padding:8px !important; }
-  #ast .astp.bot .ast-in > .btn.p { min-width:38px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) { border-radius:20px !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh { padding-inline:8px; gap:4px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha { gap:1px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha .bib, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh > .bib { width:32px; min-width:32px; height:34px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bwm.big { font-size:13px; letter-spacing:.04em; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in { gap:4px; padding:5px !important; border-radius:18px !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in textarea, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in textarea:focus { min-height:40px; padding:9px 8px !important; font-size:16px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn { min-width:34px; min-height:36px; padding:8px !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn.p { min-width:38px; }
 }
 @media (max-width:370px) {
-  #ast .astp.bot .bha .bib[aria-label="Robot size"], #ast .astp.bot .bha .bib[aria-label="Voice"] { display:none; }
-  #ast .astp.bot .ast-in { gap:3px; }
-  #ast .astp.bot .ast-in > .btn { min-width:31px; padding:6px !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha .bib[aria-label="Robot size"], :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha .bib[aria-label="Voice"] { display:none; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in { gap:3px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn { min-width:31px; padding:6px !important; }
 }
-@media (prefers-reduced-motion:reduce) { #ast .astp.bot .bs, #ast .astp.bot .ast-in, #ast .astp.bot .ast-in > .btn, #ast .astp.bot .bsscrim { transition:none !important; animation:none !important; } }
+@media (prefers-reduced-motion:reduce) { :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn, :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsscrim { transition:none !important; animation:none !important; } }
 
 
 /* RESPONSIVE AUDIT FIX — final, authoritative QuorlythBot layout rules.
@@ -301,7 +301,7 @@
   overflow: hidden;
   overscroll-behavior: contain;
 }
-#ast .astp.bot {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) {
   position: relative;
   inset: auto;
   display: flex;
@@ -315,7 +315,7 @@
   overflow: hidden;
   isolation: isolate;
 }
-#ast .astp.bot .bs {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs {
   flex: 0 0 258px;
   width: 258px;
   min-width: 0;
@@ -323,14 +323,14 @@
   height: 100%;
   overflow: hidden;
 }
-#ast .astp.bot .bs-l {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs-l {
   flex: 1 1 auto;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-#ast .astp.bot .bm {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bm {
   display: flex;
   flex: 1 1 0%;
   flex-direction: column;
@@ -340,18 +340,18 @@
   height: 100%;
   overflow: hidden;
 }
-#ast .astp.bot .bh,
-#ast .astp.bot .bc {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bc {
   flex: 0 0 auto;
   min-width: 0;
 }
-#ast .astp.bot .bstage {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bstage {
   flex: 0 0 auto;
   width: 100%;
   min-width: 0;
   max-width: 100%;
 }
-#ast .astp.bot .bv {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bv {
   flex: 1 1 0%;
   width: 100%;
   min-width: 0;
@@ -360,45 +360,45 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-#ast .astp.bot .ast-log {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-log {
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-#ast .astp.bot .am,
-#ast .astp.bot .mt,
-#ast .astp.bot .bhero,
-#ast .astp.bot .qbot-action {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .am,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .mt,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bhero,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .qbot-action {
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-#ast .astp.bot .bc {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bc {
   padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
 }
-#ast .astp.bot .ast-in {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in {
   width: 100%;
   max-width: 100%;
 }
-#ast .astp.bot .ast-in textarea {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in textarea {
   min-width: 0;
   max-width: 100%;
   font-size: 16px;
 }
-#ast .astp.bot .bsscrim { display: none; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsscrim { display: none; }
 
 @media (max-width: 980px) {
   #ast { padding: 8px; }
-  #ast .astp.bot {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) {
     width: calc(100vw - 16px) !important;
     height: calc(100dvh - 16px);
     max-width: calc(100vw - 16px) !important;
     max-height: calc(100dvh - 16px) !important;
     border-radius: 22px !important;
   }
-  #ast .astp.bot .bs {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs {
     position: absolute;
     inset: 0 auto 0 0;
     z-index: 30;
@@ -414,13 +414,13 @@
     border-right: 1px solid rgba(255,255,255,.14);
     box-shadow: 24px 0 60px rgba(0,0,0,.42);
   }
-  #ast .astp.bot.side-on .bs {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).side-on .bs {
     transform: translateX(0);
     visibility: visible;
     pointer-events: auto;
   }
-  #ast .astp.bot .bm { width: 100%; flex-basis: 100%; }
-  #ast .astp.bot .bsscrim {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bm { width: 100%; flex-basis: 100%; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsscrim {
     display: block;
     position: absolute;
     inset: 0;
@@ -433,15 +433,15 @@
     -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
   }
-  #ast .astp.bot:not(.side-on) .bsscrim { display: none; }
-  #ast .astp.bot .bh { flex-wrap: nowrap; }
-  #ast .astp.bot .bht { flex: 1 1 auto; min-width: 0; }
-  #ast .astp.bot .bwm.big { overflow: hidden; text-overflow: ellipsis; }
-  #ast .astp.bot .bha { flex: 0 0 auto; min-width: 0; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.side-on) .bsscrim { display: none; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh { flex-wrap: nowrap; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bht { flex: 1 1 auto; min-width: 0; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bwm.big { overflow: hidden; text-overflow: ellipsis; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha { flex: 0 0 auto; min-width: 0; }
 }
 @media (max-width: 600px) {
   #ast { padding: 0; }
-  #ast .astp.bot {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) {
     width: 100vw !important;
     height: 100dvh;
     max-width: 100vw !important;
@@ -449,33 +449,33 @@
     border-radius: 0 !important;
     border-inline: 0 !important;
   }
-  #ast .astp.bot .bh {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh {
     padding-top: max(8px, env(safe-area-inset-top, 0px));
     padding-inline: 9px;
     gap: 3px;
   }
-  #ast .astp.bot .bha { gap: 0; }
-  #ast .astp.bot .bha .bib,
-  #ast .astp.bot .bh > .bib {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha { gap: 0; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha .bib,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh > .bib {
     width: 34px;
     min-width: 34px;
     height: 36px;
     flex: 0 0 34px;
   }
-  #ast .astp.bot .bwm.big {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bwm.big {
     max-width: 36vw;
     font-size: clamp(11px, 3.3vw, 14px);
     letter-spacing: .02em;
   }
-  #ast .astp.bot .bstage { border-radius: 16px !important; }
-  #ast .astp.bot .ast-in {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bstage { border-radius: 16px !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in {
     display: flex;
     flex-wrap: nowrap;
     gap: 3px;
     padding: 4px !important;
     border-radius: 16px !important;
   }
-  #ast .astp.bot .ast-in textarea {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in textarea {
     flex: 1 1 0%;
     width: 0;
     min-width: 0;
@@ -484,47 +484,47 @@
     padding: 10px 8px !important;
     font-size: 16px !important;
   }
-  #ast .astp.bot .ast-in > .btn,
-  #ast .astp.bot .ast-in > .btn.p {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn.p {
     flex: 0 0 36px;
     width: 36px;
     min-width: 36px;
     min-height: 36px;
     padding: 7px !important;
   }
-  #ast .astp.bot .bc { padding-inline: 8px; }
-  #ast .astp.bot .bgrid.sm { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  #ast .astp.bot .bsk { min-width: 0; overflow-wrap: anywhere; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bc { padding-inline: 8px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bgrid.sm { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsk { min-width: 0; overflow-wrap: anywhere; }
 }
 @media (max-width: 360px) {
-  #ast .astp.bot .bwm.big { max-width: 30vw; font-size: 11px; }
-  #ast .astp.bot .bha .bib[aria-label="Robot size"],
-  #ast .astp.bot .bha .bib[aria-label="Voice"] { display: none; }
-  #ast .astp.bot .bgrid.sm { grid-template-columns: minmax(0,1fr); }
-  #ast .astp.bot .ast-in > .btn,
-  #ast .astp.bot .ast-in > .btn.p { flex-basis: 32px; width: 32px; min-width: 32px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bwm.big { max-width: 30vw; font-size: 11px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha .bib[aria-label="Robot size"],
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bha .bib[aria-label="Voice"] { display: none; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bgrid.sm { grid-template-columns: minmax(0,1fr); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .ast-in > .btn.p { flex-basis: 32px; width: 32px; min-width: 32px; }
 }
 @media (max-height: 560px) and (min-width: 601px) {
   #ast { padding: 6px; }
-  #ast .astp.bot { height: calc(100dvh - 12px); }
-  #ast .astp.bot .bstage.std { height: clamp(90px, 20dvh, 150px); }
-  #ast .astp.bot .bstage.big { height: clamp(100px, 25dvh, 180px); }
-  #ast .astp.bot .bhero { padding-block: 8px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) { height: calc(100dvh - 12px); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bstage.std { height: clamp(90px, 20dvh, 150px); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bstage.big { height: clamp(100px, 25dvh, 180px); }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bhero { padding-block: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  #ast .astp.bot .bs,
-  #ast .astp.bot .bsscrim { transition: none !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bs,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bsscrim { transition: none !important; }
 }
 
 
 /* Narrow-panel audit: respond to the bot's actual size, not just the browser width.
    This fixes the desktop resize/minimize case where React marks the bot narrow
    but viewport-only media queries leave the desktop sidebar in the layout. */
-#ast .astp.bot.narrow {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow {
   min-width: 0;
   min-height: 0;
 }
-#ast .astp.bot.narrow .bs {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs {
   position: absolute !important;
   inset: 0 auto 0 0 !important;
   z-index: 40 !important;
@@ -545,18 +545,18 @@
   backdrop-filter: none !important;
   transition: transform .22s cubic-bezier(.2,.75,.2,1), visibility .22s;
 }
-#ast .astp.bot.narrow.side-on .bs {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on .bs {
   transform: translateX(0);
   visibility: visible;
   pointer-events: auto;
 }
-#ast .astp.bot.narrow .bm {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bm {
   width: 100% !important;
   flex: 1 1 100% !important;
   min-width: 0;
 }
-#ast .astp.bot.narrow .bsscrim,
-#ast .astp.bot.narrow.side-on .bsscrim {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bsscrim,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on .bsscrim {
   display: block !important;
   position: absolute;
   inset: 0;
@@ -573,52 +573,52 @@
   backdrop-filter: none !important;
   animation: none !important;
 }
-#ast .astp.bot.narrow:not(.side-on) .bsscrim { display: none !important; }
-#ast .astp.bot.narrow .bs { isolation: isolate; }
-#ast .astp.bot.narrow .bs-t,
-#ast .astp.bot.narrow .bs-n,
-#ast .astp.bot.narrow .bs-s,
-#ast .astp.bot.narrow .bs-l,
-#ast .astp.bot.narrow .bs-f { flex-shrink: 0; min-width: 0; }
-#ast .astp.bot.narrow .bs-l {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow:not(.side-on) .bsscrim { display: none !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs { isolation: isolate; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs-t,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs-n,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs-s,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs-l,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs-f { flex-shrink: 0; min-width: 0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs-l {
   flex: 1 1 auto;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-#ast .astp.bot.narrow .bs input,
-#ast .astp.bot.narrow .bs button,
-#ast .astp.bot.narrow .bs .bct { filter: none !important; opacity: 1; }
-#ast .astp.bot.narrow .bwm.big {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs input,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs button,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs .bct { filter: none !important; opacity: 1; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bwm.big {
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-#ast .astp.bot.narrow .bh,
-#ast .astp.bot.narrow .bc,
-#ast .astp.bot.narrow .bv { min-width: 0; }
-#ast .astp.bot.narrow .bv {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bh,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bc,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bv { min-width: 0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bv {
   flex: 1 1 0%;
   overflow-x: hidden;
   overflow-y: auto;
 }
 @media (max-width: 980px) {
-  #ast .astp.bot.narrow .bs {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs {
     width: min(300px, 84%) !important;
     max-width: calc(100% - 40px) !important;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  #ast .astp.bot.narrow .bs,
-  #ast .astp.bot.narrow .bsscrim { transition: none !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bs,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow .bsscrim { transition: none !important; }
 }
 
 
 /* Correct panel sizing: full means full available viewport, not a capped dialog. */
-#ast .astp.bot.m-full {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-full {
   width: calc(100vw - 24px) !important;
   height: calc(100dvh - 24px) !important;
   max-width: calc(100vw - 24px) !important;
@@ -627,7 +627,7 @@
   min-height: 0;
 }
 @media (max-width: 600px) {
-  #ast .astp.bot.m-full {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-full {
     width: 100vw !important;
     height: 100dvh !important;
     max-width: 100vw !important;
@@ -635,38 +635,38 @@
   }
 }
 /* Keep the robot stage and chat area visible and independently scrollable. */
-#ast .astp.bot .bm {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bm {
   flex: 1 1 0%;
   min-width: 0;
   min-height: 0;
 }
-#ast .astp.bot .bstage:not(.off) {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bstage:not(.off) {
   flex: 0 0 auto;
   min-height: 150px;
 }
-#ast .astp.bot .bv {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bv {
   flex: 1 1 0%;
   min-height: 0;
 }
 @media (max-height: 650px) {
-  #ast .astp.bot .bstage:not(.off) { min-height: 105px; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bstage:not(.off) { min-height: 105px; }
 }
 
 
 /* Drag handle for repositioning the floating QuorlythBot panel. Controls remain clickable. */
-#ast .astp.bot:not(.m-full) .bh {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.m-full) .bh {
   cursor: grab;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
 }
-#ast .astp.bot:not(.m-full) .bh:active { cursor: grabbing; }
-#ast .astp.bot .bh button,
-#ast .astp.bot .bh input { cursor: pointer; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.m-full) .bh:active { cursor: grabbing; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh button,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh input { cursor: pointer; }
 
 
 /* QBOT FINAL AUDIT — consistent black Liquid Glass, correct drag direction, reliable viewport sizing. */
-#ast .astp.bot {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) {
   color: #f7f7f7 !important;
   background:
     radial-gradient(ellipse 76% 34% at 50% 0%, rgba(255,255,255,.075), transparent 74%),
@@ -677,7 +677,7 @@
   -webkit-backdrop-filter: blur(38px) saturate(140%);
   backdrop-filter: blur(38px) saturate(140%);
 }
-#ast .astp.bot.m-full {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-full {
   position: fixed !important;
   inset: 0 !important;
   transform: none !important;
@@ -690,13 +690,13 @@
   max-height: 100dvh !important;
   border-radius: 0 !important;
 }
-#ast .astp.bot.m-custom {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-custom {
   width: var(--qbot-custom-width, min(1180px, calc(100vw - 24px))) !important;
   height: var(--qbot-custom-height, min(860px, calc(100dvh - 24px))) !important;
   max-width: calc(100vw - 16px) !important;
   max-height: calc(100dvh - 16px) !important;
 }
-#ast .astp.bot:not(.m-full) .bresz {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.m-full) .bresz {
   left: auto !important;
   top: auto !important;
   right: 0 !important;
@@ -708,7 +708,7 @@
   border-radius: 0 0 18px 0;
   background: linear-gradient(135deg, transparent 45%, rgba(255,255,255,.025) 100%);
 }
-#ast .astp.bot:not(.m-full) .bresz::after {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.m-full) .bresz::after {
   left: auto !important;
   top: auto !important;
   right: 8px !important;
@@ -721,42 +721,42 @@
   border-radius: 0 0 3px 0 !important;
   opacity: .8;
 }
-#ast .astp.bot:not(.m-full) .bresz:hover::after {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.m-full) .bresz:hover::after {
   border-color: #fff !important;
   opacity: 1;
 }
-#ast .astp.bot:not(.m-full) .bh { cursor: grab; touch-action: none; }
-#ast .astp.bot:not(.m-full) .bh:active { cursor: grabbing; }
-#ast .astp.bot .bh button,
-#ast .astp.bot .bh input,
-#ast .astp.bot .bh select { cursor: pointer; touch-action: manipulation; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.m-full) .bh { cursor: grab; touch-action: none; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.m-full) .bh:active { cursor: grabbing; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh button,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh input,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) .bh select { cursor: pointer; touch-action: manipulation; }
 @media (max-width: 980px) {
-  #ast .astp.bot.m-custom {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-custom {
     width: min(var(--qbot-custom-width, calc(100vw - 16px)), calc(100vw - 16px)) !important;
     height: min(var(--qbot-custom-height, calc(100dvh - 16px)), calc(100dvh - 16px)) !important;
   }
 }
 @media (max-width: 600px) {
-  #ast .astp.bot.m-full {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-full {
     inset: 0 !important;
     width: 100vw !important;
     height: 100dvh !important;
     max-width: 100vw !important;
     max-height: 100dvh !important;
   }
-  #ast .astp.bot:not(.m-full) .bresz { display: block !important; }
-  #ast .astp.bot.m-custom {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot):not(.m-full) .bresz { display: block !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).m-custom {
     width: min(var(--qbot-custom-width, calc(100vw - 16px)), calc(100vw - 16px)) !important;
     height: min(var(--qbot-custom-height, calc(100dvh - 16px)), calc(100dvh - 16px)) !important;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  #ast .astp.bot, #ast .astp.bot * { scroll-behavior: auto !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot), :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) * { scroll-behavior: auto !important; }
 }
 
 
 /* The resize grip is a positioned overlay, never a flex/grid child. */
-#ast .astp.bot > .bresz {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) > .bresz {
   position: absolute !important;
   z-index: 7 !important;
   flex: none !important;
@@ -766,7 +766,7 @@
 /* SIDEBAR EDGE FIX — when the bot is compact/narrow, the opened drawer belongs
    to the viewport edge, not the centered bot card. Keep the backdrop scoped to
    the bot while pinning the actual drawer to the left screen edge. */
-#ast .astp.bot.narrow.side-on .bs {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on .bs {
   position: fixed !important;
   inset: 0 auto 0 max(0px, env(safe-area-inset-left, 0px)) !important;
   z-index: 1002 !important;
@@ -789,7 +789,7 @@
   -webkit-backdrop-filter: blur(34px) saturate(135%) !important;
   backdrop-filter: blur(34px) saturate(135%) !important;
 }
-#ast .astp.bot.narrow.side-on .bsscrim {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on .bsscrim {
   position: fixed !important;
   inset: 0 !important;
   z-index: 1001 !important;
@@ -802,7 +802,7 @@
   backdrop-filter: blur(5px) !important;
 }
 @media (max-width: 420px) {
-  #ast .astp.bot.narrow.side-on .bs {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on .bs {
     width: min(300px, 88vw) !important;
     max-width: 88vw !important;
   }
@@ -812,7 +812,7 @@
 /* SIDEBAR VIEWPORT ANCHOR — backdrop-filter on the centered bot creates a containing block
    for fixed descendants in Chromium/WebKit. Remove that containing block while the
    drawer is open so the drawer and scrim truly attach to the viewport's left edge. */
-#ast .astp.bot.narrow.side-on {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
   filter: none !important;
@@ -820,7 +820,7 @@
   contain: none !important;
   will-change: auto !important;
 }
-#ast .astp.bot.narrow.side-on .bs {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on .bs {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -836,7 +836,7 @@
   transform: translate3d(0, 0, 0) !important;
   z-index: 2147483001 !important;
 }
-#ast .astp.bot.narrow.side-on .bsscrim {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on .bsscrim {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -849,7 +849,7 @@
   z-index: 2147483000 !important;
 }
 @media (max-width: 420px) {
-  #ast .astp.bot.narrow.side-on .bs {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot).narrow.side-on .bs {
     width: min(300px, 88vw) !important;
     max-width: 88vw !important;
   }
@@ -858,7 +858,7 @@
 
 /* REAL VIEWPORT DRAWER — rendered through a React portal outside #bot.
    This avoids fixed-position containing blocks created by the bot's glass/filter styles. */
-#ast > .qbot-drawer-portal {
+body > .qbot-drawer-portal {
   position: fixed !important;
   inset: 0 !important;
   width: 100vw !important;
@@ -873,7 +873,7 @@
   overflow: visible !important;
   isolation: auto !important;
 }
-#ast > .qbot-drawer-portal > .qbot-drawer-scrim {
+body > .qbot-drawer-portal > .qbot-drawer-scrim {
   display: block !important;
   position: absolute !important;
   inset: 0 !important;
@@ -890,7 +890,7 @@
   backdrop-filter: blur(5px) !important;
   animation: qbotScrimIn .2s ease both;
 }
-#ast > .qbot-drawer-portal > .bs {
+body > .qbot-drawer-portal > .bs {
   display: flex !important;
   position: absolute !important;
   inset: 0 auto 0 0 !important;
@@ -905,7 +905,7 @@
   overflow: hidden !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  transform: translate3d(0,0,0) !important;
+  transform: translate3d(0,0,0);
   border: 0 !important;
   border-right: 1px solid rgba(255,255,255,.16) !important;
   border-radius: 0 22px 22px 0 !important;
@@ -915,33 +915,33 @@
   backdrop-filter: blur(34px) saturate(135%) !important;
   animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both;
 }
-#ast > .qbot-drawer-portal .bs-l {
+body > .qbot-drawer-portal .bs-l {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   overscroll-behavior: contain;
 }
-#ast > .qbot-drawer-portal .bs-t,
-#ast > .qbot-drawer-portal .bs-n,
-#ast > .qbot-drawer-portal .bs-s,
-#ast > .qbot-drawer-portal .bs-f { flex-shrink: 0; min-width: 0; }
+body > .qbot-drawer-portal .bs-t,
+body > .qbot-drawer-portal .bs-n,
+body > .qbot-drawer-portal .bs-s,
+body > .qbot-drawer-portal .bs-f { flex-shrink: 0; min-width: 0; }
 @keyframes qbotDrawerEnter {
   from { transform: translate3d(-100%,0,0); }
   to { transform: translate3d(0,0,0); }
 }
 @media (max-width: 420px) {
-  #ast > .qbot-drawer-portal > .bs { width: min(300px, 88vw) !important; max-width: 88vw !important; border-radius: 0 18px 18px 0 !important; }
+  body > .qbot-drawer-portal > .bs { width: min(300px, 88vw) !important; max-width: 88vw !important; border-radius: 0 18px 18px 0 !important; }
 }
 @media (prefers-reduced-motion: reduce) {
-  #ast > .qbot-drawer-portal > .bs,
-  #ast > .qbot-drawer-portal > .qbot-drawer-scrim { animation: none !important; transition: none !important; }
+  body > .qbot-drawer-portal > .bs,
+  body > .qbot-drawer-portal > .qbot-drawer-scrim { animation: none !important; transition: none !important; }
 }
 
 
 /* Portal root keeps the existing .astp.bot selector scope for every sidebar
    child style, while the fixed root itself spans the viewport rather than centering. */
-#ast > .qbot-drawer-portal.astp.bot {
+body > .qbot-drawer-portal.astp.bot {
   position: fixed !important;
   inset: 0 !important;
   display: block !important;
@@ -969,13 +969,13 @@
   pointer-events: none !important;
   z-index: 2147483000 !important;
 }
-#ast > .qbot-drawer-portal.astp.bot > .qbot-drawer-scrim {
+body > .qbot-drawer-portal.astp.bot > .qbot-drawer-scrim {
   position: absolute !important;
   inset: 0 !important;
   z-index: 0 !important;
   pointer-events: auto !important;
 }
-#ast > .qbot-drawer-portal.astp.bot > .bs {
+body > .qbot-drawer-portal.astp.bot > .bs {
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
@@ -987,4 +987,120 @@
   transform: translate3d(0,0,0);
   pointer-events: auto !important;
   z-index: 1 !important;
+}
+
+
+/* Viewport-root drawer hardening. This element is a direct child of body,
+   so panel transforms, centering, and glass filters cannot redefine its origin. */
+body > .qbot-drawer-portal.astp.bot {
+  position: fixed !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100vw !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  transform: none !important;
+  transform-origin: initial !important;
+  animation: none !important;
+  filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  contain: none !important;
+  will-change: auto !important;
+  isolation: isolate !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  z-index: 2147483646 !important;
+}
+body > .qbot-drawer-portal.astp.bot > .qbot-drawer-scrim {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  transform: none !important;
+  z-index: 0 !important;
+  pointer-events: auto !important;
+}
+body > .qbot-drawer-portal.astp.bot > .bs {
+  display: flex !important;
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: 0 !important;
+  width: min(320px, 88vw) !important;
+  max-width: 88vw !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 12px !important;
+  transform: translate3d(0,0,0);
+  visibility: visible !important;
+  pointer-events: auto !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-right: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 0 22px 22px 0 !important;
+  background: radial-gradient(ellipse 120% 42% at 0% 0%, rgba(255,255,255,.075), transparent 72%), linear-gradient(145deg, rgba(14,14,15,.99), rgba(3,3,4,.995)) !important;
+  box-shadow: 24px 0 80px rgba(0,0,0,.62), inset -1px 0 0 rgba(255,255,255,.13), inset 0 1px 0 rgba(255,255,255,.09) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(135%) !important;
+  backdrop-filter: blur(34px) saturate(135%) !important;
+  z-index: 1 !important;
+  animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both !important;
+}
+body > .qbot-drawer-portal.astp.bot .bs-l {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+body > .qbot-drawer-portal.astp.bot .bs-t,
+body > .qbot-drawer-portal.astp.bot .bs-n,
+body > .qbot-drawer-portal.astp.bot .bs-s,
+body > .qbot-drawer-portal.astp.bot .bs-f {
+  flex-shrink: 0 !important;
+  min-width: 0 !important;
+}
+@media (max-width: 420px) {
+  body > .qbot-drawer-portal.astp.bot > .bs {
+    width: min(300px, 88vw) !important;
+    max-width: 88vw !important;
+    border-radius: 0 18px 18px 0 !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body > .qbot-drawer-portal.astp.bot > .bs,
+  body > .qbot-drawer-portal.astp.bot > .qbot-drawer-scrim {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+
+/* Match the original sidebar styling specificity without inheriting the bot's
+   narrow/side-on panel-centering rules. The transform remains animatable. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.astp.bot) > .bs {
+  transform: translate3d(0,0,0);
+  animation: qbotDrawerEnter .24s cubic-bezier(.2,.75,.2,1) both;
 }
