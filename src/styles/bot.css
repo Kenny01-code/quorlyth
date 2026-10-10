@@ -26,7 +26,7 @@
   background: linear-gradient(128deg,rgba(255,255,255,.11),transparent 23%,transparent 73%,rgba(255,255,255,.035));
 }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) > * { position: relative; z-index: 1; }
-.bot .bh, .bot .bv, .bot .bc, .bot .ast-in, .bot .ast-log, .bot .bsl,
+.bot .bh, .bot .qbot-conversation, .bot .bc, .bot .ast-in, .bot .ast-log, .bot .bsl,
 .bot .bstage, .bot .ast-stage {
   border-color: rgba(255,255,255,.15) !important;
 }
@@ -114,9 +114,9 @@
 /* Size-aware layout: custom resizing adapts to the bot panel, not only the browser. */
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) { box-sizing: border-box; min-width: 0; min-height: 0; }
 .bot .bm { container-type: size; container-name: qbot-panel; }
-.bot .bm, .bot .bv, .bot .ast-log, .bot .bc, .bot .ast-in, .bot .bh { min-width: 0; }
+.bot .bm, .bot .qbot-conversation, .bot .ast-log, .bot .bc, .bot .ast-in, .bot .bh { min-width: 0; }
 .bot .ast-in textarea { width: 100%; min-width: 0; overflow-wrap: anywhere; }
-.bot .bv { overscroll-behavior: contain; }
+.bot .qbot-conversation { overscroll-behavior: contain; }
 @container qbot-panel (max-width: 520px) {
   .bot .bm { padding: 9px; }
   .bot .bh { gap: 5px; }
@@ -136,7 +136,7 @@
 @container qbot-panel (max-height: 620px) {
   .bot .bstage.std { height: clamp(120px, 24cqh, 190px); }
   .bot .bstage.big { height: clamp(145px, 31cqh, 235px); }
-  .bot .bv { margin-top: 6px; }
+  .bot .qbot-conversation { margin-top: 6px; }
   .bot .bhero { padding-block: 10px; }
   .bot .bhero h3 { font-size: 21px; }
   .bot .bc { padding-top: 4px; }
@@ -192,7 +192,7 @@
 @media (max-height: 760px) {
   .bot .bstage.std { height: clamp(120px, 25dvh, 220px); }
   .bot .bstage.big { height: clamp(140px, 34dvh, 300px); }
-  .bot .bv { margin-top: 6px; }
+  .bot .qbot-conversation { margin-top: 6px; }
   .bot .bhero { padding-block: 12px; }
   .bot .bhero h3 { font-size: clamp(19px, 3.2dvh, 24px); }
   .bot .ast-in textarea { min-height: 36px; max-height: 76px; }
@@ -210,7 +210,7 @@
 #ast { max-width:100vw; max-height:100dvh; }
 #ast .astp { max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); min-width:0; }
 #ast .bot { min-width:0; max-width:100%; }
-#ast .bot .bm, #ast .bot .bv, #ast .bot .bc, #ast .bot .bbody { min-width:0; }
+#ast .bot .bm, #ast .bot .qbot-conversation, #ast .bot .bc, #ast .bot .bbody { min-width:0; }
 #ast .bot .bbody { overflow-x:hidden; overscroll-behavior:contain; }
 #ast .bot .bnav, #ast .bot .bside, #ast .bot .bmenu { min-width:0; max-width:100%; }
 #ast .bot button, #ast .bot [role=button] { touch-action:manipulation; }
@@ -241,7 +241,7 @@
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs, :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bm { min-height:0; }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs { flex:0 0 auto; }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bm { flex:1 1 auto; width:0; min-width:0; }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bv, :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-log { min-height:0; min-width:0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation, :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-log { min-height:0; min-width:0; }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc { flex:0 0 auto; min-width:0; }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in { display:flex; align-items:flex-end; gap:8px; min-width:0; border:1px solid rgba(255,255,255,.11) !important; border-radius:22px !important; padding:7px !important; background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.018)) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 32px -25px #fff !important; transition:border-color .22s ease,box-shadow .22s ease,background .22s ease !important; }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in:focus-within { border-color:rgba(255,255,255,.23) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 3px rgba(255,255,255,.025),0 16px 38px -26px rgba(255,255,255,.3) !important; background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025)) !important; }
@@ -351,7 +351,7 @@
   min-width: 0;
   max-width: 100%;
 }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bv {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation {
   flex: 1 1 0%;
   width: 100%;
   min-width: 0;
@@ -599,8 +599,8 @@
 }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bh,
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bc,
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bv { min-width: 0; }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .bv {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .qbot-conversation { min-width: 0; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow .qbot-conversation {
   flex: 1 1 0%;
   overflow-x: hidden;
   overflow-y: auto;
@@ -644,7 +644,7 @@
   flex: 0 0 auto;
   min-height: 150px;
 }
-:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bv {
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation {
   flex: 1 1 0%;
   min-height: 0;
 }
@@ -850,112 +850,5 @@
   :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on .bs {
     width: min(300px, 88vw) !important;
     max-width: 88vw !important;
-  }
-}
-
-/* QuorlythBot sidebar: a single body-level viewport drawer, anchored to the left edge. */
-body > .qbot-drawer-portal.bot {
-  position: fixed !important;
-  inset: 0 !important;
-  display: block !important;
-  width: 100vw !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  height: 100vh !important;
-  height: 100dvh !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: visible !important;
-  transform: none !important;
-  transform-origin: initial !important;
-  filter: none !important;
-  contain: none !important;
-  isolation: isolate !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  pointer-events: none !important;
-  z-index: 2147483646 !important;
-}
-
-body > .qbot-drawer-portal.bot > .qbot-drawer-scrim {
-  appearance: none !important;
-  display: block !important;
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: rgba(0, 0, 0, .24) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  pointer-events: auto !important;
-  cursor: pointer;
-  z-index: 0 !important;
-  animation: none !important;
-}
-
-body > .qbot-drawer-portal.bot > .bs {
-  position: absolute !important;
-  inset: 0 auto 0 0 !important;
-  display: flex !important;
-  flex: 0 0 auto !important;
-  flex-direction: column !important;
-  width: min(320px, 88vw) !important;
-  max-width: 88vw !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  box-sizing: border-box !important;
-  margin: 0 !important;
-  padding: 12px !important;
-  overflow: hidden !important;
-  visibility: visible !important;
-  transform: translate3d(0, 0, 0) !important;
-  border: 0 !important;
-  border-right: 1px solid rgba(255, 255, 255, .16) !important;
-  border-radius: 0 20px 20px 0 !important;
-  background: #080808 !important;
-  box-shadow: 18px 0 44px rgba(0, 0, 0, .42) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-  pointer-events: auto !important;
-  z-index: 1 !important;
-}
-
-body > .qbot-drawer-portal.bot .bs-l {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important;
-}
-
-body > .qbot-drawer-portal.bot .bs-t,
-body > .qbot-drawer-portal.bot .bs-n,
-body > .qbot-drawer-portal.bot .bs-s,
-body > .qbot-drawer-portal.bot .bs-f {
-  flex-shrink: 0 !important;
-  min-width: 0 !important;
-}
-
-@media (max-width: 420px) {
-  body > .qbot-drawer-portal.bot > .bs {
-    width: min(300px, 88vw) !important;
-    max-width: 88vw !important;
-    border-radius: 0 16px 16px 0 !important;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body > .qbot-drawer-portal.bot > .bs {
-    animation: none !important;
-    transition: none !important;
   }
 }

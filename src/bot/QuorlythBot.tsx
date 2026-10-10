@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -898,7 +897,10 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {/* Sidebar is rendered only by the viewport-level portal while open. */}
+            {/* Desktop keeps the sidebar in the two-pane layout. On narrow screens, the same sidebar becomes a viewport-anchored drawer above a translucent scrim. */}
+            {!narrow && sideShown && sidebar}
+            {narrow && sideShown && <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />}
+            {narrow && sideShown && sidebar}
             <section className="bm">
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
@@ -949,7 +951,7 @@ export function QuorlythBot() {
                   </div>
                 </div>
               )}
-              <div className="bv" style={view === 'chat' ? undefined : { padding: '6px 4px' }}>
+              <div className="qbot-conversation" style={view === 'chat' ? undefined : { padding: '6px 4px' }}>
                 {view === 'chat' ? (
                   !msgs.length ? (
                     <div className="bhero"><p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p><h3>{project ? project.name : 'How can I help?'}</h3><p className="mut">Ask anything about your space, or pick a skill.</p>
@@ -986,13 +988,6 @@ export function QuorlythBot() {
               )}
             </section>
           </div>
-          {sideShown && createPortal(
-            <div className="bot narrow side-on qbot-drawer-portal" aria-label="QuorlythBot sidebar layer">
-              <button className="qbot-drawer-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
-              {sidebar}
-            </div>,
-            document.body
-          )}
           {menu && <ChatMenu chat={menuChat} x={menu.x} y={menu.y} projects={bd.projects} act={actions as any} onClose={() => setMenu(null)} />}
         </div>
       )}
