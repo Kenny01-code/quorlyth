@@ -15,9 +15,9 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/analytics', label: 'Analytics', icon: 'insight', communityOwner: true },
   { path: '/communities', label: 'Communities', icon: 'community' },
   { path: '/messages', label: 'Messages', icon: 'message' },
-  { path: '/queue', label: 'Review queue', icon: 'queue', communityOwner: true },
-  { path: '/promote', label: 'Promote', icon: 'promote', communityOwner: true },
-  { path: '/settings', label: 'Settings', icon: 'settings', communityOwner: true },
+  { path: '/queue', label: 'Review queue', icon: 'queue', owner: true },
+  { path: '/promote', label: 'Promote', icon: 'promote', owner: true },
+  { path: '/settings', label: 'Settings', icon: 'settings', owner: true },
   { path: '/me', label: 'My space', icon: 'member' },
   { path: '/database', label: 'Database', icon: 'db', owner: true },
 ]
