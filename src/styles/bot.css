@@ -178,70 +178,154 @@
 }
 
 
-/* CONSOLIDATED RESPONSIVE LAYOUT
-   One authoritative ruleset for the Bot panel, drawer, conversation and composer.
-   The React .narrow class is the source of truth: it reflects panel AND viewport size. */
-#ast,
-#ast * ,
-#ast *::before,
-#ast *::after { box-sizing: border-box; }
+/* Viewport-aware layout for the bot's two-pane shell. The component switches
+   to its overlay sidebar below 980px; these rules keep the remaining pane usable. */
+@media (max-width: 980px) {
+  #ast .astp.bot.m-large { width: min(1000px, calc(100vw - 16px)); }
+  .bot.narrow .bm { padding: clamp(7px, 1.4vw, 12px); }
+  .bot.narrow .bh { gap: 5px; }
+  .bot.narrow .bha { gap: 0; }
+  .bot.narrow .bha .bib { width: 32px; height: 32px; }
+  .bot.narrow .bwm.big { font-size: clamp(11px, 2.4vw, 15px); letter-spacing: .07em; }
+  .bot.narrow .bgrid.sm { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-height: 760px) {
+  .bot .bstage.std { height: clamp(120px, 25dvh, 220px); }
+  .bot .bstage.big { height: clamp(140px, 34dvh, 300px); }
+  .bot .bv { margin-top: 6px; }
+  .bot .bhero { padding-block: 12px; }
+  .bot .bhero h3 { font-size: clamp(19px, 3.2dvh, 24px); }
+  .bot .ast-in textarea { min-height: 36px; max-height: 76px; }
+}
+@media (max-width: 420px) {
+  .bot.narrow .bgrid.sm { grid-template-columns: 1fr; }
+  .bot .bh { gap: 3px; }
+  .bot .bha .bib { width: 29px; height: 30px; }
+  .bot .bwm.big { font-size: 11px; letter-spacing: .035em; }
+}
+
+
+/* Fluid QuorlythBot layout across touch, narrow, landscape and desktop viewports. */
+#ast, #ast .astp, #ast .bot { box-sizing:border-box; }
+#ast { max-width:100vw; max-height:100dvh; }
+#ast .astp { max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); min-width:0; }
+#ast .bot { min-width:0; max-width:100%; }
+#ast .bot .bm, #ast .bot .bv, #ast .bot .bc, #ast .bot .bbody { min-width:0; }
+#ast .bot .bbody { overflow-x:hidden; overscroll-behavior:contain; }
+#ast .bot .bnav, #ast .bot .bside, #ast .bot .bmenu { min-width:0; max-width:100%; }
+#ast .bot button, #ast .bot [role=button] { touch-action:manipulation; }
+@media (max-width: 760px) {
+  #ast { padding:0; }
+  #ast .astp { width:calc(100vw - 12px) !important; max-width:calc(100vw - 12px) !important; max-height:calc(100dvh - 12px) !important; border-radius:22px; }
+  #ast .bot { max-height:calc(100dvh - 12px); }
+  #ast .bot .bh { flex-wrap:wrap; }
+  #ast .bot .bmain, #ast .bot .bcontent, #ast .bot .bscroll { min-width:0; max-width:100%; }
+  #ast .bot .bgrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 420px) {
+  #ast .astp { width:calc(100vw - 8px) !important; max-width:calc(100vw - 8px) !important; max-height:calc(100dvh - 8px) !important; border-radius:18px; }
+  #ast .bot .bgrid { grid-template-columns:minmax(0,1fr); }
+  #ast .bot .bh { gap:4px; }
+}
+@media (max-height: 600px) {
+  #ast .astp { max-height:calc(100dvh - 8px) !important; }
+  #ast .bot .bstage.std { height:clamp(92px,22dvh,150px); }
+  #ast .bot .bstage.big { height:clamp(110px,28dvh,190px); }
+  #ast .bot .bhero { padding-block:8px; }
+}
+@media (prefers-reduced-motion: reduce) { #ast .bot *, #ast .bot *::before, #ast .bot *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; } }
+
+
+/* Final interaction pass: sidebar becomes a true drawer on narrow panels, while desktop keeps its split layout. */
+#ast .astp.bot { display:flex; overflow:hidden; }
+#ast .astp.bot .bs, #ast .astp.bot .bm { min-height:0; }
+#ast .astp.bot .bs { flex:0 0 auto; }
+#ast .astp.bot .bm { flex:1 1 auto; width:0; min-width:0; }
+#ast .astp.bot .bv, #ast .astp.bot .ast-log { min-height:0; min-width:0; }
+#ast .astp.bot .bc { flex:0 0 auto; min-width:0; }
+#ast .astp.bot .ast-in { display:flex; align-items:flex-end; gap:8px; min-width:0; border:1px solid rgba(255,255,255,.11) !important; border-radius:22px !important; padding:7px !important; background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.018)) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 32px -25px #fff !important; transition:border-color .22s ease,box-shadow .22s ease,background .22s ease !important; }
+#ast .astp.bot .ast-in:focus-within { border-color:rgba(255,255,255,.23) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 3px rgba(255,255,255,.025),0 16px 38px -26px rgba(255,255,255,.3) !important; background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025)) !important; }
+#ast .astp.bot .ast-in textarea, #ast .astp.bot .ast-in textarea:focus, #ast .astp.bot .ast-in textarea:focus-visible { flex:1 1 auto; width:100%; min-width:0; min-height:42px; max-height:160px; padding:10px 11px !important; border:0 !important; outline:0 !important; border-radius:14px !important; background:transparent !important; box-shadow:none !important; resize:none; font-size:14px; line-height:1.5; }
+#ast .astp.bot .ast-in textarea:focus-visible { outline:none !important; }
+#ast .astp.bot .ast-in > .btn { flex:0 0 auto; min-width:38px; min-height:38px; display:inline-flex; align-items:center; justify-content:center; border-radius:14px !important; transition:transform .18s ease,background .18s ease,box-shadow .18s ease !important; }
+#ast .astp.bot .ast-in > .btn:hover { transform:translateY(-1px); }
+#ast .astp.bot .ast-in > .btn.p { min-width:44px; }
+#ast .astp.bot .bsb, #ast .astp.bot .bsu, #ast .astp.bot .bib { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+#ast .astp.bot .bsb { min-height:42px; }
+#ast .astp.bot .bs-l { min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+#ast .astp.bot .bsscrim { position:absolute; inset:0; z-index:20; width:100%; height:100%; border:0; background:rgba(0,0,0,.58); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); animation:qbotScrimIn .2s ease both; }
+@keyframes qbotScrimIn { from { opacity:0 } to { opacity:1 } }
+@media (max-width:980px) {
+  #ast .astp.bot { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); }
+  #ast .astp.bot .bs { position:absolute; z-index:30; inset:0 auto 0 0; width:min(84%,310px); max-width:calc(100% - 44px); height:100%; transform:translateX(-105%); transition:transform .28s cubic-bezier(.2,.75,.2,1); box-shadow:24px 0 60px rgba(0,0,0,.38); border-right:1px solid rgba(255,255,255,.12); background:rgba(5,5,6,.97); backdrop-filter:blur(32px); -webkit-backdrop-filter:blur(32px); }
+  #ast .astp.bot.side-on .bs { transform:translateX(0); }
+  #ast .astp.bot .bm { width:100%; }
+  #ast .astp.bot .bh { flex-wrap:nowrap; }
+  #ast .astp.bot .bht { min-width:0; }
+  #ast .astp.bot .bwm.big { white-space:nowrap; }
+}
+@media (max-width:520px) {
+  #ast .astp.bot { border-radius:20px !important; }
+  #ast .astp.bot .bh { padding-inline:8px; gap:4px; }
+  #ast .astp.bot .bha { gap:1px; }
+  #ast .astp.bot .bha .bib, #ast .astp.bot .bh > .bib { width:32px; min-width:32px; height:34px; }
+  #ast .astp.bot .bwm.big { font-size:13px; letter-spacing:.04em; }
+  #ast .astp.bot .ast-in { gap:4px; padding:5px !important; border-radius:18px !important; }
+  #ast .astp.bot .ast-in textarea, #ast .astp.bot .ast-in textarea:focus { min-height:40px; padding:9px 8px !important; font-size:16px; }
+  #ast .astp.bot .ast-in > .btn { min-width:34px; min-height:36px; padding:8px !important; }
+  #ast .astp.bot .ast-in > .btn.p { min-width:38px; }
+}
+@media (max-width:370px) {
+  #ast .astp.bot .bha .bib[aria-label="Robot size"], #ast .astp.bot .bha .bib[aria-label="Voice"] { display:none; }
+  #ast .astp.bot .ast-in { gap:3px; }
+  #ast .astp.bot .ast-in > .btn { min-width:31px; padding:6px !important; }
+}
+@media (prefers-reduced-motion:reduce) { #ast .astp.bot .bs, #ast .astp.bot .ast-in, #ast .astp.bot .ast-in > .btn, #ast .astp.bot .bsscrim { transition:none !important; animation:none !important; } }
+
+
+/* RESPONSIVE AUDIT FIX — final, authoritative QuorlythBot layout rules.
+   Keep these scoped to the bot so page styling elsewhere remains untouched. */
 #ast {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: grid;
-  place-items: center;
   width: 100%;
-  height: 100vh;
+  height: 100%;
   height: 100dvh;
   max-width: none;
   max-height: none;
   padding: 12px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
   overflow: hidden;
   overscroll-behavior: contain;
 }
 #ast .astp.bot {
   position: relative;
+  inset: auto;
   display: flex;
-  flex-direction: row;
   width: min(1180px, calc(100vw - 32px));
   height: min(860px, calc(100dvh - 32px));
   max-width: 100%;
   max-height: 100%;
   min-width: 0;
   min-height: 0;
+  transform: none;
   overflow: hidden;
   isolation: isolate;
-  transform: none;
 }
-#ast .astp.bot.m-compact { width: min(780px, calc(100vw - 32px)); height: min(700px, calc(100dvh - 32px)); }
-#ast .astp.bot.m-large { width: min(1020px, calc(100vw - 32px)); height: min(800px, calc(100dvh - 32px)); }
 #ast .astp.bot .bs {
-  position: relative;
-  display: flex;
   flex: 0 0 258px;
-  flex-direction: column;
   width: 258px;
   min-width: 0;
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  transform: none;
-  visibility: visible;
-  pointer-events: auto;
-  background: #080809;
-  border-right: 1px solid rgba(255,255,255,.10);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
-#ast .astp.bot .bs-t,
-#ast .astp.bot .bs-n,
-#ast .astp.bot .bs-s,
-#ast .astp.bot .bs-f { flex: 0 0 auto; min-width: 0; }
 #ast .astp.bot .bs-l {
   flex: 1 1 auto;
   min-height: 0;
-  min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -250,28 +334,22 @@
   display: flex;
   flex: 1 1 0%;
   flex-direction: column;
-  width: 0;
+  width: auto;
   min-width: 0;
   min-height: 0;
   height: 100%;
   overflow: hidden;
 }
 #ast .astp.bot .bh,
-#ast .astp.bot .bc { flex: 0 0 auto; min-width: 0; }
-#ast .astp.bot .bh { gap: clamp(4px, .8vw, 10px); }
-#ast .astp.bot .bht { flex: 1 1 auto; min-width: 0; }
-#ast .astp.bot .bwm.big {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+#ast .astp.bot .bc {
+  flex: 0 0 auto;
+  min-width: 0;
 }
 #ast .astp.bot .bstage {
   flex: 0 0 auto;
   width: 100%;
-  max-width: 100%;
   min-width: 0;
+  max-width: 100%;
 }
 #ast .astp.bot .bv {
   flex: 1 1 0%;
@@ -282,7 +360,12 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-#ast .astp.bot .ast-log,
+#ast .astp.bot .ast-log {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 #ast .astp.bot .am,
 #ast .astp.bot .mt,
 #ast .astp.bot .bhero,
@@ -293,151 +376,83 @@
   word-break: break-word;
 }
 #ast .astp.bot .bc {
-  min-width: 0;
   padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
 }
 #ast .astp.bot .ast-in {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
   width: 100%;
   max-width: 100%;
-  min-width: 0;
-  border: 1px solid rgba(255,255,255,.11) !important;
-  border-radius: 22px !important;
-  padding: 7px !important;
-  background: linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.018)) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08),0 12px 32px -25px #fff !important;
-  transition: border-color .22s ease,box-shadow .22s ease,background .22s ease !important;
 }
-#ast .astp.bot .ast-in:focus-within {
-  border-color: rgba(255,255,255,.23) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.1),0 0 0 3px rgba(255,255,255,.025),0 16px 38px -26px rgba(255,255,255,.3) !important;
-  background: linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025)) !important;
-}
-#ast .astp.bot .ast-in textarea,
-#ast .astp.bot .ast-in textarea:focus,
-#ast .astp.bot .ast-in textarea:focus-visible {
-  flex: 1 1 0%;
-  width: 0;
+#ast .astp.bot .ast-in textarea {
   min-width: 0;
   max-width: 100%;
-  min-height: 42px;
-  max-height: 160px;
-  padding: 10px 11px !important;
-  border: 0 !important;
-  outline: 0 !important;
-  border-radius: 14px !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  resize: none;
-  font-size: 16px !important;
-  line-height: 1.5;
+  font-size: 16px;
 }
-#ast .astp.bot .ast-in > .btn {
-  flex: 0 0 auto;
-  min-width: 38px;
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 14px !important;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform .18s ease,background .18s ease,box-shadow .18s ease !important;
-}
-#ast .astp.bot .ast-in > .btn:hover { transform: translateY(-1px); }
-#ast .astp.bot .ast-in > .btn.p { min-width: 44px; }
-#ast .astp.bot .bsb,
-#ast .astp.bot .bsu,
-#ast .astp.bot .bib { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-#ast .astp.bot .bsb { min-height: 42px; }
 #ast .astp.bot .bsscrim { display: none; }
-
-/* Narrow means the Bot panel itself is narrow, even on a large monitor. */
-#ast .astp.bot.narrow .bs {
-  position: absolute;
-  inset: 0 auto 0 0;
-  z-index: 40;
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  width: min(300px, 84%);
-  max-width: calc(100% - 40px);
-  height: 100%;
-  overflow: hidden;
-  transform: translateX(-105%);
-  visibility: hidden;
-  pointer-events: none;
-  background: #080809;
-  border-right: 1px solid rgba(255,255,255,.16);
-  box-shadow: 22px 0 50px rgba(0,0,0,.52);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  transition: transform .22s cubic-bezier(.2,.75,.2,1), visibility .22s;
-}
-#ast .astp.bot.narrow.side-on .bs {
-  transform: translateX(0);
-  visibility: visible;
-  pointer-events: auto;
-}
-#ast .astp.bot.narrow .bm { flex: 1 1 100%; width: 100%; min-width: 0; }
-#ast .astp.bot.narrow .bsscrim,
-#ast .astp.bot.narrow.side-on .bsscrim {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
-  display: block;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: inherit;
-  background: rgba(0,0,0,.48);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  animation: none;
-}
-#ast .astp.bot.narrow:not(.side-on) .bsscrim { display: none; }
-#ast .astp.bot.narrow .bs-l { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; }
-#ast .astp.bot.narrow .bh,
-#ast .astp.bot.narrow .bc,
-#ast .astp.bot.narrow .bv { min-width: 0; }
-#ast .astp.bot.narrow .bh { flex-wrap: nowrap; }
-#ast .astp.bot.narrow .bha { flex: 0 0 auto; min-width: 0; }
-#ast .astp.bot.narrow .bgrid.sm { grid-template-columns: repeat(2,minmax(0,1fr)); }
 
 @media (max-width: 980px) {
   #ast { padding: 8px; }
   #ast .astp.bot {
-    width: calc(100vw - 16px);
+    width: calc(100vw - 16px) !important;
     height: calc(100dvh - 16px);
-    max-width: calc(100vw - 16px);
-    max-height: calc(100dvh - 16px);
-    border-radius: 22px;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    border-radius: 22px !important;
   }
-  #ast .astp.bot.m-compact { width: calc(100vw - 16px); height: min(700px, calc(100dvh - 16px)); }
-  #ast .astp.bot.m-large { width: calc(100vw - 16px); height: calc(100dvh - 16px); }
-  #ast .astp.bot .bs { flex-basis: auto; }
-  #ast .astp.bot .bwm.big { max-width: 38vw; }
+  #ast .astp.bot .bs {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: min(82%, 300px);
+    max-width: calc(100% - 42px);
+    height: 100%;
+    flex: 0 0 auto;
+    transform: translateX(-110%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform .24s cubic-bezier(.2,.75,.2,1), visibility .24s;
+    background: rgba(5,5,6,.98);
+    border-right: 1px solid rgba(255,255,255,.14);
+    box-shadow: 24px 0 60px rgba(0,0,0,.42);
+  }
+  #ast .astp.bot.side-on .bs {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+  #ast .astp.bot .bm { width: 100%; flex-basis: 100%; }
+  #ast .astp.bot .bsscrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: inherit;
+    background: rgba(0,0,0,.62);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+  }
+  #ast .astp.bot:not(.side-on) .bsscrim { display: none; }
+  #ast .astp.bot .bh { flex-wrap: nowrap; }
+  #ast .astp.bot .bht { flex: 1 1 auto; min-width: 0; }
+  #ast .astp.bot .bwm.big { overflow: hidden; text-overflow: ellipsis; }
+  #ast .astp.bot .bha { flex: 0 0 auto; min-width: 0; }
 }
 @media (max-width: 600px) {
   #ast { padding: 0; }
-  #ast .astp.bot,
-  #ast .astp.bot.m-compact,
-  #ast .astp.bot.m-large {
-    width: 100vw;
+  #ast .astp.bot {
+    width: 100vw !important;
     height: 100dvh;
-    max-width: 100vw;
-    max-height: 100dvh;
-    border-radius: 0;
-    border-inline: 0;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border-inline: 0 !important;
   }
   #ast .astp.bot .bh {
-    gap: 3px;
     padding-top: max(8px, env(safe-area-inset-top, 0px));
     padding-inline: 9px;
+    gap: 3px;
   }
   #ast .astp.bot .bha { gap: 0; }
   #ast .astp.bot .bha .bib,
@@ -448,13 +463,27 @@
     flex: 0 0 34px;
   }
   #ast .astp.bot .bwm.big {
-    max-width: 34vw;
+    max-width: 36vw;
     font-size: clamp(11px, 3.3vw, 14px);
     letter-spacing: .02em;
   }
   #ast .astp.bot .bstage { border-radius: 16px !important; }
-  #ast .astp.bot .ast-in { gap: 3px; padding: 4px !important; border-radius: 16px !important; }
-  #ast .astp.bot .ast-in textarea { padding: 10px 8px !important; max-height: 120px; }
+  #ast .astp.bot .ast-in {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 3px;
+    padding: 4px !important;
+    border-radius: 16px !important;
+  }
+  #ast .astp.bot .ast-in textarea {
+    flex: 1 1 0%;
+    width: 0;
+    min-width: 0;
+    min-height: 42px;
+    max-height: 120px;
+    padding: 10px 8px !important;
+    font-size: 16px !important;
+  }
   #ast .astp.bot .ast-in > .btn,
   #ast .astp.bot .ast-in > .btn.p {
     flex: 0 0 36px;
@@ -464,31 +493,161 @@
     padding: 7px !important;
   }
   #ast .astp.bot .bc { padding-inline: 8px; }
-  #ast .astp.bot .bgrid.sm { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #ast .astp.bot .bgrid.sm { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  #ast .astp.bot .bsk { min-width: 0; overflow-wrap: anywhere; }
 }
-@media (max-width: 380px) {
-  #ast .astp.bot .bwm.big { max-width: 29vw; font-size: 11px; }
+@media (max-width: 360px) {
+  #ast .astp.bot .bwm.big { max-width: 30vw; font-size: 11px; }
   #ast .astp.bot .bha .bib[aria-label="Robot size"],
   #ast .astp.bot .bha .bib[aria-label="Voice"] { display: none; }
   #ast .astp.bot .bgrid.sm { grid-template-columns: minmax(0,1fr); }
   #ast .astp.bot .ast-in > .btn,
   #ast .astp.bot .ast-in > .btn.p { flex-basis: 32px; width: 32px; min-width: 32px; }
 }
-@media (max-height: 600px) {
-  #ast { padding-block: 6px; }
+@media (max-height: 560px) and (min-width: 601px) {
+  #ast { padding: 6px; }
   #ast .astp.bot { height: calc(100dvh - 12px); }
-  #ast .astp.bot .bstage.std { height: clamp(92px,22dvh,160px); }
-  #ast .astp.bot .bstage.big { height: clamp(108px,28dvh,190px); }
+  #ast .astp.bot .bstage.std { height: clamp(90px, 20dvh, 150px); }
+  #ast .astp.bot .bstage.big { height: clamp(100px, 25dvh, 180px); }
   #ast .astp.bot .bhero { padding-block: 8px; }
-  #ast .astp.bot .ast-in textarea { max-height: 76px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #ast .astp.bot .bs,
-  #ast .astp.bot .ast-in,
-  #ast .astp.bot .ast-in > .btn,
-  #ast .astp.bot .bsscrim {
-    transition: none !important;
-    animation: none !important;
+  #ast .astp.bot .bsscrim { transition: none !important; }
+}
+
+
+/* Narrow-panel audit: respond to the bot's actual size, not just the browser width.
+   This fixes the desktop resize/minimize case where React marks the bot narrow
+   but viewport-only media queries leave the desktop sidebar in the layout. */
+#ast .astp.bot.narrow {
+  min-width: 0;
+  min-height: 0;
+}
+#ast .astp.bot.narrow .bs {
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  z-index: 40 !important;
+  display: flex;
+  flex-direction: column;
+  width: min(300px, 84%) !important;
+  max-width: calc(100% - 40px) !important;
+  height: 100% !important;
+  flex: 0 0 auto !important;
+  transform: translateX(-105%);
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  background: #080809 !important;
+  border-right: 1px solid rgba(255,255,255,.16) !important;
+  box-shadow: 22px 0 50px rgba(0,0,0,.52) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  transition: transform .22s cubic-bezier(.2,.75,.2,1), visibility .22s;
+}
+#ast .astp.bot.narrow.side-on .bs {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+#ast .astp.bot.narrow .bm {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+  min-width: 0;
+}
+#ast .astp.bot.narrow .bsscrim,
+#ast .astp.bot.narrow.side-on .bsscrim {
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: rgba(0,0,0,.46) !important;
+  opacity: 1;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+}
+#ast .astp.bot.narrow:not(.side-on) .bsscrim { display: none !important; }
+#ast .astp.bot.narrow .bs { isolation: isolate; }
+#ast .astp.bot.narrow .bs-t,
+#ast .astp.bot.narrow .bs-n,
+#ast .astp.bot.narrow .bs-s,
+#ast .astp.bot.narrow .bs-l,
+#ast .astp.bot.narrow .bs-f { flex-shrink: 0; min-width: 0; }
+#ast .astp.bot.narrow .bs-l {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#ast .astp.bot.narrow .bs input,
+#ast .astp.bot.narrow .bs button,
+#ast .astp.bot.narrow .bs .bct { filter: none !important; opacity: 1; }
+#ast .astp.bot.narrow .bwm.big {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#ast .astp.bot.narrow .bh,
+#ast .astp.bot.narrow .bc,
+#ast .astp.bot.narrow .bv { min-width: 0; }
+#ast .astp.bot.narrow .bv {
+  flex: 1 1 0%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+@media (max-width: 980px) {
+  #ast .astp.bot.narrow .bs {
+    width: min(300px, 84%) !important;
+    max-width: calc(100% - 40px) !important;
   }
-  #ast .astp.bot .ast-in > .btn:hover { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ast .astp.bot.narrow .bs,
+  #ast .astp.bot.narrow .bsscrim { transition: none !important; }
+}
+
+
+/* Correct panel sizing: full means full available viewport, not a capped dialog. */
+#ast .astp.bot.m-full {
+  width: calc(100vw - 24px) !important;
+  height: calc(100dvh - 24px) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - 24px) !important;
+  min-width: 0;
+  min-height: 0;
+}
+@media (max-width: 600px) {
+  #ast .astp.bot.m-full {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+  }
+}
+/* Keep the robot stage and chat area visible and independently scrollable. */
+#ast .astp.bot .bm {
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+}
+#ast .astp.bot .bstage:not(.off) {
+  flex: 0 0 auto;
+  min-height: 150px;
+}
+#ast .astp.bot .bv {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+@media (max-height: 650px) {
+  #ast .astp.bot .bstage:not(.off) { min-height: 105px; }
 }
