@@ -898,7 +898,7 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {!narrow && sidebar}
+            {/* Sidebar is rendered only by the viewport-level portal while open. */}
             <section className="bm">
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
@@ -986,7 +986,7 @@ export function QuorlythBot() {
               )}
             </section>
           </div>
-          {narrow && sideShown && createPortal(
+          {sideShown && createPortal(
             <div className="astp bot qbot-drawer-portal">
               <button className="qbot-drawer-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
               {sidebar}
