@@ -991,7 +991,7 @@ export function QuorlythBot() {
               <button className="qbot-drawer-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
               {sidebar}
             </div>,
-            document.getElementById('ast')!
+            document.body
           )}
           {menu && <ChatMenu chat={menuChat} x={menu.x} y={menu.y} projects={bd.projects} act={actions as any} onClose={() => setMenu(null)} />}
         </div>
