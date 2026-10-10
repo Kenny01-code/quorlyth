@@ -839,12 +839,37 @@ export function QuorlythBot() {
       </button>
       {open && (
         <div id="ast">
-          <div id="bot" className={cn('astp glass bot', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
-            {mode !== 'full' && <div className="bresz" title="Drag to resize" onPointerDown={e => {
-              e.preventDefault(); const el = panel.current!, sx = e.clientX, sy = e.clientY, sw = el.offsetWidth, sh = el.offsetHeight
-              const mv = (ev: PointerEvent) => { const maxW = Math.max(240, window.innerWidth - 24), maxH = Math.max(300, window.innerHeight - 24); setMode('custom'); setSize({ w: Math.max(Math.min(340, maxW), Math.min(maxW, sw + (sx - ev.clientX))), h: Math.max(Math.min(420, maxH), Math.min(maxH, sh + (sy - ev.clientY))) }) }
-              const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up) }
-              addEventListener('pointermove', mv); addEventListener('pointerup', up)
+          <div id="bot" className={cn('astp glass bot', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
+            {mode !== 'full' && <div className="bresz" title="Drag to resize" role="separator" aria-label="Resize QuorlythBot" onPointerDown={e => {
+              if (e.button !== 0) return
+              e.preventDefault()
+              const el = panel.current
+              if (!el) return
+              const sx = e.clientX, sy = e.clientY
+              const rect = el.getBoundingClientRect()
+              const sw = rect.width, sh = rect.height
+              const originX = Math.max(0, rect.left), originY = Math.max(0, rect.top)
+              setPosition({ x: originX, y: originY })
+              setMode('custom')
+              try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* Window listeners remain as a fallback. */ }
+              const mv = (ev: PointerEvent) => {
+                if (ev.pointerId !== e.pointerId) return
+                const maxW = Math.max(240, window.innerWidth - originX - 8)
+                const maxH = Math.max(300, window.innerHeight - originY - 8)
+                setSize({
+                  w: Math.max(Math.min(340, maxW), Math.min(maxW, sw + (ev.clientX - sx))),
+                  h: Math.max(Math.min(420, maxH), Math.min(maxH, sh + (ev.clientY - sy))),
+                })
+              }
+              const up = (ev: PointerEvent) => {
+                if (ev.pointerId !== e.pointerId) return
+                removeEventListener('pointermove', mv)
+                removeEventListener('pointerup', up)
+                removeEventListener('pointercancel', up)
+              }
+              addEventListener('pointermove', mv)
+              addEventListener('pointerup', up)
+              addEventListener('pointercancel', up)
             }} />}
             {narrow && sideShown && <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />}
             <aside className="bs">
@@ -870,21 +895,24 @@ export function QuorlythBot() {
             </aside>
             <section className="bm">
               <header className="bh" onPointerDown={e => {
-                if (mode === 'full' || (e.target as HTMLElement).closest('button, input, textarea, a, [role="button"]')) return
+                if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
                 const el = panel.current
                 if (!el) return
                 e.preventDefault()
                 const rect = el.getBoundingClientRect()
                 const offsetX = e.clientX - rect.left
                 const offsetY = e.clientY - rect.top
+                try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* Window listeners remain as a fallback. */ }
                 const move = (ev: PointerEvent) => {
+                  if (ev.pointerId !== e.pointerId) return
                   const w = el.offsetWidth, h = el.offsetHeight
                   setPosition({
                     x: Math.max(8, Math.min(ev.clientX - offsetX, window.innerWidth - Math.min(w, window.innerWidth) - 8)),
                     y: Math.max(8, Math.min(ev.clientY - offsetY, window.innerHeight - Math.min(h, window.innerHeight) - 8)),
                   })
                 }
-                const end = () => {
+                const end = (ev: PointerEvent) => {
+                  if (ev.pointerId !== e.pointerId) return
                   window.removeEventListener('pointermove', move)
                   window.removeEventListener('pointerup', end)
                   window.removeEventListener('pointercancel', end)
@@ -898,7 +926,7 @@ export function QuorlythBot() {
                 <div className="bha">
                   <button className="bib" aria-label="Robot size" title="Robot size" onClick={() => setStage(stage === 'std' ? 'big' : stage === 'big' ? 'off' : 'std')}><Icon name="stage" size={18} /></button>
                   <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>
-                  <button className="bib" aria-label="Resize" title="Expand" onClick={() => { setSize(null); setMode(mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact') }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
+                  <button className="bib" aria-label="Resize" title="Expand" onClick={() => { const next = mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact'; setSize(null); setPosition(null); setMode(next) }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
                   <button className="bib" aria-label="Close" onClick={() => { stopLive(); audio.current?.stop(); setOpen(false) }}><Icon name="decline" size={18} /></button>
                 </div>
               </header>
