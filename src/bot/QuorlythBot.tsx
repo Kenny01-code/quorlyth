@@ -897,12 +897,8 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {/* The layout wrapper is the containing block for BOTH the sidebar and chat pane. */}
-            <div className={cn('qbot-layout', narrow && 'qbot-layout-narrow')}>
-              {/* The scrim and drawer are confined to this layout, never the viewport. */}
-              {narrow && sideShown && <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />}
-              {sideShown && sidebar}
-              <section className="bm">
+            {sideShown && sidebar}
+            <section className="bm">
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
                 const el = panel.current
@@ -987,8 +983,7 @@ export function QuorlythBot() {
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
                 </div>
               )}
-              </section>
-            </div>
+            </section>
           </div>
           {menu && <ChatMenu chat={menuChat} x={menu.x} y={menu.y} leftBound={menu.leftBound} rightBound={menu.rightBound} anchor={menu.anchor} offsetX={menu.offsetX} offsetY={menu.offsetY} projects={bd.projects} act={actions as any} onClose={() => setMenu(null)} />}
         </div>
