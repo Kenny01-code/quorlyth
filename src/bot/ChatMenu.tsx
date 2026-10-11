@@ -31,6 +31,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       const sidebarRect = sidebarFrame?.getBoundingClientRect()
       const botRect = botFrame?.getBoundingClientRect()
       if (!sidebarRect || !botRect) return
+      if (!sidebarFrame) return
       const nav = sidebarFrame.querySelector<HTMLElement>('.bs-n')
       const footer = sidebarFrame.querySelector<HTMLElement>('.bs-f')
       const navButtons = nav ? Array.from(nav.querySelectorAll<HTMLElement>('button')) : []
