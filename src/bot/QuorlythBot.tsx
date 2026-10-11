@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -85,7 +84,7 @@ export function QuorlythBot() {
   const [status, setStatus] = useState('Online')
   const [thinkingTask, setThinkingTask] = useState('')
   const [q, setQ] = useState('')
-  const [menu, setMenu] = useState<null | { id: string | null; x: number; y: number; leftBound?: number; rightBound?: number }>(null)
+  const [menu, setMenu] = useState<null | { id: string | null; x: number; y: number; leftBound?: number; rightBound?: number; anchor: HTMLElement; offsetX: number; offsetY: number }>(null)
   const [ren, setRen] = useState('')
   const [showArch, setShowArch] = useState(false)
   const [live, setLive] = useState<Live>(null)
@@ -662,14 +661,14 @@ export function QuorlythBot() {
       <div key={c.id} className={cn('bci', cur?.id === c.id && view === 'chat' && 'on', T && 'tint', c.unread && 'unread')} tabIndex={0} role="button" aria-label={'Open chat: ' + c.title}
         style={T ? ({ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any) : undefined}
         onClick={() => { if (busy) return; setCur(c); setView('chat'); if (c.pj) setPj(c.pj); if (c.unread) patch(c.id, { unread: false }); if (narrow) setSide(false) }}
-        onContextMenu={e => { e.preventDefault(); const bounds = (e.currentTarget as HTMLElement).closest('.bs')?.getBoundingClientRect(); setMenu({ id: c.id, x: e.clientX, y: e.clientY, leftBound: bounds?.left, rightBound: bounds?.right }) }}
+        onContextMenu={e => { e.preventDefault(); const row = e.currentTarget as HTMLElement; const rowRect = row.getBoundingClientRect(); const bounds = row.closest('.bs')?.getBoundingClientRect(); setMenu({ id: c.id, x: e.clientX, y: e.clientY, leftBound: bounds?.left, rightBound: bounds?.right, anchor: row, offsetX: e.clientX - rowRect.left, offsetY: e.clientY - rowRect.top }) }}
         onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCur(c); setView('chat'); if (narrow) setSide(false) } }}>
         <span className={cn('cd', !T && 'none')} />
         {ren === c.id ? <input autoFocus defaultValue={c.title} maxLength={60} aria-label="Rename chat" onClick={e => e.stopPropagation()}
           onBlur={e => { patch(c.id, { title: e.target.value.trim() || c.title }); setRen('') }}
           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRen('') }} /> : <span className="bct">{c.title}</span>}
         {c.pin && <span className="bpn"><Icon name="pin" size={12} /></span>}{c.unread && <i className="bud" />}
-        <button className="bcm" aria-label={'Options for ' + c.title} title="Chat options" onClick={e => { e.stopPropagation(); const button = e.currentTarget as HTMLElement; const r = button.getBoundingClientRect(); const bounds = button.closest('.bs')?.getBoundingClientRect(); setMenu({ id: c.id, x: r.right, y: r.top, leftBound: bounds?.left, rightBound: bounds?.right }) }}><Icon name="more" size={18} /></button>
+        <button className="bcm" aria-label={'Options for ' + c.title} title="Chat options" onClick={e => { e.stopPropagation(); const button = e.currentTarget as HTMLElement; const r = button.getBoundingClientRect(); const bounds = button.closest('.bs')?.getBoundingClientRect(); setMenu({ id: c.id, x: r.right, y: r.top, leftBound: bounds?.left, rightBound: bounds?.right, anchor: button, offsetX: r.width, offsetY: 0 }) }}><Icon name="more" size={18} /></button>
       </div>
     )
   }
@@ -898,15 +897,10 @@ export function QuorlythBot() {
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
-            {/* Desktop uses the sidebar as the first flex pane; narrow layouts portal it to the viewport. */}
-            {!narrow && sideShown && sidebar}
-            {narrow && sideShown && createPortal(
-              <div className="qbot-sidebar-layer" role="presentation">
-                <button className="qbot-sidebar-scrim" aria-label="Close sidebar" onClick={() => setSide(false)} />
-                {sidebar}
-              </div>,
-              document.body,
-            )}
+            {/* On narrow layouts, dim only the bot's interior while its sidebar is open. */}
+            {narrow && sideShown && <button className="bsscrim" aria-label="Close sidebar" onClick={() => setSide(false)} />}
+            {/* Keep chat history inside the QuorlythBot frame at every viewport size. */}
+            {sideShown && sidebar}
             <section className="bm">
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
@@ -994,7 +988,7 @@ export function QuorlythBot() {
               )}
             </section>
           </div>
-          {menu && <ChatMenu chat={menuChat} x={menu.x} y={menu.y} leftBound={menu.leftBound} rightBound={menu.rightBound} projects={bd.projects} act={actions as any} onClose={() => setMenu(null)} />}
+          {menu && <ChatMenu chat={menuChat} x={menu.x} y={menu.y} leftBound={menu.leftBound} rightBound={menu.rightBound} anchor={menu.anchor} offsetX={menu.offsetX} offsetY={menu.offsetY} projects={bd.projects} act={actions as any} onClose={() => setMenu(null)} />}
         </div>
       )}
     </>

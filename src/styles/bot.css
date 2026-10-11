@@ -316,6 +316,8 @@
   isolation: isolate;
 }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs {
+  position: relative;
+  z-index: 40;
   flex: 0 0 258px;
   width: 258px;
   min-width: 0;
@@ -800,5 +802,69 @@
   :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) > .bs {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+
+/* Final containment rule: the narrow sidebar and its scrim stay inside #bot.
+   No viewport-level portal is used; all drawer geometry is relative to the bot frame. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow {
+  position: relative !important;
+  overflow: hidden !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow > .bs.qbot-sidebar-drawer {
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  z-index: 30 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: min(310px, calc(100% - 44px)) !important;
+  min-width: 0 !important;
+  max-width: calc(100% - 24px) !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  transform: translateX(-110%) !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  border-radius: 0 18px 18px 0 !important;
+  background: rgba(5,5,6,.98) !important;
+  box-shadow: 24px 0 60px rgba(0,0,0,.42) !important;
+  transition: transform .24s cubic-bezier(.2,.75,.2,1), visibility .24s !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on > .bs.qbot-sidebar-drawer {
+  transform: translateX(0) !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow > .bsscrim {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 20 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  background: rgba(0,0,0,.55) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  backdrop-filter: blur(4px) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow:not(.side-on) > .bsscrim {
+  display: none !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow > .bm {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  flex: 1 1 0% !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow > .bs.qbot-sidebar-drawer {
+    transition: none !important;
   }
 }
