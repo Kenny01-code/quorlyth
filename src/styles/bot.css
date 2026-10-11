@@ -868,3 +868,71 @@
     transition: none !important;
   }
 }
+
+
+/* Compact sidebar refinement: preserve the bot-frame boundary and reclaim chat space. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot):not(.narrow) {
+  padding: 8px !important;
+  grid-template-columns: minmax(208px, 236px) minmax(0, 1fr) !important;
+  column-gap: 8px !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot):not(.narrow) > .bs:not(.qbot-sidebar-drawer) {
+  border: 1px solid rgba(255,255,255,.085) !important;
+  border-radius: 16px !important;
+  height: 100% !important;
+  min-width: 0 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-l {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain !important;
+  scroll-behavior: smooth;
+  touch-action: pan-y;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-l::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow > .bs.qbot-sidebar-drawer {
+  inset: 8px auto 8px 8px !important;
+  width: min(276px, calc(100% - 48px)) !important;
+  max-width: calc(100% - 32px) !important;
+  height: auto !important;
+  max-height: none !important;
+  border: 1px solid rgba(255,255,255,.13) !important;
+  border-radius: 16px !important;
+  transform: translateX(calc(-100% - 16px)) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow.side-on > .bs.qbot-sidebar-drawer {
+  transform: translateX(0) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow > .bs.qbot-sidebar-drawer .bs-l {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overscroll-behavior-y: contain !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow > .bs.qbot-sidebar-drawer .bs-l::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+@media (max-width: 620px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot):not(.narrow) {
+    padding: 5px !important;
+    grid-template-columns: minmax(190px, 218px) minmax(0, 1fr) !important;
+    column-gap: 5px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot):not(.narrow) > .bs:not(.qbot-sidebar-drawer) {
+    border-radius: 12px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-l {
+    scroll-behavior: auto !important;
+  }
+}
