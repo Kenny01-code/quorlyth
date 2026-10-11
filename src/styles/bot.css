@@ -936,3 +936,68 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Explicit v2 sidebar geometry: higher-specificity rules prevent older layout
+   declarations from silently winning in either the desktop split pane or drawer. */
+#ast #bot.qbot-sidebar-compact-v2:not(.narrow) {
+  display: grid !important;
+  grid-template-columns: minmax(190px, 208px) minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 10px !important;
+  padding: 10px !important;
+  align-items: stretch !important;
+  justify-items: stretch !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+#ast #bot.qbot-sidebar-compact-v2:not(.narrow) > .bs:not(.qbot-sidebar-drawer) {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: 1px solid rgba(255,255,255,.11) !important;
+  border-radius: 15px !important;
+  overflow: hidden !important;
+}
+#ast #bot.qbot-sidebar-compact-v2:not(.narrow) > .bm {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+#ast #bot.qbot-sidebar-compact-v2 .bs-l {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+#ast #bot.qbot-sidebar-compact-v2 .bs-l::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+#ast #bot.qbot-sidebar-compact-v2.narrow > .bs.qbot-sidebar-drawer {
+  inset: 10px auto 10px 10px !important;
+  width: min(248px, calc(100% - 44px)) !important;
+  max-width: calc(100% - 24px) !important;
+  height: auto !important;
+  max-height: none !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 15px !important;
+  transform: translateX(calc(-100% - 20px)) !important;
+}
+#ast #bot.qbot-sidebar-compact-v2.narrow.side-on > .bs.qbot-sidebar-drawer {
+  transform: translateX(0) !important;
+}
+@media (max-width: 620px) {
+  #ast #bot.qbot-sidebar-compact-v2:not(.narrow) {
+    grid-template-columns: minmax(174px, 194px) minmax(0, 1fr) !important;
+    gap: 6px !important;
+    padding: 6px !important;
+  }
+}
