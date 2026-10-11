@@ -1363,3 +1363,51 @@ input,textarea,select,button{ touch-action: manipulation; }
 }
 @media(max-width:390px){.chat-page .chat-heading-mark{width:38px;height:38px}.chat-page .chat-page-heading{gap:9px}.chat-page .chat-top-actions .btn{font-size:10px}.chat-page .chat-private-label{display:none}.chat-page .chat-message-line{max-width:96%}.chat-page .chat-utility-item{font-size:11px;padding:9px 4px}}
 @media(prefers-reduced-motion:reduce){.chat-page *,.chat-page *:before,.chat-page *:after{animation:none!important;transition:none!important}}
+
+
+/* QuorlythBot recent-chat menu: compact liquid-glass panel contained in the sidebar lane. */
+#ast #bot .cmx {
+  min-width: 0 !important;
+  max-width: calc(100% - 16px) !important;
+  padding: 7px !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 16px !important;
+  background: rgba(8,8,9,.94) !important;
+  box-shadow: 0 20px 55px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.12) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(135%) !important;
+  backdrop-filter: blur(24px) saturate(135%) !important;
+  scrollbar-width: none !important;
+  overscroll-behavior: contain !important;
+}
+#ast #bot .cmx::-webkit-scrollbar,
+#ast #bot .cmx .cmsub::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+#ast #bot .cmx .cmh {
+  padding: 7px 9px 9px !important;
+  margin-bottom: 3px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  color: rgba(255,255,255,.55) !important;
+  border-bottom: 1px solid rgba(255,255,255,.09) !important;
+}
+#ast #bot .cmx button[role="menuitem"],
+#ast #bot .cmx .cmsub button {
+  min-height: 34px !important;
+  padding: 7px 9px !important;
+  gap: 9px !important;
+  border-radius: 9px !important;
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+}
+#ast #bot .cmx .cmc { padding: 7px 9px !important; gap: 7px !important; border-radius: 9px !important; }
+#ast #bot .cmx .cmc > span { font-size: 11px !important; }
+#ast #bot .cmx .cmc > div { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; }
+#ast #bot .cmx .cmw { width: 17px !important; height: 17px !important; min-width: 17px !important; border-radius: 50% !important; }
+#ast #bot .cmx .cmsub { max-height: 112px !important; overflow-y: auto !important; scrollbar-width: none !important; }
+#ast #bot .cmx-backdrop { position: absolute !important; inset: 0 !important; }
+@media (max-width: 620px) {
+  #ast #bot .cmx { border-radius: 13px !important; padding: 6px !important; }
+  #ast #bot .cmx button[role="menuitem"],
+  #ast #bot .cmx .cmsub button { min-height: 32px !important; font-size: 11.5px !important; }
+}
