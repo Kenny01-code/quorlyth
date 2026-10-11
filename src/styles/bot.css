@@ -1001,3 +1001,55 @@
     padding: 6px !important;
   }
 }
+
+
+/* Enforce QuorlythBot's sidebar layout after every legacy rule. */
+#ast #bot.qbot-sidebar-compact-v2:not(.narrow) {
+  display: grid !important;
+  grid-template-columns: minmax(190px, 208px) minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 10px !important;
+  padding: 10px !important;
+}
+#ast #bot.qbot-sidebar-compact-v2:not(.narrow) > .bs {
+  position: relative !important;
+  inset: auto !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  height: 100% !important;
+  transform: none !important;
+  visibility: visible !important;
+  border-radius: 15px !important;
+  overflow: hidden !important;
+}
+#ast #bot.qbot-sidebar-compact-v2:not(.narrow) > .bm {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 100% !important;
+}
+#ast #bot.qbot-sidebar-compact-v2 .bs-l { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+#ast #bot.qbot-sidebar-compact-v2 .bs-l::-webkit-scrollbar { display: none !important; width: 0 !important; }
+#ast #bot.qbot-sidebar-compact-v2.narrow > .bs.qbot-sidebar-drawer {
+  position: absolute !important;
+  inset: 10px auto 10px 10px !important;
+  width: min(248px, calc(100% - 44px)) !important;
+  max-width: calc(100% - 24px) !important;
+  height: auto !important;
+  transform: translateX(calc(-100% - 20px)) !important;
+  visibility: hidden !important;
+  z-index: 30 !important;
+}
+#ast #bot.qbot-sidebar-compact-v2.narrow.side-on > .bs.qbot-sidebar-drawer {
+  transform: translateX(0) !important;
+  visibility: visible !important;
+}
+@media (max-width: 620px) {
+  #ast #bot.qbot-sidebar-compact-v2:not(.narrow) {
+    grid-template-columns: minmax(174px, 194px) minmax(0, 1fr) !important;
+    gap: 6px !important;
+    padding: 6px !important;
+  }
+}
