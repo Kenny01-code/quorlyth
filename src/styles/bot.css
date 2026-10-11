@@ -1003,13 +1003,17 @@
 }
 
 
-/* Enforce QuorlythBot's sidebar layout after every legacy rule. */
+/* Final desktop layout: the grid follows the sidebar's actual visibility.
+   When the sidebar is absent, the chat occupies the entire content grid. */
 #ast #bot.qbot-sidebar-compact-v2:not(.narrow) {
   display: grid !important;
-  grid-template-columns: minmax(190px, 208px) minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 1fr) !important;
   grid-template-rows: minmax(0, 1fr) !important;
   gap: 10px !important;
   padding: 10px !important;
+}
+#ast #bot.qbot-sidebar-compact-v2:not(.narrow).side-on {
+  grid-template-columns: minmax(190px, 208px) minmax(0, 1fr) !important;
 }
 #ast #bot.qbot-sidebar-compact-v2:not(.narrow) > .bs {
   position: relative !important;
@@ -1024,11 +1028,14 @@
   overflow: hidden !important;
 }
 #ast #bot.qbot-sidebar-compact-v2:not(.narrow) > .bm {
-  grid-column: 2 !important;
+  grid-column: 1 !important;
   grid-row: 1 !important;
   width: auto !important;
   min-width: 0 !important;
   height: 100% !important;
+}
+#ast #bot.qbot-sidebar-compact-v2:not(.narrow).side-on > .bm {
+  grid-column: 2 !important;
 }
 #ast #bot.qbot-sidebar-compact-v2 .bs-l { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 #ast #bot.qbot-sidebar-compact-v2 .bs-l::-webkit-scrollbar { display: none !important; width: 0 !important; }
