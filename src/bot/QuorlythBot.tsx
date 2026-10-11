@@ -72,8 +72,8 @@ export function QuorlythBot() {
   const audio = useRef<{ stop(): void } | null>(null)
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'compact' | 'large' | 'full' | 'custom'>('full')
-  const [viewportNarrow, setViewportNarrow] = useState(() => window.innerWidth <= 760)
-  const [side, setSide] = useState(() => window.innerWidth > 760)
+  const [viewportNarrow, setViewportNarrow] = useState(() => window.innerWidth <= 980)
+  const [side, setSide] = useState(() => window.innerWidth > 980)
   const [view, setView] = useState<View>('chat')
   const [cur, setCur] = useState<Chat | null>(null)
   const [pj, setPj] = useState('')
@@ -110,7 +110,7 @@ export function QuorlythBot() {
 
   useEffect(() => {
     const resize = () => {
-      const isNarrow = window.innerWidth <= 760
+      const isNarrow = window.innerWidth <= 980
       setViewportNarrow(isNarrow)
       setSize(current => {
         if (!current) return current
