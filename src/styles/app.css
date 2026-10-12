@@ -1597,3 +1597,190 @@ input,textarea,select,button{ touch-action: manipulation; }
     transform: none !important;
   }
 }
+
+
+/* QuorlythBot recent-chat action menu — premium liquid-glass refinement.
+   Scoped to the contextual menu opened by the three-dot control in Recent. */
+#bot .cmx,
+.astp.bot .cmx,
+body > .qbot-drawer-portal.bot .cmx {
+  --cmx-ink: rgba(255,255,255,.94);
+  --cmx-muted: rgba(255,255,255,.64);
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.19);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 55% at 12% 0%, rgba(255,255,255,.105), transparent 58%),
+    linear-gradient(155deg, rgba(34,34,34,.96), rgba(10,10,10,.975) 54%, rgba(20,20,20,.965));
+  -webkit-backdrop-filter: blur(32px) saturate(155%);
+  backdrop-filter: blur(32px) saturate(155%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    inset 0 -1px 0 rgba(255,255,255,.035),
+    inset 0 0 28px rgba(255,255,255,.025),
+    0 22px 58px rgba(0,0,0,.62),
+    0 3px 12px rgba(0,0,0,.34);
+  color: var(--cmx-ink);
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+#bot .cmx::-webkit-scrollbar,
+.astp.bot .cmx::-webkit-scrollbar,
+body > .qbot-drawer-portal.bot .cmx::-webkit-scrollbar { display: none; }
+
+#bot .cmx .cmh,
+.astp.bot .cmx .cmh,
+body > .qbot-drawer-portal.bot .cmx .cmh {
+  padding: 12px 13px 11px;
+  color: rgba(255,255,255,.7);
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 600;
+  letter-spacing: .025em;
+  border-bottom: 1px solid rgba(255,255,255,.085);
+  margin: 0 2px 7px;
+}
+
+#bot .cmx button[role="menuitem"],
+#bot .cmx .cmsub button,
+.astp.bot .cmx button[role="menuitem"],
+.astp.bot .cmx .cmsub button,
+body > .qbot-drawer-portal.bot .cmx button[role="menuitem"],
+body > .qbot-drawer-portal.bot .cmx .cmsub button {
+  min-height: 49px;
+  padding: 13px 13px;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: rgba(255,255,255,.88);
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 550;
+  letter-spacing: -.008em;
+  transition:
+    background-color .2s ease,
+    border-color .2s ease,
+    color .2s ease,
+    transform .2s cubic-bezier(.2,.8,.2,1),
+    box-shadow .2s ease;
+}
+#bot .cmx button[role="menuitem"] .ic,
+.astp.bot .cmx button[role="menuitem"] .ic,
+body > .qbot-drawer-portal.bot .cmx button[role="menuitem"] .ic {
+  width: 18px;
+  height: 18px;
+  opacity: .88;
+}
+#bot .cmx button[role="menuitem"]:hover,
+#bot .cmx button[role="menuitem"]:focus-visible,
+#bot .cmx .cmsub button:hover,
+#bot .cmx .cmsub button:focus-visible,
+.astp.bot .cmx button[role="menuitem"]:hover,
+.astp.bot .cmx button[role="menuitem"]:focus-visible,
+.astp.bot .cmx .cmsub button:hover,
+.astp.bot .cmx .cmsub button:focus-visible,
+body > .qbot-drawer-portal.bot .cmx button[role="menuitem"]:hover,
+body > .qbot-drawer-portal.bot .cmx button[role="menuitem"]:focus-visible,
+body > .qbot-drawer-portal.bot .cmx .cmsub button:hover,
+body > .qbot-drawer-portal.bot .cmx .cmsub button:focus-visible {
+  background: linear-gradient(105deg, rgba(255,255,255,.105), rgba(255,255,255,.045));
+  border-color: rgba(255,255,255,.105);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055);
+}
+#bot .cmx .cmc,
+.astp.bot .cmx .cmc,
+body > .qbot-drawer-portal.bot .cmx .cmc {
+  padding: 13px 13px 15px;
+  margin: 5px 2px 7px;
+  border-top: 1px solid rgba(255,255,255,.085);
+  border-bottom: 1px solid rgba(255,255,255,.085);
+}
+#bot .cmx .cmc > span,
+.astp.bot .cmx .cmc > span,
+body > .qbot-drawer-portal.bot .cmx .cmc > span {
+  display: block;
+  color: var(--cmx-muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .015em;
+}
+#bot .cmx .cmc > div,
+.astp.bot .cmx .cmc > div,
+body > .qbot-drawer-portal.bot .cmx .cmc > div {
+  gap: 12px;
+  margin-top: 12px;
+}
+#bot .cmx .cmw,
+.astp.bot .cmx .cmw,
+body > .qbot-drawer-portal.bot .cmx .cmw {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255,255,255,.34);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.48), 0 2px 7px rgba(0,0,0,.28);
+}
+#bot .cmx .cmw.on,
+.astp.bot .cmx .cmw.on,
+body > .qbot-drawer-portal.bot .cmx .cmw.on {
+  box-shadow: 0 0 0 2px rgba(8,8,8,.96), 0 0 0 4px rgba(255,255,255,.94), 0 0 15px rgba(255,255,255,.12);
+}
+#bot .cmx .cmsub,
+.astp.bot .cmx .cmsub,
+body > .qbot-drawer-portal.bot .cmx .cmsub {
+  padding: 5px 0 7px 10px;
+  margin: 1px 0 5px 8px;
+  border-left: 1px solid rgba(255,255,255,.15);
+}
+#bot .cmx .cmsub button,
+.astp.bot .cmx .cmsub button,
+body > .qbot-drawer-portal.bot .cmx .cmsub button {
+  min-height: 43px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+#bot .cmx .cmx-r,
+.astp.bot .cmx .cmx-r,
+body > .qbot-drawer-portal.bot .cmx .cmx-r {
+  color: rgba(255,255,255,.64);
+  font-size: 18px;
+  font-weight: 500;
+}
+#bot .cmx .danger,
+.astp.bot .cmx .danger,
+body > .qbot-drawer-portal.bot .cmx .danger {
+  color: rgba(255,255,255,.84);
+}
+#bot .cmx .danger:hover,
+#bot .cmx .danger:focus-visible,
+.astp.bot .cmx .danger:hover,
+.astp.bot .cmx .danger:focus-visible,
+body > .qbot-drawer-portal.bot .cmx .danger:hover,
+body > .qbot-drawer-portal.bot .cmx .danger:focus-visible {
+  background: rgba(255,255,255,.94);
+  border-color: rgba(255,255,255,.94);
+  color: #090909;
+}
+@media (max-width: 560px) {
+  #bot .cmx,
+  .astp.bot .cmx,
+  body > .qbot-drawer-portal.bot .cmx {
+    padding: 8px;
+    border-radius: 17px;
+  }
+  #bot .cmx button[role="menuitem"],
+  #bot .cmx .cmsub button,
+  .astp.bot .cmx button[role="menuitem"],
+  .astp.bot .cmx .cmsub button,
+  body > .qbot-drawer-portal.bot .cmx button[role="menuitem"],
+  body > .qbot-drawer-portal.bot .cmx .cmsub button {
+    min-height: 47px;
+    padding: 12px 11px;
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #bot .cmx *,
+  .astp.bot .cmx *,
+  body > .qbot-drawer-portal.bot .cmx * { transition: none !important; }
+}
