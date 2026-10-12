@@ -2240,3 +2240,15 @@ main:has(.chat-page) > .on { min-height: calc(100dvh - 26px); }
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Viewport-aware alignment: keep the paired glass panels balanced on shorter desktop windows. */
+@media (min-width: 901px) {
+  .chat-inbox-panel,
+  .chat-thread,
+  .chat-create {
+    top: clamp(76px, calc((100dvh - 442px) / 2), 133px);
+    height: clamp(360px, calc(100dvh - 132px), 480px);
+  }
+  .chat-create { min-height: 0; }
+}
