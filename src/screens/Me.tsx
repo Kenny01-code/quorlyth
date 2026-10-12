@@ -104,7 +104,7 @@ function Mine() {
         </div>
       </div>
       <section className="myspace-live-insights" aria-label="Live community insights">
-        <div className="profile-section-heading"><div><p className="dim">LIVE COMMUNITY PULSE</p><h3>When ideas arrive</h3><p className="mut">New ideas across your communities, refreshed as shared data updates.</p></div><span className="profile-section-mark"><Icon name="activity" size={19} /></span></div>
+        <div className="profile-section-heading"><div><p className="dim">LIVE COMMUNITY PULSE</p><h3>When ideas arrive</h3><p className="mut">New ideas across your communities, refreshed as shared data updates.</p></div><span className="profile-section-mark"><Icon name="insight" size={19} /></span></div>
         <div className="myspace-visual-grid">
           <article className="glass myspace-visual-card myspace-arrivals-card">
             <div className="myspace-visual-overline"><span className="myspace-live-dot" />LAST 7 DAYS <b>{arrivalSeries.reduce((n, day) => n + day.count, 0)} IDEAS</b></div>
@@ -114,7 +114,7 @@ function Mine() {
             <p className="myspace-visual-foot">{communityIdeas.length ? 'Live activity from ' + communities.length + ' community spaces.' : 'Join or create a community to start seeing idea activity here.'}</p>
           </article>
           <article className="glass myspace-visual-card myspace-funnel-card">
-            <div className="myspace-visual-overline">FROM MEMBER TO SHARE-READY <span className="myspace-flow-mark"><Icon name="arrow-right" size={14} /></span></div>
+            <div className="myspace-visual-overline">FROM MEMBER TO SHARE-READY <span className="myspace-flow-mark"><Icon name="arrow" size={14} /></span></div>
             <div className="myspace-funnel">
               <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-arrived" />Ideas received</span><b>{communityIdeas.length}</b></div>
               <div className="myspace-funnel-link" />
