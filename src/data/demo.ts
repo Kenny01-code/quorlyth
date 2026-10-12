@@ -74,6 +74,21 @@ export function createDemoBackend(): Backend {
     docs[`profiles/${id}`] = { name, head: 'Community member', bio: 'Here to share useful ideas and build things together.', photo: avatar(name, color), at: Date.now() }
     docs[`members/${id}`] = { c: { 'fitness-form': true, 'content-ideas': true, 'collab-opportunities': true } }
   })
+  const chatNow = Date.now()
+  const sampleChats: [string, string, number][] = [
+    ['aria', 'Alright, I have booked our tickets. See you at the movies.', 4],
+    ['noah', 'Hey! Just a reminder that our dinner plans are set for tomorrow.', 68],
+    ['imani', 'Good morning! Hope you are doing well. See you at the office.', 26 * 60],
+    ['leo', 'Hi! I came across this interesting article and thought you might like it.', 49 * 60],
+    ['sana', "Let's choose the first option.", 29 * 24 * 60],
+    ['jules', "Let's choose the first option.", 30 * 24 * 60],
+  ]
+  sampleChats.forEach(([personId, text, minutesAgo], index) => {
+    const id = 'demo-chat-' + personId
+    const at = chatNow - minutesAgo * 60_000
+    docs[`conversations/${id}`] = { title: '', type: 'direct', members: [DEMO_ME.id, personId], createdBy: personId, createdAt: at }
+    docs[`messages/demo-message-${index + 1}`] = { conversationId: id, senderId: personId, text, at }
+  })
   const reasons = [...explanations]
   ideaSeed.forEach(([cid, title, body, person, tags], index) => {
     const id = `demo-idea-${index + 1}`

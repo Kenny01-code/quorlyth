@@ -1,6 +1,8 @@
 // Custom Quorlyth icon set: 24 unit grid, 1.25 stroke, round caps, outline only.
 export const ICONS: Record<string, string> = {
   "message": "<path d=\"M4 5.5h16v11H11l-5 4v-4H4z\"/><path d=\"M8 9.5h8M8 13h5\"/>",
+  "phone": "<path d=\"M7 3.5h3l1.5 4.1-2 1.5a15 15 0 0 0 5.4 5.4l1.5-2 4.1 1.5v3a2 2 0 0 1-2.1 2A15.5 15.5 0 0 1 5 5.6a2 2 0 0 1 2-2.1z\"/>",
+  "logout": "<path d=\"M10 4H5v16h5M15 8l4 4-4 4M9 12h10\"/>",
   "share": "<circle cx=\"18\" cy=\"5\" r=\"2.5\"/><circle cx=\"6\" cy=\"12\" r=\"2.5\"/><circle cx=\"18\" cy=\"19\" r=\"2.5\"/><path d=\"M8.2 10.8l7.5-4.4M8.2 13.2l7.5 4.4\"/>",
   "lock": "<rect x=\"4.5\" y=\"10\" width=\"15\" height=\"10.5\" rx=\"2.5\"/><path d=\"M8 10V7a4 4 0 0 1 8 0v3M12 14v2.5\"/>",
   "arrow-up": "<path d=\"M12 19V5M6 11l6-6 6 6\"/>",
