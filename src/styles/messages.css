@@ -1135,6 +1135,25 @@ main:has(.chat-page) > .on { width: 100%; min-width: 0; }
   .chat-page .chat-top-actions .btn::before { transform: none !important; }
 }
 
+/* My Space visibility guard: insight sections must remain visible on both private and public profile routes. */
+.myspace-live-insights,
+.myspace-live-insights.public-live-insights {
+  display: block !important;
+  position: relative;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  isolation: isolate;
+}
+.myspace-live-insights > .profile-section-heading,
+.myspace-live-insights .myspace-visual-grid,
+.myspace-live-insights .myspace-top-contributors {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
 /* My Space live insight suite — restrained black-glass cards and animated data visuals. */
 .myspace-live-insights { margin: 34px 0 28px; }
 .myspace-live-insights > .profile-section-heading { margin-bottom: 15px; }
