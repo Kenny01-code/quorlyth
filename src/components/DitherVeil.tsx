@@ -93,7 +93,7 @@ export default function DitherVeil({
   paperColor = '#e7e7e7', contrast = 1.15, brightness = 0,
   revealRadius = 200, softness = 0.6, linger = 1,
   rimColor = '#aeb5bc', rim = 0.16, reverse = false, wander = false,
-  className = '', style,
+  className = '', style = {},
 }) {
   const containerRef = useRef(null)
   const settingsRef = useRef(null)
