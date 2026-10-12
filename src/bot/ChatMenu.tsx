@@ -28,27 +28,29 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
     const menu = menuRef.current
     if (!menu) return
     const place = () => {
-      const sidebarRect = sidebarFrame?.getBoundingClientRect()
-      const botRect = botFrame?.getBoundingClientRect()
-      if (!sidebarRect || !botRect) return
-      if (!sidebarFrame) return
+      if (!sidebarFrame || !botFrame || !menu) return
+      const sidebarRect = sidebarFrame.getBoundingClientRect()
       const nav = sidebarFrame.querySelector<HTMLElement>('.bs-n')
       const footer = sidebarFrame.querySelector<HTMLElement>('.bs-f')
-      const navButtons = nav ? Array.from(nav.querySelectorAll<HTMLElement>('button')) : []
+      const navButtons = nav ? Array.from(nav.querySelectorAll<HTMLElement>('.bsb')) : []
       const skills = navButtons.find(button => button.textContent?.trim().includes('Skills'))
       const projects = navButtons.find(button => button.textContent?.trim().includes('Projects'))
-      const topViewport = skills && projects
+      const seam = skills && projects
         ? (skills.getBoundingClientRect().bottom + projects.getBoundingClientRect().top) / 2
         : nav?.getBoundingClientRect().bottom ?? sidebarRect.top + 72
-      const bottomViewport = footer?.getBoundingClientRect().top ?? sidebarRect.bottom - 12
-      const safeTop = Math.max(sidebarRect.top + 8, Math.min(topViewport, bottomViewport - 120))
-      const safeBottom = Math.max(safeTop + 100, Math.min(sidebarRect.bottom - 8, bottomViewport))
-      const width = Math.max(0, Math.min(260, sidebarRect.width - 16, window.innerWidth - 16))
-      const leftViewport = sidebarRect.left + 8
-      const maxHeight = Math.max(100, safeBottom - safeTop)
-      const left = leftViewport - botRect.left
-      const top = safeTop - botRect.top
-      setPanelMaxHeight(current => current === maxHeight ? current : maxHeight)
+      const footerTop = footer?.getBoundingClientRect().top ?? sidebarRect.bottom - 12
+      const topViewport = Math.max(sidebarRect.top + 8, Math.min(seam, footerTop - 80))
+      const bottomViewport = Math.min(sidebarRect.bottom - 8, footerTop - 8)
+      const width = Math.max(120, Math.min(260, sidebarRect.width - 16, window.innerWidth - 16))
+      const height = Math.max(80, bottomViewport - topViewport)
+      const leftViewport = Math.max(sidebarRect.left + 8, Math.min(sidebarRect.right - width - 8, sidebarRect.left + 8))
+      // Position against the browser's actual CSS containing block. This avoids
+      // the offset errors caused by assuming #bot is always the offset parent.
+      const containingBlock = menu.offsetParent instanceof HTMLElement ? menu.offsetParent : botFrame
+      const containingRect = containingBlock.getBoundingClientRect()
+      const left = leftViewport - containingRect.left - containingBlock.clientLeft + containingBlock.scrollLeft
+      const top = topViewport - containingRect.top - containingBlock.clientTop + containingBlock.scrollTop
+      setPanelMaxHeight(current => current === height ? current : height)
       setPosition(current => current.left === left && current.top === top && current.width === width ? current : { left, top, width })
     }
     place()
