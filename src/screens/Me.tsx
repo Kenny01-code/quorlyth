@@ -231,10 +231,6 @@ function Public({ id }: { id: string }) {
           </article>
         })}</div>
       </section>}
-      {contributors.length > 0 && <section className="public-contributors">
-        <div className="profile-section-heading"><div><p className="dim">COMMUNITY RECOGNITION</p><h3>Top contributors</h3><p className="mut">Ranked by support earned, with idea count as the tie-breaker.</p></div><span className="profile-section-mark"><Icon name="rank" size={19} /></span></div>
-        <div className="glass profile-leaderboard">{contributors.map((person, index) => <button key={person.id} className="profile-leader-row" onClick={() => nav('/me/' + person.id)}><span className="profile-rank">{String(index + 1).padStart(2, '0')}</span><Av id={person.id} size={39} /><span className="profile-leader-copy"><b>{a.nm(person.id)}{(person.id === a.data.ownerId || !!(a.data.profiles[person.id] as any)?.platformAdmin) && <span className="owner-badge">✦ OWNER</span>}</b><small>{person.ideas} {person.ideas === 1 ? 'idea' : 'ideas'} contributed</small></span><span className="profile-leader-score"><b>{person.backings}</b><small>backings</small></span><Icon name="arrow-up-right" size={16} /></button>)}</div>
-      </section>}
       <h3 style={{ margin: '30px 0 14px' }}>Ideas</h3>
       {my.length ? <div className="grid g3">{my.map(i => <IdeaCard key={i.id} idea={i} />)}</div> : <Empty icon="idea" title="No ideas yet" text="Ideas this person shares will appear here." />}
     </>
