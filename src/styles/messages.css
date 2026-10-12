@@ -1658,3 +1658,63 @@ main:has(.chat-page) > .on { width: 100%; min-width: 0; }
   .chat-page::before { animation:none; }
   .chat-conversation,.chat-utility-item { transition:none; }
 }
+
+
+/* OGL reference implementation — keep the live WebGL dither behind the glass UI. */
+.chat-page { position:relative; isolation:isolate; }
+.chat-page > .chat-dither-background {
+  position:fixed !important;
+  inset:0 !important;
+  z-index:-2 !important;
+  display:block;
+  width:100vw !important;
+  height:100dvh !important;
+  max-width:none !important;
+  opacity:.27;
+  filter:grayscale(1) contrast(.92);
+  pointer-events:none !important;
+  overflow:hidden;
+}
+.chat-page > .chat-dither-background canvas {
+  display:block;
+  width:100% !important;
+  height:100% !important;
+}
+.chat-page > .chat-dither-vignette {
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.28),transparent 20%,transparent 76%,rgba(0,0,0,.52)),
+    radial-gradient(ellipse at center,transparent 28%,rgba(0,0,0,.58) 100%);
+}
+.chat-page > .chat-topline,
+.chat-page > .chat-error,
+.chat-page > .chat-workspace,
+.chat-page > .chat-footnote { position:relative; z-index:1; }
+.chat-page .chat-inbox-panel,
+.chat-page .chat-thread,
+.chat-page .chat-create {
+  background-color:rgba(23,25,24,.63);
+  border-color:rgba(255,255,255,.16);
+  box-shadow:0 25px 64px rgba(0,0,0,.36),inset 0 1px rgba(255,255,255,.16),inset 0 -1px rgba(255,255,255,.035);
+  -webkit-backdrop-filter:blur(28px) saturate(.86);
+  backdrop-filter:blur(28px) saturate(.86);
+}
+.chat-page .chat-inbox-panel {
+  background-image:radial-gradient(ellipse at 88% 0%,rgba(198,207,203,.13),transparent 38%),linear-gradient(145deg,rgba(65,68,66,.69),rgba(16,18,17,.72) 72%);
+}
+.chat-page .chat-thread {
+  background-image:radial-gradient(ellipse at 77% 85%,rgba(175,181,178,.10),transparent 37%),radial-gradient(ellipse at 18% 31%,rgba(158,168,165,.10),transparent 34%),linear-gradient(145deg,rgba(48,51,49,.66),rgba(17,19,18,.73));
+}
+.chat-page .chat-create {
+  background-image:linear-gradient(145deg,rgba(51,54,52,.82),rgba(17,19,18,.88));
+}
+.chat-page .chat-compose-glass {
+  background:linear-gradient(145deg,rgba(9,11,10,.68),rgba(36,39,37,.66));
+  border-color:rgba(255,255,255,.17);
+}
+@media (prefers-reduced-motion:reduce) {
+  .chat-page > .chat-dither-background { opacity:.18; }
+}
