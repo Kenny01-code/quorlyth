@@ -73,6 +73,34 @@ function Mine() {
   return (
     <>
       <Head kicker="My space" title="Your profile." right={<><button className="btn" onClick={() => nav('/me/' + me.id)}><Icon name="review" size={16} />View public profile</button>{' '}<button className="btn" onClick={() => a.backend?.auth.signOut()}><Icon name="private" size={16} />Sign out</button></>} />
+      {/* Keep the requested live visuals directly below the page header so they are immediately visible. */}
+      <section className="myspace-live-insights" aria-label="Live community insights">
+        <div className="profile-section-heading"><div><p className="dim">LIVE COMMUNITY PULSE</p><h3>When ideas arrive</h3><p className="mut">New ideas across your communities, refreshed as shared data updates.</p></div><span className="profile-section-mark"><Icon name="insight" size={19} /></span></div>
+        <div className="myspace-visual-grid">
+          <article className="glass myspace-visual-card myspace-arrivals-card">
+            <div className="myspace-visual-overline"><span className="myspace-live-dot" />LAST 7 DAYS <b>{arrivalSeries.reduce((n, day) => n + day.count, 0)} IDEAS</b></div>
+            <div className="myspace-arrival-chart" role="img" aria-label={arrivalSeries.map(day => day.label + ': ' + day.count + ' ideas').join(', ')}>
+              {arrivalSeries.map((day, index) => <div className="myspace-arrival-column" key={day.label + index}><span className="myspace-arrival-count">{day.count || ''}</span><div className="myspace-arrival-track"><i style={{ height: Math.max(day.count ? 14 : 4, day.count / maxArrivals * 100) + '%' }} /></div><small>{day.label}</small></div>)}
+            </div>
+            <p className="myspace-visual-foot">{communityIdeas.length ? 'Live activity from ' + communities.length + ' community spaces.' : 'Join or create a community to start seeing idea activity here.'}</p>
+          </article>
+          <article className="glass myspace-visual-card myspace-funnel-card">
+            <div className="myspace-visual-overline">FROM MEMBER TO SHARE-READY <span className="myspace-flow-mark"><Icon name="arrow" size={14} /></span></div>
+            <div className="myspace-funnel">
+              <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-arrived" />Ideas received</span><b>{communityIdeas.length}</b></div>
+              <div className="myspace-funnel-link" />
+              <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-selected" />Selected for progress</span><b>{selectedIdeas + shareReady}</b></div>
+              <div className="myspace-funnel-link" />
+              <div className="myspace-funnel-step ready"><span><i className="myspace-stage-dot stage-ready" />Share-ready</span><b>{shareReady}</b></div>
+            </div>
+            <p className="myspace-visual-foot">A live view of ideas moving through the community pipeline.</p>
+          </article>
+        </div>
+        <article className="glass myspace-visual-card myspace-top-contributors">
+          <div className="profile-section-heading"><div><p className="dim">COMMUNITY RECOGNITION</p><h3>Top contributors</h3><p className="mut">People adding ideas and earning support across your community spaces.</p></div><span className="profile-section-mark"><Icon name="rank" size={19} /></span></div>
+          {topContributors.length ? <div className="myspace-contributor-grid">{topContributors.map((person, index) => <button key={person.id} className="myspace-contributor" onClick={() => nav('/me/' + person.id)}><span className="profile-rank">{String(index + 1).padStart(2, '0')}</span><Av id={person.id} size={37} /><span className="myspace-contributor-copy"><b>{a.nm(person.id)}{(person.id === a.data.ownerId || !!(a.data.profiles[person.id] as any)?.platformAdmin) && <span className="owner-badge">✦ OWNER</span>}{a.data.communities.some(c => (c.ownerId === person.id || c.createdBy === person.id) && c.vis !== 'unlisted') && <span className="creator-badge">✧ COMMUNITY OWNER</span>}</b><small>{person.ideas} {person.ideas === 1 ? 'idea' : 'ideas'} · {person.backings} backings</small></span><Icon name="arrow-up-right" size={15} /></button>)}</div> : <p className="mut myspace-visual-empty">Top contributors will appear as people share ideas in your communities.</p>}
+        </article>
+      </section>
       <div className="grid g2" style={{ marginBottom: 18 }}>
         <div className="glass pad">
           <div className="pw">
@@ -103,33 +131,7 @@ function Mine() {
             {communities.length ? communities.map(c => <div key={c.id} className="row" onClick={() => nav('/communities/' + c.id)}><Icon name="community" /><div className="t"><h3 style={{ fontSize: 15 }}>{c.name}</h3><p className="dim">{a.ownsCommunity(c.id) ? <><span className="community-owner-proof">✧ COMMUNITY OWNER</span> · Created by you</> : 'Joined'}</p></div></div>) : <><p className="mut">You have not created or joined any yet.</p><div className="acts"><button className="btn p" onClick={() => nav('/communities')}>Discover communities</button></div></>}</div>
         </div>
       </div>
-      <section className="myspace-live-insights" aria-label="Live community insights">
-        <div className="profile-section-heading"><div><p className="dim">LIVE COMMUNITY PULSE</p><h3>When ideas arrive</h3><p className="mut">New ideas across your communities, refreshed as shared data updates.</p></div><span className="profile-section-mark"><Icon name="insight" size={19} /></span></div>
-        <div className="myspace-visual-grid">
-          <article className="glass myspace-visual-card myspace-arrivals-card">
-            <div className="myspace-visual-overline"><span className="myspace-live-dot" />LAST 7 DAYS <b>{arrivalSeries.reduce((n, day) => n + day.count, 0)} IDEAS</b></div>
-            <div className="myspace-arrival-chart" role="img" aria-label={arrivalSeries.map(day => day.label + ': ' + day.count + ' ideas').join(', ')}>
-              {arrivalSeries.map((day, index) => <div className="myspace-arrival-column" key={day.label + index}><span className="myspace-arrival-count">{day.count || ''}</span><div className="myspace-arrival-track"><i style={{ height: Math.max(day.count ? 14 : 4, day.count / maxArrivals * 100) + '%' }} /></div><small>{day.label}</small></div>)}
-            </div>
-            <p className="myspace-visual-foot">{communityIdeas.length ? 'Live activity from ' + communities.length + ' community spaces.' : 'Join or create a community to start seeing idea activity here.'}</p>
-          </article>
-          <article className="glass myspace-visual-card myspace-funnel-card">
-            <div className="myspace-visual-overline">FROM MEMBER TO SHARE-READY <span className="myspace-flow-mark"><Icon name="arrow" size={14} /></span></div>
-            <div className="myspace-funnel">
-              <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-arrived" />Ideas received</span><b>{communityIdeas.length}</b></div>
-              <div className="myspace-funnel-link" />
-              <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-selected" />Selected for progress</span><b>{selectedIdeas + shareReady}</b></div>
-              <div className="myspace-funnel-link" />
-              <div className="myspace-funnel-step ready"><span><i className="myspace-stage-dot stage-ready" />Share-ready</span><b>{shareReady}</b></div>
-            </div>
-            <p className="myspace-visual-foot">A live view of ideas moving through the community pipeline.</p>
-          </article>
-        </div>
-        <article className="glass myspace-visual-card myspace-top-contributors">
-          <div className="profile-section-heading"><div><p className="dim">COMMUNITY RECOGNITION</p><h3>Top contributors</h3><p className="mut">People adding ideas and earning support across your community spaces.</p></div><span className="profile-section-mark"><Icon name="rank" size={19} /></span></div>
-          {topContributors.length ? <div className="myspace-contributor-grid">{topContributors.map((person, index) => <button key={person.id} className="myspace-contributor" onClick={() => nav('/me/' + person.id)}><span className="profile-rank">{String(index + 1).padStart(2, '0')}</span><Av id={person.id} size={37} /><span className="myspace-contributor-copy"><b>{a.nm(person.id)}{(person.id === a.data.ownerId || !!(a.data.profiles[person.id] as any)?.platformAdmin) && <span className="owner-badge">✦ OWNER</span>}{a.data.communities.some(c => (c.ownerId === person.id || c.createdBy === person.id) && c.vis !== 'unlisted') && <span className="creator-badge">✧ COMMUNITY OWNER</span>}</b><small>{person.ideas} {person.ideas === 1 ? 'idea' : 'ideas'} · {person.backings} backings</small></span><Icon name="arrow-up-right" size={15} /></button>)}</div> : <p className="mut myspace-visual-empty">Top contributors will appear as people share ideas in your communities.</p>}
-        </article>
-      </section>
+      
       <h3 style={{ margin: '34px 0 16px' }}>What you have access to</h3>
       <div className="grid g3" style={{ marginBottom: 18 }}>
         {access.map(([ic, t, d, on]) => <div key={t} className="glass lift acc"><div className="top"><Icon name={ic} size={26} /><span className={on ? 'chip on' : 'chip'}>{on ? 'Available' : 'Owners only'}</span></div><h3>{t}</h3><p className="dim">{d}</p></div>)}
@@ -195,7 +197,7 @@ function Public({ id }: { id: string }) {
         </div>
       </section>
       <section className="myspace-live-insights public-live-insights" aria-label="Live community insights">
-        <div className="profile-section-heading"><div><p className="dim">LIVE COMMUNITY PULSE</p><h3>When ideas arrive</h3><p className="mut">Live activity across this member's visible community spaces.</p></div><span className="profile-section-mark"><Icon name="activity" size={19} /></span></div>
+        <div className="profile-section-heading"><div><p className="dim">LIVE COMMUNITY PULSE</p><h3>When ideas arrive</h3><p className="mut">Live activity across this member's visible community spaces.</p></div><span className="profile-section-mark"><Icon name="insight" size={19} /></span></div>
         <div className="myspace-visual-grid">
           <article className="glass myspace-visual-card myspace-arrivals-card">
             <div className="myspace-visual-overline"><span className="myspace-live-dot" />LAST 7 DAYS <b>{arrivalSeries.reduce((n, day) => n + day.count, 0)} IDEAS</b></div>
@@ -205,7 +207,7 @@ function Public({ id }: { id: string }) {
             <p className="myspace-visual-foot">{communityIdeas.length ? 'Live activity from ' + communities.length + ' visible community spaces.' : 'No visible community activity yet.'}</p>
           </article>
           <article className="glass myspace-visual-card myspace-funnel-card">
-            <div className="myspace-visual-overline">FROM MEMBER TO SHARE-READY <span className="myspace-flow-mark"><Icon name="arrow-right" size={14} /></span></div>
+            <div className="myspace-visual-overline">FROM MEMBER TO SHARE-READY <span className="myspace-flow-mark"><Icon name="arrow" size={14} /></span></div>
             <div className="myspace-funnel">
               <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-arrived" />Ideas received</span><b>{communityIdeas.length}</b></div><div className="myspace-funnel-link" />
               <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-selected" />Selected for progress</span><b>{selectedIdeas + shareReady}</b></div><div className="myspace-funnel-link" />
