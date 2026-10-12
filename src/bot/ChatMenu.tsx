@@ -30,6 +30,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
     const place = () => {
       if (!sidebarFrame || !botFrame || !menu) return
       const sidebarRect = sidebarFrame.getBoundingClientRect()
+      const botRect = botFrame.getBoundingClientRect()
       const nav = sidebarFrame.querySelector<HTMLElement>('.bs-n')
       const footer = sidebarFrame.querySelector<HTMLElement>('.bs-f')
       const navButtons = nav ? Array.from(nav.querySelectorAll<HTMLElement>('.bsb')) : []
@@ -41,9 +42,13 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       const footerTop = footer?.getBoundingClientRect().top ?? sidebarRect.bottom - 12
       const topViewport = Math.max(sidebarRect.top + 8, Math.min(seam, footerTop - 80))
       const bottomViewport = Math.min(sidebarRect.bottom - 8, footerTop - 8)
-      const width = Math.max(120, Math.min(260, sidebarRect.width - 16, window.innerWidth - 16))
+      // Float from the sidebar's right edge into the bot's chat lane.
+      // A small overlap keeps the panel visually attached to the sidebar while
+      // placing most of its surface between the navigation and conversation.
+      const leftViewport = Math.max(botRect.left + 8, sidebarRect.right - 18)
+      const availableRight = Math.min(botRect.right, window.innerWidth) - leftViewport - 8
+      const width = Math.max(120, Math.min(260, availableRight))
       const height = Math.max(80, bottomViewport - topViewport)
-      const leftViewport = Math.max(sidebarRect.left + 8, Math.min(sidebarRect.right - width - 8, sidebarRect.left + 8))
       // Position against the browser's actual CSS containing block. This avoids
       // the offset errors caused by assuming #bot is always the offset parent.
       const containingBlock = menu.offsetParent instanceof HTMLElement ? menu.offsetParent : botFrame
