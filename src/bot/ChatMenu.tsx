@@ -45,9 +45,15 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       // Float from the sidebar's right edge into the bot's chat lane.
       // A small overlap keeps the panel visually attached to the sidebar while
       // placing most of its surface between the navigation and conversation.
-      const leftViewport = Math.max(botRect.left + 8, sidebarRect.right - 18)
-      const availableRight = Math.min(botRect.right, window.innerWidth) - leftViewport - 8
-      const width = Math.max(120, Math.min(260, availableRight))
+      const laneLeft = Math.max(botRect.left + 8, sidebarRect.right - 18)
+      const availableRight = Math.min(botRect.right, window.innerWidth) - laneLeft - 8
+      // On narrow layouts there may be no chat lane beside the drawer; keep
+      // the panel inside the original sidebar instead of forcing horizontal overflow.
+      const hasRoomBesideSidebar = availableRight >= 160
+      const leftViewport = hasRoomBesideSidebar ? laneLeft : sidebarRect.left + 8
+      const width = hasRoomBesideSidebar
+        ? Math.min(260, availableRight)
+        : Math.max(120, Math.min(260, sidebarRect.width - 16, window.innerWidth - 16))
       const height = Math.max(80, bottomViewport - topViewport)
       // Position against the browser's actual CSS containing block. This avoids
       // the offset errors caused by assuming #bot is always the offset parent.
