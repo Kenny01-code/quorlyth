@@ -4,6 +4,7 @@ import { Icon } from '../lib/Icon'
 import { Av, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { cn } from '../lib/util'
+import DitherVeil from '../components/DitherVeil'
 
 type Conversation = { id: string; title?: string; type: 'direct' | 'group'; members: string[]; createdBy: string; createdAt: number }
 type Message = { id: string; conversationId: string; senderId: string; text: string; at: number; replyTo?: string }
@@ -165,6 +166,8 @@ export function Messages() {
 
   return (
     <div className="chat-page">
+      <DitherVeil className="chat-dither-background" wander rim={0.16} pixelSize={2} levels={2} inkColor="#050505" paperColor="#c9c9c9" contrast={1.15} revealRadius={220} softness={0.62} />
+      <div className="chat-dither-vignette" aria-hidden="true" />
       <div className="chat-topline"><div className="chat-page-heading"><span className="chat-heading-mark"><Icon name="message" size={17} /></span><div><h2 className="chat-title">Messages</h2><p className="mut">Your conversations, thoughtfully connected</p></div></div><div className="chat-top-actions"><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="users" size={16} />New group</button><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="plus" size={16} />New conversation</button></div></div>
       {error && <div className="chat-error" role="alert"><Icon name="alert" size={16} />{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
       <div className={cn('chat-workspace', 'size-' + workspaceSize, (peopleOpen || groupOpen || settingsOpen || profileOpen) && 'with-sidepanel')}>
