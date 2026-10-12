@@ -70,23 +70,7 @@ function Mine() {
   return (
     <>
       <Head kicker="My space" title="Your profile." right={<><button className="btn" onClick={() => nav('/me/' + me.id)}><Icon name="review" size={16} />View public profile</button>{' '}<button className="btn" onClick={() => a.backend?.auth.signOut()}><Icon name="private" size={16} />Sign out</button></>} />
-      {/* Keep the requested live visuals directly below the page header so they are immediately visible. */}
-      <section className="myspace-live-insights" aria-label="Live community insights">
-        <div className="grid g2" style={{ marginBottom: 18 }}>
-          <div className="glass pad">
-            <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.heat}</h3><p className="dim">By day and time, all time</p></div></div>
-            <div className="chs"><Heat ideas={communityIdeas} val={cs.heat.val} /></div>
-          </div>
-          <div className="glass pad">
-            <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.fun}</h3><p className="dim">How people move through your space</p></div></div>
-            <div className="chs"><Funnel rows={[['Members', communityMemberIds.size], ['Contributors', contributorStats.length], ['Ideas', communityIdeas.length], ['Selected', selectedIdeas + shareReady], ['Ready to share', a.data.promotions.filter(p => communityIds.has(a.data.ideas.find(i => i.id === p.ideaId)?.cid || '')).length]]} o={cs.fun} /></div>
-          </div>
-        </div>
-        <div className="glass pad">
-          <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.top}</h3><p className="dim">Your most active people</p></div></div>
-          <TopList ids={contributorIds} src={contributorSource} nm={a.nm} />
-        </div>
-      </section>
+
       <div className="grid g2" style={{ marginBottom: 18 }}>
         <div className="glass pad">
           <div className="pw">
@@ -121,6 +105,22 @@ function Mine() {
         {saved.length ? saved.map(i => <div key={i.id} className="row" onClick={() => nav('/idea/' + i.id)}><Icon name="save" /><div className="t"><h3 style={{ fontSize: 15 }}>{i.title}</h3><p className="dim">{a.nm(i.authorId)}</p></div></div>) : <p className="mut" style={{ padding: '14px 0' }}>Save an idea to find it here.</p>}</div>
       <div className="glass pad"><h3 style={{ marginBottom: 8 }}>My contributions</h3>
         {my.length ? my.map(i => <div key={i.id} className="row" onClick={() => nav('/idea/' + i.id)}><div className="score" style={{ width: 44, height: 44 }}><Icon name={a.statusOf(i.id) === 'promoted' ? 'publish' : a.statusOf(i.id) === 'selected' ? 'select' : 'status'} size={18} /></div><div className="t"><h3>{i.title}</h3><p className="dim">{STATUS_LABEL[a.statusOf(i.id)]}, {a.votesOf(i.id)} backing</p></div></div>) : <p className="mut" style={{ padding: '14px 0' }}>You have not shared an idea yet.</p>}</div></div>
+      <section className="myspace-live-insights" aria-label="Live community insights">
+        <div className="grid g2" style={{ marginBottom: 18 }}>
+          <div className="glass pad">
+            <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.heat}</h3><p className="dim">By day and time, all time</p></div></div>
+            <div className="chs"><Heat ideas={communityIdeas} val={cs.heat.val} /></div>
+          </div>
+          <div className="glass pad">
+            <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.fun}</h3><p className="dim">How people move through your space</p></div></div>
+            <div className="chs"><Funnel rows={[['Members', communityMemberIds.size], ['Contributors', contributorStats.length], ['Ideas', communityIdeas.length], ['Selected', selectedIdeas + shareReady], ['Ready to share', a.data.promotions.filter(p => communityIds.has(a.data.ideas.find(i => i.id === p.ideaId)?.cid || '')).length]]} o={cs.fun} /></div>
+          </div>
+        </div>
+        <div className="glass pad">
+          <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.top}</h3><p className="dim">Your most active people</p></div></div>
+          <TopList ids={contributorIds} src={contributorSource} nm={a.nm} />
+        </div>
+      </section>
       {crop && <CropModal file={crop} onCancel={() => setCrop(null)} onSave={async d => { if (!await a.saveProfile({ photo: d })) return false; setPhotoPreview(d); setCrop(null); return true }} />}
     </>
   )
@@ -174,6 +174,21 @@ function Public({ id }: { id: string }) {
           <div className="glass profile-impact-card"><span>Communities created</span><strong>{created.length}</strong><small>Community spaces started by this member</small></div>
         </div>
       </section>
+
+      {communities.length > 0 && <section className="public-created-communities">
+        <div className="profile-section-heading"><div><p className="dim">OPEN THE DOOR</p><h3>Communities & share links</h3><p className="mut">Explore each community or scan its QR code to open the space.</p></div><span className="profile-section-mark"><Icon name="community" size={19} /></span></div>
+        <div className="public-community-grid">{communities.map(c => {
+          const items = a.data.ideas.filter(i => i.cid === c.id)
+          const backs = items.reduce((n, i) => n + a.votesOf(i.id), 0)
+          return <article className="glass public-community-card" key={c.id}>
+            <button className="public-community-open" onClick={() => nav('/communities/' + c.id)}><span className="public-community-icon"><Icon name="community" size={21} /></span><span className="public-community-copy"><b>{c.name}</b><small>{created.some(own => own.id === c.id) ? 'Created by this member' : 'Member of this community'} · {items.length} {items.length === 1 ? 'idea' : 'ideas'} · {backs} backings</small>{created.some(own => own.id === c.id) ? <span className="community-member-badge community-owner-proof"><span aria-hidden="true">✧</span>COMMUNITY OWNER</span> : c.memberBadges?.[id] && <span className="community-member-badge"><span aria-hidden="true">✧</span>{c.memberBadges[id]}</span>}</span><Icon name="arrow-up-right" size={17} /></button>
+            {c.purpose && <p className="mut public-community-purpose">{c.purpose}</p>}
+            <ShareCard title={c.name + ' link'} url={location.origin + '/communities/' + c.id} sub="Share this community with its direct link or QR code." />
+          </article>
+        })}</div>
+      </section>}
+      <h3 style={{ margin: '30px 0 14px' }}>Ideas</h3>
+      {my.length ? <div className="grid g3">{my.map(i => <IdeaCard key={i.id} idea={i} />)}</div> : <Empty icon="idea" title="No ideas yet" text="Ideas this person shares will appear here." />}
       <section className="myspace-live-insights public-live-insights" aria-label="Live community insights">
         <div className="grid g2" style={{ marginBottom: 18 }}>
           <div className="glass pad">
@@ -190,20 +205,6 @@ function Public({ id }: { id: string }) {
           <TopList ids={contributorIds} src={contributorSource} nm={a.nm} />
         </div>
       </section>
-      {communities.length > 0 && <section className="public-created-communities">
-        <div className="profile-section-heading"><div><p className="dim">OPEN THE DOOR</p><h3>Communities & share links</h3><p className="mut">Explore each community or scan its QR code to open the space.</p></div><span className="profile-section-mark"><Icon name="community" size={19} /></span></div>
-        <div className="public-community-grid">{communities.map(c => {
-          const items = a.data.ideas.filter(i => i.cid === c.id)
-          const backs = items.reduce((n, i) => n + a.votesOf(i.id), 0)
-          return <article className="glass public-community-card" key={c.id}>
-            <button className="public-community-open" onClick={() => nav('/communities/' + c.id)}><span className="public-community-icon"><Icon name="community" size={21} /></span><span className="public-community-copy"><b>{c.name}</b><small>{created.some(own => own.id === c.id) ? 'Created by this member' : 'Member of this community'} · {items.length} {items.length === 1 ? 'idea' : 'ideas'} · {backs} backings</small>{created.some(own => own.id === c.id) ? <span className="community-member-badge community-owner-proof"><span aria-hidden="true">✧</span>COMMUNITY OWNER</span> : c.memberBadges?.[id] && <span className="community-member-badge"><span aria-hidden="true">✧</span>{c.memberBadges[id]}</span>}</span><Icon name="arrow-up-right" size={17} /></button>
-            {c.purpose && <p className="mut public-community-purpose">{c.purpose}</p>}
-            <ShareCard title={c.name + ' link'} url={location.origin + '/communities/' + c.id} sub="Share this community with its direct link or QR code." />
-          </article>
-        })}</div>
-      </section>}
-      <h3 style={{ margin: '30px 0 14px' }}>Ideas</h3>
-      {my.length ? <div className="grid g3">{my.map(i => <IdeaCard key={i.id} idea={i} />)}</div> : <Empty icon="idea" title="No ideas yet" text="Ideas this person shares will appear here." />}
     </>
   )
 }
