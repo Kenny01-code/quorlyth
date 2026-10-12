@@ -175,7 +175,8 @@ export function Messages() {
             <button className={cn('chat-utility-item', profileOpen && 'on')} onClick={() => { setProfileOpen(true); setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false) }}><Icon name="member" size={16} /><span>Profile</span></button>
             <button className={cn('chat-utility-item', settingsOpen && 'on')} onClick={() => { setSettingsOpen(true); setPeopleOpen(false); setGroupOpen(false); setProfileOpen(false) }}><Icon name="settings" size={16} /><span>Settings</span></button>
           </nav>
-          <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
+          <div className="chat-inbox-panel">
+           <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
           <label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" /></label>
           <div className="chat-filter-tabs" role="group" aria-label="Filter conversations"><button className={cn(conversationFilter === 'all' && 'on')} onClick={() => setConversationFilter('all')}>All</button><button className={cn(conversationFilter === 'groups' && 'on')} onClick={() => setConversationFilter('groups')}>Groups</button><button className={cn(conversationFilter === 'unread' && 'on')} onClick={() => setConversationFilter('unread')}>Unread</button></div>
           <div className="chat-conversation-list">{conversations.filter(c => conversationFilter === 'all' || (conversationFilter === 'groups' ? c.type === 'group' : unreadCount(c) > 0)).filter(c => titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())).map(c => {
@@ -187,7 +188,8 @@ export function Messages() {
             </div>
           })}{!conversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>Your inbox is a blank canvas.</b><p>Start a private conversation or bring your collaborators together.</p><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button></div>}</div>
           <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Private conversations <span className="dim">· standard encryption in transit</span></div>
-        </aside>
+        </div>
+         </aside>
         <div className={cn('glass chat-thread', active && 'has-active')}>
           {active ? <>
             <header className="chat-thread-head"><button className="chat-back-mobile" onClick={() => nav('/messages')} aria-label="Back to inbox"><Icon name="arrow-left" size={18} /></button>
