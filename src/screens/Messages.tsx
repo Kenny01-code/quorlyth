@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Av, Empty, Head } from '../components/ui'
@@ -43,6 +43,7 @@ export function Messages() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [peopleQuery, setPeopleQuery] = useState('')
   const [conversationFilter, setConversationFilter] = useState<'all' | 'groups' | 'unread'>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [groupName, setGroupName] = useState('')
   const [selectedPeople, setSelectedPeople] = useState<string[]>([])
   const [sending, setSending] = useState(false)
@@ -68,6 +69,18 @@ export function Messages() {
   }, [store, meId])
 
   const active = conversations.find(c => c.id === conversationId) || null
+
+  useEffect(() => {
+    if (conversationId || !conversations.length) return
+    const desktop = window.matchMedia('(min-width: 761px)')
+    const openFirstConversation = () => {
+      if (desktop.matches) nav('/messages/' + conversations[0].id, { replace: true })
+    }
+    openFirstConversation()
+    desktop.addEventListener('change', openFirstConversation)
+    return () => desktop.removeEventListener('change', openFirstConversation)
+  }, [conversationId, conversations, nav])
+
   const isPlatformAdmin = (id: string) => id === a.data.ownerId || !!(a.data.profiles[id] as any)?.platformAdmin || (!!a.me && id === a.me.id && a.owner)
   const isCommunityCreator = (id: string) => id !== a.data.ownerId && !(a.me && id === a.me.id && a.owner) && a.data.communities.some(c => c.ownerId === id || c.createdBy === id)
   const profileLink = (id: string) => '/me/' + encodeURIComponent(id)
@@ -92,6 +105,15 @@ export function Messages() {
     const d = new Date(at)
     const today = new Date()
     return d.toDateString() === today.toDateString() ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  }
+  const formatDay = (at: number) => {
+    const day = new Date(at)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+    if (day.toDateString() === today.toDateString()) return 'Today'
+    if (day.toDateString() === yesterday.toDateString()) return 'Yesterday'
+    return day.toLocaleDateString([], { day: '2-digit', month: '2-digit' })
   }
 
   useEffect(() => {
@@ -161,23 +183,132 @@ export function Messages() {
     finally { setSending(false); textarea.current?.focus() }
   }
 
-  if (!a.me) return <><Head kicker="Messages" title="Conversations, without the noise." /><div className="glass pad chat-signin"><div className="chat-orb"><Icon name="message" size={32} /></div><h3>Your people. Your ideas. One place.</h3><p className="mut">Sign in to start private conversations and build with your community.</p><button className="btn p" onClick={() => nav('/signin')}>Sign in to continue <Icon name="arrow" size={16} /></button></div></>
+  async function signOut() {
+    setError('')
+    try {
+      if (a.demo) {
+        await a.exitDemo()
+        nav('/', { replace: true })
+      } else {
+        await a.backend?.auth.signOut()
+        nav('/signin', { replace: true })
+      }
+    } catch (e) {
+      setError('Could not sign out. ' + readableChatError(e))
+    }
+  }
+
+  if (!a.me) return (
+    <>
+      <Head kicker="Messages" title="Conversations, without the noise." />
+      <section className="chat-signin-shell" aria-labelledby="chat-signin-title">
+        <div className="chat-signin-ambient" aria-hidden="true">
+          <span className="chat-signin-orb chat-signin-orb-a" />
+          <span className="chat-signin-orb chat-signin-orb-b" />
+          <span className="chat-signin-orbit chat-signin-orbit-a" />
+          <span className="chat-signin-orbit chat-signin-orbit-b" />
+        </div>
+
+        <div className="chat-signin-chrome">
+          <div className="chat-signin-wordmark">
+            <span className="chat-signin-mark"><Icon name="message" size={17} /></span>
+            <span>QUORLYTH <i>/</i> MESSAGES</span>
+          </div>
+          <span className="chat-signin-access"><i /> MEMBER SPACE</span>
+        </div>
+
+        <div className="chat-signin-layout">
+          <div className="chat-signin-copy">
+            <p className="chat-signin-overline"><i /> PRIVATE CONVERSATIONS, BUILT FOR GOOD IDEAS</p>
+            <h1 id="chat-signin-title">Ideas move<br /><span>when we talk.</span></h1>
+            <p className="chat-signin-description">
+              Start a private conversation, bring your collaborators together, and give good ideas room to grow.
+            </p>
+
+            <div className="chat-signin-actions">
+              <button className="chat-signin-cta" onClick={() => nav('/signin')}>
+                <span className="chat-signin-cta-copy">
+                  <b>Enter your messages</b>
+                  <small>Sign in to your Quorlyth space</small>
+                </span>
+                <span className="chat-signin-cta-icon" aria-hidden="true"><Icon name="arrow" size={18} /></span>
+              </button>
+              <div className="chat-signin-assurance">
+                <span className="chat-signin-lock"><Icon name="lock" size={15} /></span>
+                <span><b>Private conversations</b><small>A quieter space for you and your collaborators.</small></span>
+              </div>
+            </div>
+
+            <div className="chat-signin-features" aria-label="Messaging features">
+              <div><span>01</span><b>Direct</b><small>One-to-one</small></div>
+              <div><span>02</span><b>Together</b><small>Group chats</small></div>
+              <div><span>03</span><b>In sync</b><small>Live messages</small></div>
+            </div>
+          </div>
+
+          <div className="chat-signin-visual" role="img" aria-label="Illustrated preview of a Quorlyth conversation">
+            <div className="chat-signin-visual-halo" aria-hidden="true" />
+            <div className="chat-signin-float-pill chat-signin-float-pill-top" aria-hidden="true">
+              <span className="chat-signin-float-icon"><Icon name="lock" size={15} /></span>
+              <span><b>Private by design</b><small>A space that feels like yours</small></span>
+            </div>
+
+            <div className="chat-signin-preview" aria-hidden="true">
+              <div className="chat-signin-preview-top">
+                <span className="chat-signin-window-controls"><i /><i /><i /></span>
+                <span>QUORLYTH <i>/</i> MESSAGES</span>
+                <span className="chat-signin-preview-lock"><Icon name="lock" size={13} /></span>
+              </div>
+              <div className="chat-signin-preview-heading">
+                <span className="chat-signin-avatar">Q</span>
+                <span className="chat-signin-preview-title"><small>A SPACE FOR IDEAS</small><b>Good things, in progress</b></span>
+                <span className="chat-signin-preview-presence"><i /> PRIVATE</span>
+              </div>
+              <div className="chat-signin-preview-time"><span>MONDAY · 9:41 AM</span></div>
+              <div className="chat-signin-preview-message chat-signin-preview-message-in">
+                <span className="chat-signin-avatar-small">Q</span>
+                <span><small>IN THE ROOM</small><b>What if we made this together?</b><time>9:41</time></span>
+              </div>
+              <div className="chat-signin-preview-message chat-signin-preview-message-out">
+                <span><b>That’s exactly where it should start.</b><time>9:42</time></span>
+              </div>
+              <div className="chat-signin-preview-composer">
+                <span>Write something worth sharing…</span>
+                <i><Icon name="arrow-up" size={16} /></i>
+              </div>
+              <div className="chat-signin-preview-foot"><span>AN ILLUSTRATION OF YOUR SPACE</span><span>01 — 03</span></div>
+            </div>
+
+            <div className="chat-signin-float-pill chat-signin-float-pill-bottom" aria-hidden="true">
+              <span className="chat-signin-float-icon"><Icon name="users" size={15} /></span>
+              <span><b>One-to-one or together</b><small>Good ideas grow in good company</small></span>
+            </div>
+          </div>
+        </div>
+
+        <div className="chat-signin-footer"><span>QUORLYTH MESSAGES</span><span>Make room for what comes next.</span><span>01 / PRIVATE SPACE</span></div>
+      </section>
+    </>
+  )
 
   return (
     <div className="chat-page">
       <div className="chat-topline"><div className="chat-page-heading"><span className="chat-heading-mark"><Icon name="message" size={17} /></span><div><h2 className="chat-title">Messages</h2><p className="mut">Your conversations, thoughtfully connected</p></div></div><div className="chat-top-actions"><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="users" size={16} />New group</button><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="plus" size={16} />New conversation</button></div></div>
       {error && <div className="chat-error" role="alert"><Icon name="alert" size={16} />{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
       <div className={cn('chat-workspace', 'size-' + workspaceSize, (peopleOpen || groupOpen || settingsOpen || profileOpen) && 'with-sidepanel')}>
+        <nav className="chat-scene-rail" aria-label="Messaging navigation">
+          <button className={cn('chat-utility-item', !peopleOpen && !groupOpen && !settingsOpen && !profileOpen && 'on')} title="Chats" aria-label="Chats" onClick={() => { setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setConversationFilter('all') }}><Icon name="message" size={16} /><span>Chats</span></button>
+          <button className="chat-utility-item chat-call-rail" type="button" disabled title="Voice calls are not available yet" aria-label="Voice calls are not available yet"><Icon name="phone" size={16} /><span>Calls</span></button>
+          <button className={cn('chat-utility-item', peopleOpen && 'on')} title="Contacts" aria-label="Contacts" onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="users" size={16} /><span>Contacts</span></button>
+          <button className={cn('chat-utility-item', settingsOpen && 'on')} title="Settings" aria-label="Settings" onClick={() => { setSettingsOpen(true); setPeopleOpen(false); setGroupOpen(false); setProfileOpen(false) }}><Icon name="settings" size={16} /><span>Settings</span></button>
+          <span className="chat-rail-spacer" aria-hidden="true" />
+          <button className={cn('chat-rail-avatar', profileOpen && 'on')} title="Your profile" aria-label="Your profile" onClick={() => { setProfileOpen(true); setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false) }}><Av id={meId} size={30} /></button>
+          <button className="chat-utility-item chat-logout" title="Logout" aria-label="Logout" onClick={() => void signOut()}><Icon name="logout" size={16} /><span>Logout</span></button>
+        </nav>
         <aside className={cn('glass chat-sidebar', active && 'has-active')}>
-          <nav className="chat-utility-nav" aria-label="Messaging navigation">
-            <button className={cn('chat-utility-item', !peopleOpen && !groupOpen && !settingsOpen && !profileOpen && 'on')} onClick={() => { setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setConversationFilter('all') }}><Icon name="message" size={16} /><span>Chats</span></button>
-            <button className={cn('chat-utility-item', peopleOpen && 'on')} onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="users" size={16} /><span>People</span></button>
-            <button className={cn('chat-utility-item', profileOpen && 'on')} onClick={() => { setProfileOpen(true); setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false) }}><Icon name="member" size={16} /><span>Profile</span></button>
-            <button className={cn('chat-utility-item', settingsOpen && 'on')} onClick={() => { setSettingsOpen(true); setPeopleOpen(false); setGroupOpen(false); setProfileOpen(false) }}><Icon name="settings" size={16} /><span>Settings</span></button>
-          </nav>
-          <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
-          <label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" /></label>
-          <div className="chat-filter-tabs" role="group" aria-label="Filter conversations"><button className={cn(conversationFilter === 'all' && 'on')} onClick={() => setConversationFilter('all')}>All</button><button className={cn(conversationFilter === 'groups' && 'on')} onClick={() => setConversationFilter('groups')}>Groups</button><button className={cn(conversationFilter === 'unread' && 'on')} onClick={() => setConversationFilter('unread')}>Unread</button></div>
+          <div className="chat-search-toolbar"><label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search" /></label><div className="chat-inbox-actions"><button className="chat-icon-btn chat-rail-home" onClick={() => nav('/dashboard')} title="Back to Quorlyth" aria-label="Back to Quorlyth"><Icon name="home" size={16} /></button><button className={cn('chat-icon-btn', 'chat-profile-btn', profileOpen && 'on')} title="Your profile" aria-label="Your profile" onClick={() => { setProfileOpen(true); setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false) }}><Av id={meId} size={23} /></button><button className={cn('chat-icon-btn', 'chat-filter-toggle', filtersOpen && 'on')} title={filtersOpen ? 'Hide chat filters' : 'Show chat filters'} aria-label={filtersOpen ? 'Hide chat filters' : 'Show chat filters'} aria-expanded={filtersOpen} onClick={() => setFiltersOpen(open => !open)}><Icon name="sliders" size={16} /></button><button className="chat-icon-btn" title="Create a group" aria-label="Create a group" onClick={() => { setGroupOpen(true); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="users" size={16} /></button><button className="chat-icon-btn" title="New conversation" aria-label="New conversation" onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="plus" size={18} /></button></div></div>
+          <div className="chat-sidebar-head"><div><h3>Chats <span>{conversations.length || ''}</span></h3></div></div>
+          <div className={cn('chat-filter-tabs', filtersOpen && 'open')} role="group" aria-label="Filter conversations"><button className={cn(conversationFilter === 'all' && 'on')} onClick={() => setConversationFilter('all')}>All</button><button className={cn(conversationFilter === 'groups' && 'on')} onClick={() => setConversationFilter('groups')}>Groups</button><button className={cn(conversationFilter === 'unread' && 'on') } onClick={() => setConversationFilter('unread')}>Unread</button></div>
           <div className="chat-conversation-list">{conversations.filter(c => conversationFilter === 'all' || (conversationFilter === 'groups' ? c.type === 'group' : unreadCount(c) > 0)).filter(c => titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())).map(c => {
             const last = lastMessage(c), unread = unreadCount(c)
             return <div key={c.id} role="button" tabIndex={0} className={cn('chat-conversation', active?.id === c.id && 'active', unread > 0 && 'unread')} onClick={() => nav('/messages/' + c.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav('/messages/' + c.id) } }}>
@@ -193,19 +324,21 @@ export function Messages() {
             <header className="chat-thread-head"><button className="chat-back-mobile" onClick={() => nav('/messages')} aria-label="Back to inbox"><Icon name="arrow-left" size={18} /></button>
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
-              <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
+              <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span><button className="chat-call-button" type="button" disabled title="Voice calls are not available yet" aria-label="Voice calls are not available yet"><Icon name="phone" size={16} /></button>
             </header>
             <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 120 }}>
-              <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
+              {!activeMessages.length && <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>}
+              {!!activeMessages.length && <div className="chat-thread-spacer" aria-hidden="true" />}
               {activeMessages.map((m, i) => {
                 const mine = m.senderId === meId
                 const prev = activeMessages[i - 1]
                 const showAuthor = active.type === 'group' && !mine && (!prev || prev.senderId !== m.senderId)
-                return <div key={m.id} className={cn('chat-message-row', mine && 'mine', showAuthor && 'with-author')}>{showAuthor && <div className="chat-message-author"><button className="chat-author-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"}><span>{a.nm(m.senderId)}</span>{isPlatformAdmin(m.senderId) && <span className="owner-badge" title="Platform owner">✦ OWNER</span>}</button></div>}<div className="chat-message-line"><button className="chat-avatar-link message-avatar-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"} aria-label={'View ' + a.nm(m.senderId) + ' public profile'}><Av id={m.senderId} size={30} />{isPlatformAdmin(m.senderId) && <span className="admin-orbit" title="Platform owner">✦</span>}</button><div className={cn('chat-bubble', mine ? 'mine' : 'theirs')}><p>{m.text}</p><time>{formatTime(m.at)}</time></div></div></div>
+                const startsDay = !prev || new Date(prev.at).toDateString() !== new Date(m.at).toDateString()
+                return <Fragment key={m.id}>{startsDay && <div className="chat-day-divider"><span>{formatDay(m.at)}</span></div>}<div className={cn('chat-message-row', mine && 'mine', showAuthor && 'with-author')}>{showAuthor && <div className="chat-message-author"><button className="chat-author-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"}><span>{a.nm(m.senderId)}</span>{isPlatformAdmin(m.senderId) && <span className="owner-badge" title="Platform owner">✦ OWNER</span>}</button></div>}<div className="chat-message-line"><button className="chat-avatar-link message-avatar-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"} aria-label={'View ' + a.nm(m.senderId) + ' public profile'}><Av id={m.senderId} size={30} />{isPlatformAdmin(m.senderId) && <span className="admin-orbit" title="Platform owner">✦</span>}</button><div className={cn('chat-bubble', mine ? 'mine' : 'theirs')}><p>{m.text}</p><time>{formatTime(m.at)}</time></div></div></div></Fragment>
               })}
               <div ref={bottom} />
             </div>
-            <form className="chat-composer" onSubmit={sendMessage}><div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
+            <form className="chat-composer" onSubmit={sendMessage}><div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Message" aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
           </> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'spark'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
             <>Every great thing<br />starts somewhere.</>,
             <>One message can<br />start something real.</>,

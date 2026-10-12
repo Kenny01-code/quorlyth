@@ -47,6 +47,7 @@ function MissingRoute() {
 export default function App() {
   const a = useApp()
   const loc = useLocation()
+  const focusMessages = !!a.me && (loc.pathname === '/messages' || loc.pathname.startsWith('/messages/'))
   const nav = useNavigate()
   const [palette, setPalette] = useState(false)
   const [keys, setKeys] = useState(false)
@@ -153,10 +154,10 @@ export default function App() {
   return (
     <>
       <div id="sp" />
-      {intro && <Intro replay={replay} onDone={() => { setIntro(false); sessionStorage.setItem('qintro', '1') }} />}
-      <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
-      {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin') }}>Sign in</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
-      <main id="main">
+      {intro && !focusMessages && <Intro replay={replay} onDone={() => { setIntro(false); sessionStorage.setItem('qintro', '1') }} />}
+      {!focusMessages && <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />}
+      {a.demo && !focusMessages && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin') }}>Sign in</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
+      <main id="main" className={focusMessages ? 'messages-focus-mode' : undefined}>
         <section className="on">
           <Suspense fallback={<div className="route-loading" role="status" aria-label="Loading page"><span className="ast-ld"><i /><i /><i /></span></div>}>
             <Routes>
@@ -187,7 +188,7 @@ export default function App() {
       {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); if (n) chime() }} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
-      <Suspense fallback={null}><QuorlythBot /></Suspense>
+      {!focusMessages && <Suspense fallback={null}><QuorlythBot /></Suspense>}
       <Toast />
     </>
   )
