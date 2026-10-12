@@ -5,6 +5,8 @@ import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
 import { CropModal } from '../components/CropModal'
 import { ShareCard } from '../components/ShareCard'
+import { Heat, Funnel, TopList } from '../components/Charts'
+import { useChartSettings, TITLES } from '../lib/chartSettings'
 import { IdeaCard } from '../components/IdeaCard'
 import { Av, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
@@ -22,6 +24,7 @@ function Mine() {
   const nav = useNavigate()
   const me = a.me!
   const us = useUserState()
+  const { cs } = useChartSettings()
   const saved = a.data.ideas.filter(i => us.st.saved?.[i.id])
   const q = a.data.profiles[me.id] || { id: me.id }
   const profileBase = { name: q.name || '', head: q.head || '', bio: q.bio || '' }
@@ -39,22 +42,17 @@ function Mine() {
   const communityBackings = communityIdeas.reduce((n, i) => n + a.votesOf(i.id), 0)
   const shareReady = communityIdeas.filter(i => a.statusOf(i.id) === 'promoted').length
   const selectedIdeas = communityIdeas.filter(i => a.statusOf(i.id) === 'selected').length
-  const arrivalSeries = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date()
-    date.setHours(0, 0, 0, 0)
-    date.setDate(date.getDate() - (6 - index))
-    const next = new Date(date)
-    next.setDate(next.getDate() + 1)
-    return { label: date.toLocaleDateString([], { weekday: 'short' }), count: communityIdeas.filter(i => i.at >= date.getTime() && i.at < next.getTime()).length }
-  })
-  const maxArrivals = Math.max(1, ...arrivalSeries.map(day => day.count))
-  const topContributors = Object.values(communityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
+  const contributorStats = Object.values(communityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
     const current = acc[idea.authorId] || { id: idea.authorId, ideas: 0, backings: 0 }
     current.ideas += 1
     current.backings += a.votesOf(idea.id)
     acc[idea.authorId] = current
     return acc
-  }, {})).sort((x, y) => y.backings - x.backings || y.ideas - x.ideas).slice(0, 5)
+  }, {}))
+  const contributorSource = Object.fromEntries(contributorStats.map(person => [person.id, cs.top.m === 'backs' ? person.backings : person.ideas])) as Record<string, number>
+  const contributorIds = Object.keys(contributorSource).sort((x, y) => contributorSource[y] - contributorSource[x]).slice(0, cs.top.n)
+  const communityMemberIds = new Set<string>()
+  Object.entries(a.data.members).forEach(([uid, memberships]) => { if (Object.entries(memberships || {}).some(([cid, joined]) => joined && communityIds.has(cid))) communityMemberIds.add(uid) })
   const url = location.origin + '/me/' + me.id
   const photo = photoPreview || q.photo || q.authAvatarUrl || me.avatarUrl || ''
   const avatarName = a.nm(me.id)
@@ -74,31 +72,20 @@ function Mine() {
       <Head kicker="My space" title="Your profile." right={<><button className="btn" onClick={() => nav('/me/' + me.id)}><Icon name="review" size={16} />View public profile</button>{' '}<button className="btn" onClick={() => a.backend?.auth.signOut()}><Icon name="private" size={16} />Sign out</button></>} />
       {/* Keep the requested live visuals directly below the page header so they are immediately visible. */}
       <section className="myspace-live-insights" aria-label="Live community insights">
-        <div className="profile-section-heading"><div><p className="dim">LIVE COMMUNITY PULSE</p><h3>When ideas arrive</h3><p className="mut">New ideas across your communities, refreshed as shared data updates.</p></div><span className="profile-section-mark"><Icon name="insight" size={19} /></span></div>
-        <div className="myspace-visual-grid">
-          <article className="glass myspace-visual-card myspace-arrivals-card">
-            <div className="myspace-visual-overline"><span className="myspace-live-dot" />LAST 7 DAYS <b>{arrivalSeries.reduce((n, day) => n + day.count, 0)} IDEAS</b></div>
-            <div className="myspace-arrival-chart" role="img" aria-label={arrivalSeries.map(day => day.label + ': ' + day.count + ' ideas').join(', ')}>
-              {arrivalSeries.map((day, index) => <div className="myspace-arrival-column" key={day.label + index}><span className="myspace-arrival-count">{day.count || ''}</span><div className="myspace-arrival-track"><i style={{ height: Math.max(day.count ? 14 : 4, day.count / maxArrivals * 100) + '%' }} /></div><small>{day.label}</small></div>)}
-            </div>
-            <p className="myspace-visual-foot">{communityIdeas.length ? 'Live activity from ' + communities.length + ' community spaces.' : 'Join or create a community to start seeing idea activity here.'}</p>
-          </article>
-          <article className="glass myspace-visual-card myspace-funnel-card">
-            <div className="myspace-visual-overline">FROM MEMBER TO SHARE-READY <span className="myspace-flow-mark"><Icon name="arrow" size={14} /></span></div>
-            <div className="myspace-funnel">
-              <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-arrived" />Ideas received</span><b>{communityIdeas.length}</b></div>
-              <div className="myspace-funnel-link" />
-              <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-selected" />Selected for progress</span><b>{selectedIdeas + shareReady}</b></div>
-              <div className="myspace-funnel-link" />
-              <div className="myspace-funnel-step ready"><span><i className="myspace-stage-dot stage-ready" />Share-ready</span><b>{shareReady}</b></div>
-            </div>
-            <p className="myspace-visual-foot">A live view of ideas moving through the community pipeline.</p>
-          </article>
+        <div className="grid g2" style={{ marginBottom: 18 }}>
+          <div className="glass pad">
+            <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.heat}</h3><p className="dim">By day and time, all time</p></div></div>
+            <div className="chs"><Heat ideas={communityIdeas} val={cs.heat.val} /></div>
+          </div>
+          <div className="glass pad">
+            <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.fun}</h3><p className="dim">How people move through your space</p></div></div>
+            <div className="chs"><Funnel rows={[['Members', communityMemberIds.size], ['Contributors', contributorStats.length], ['Ideas', communityIdeas.length], ['Selected', selectedIdeas + shareReady], ['Ready to share', a.data.promotions.filter(p => communityIds.has(a.data.ideas.find(i => i.id === p.ideaId)?.cid || '')).length]]} o={cs.fun} /></div>
+          </div>
         </div>
-        <article className="glass myspace-visual-card myspace-top-contributors">
-          <div className="profile-section-heading"><div><p className="dim">COMMUNITY RECOGNITION</p><h3>Top contributors</h3><p className="mut">People adding ideas and earning support across your community spaces.</p></div><span className="profile-section-mark"><Icon name="rank" size={19} /></span></div>
-          {topContributors.length ? <div className="myspace-contributor-grid">{topContributors.map((person, index) => <button key={person.id} className="myspace-contributor" onClick={() => nav('/me/' + person.id)}><span className="profile-rank">{String(index + 1).padStart(2, '0')}</span><Av id={person.id} size={37} /><span className="myspace-contributor-copy"><b>{a.nm(person.id)}{(person.id === a.data.ownerId || !!(a.data.profiles[person.id] as any)?.platformAdmin) && <span className="owner-badge">✦ OWNER</span>}{a.data.communities.some(c => (c.ownerId === person.id || c.createdBy === person.id) && c.vis !== 'unlisted') && <span className="creator-badge">✧ COMMUNITY OWNER</span>}</b><small>{person.ideas} {person.ideas === 1 ? 'idea' : 'ideas'} · {person.backings} backings</small></span><Icon name="arrow-up-right" size={15} /></button>)}</div> : <p className="mut myspace-visual-empty">Top contributors will appear as people share ideas in your communities.</p>}
-        </article>
+        <div className="glass pad">
+          <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.top}</h3><p className="dim">Your most active people</p></div></div>
+          <TopList ids={contributorIds} src={contributorSource} nm={a.nm} />
+        </div>
       </section>
       <div className="grid g2" style={{ marginBottom: 18 }}>
         <div className="glass pad">
@@ -141,6 +128,7 @@ function Mine() {
 
 function Public({ id }: { id: string }) {
   const a = useApp()
+  const { cs } = useChartSettings()
   const nav = useNavigate()
   const q = a.data.profiles[id]
   const my = a.data.ideas.filter(i => i.authorId === id).sort((x, y) => y.at - x.at)
@@ -154,23 +142,18 @@ function Public({ id }: { id: string }) {
   const communityIdeas = a.data.ideas.filter(i => activityCommunityIds.has(i.cid))
   const shareReady = communityIdeas.filter(i => a.statusOf(i.id) === 'promoted').length
   const selectedIdeas = communityIdeas.filter(i => a.statusOf(i.id) === 'selected').length
-  const arrivalSeries = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date()
-    date.setHours(0, 0, 0, 0)
-    date.setDate(date.getDate() - (6 - index))
-    const next = new Date(date)
-    next.setDate(next.getDate() + 1)
-    return { label: date.toLocaleDateString([], { weekday: 'short' }), count: communityIdeas.filter(i => i.at >= date.getTime() && i.at < next.getTime()).length }
-  })
-  const maxArrivals = Math.max(1, ...arrivalSeries.map(day => day.count))
   const communityBackings = communityIdeas.reduce((n, i) => n + a.votesOf(i.id), 0)
-  const contributors = Object.values(communityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
+  const contributorStats = Object.values(communityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
     const current = acc[idea.authorId] || { id: idea.authorId, ideas: 0, backings: 0 }
     current.ideas += 1
     current.backings += a.votesOf(idea.id)
     acc[idea.authorId] = current
     return acc
-  }, {})).sort((x, y) => y.backings - x.backings || y.ideas - x.ideas).slice(0, 5)
+  }, {}))
+  const contributorSource = Object.fromEntries(contributorStats.map(person => [person.id, cs.top.m === 'backs' ? person.backings : person.ideas])) as Record<string, number>
+  const contributorIds = Object.keys(contributorSource).sort((x, y) => contributorSource[y] - contributorSource[x]).slice(0, cs.top.n)
+  const communityMemberIds = new Set<string>()
+  Object.entries(a.data.members).forEach(([uid, memberships]) => { if (Object.entries(memberships || {}).some(([cid, joined]) => joined && activityCommunityIds.has(cid))) communityMemberIds.add(uid) })
   const isPlatformOwner = id === a.data.ownerId || !!(q as any)?.platformAdmin
   // Show the role badge even when the owner's communities are unlisted; never reveal those community names.
   const isCommunityCreator = a.data.communities.some(c => isCreatorOf(c))
@@ -192,29 +175,20 @@ function Public({ id }: { id: string }) {
         </div>
       </section>
       <section className="myspace-live-insights public-live-insights" aria-label="Live community insights">
-        <div className="profile-section-heading"><div><p className="dim">LIVE COMMUNITY PULSE</p><h3>When ideas arrive</h3><p className="mut">Live activity across this member's visible community spaces.</p></div><span className="profile-section-mark"><Icon name="insight" size={19} /></span></div>
-        <div className="myspace-visual-grid">
-          <article className="glass myspace-visual-card myspace-arrivals-card">
-            <div className="myspace-visual-overline"><span className="myspace-live-dot" />LAST 7 DAYS <b>{arrivalSeries.reduce((n, day) => n + day.count, 0)} IDEAS</b></div>
-            <div className="myspace-arrival-chart" role="img" aria-label={arrivalSeries.map(day => day.label + ': ' + day.count + ' ideas').join(', ')}>
-              {arrivalSeries.map((day, index) => <div className="myspace-arrival-column" key={day.label + index}><span className="myspace-arrival-count">{day.count || ''}</span><div className="myspace-arrival-track"><i style={{ height: Math.max(day.count ? 14 : 4, day.count / maxArrivals * 100) + '%' }} /></div><small>{day.label}</small></div>)}
-            </div>
-            <p className="myspace-visual-foot">{communityIdeas.length ? 'Live activity from ' + communities.length + ' visible community spaces.' : 'No visible community activity yet.'}</p>
-          </article>
-          <article className="glass myspace-visual-card myspace-funnel-card">
-            <div className="myspace-visual-overline">FROM MEMBER TO SHARE-READY <span className="myspace-flow-mark"><Icon name="arrow" size={14} /></span></div>
-            <div className="myspace-funnel">
-              <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-arrived" />Ideas received</span><b>{communityIdeas.length}</b></div><div className="myspace-funnel-link" />
-              <div className="myspace-funnel-step"><span><i className="myspace-stage-dot stage-selected" />Selected for progress</span><b>{selectedIdeas + shareReady}</b></div><div className="myspace-funnel-link" />
-              <div className="myspace-funnel-step ready"><span><i className="myspace-stage-dot stage-ready" />Share-ready</span><b>{shareReady}</b></div>
-            </div>
-            <p className="myspace-visual-foot">A live view of ideas moving through these visible communities.</p>
-          </article>
+        <div className="grid g2" style={{ marginBottom: 18 }}>
+          <div className="glass pad">
+            <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.heat}</h3><p className="dim">By day and time, all time</p></div></div>
+            <div className="chs"><Heat ideas={communityIdeas} val={cs.heat.val} /></div>
+          </div>
+          <div className="glass pad">
+            <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.fun}</h3><p className="dim">How people move through these visible community spaces</p></div></div>
+            <div className="chs"><Funnel rows={[['Members', communityMemberIds.size], ['Contributors', contributorStats.length], ['Ideas', communityIdeas.length], ['Selected', selectedIdeas + shareReady], ['Ready to share', a.data.promotions.filter(p => communityIdeas.some(i => i.id === p.ideaId)).length]]} o={cs.fun} /></div>
+          </div>
         </div>
-        <article className="glass myspace-visual-card myspace-top-contributors">
-          <div className="profile-section-heading"><div><p className="dim">COMMUNITY RECOGNITION</p><h3>Top contributors</h3><p className="mut">Members sharing ideas and earning support in visible community spaces.</p></div><span className="profile-section-mark"><Icon name="rank" size={19} /></span></div>
-          {contributors.length ? <div className="myspace-contributor-grid">{contributors.map((person, index) => <button key={person.id} className="myspace-contributor" onClick={() => nav('/me/' + person.id)}><span className="profile-rank">{String(index + 1).padStart(2, '0')}</span><Av id={person.id} size={37} /><span className="myspace-contributor-copy"><b>{a.nm(person.id)}{(person.id === a.data.ownerId || !!(a.data.profiles[person.id] as any)?.platformAdmin) && <span className="owner-badge">✦ OWNER</span>}{a.data.communities.some(c => (c.ownerId === person.id || c.createdBy === person.id) && c.vis !== 'unlisted') && <span className="creator-badge">✧ COMMUNITY OWNER</span>}</b><small>{person.ideas} {person.ideas === 1 ? 'idea' : 'ideas'} · {person.backings} backings</small></span><Icon name="arrow-up-right" size={15} /></button>)}</div> : <p className="mut myspace-visual-empty">Contributor rankings will appear as ideas and backings arrive.</p>}
-        </article>
+        <div className="glass pad">
+          <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.top}</h3><p className="dim">Your most active people in visible community spaces</p></div></div>
+          <TopList ids={contributorIds} src={contributorSource} nm={a.nm} />
+        </div>
       </section>
       {communities.length > 0 && <section className="public-created-communities">
         <div className="profile-section-heading"><div><p className="dim">OPEN THE DOOR</p><h3>Communities & share links</h3><p className="mut">Explore each community or scan its QR code to open the space.</p></div><span className="profile-section-mark"><Icon name="community" size={19} /></span></div>
