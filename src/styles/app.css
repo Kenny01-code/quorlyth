@@ -1784,3 +1784,9 @@ body > .qbot-drawer-portal.bot .cmx .danger:focus-visible {
   .astp.bot .cmx *,
   body > .qbot-drawer-portal.bot .cmx * { transition: none !important; }
 }
+
+
+/* Community-owner proof badges appear consistently in profile and space listings. */
+.community-owner-proof { display:inline-flex; align-items:center; gap:5px; color:rgba(255,255,255,.86); font-size:9px; font-weight:650; letter-spacing:.075em; white-space:nowrap; }
+.community-member-badge.community-owner-proof { border-color:rgba(255,255,255,.25); background:linear-gradient(125deg,rgba(255,255,255,.12),rgba(255,255,255,.025)); color:#fff; }
+@media (prefers-reduced-motion: reduce) { .community-owner-proof { animation:none!important; transition:none!important; } }
