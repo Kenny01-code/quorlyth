@@ -172,7 +172,8 @@ function Public({ id }: { id: string }) {
     return acc
   }, {})).sort((x, y) => y.backings - x.backings || y.ideas - x.ideas).slice(0, 5)
   const isPlatformOwner = id === a.data.ownerId || !!(q as any)?.platformAdmin
-  const isCommunityCreator = created.length > 0
+  // Show the role badge even when the owner's communities are unlisted; never reveal those community names.
+  const isCommunityCreator = a.data.communities.some(c => isCreatorOf(c))
   return (
     <>
       <div className="head"><div><button className="chip" onClick={() => nav(-1)}>Back</button></div><div className="public-profile-actions">{id === a.me?.id && <button className="btn" onClick={() => nav('/me')}><Icon name="edit" size={16} />Edit profile</button>}<button className="btn" onClick={() => nav('/messages')}><Icon name="message" size={16} />Messages</button></div></div>
