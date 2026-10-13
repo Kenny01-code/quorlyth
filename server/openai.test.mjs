@@ -107,7 +107,7 @@ test('chat uses Gemini server-side and streams text as Quorlyth SSE', async () =
 
   assert.match(request.url, /gemini-3\.5-flash-lite:streamGenerateContent/)
   assert.equal(request.options.headers['x-goog-api-key'], 'test-secret')
-  assert.equal(JSON.parse(request.options.body).generationConfig.maxOutputTokens, 1024)
+  assert.equal(JSON.parse(request.options.body).generationConfig.maxOutputTokens, 768)
   assert.match(res.output, /"t":"Hello"/)
   assert.match(res.output, /"done":true/)
 })

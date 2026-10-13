@@ -35,13 +35,30 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
 
   useEffect(() => {
     const m = main.current!, w = wrap.current!, th = thumb.current!
-    let tm: number, dragging = false, moved = false, sx = 0, s0 = 0
+    let tm = 0, initialMeasure = 0, dragging = false, moved = false, sx = 0, s0 = 0
     const upd = () => {
-      const o = m.scrollWidth > m.clientWidth + 2
-      w.classList.toggle('ov', o)
-      if (o) { th.style.width = (m.clientWidth / m.scrollWidth) * 100 + '%'; th.style.transform = `translateX(${(m.scrollLeft / m.clientWidth) * 100}%)` }
+      const maxScroll = Math.max(0, m.scrollWidth - m.clientWidth)
+      const overflowing = maxScroll > 2
+      w.classList.toggle('ov', overflowing)
+      if (!overflowing) {
+        th.style.width = '0%'
+        th.style.transform = 'translateX(0)'
+        return
+      }
+      const thumbRatio = Math.min(1, m.clientWidth / m.scrollWidth)
+      const trackWidth = th.parentElement?.clientWidth || w.clientWidth
+      const thumbWidth = thumbRatio * trackWidth
+      const travel = Math.max(0, trackWidth - thumbWidth)
+      const progress = Math.max(0, Math.min(1, m.scrollLeft / maxScroll))
+      th.style.width = (thumbRatio * 100) + '%'
+      th.style.transform = `translateX(${progress * travel}px)`
     }
-    const onScroll = () => { upd(); w.classList.add('sc'); clearTimeout(tm); tm = window.setTimeout(() => w.classList.remove('sc'), 1100) }
+    const onScroll = () => {
+      upd()
+      w.classList.add('sc')
+      window.clearTimeout(tm)
+      tm = window.setTimeout(() => w.classList.remove('sc'), 1100)
+    }
     const wheel = (e: WheelEvent) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && m.scrollWidth > m.clientWidth) { e.preventDefault(); m.scrollLeft += e.deltaY } }
     const down = (e: PointerEvent) => { if (e.pointerType !== 'mouse') return; dragging = true; moved = false; sx = e.clientX; s0 = m.scrollLeft }
     const move = (e: PointerEvent) => { if (!dragging) return; const d = e.clientX - sx; if (Math.abs(d) > 5) moved = true; m.scrollLeft = s0 - d }
@@ -50,8 +67,8 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
     m.addEventListener('scroll', onScroll, { passive: true }); m.addEventListener('wheel', wheel, { passive: false }); m.addEventListener('pointerdown', down)
     addEventListener('pointermove', move); addEventListener('pointerup', up); m.addEventListener('click', click, true); addEventListener('resize', upd)
     const ro = 'ResizeObserver' in window ? new ResizeObserver(upd) : null; ro?.observe(m.parentElement!)
-    setTimeout(upd, 60)
-    return () => { m.removeEventListener('scroll', onScroll); m.removeEventListener('wheel', wheel); m.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); m.removeEventListener('click', click, true); removeEventListener('resize', upd); ro?.disconnect() }
+    initialMeasure = window.setTimeout(upd, 60)
+    return () => { window.clearTimeout(initialMeasure); window.clearTimeout(tm); m.removeEventListener('scroll', onScroll); m.removeEventListener('wheel', wheel); m.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); m.removeEventListener('click', click, true); removeEventListener('resize', upd); ro?.disconnect() }
   }, [])
 
   useEffect(() => {
