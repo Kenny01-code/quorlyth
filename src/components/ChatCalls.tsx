@@ -351,12 +351,20 @@ export function useChatCalls({
       setActiveCallId(null)
       return
     }
-    if (call.callerId === meId && call.state === 'ringing' && Date.now() - call.createdAt > 65000) {
-      void updateCall(call, 'ended')
+  }, [activeCall, meId, releaseMedia, updateCall, onToast])
+
+  useEffect(() => {
+    const call = activeCall
+    if (!call || call.callerId !== meId || call.state !== 'ringing') return
+    const remaining = Math.max(0, 65000 - (Date.now() - call.createdAt))
+    const timer = window.setTimeout(() => {
+      endedLocally.current.add(call.id)
       releaseMedia()
       setActiveCallId(null)
+      void updateCall(call, 'ended')
       onToast('No answer. Call ended.')
-    }
+    }, remaining)
+    return () => window.clearTimeout(timer)
   }, [activeCall, meId, releaseMedia, updateCall, onToast])
 
   useEffect(() => {
