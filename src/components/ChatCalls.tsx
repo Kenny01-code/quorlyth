@@ -62,6 +62,7 @@ export function useChatCalls({
   const peerRef = useRef<RTCPeerConnection | null>(null)
   const localRef = useRef<MediaStream | null>(null)
   const activeCallRef = useRef<string | null>(null)
+  const callsRef = useRef<CallSession[]>([])
   const processedSignals = useRef<Set<string>>(new Set())
   const pendingCandidates = useRef<RTCIceCandidateInit[]>([])
   const applyingDescription = useRef(false)
@@ -70,6 +71,7 @@ export function useChatCalls({
   const endedLocally = useRef<Set<string>>(new Set())
 
   useEffect(() => { activeCallRef.current = activeCallId }, [activeCallId])
+  useEffect(() => { callsRef.current = calls }, [calls])
 
   useEffect(() => {
     if (!store || !meId) {
@@ -102,7 +104,6 @@ export function useChatCalls({
   const otherPartyId = activeCall
     ? (activeCall.callerId === meId ? activeCall.calleeId : activeCall.callerId)
     : ''
-  const callPeerName = otherPartyId ? nameFor(otherPartyId) : ''
 
   // Incoming calls are surfaced even if the recipient is looking at another conversation.
   useEffect(() => {
@@ -382,7 +383,15 @@ export function useChatCalls({
     if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream
   }, [localStream, remoteStream, activeCall?.mode])
 
-  useEffect(() => () => releaseMedia(), [releaseMedia])
+  useEffect(() => () => {
+    const id = activeCallRef.current
+    const call = id ? callsRef.current.find(item => item.id === id) : null
+    if (call && !endedLocally.current.has(call.id) && (call.state === 'preparing' || call.state === 'ringing' || call.state === 'accepted') && store) {
+      const ended = { ...call, state: 'ended' as const, endedAt: Date.now() }
+      void store.set('calls/' + ended.id, ended).catch(error => console.warn('Could not close a call on navigation', error))
+    }
+    releaseMedia()
+  }, [releaseMedia, store])
 
   const toggleMute = () => {
     const next = !muted
