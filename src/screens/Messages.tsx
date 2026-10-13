@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { useChatCalls } from '../components/ChatCalls'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Av, Empty, Head } from '../components/ui'
@@ -93,6 +94,7 @@ export function Messages() {
   }, [store, meId])
 
   const active = conversations.find(c => c.id === conversationId) || null
+  const callUi = useChatCalls({ active, meId, store, nameFor: a.nm, onToast: a.toast })
   const isPlatformAdmin = (id: string) => id === a.data.ownerId || !!(a.data.profiles[id] as any)?.platformAdmin || (!!a.me && id === a.me.id && a.owner)
   const isCommunityCreator = (id: string) => id !== a.data.ownerId && !(a.me && id === a.me.id && a.owner) && a.data.communities.some(c => c.ownerId === id || c.createdBy === id)
   const profileLink = (id: string) => '/me/' + encodeURIComponent(id)
@@ -248,12 +250,27 @@ export function Messages() {
   useEffect(() => {
     const pane = threadBody.current
     if (!pane) return
-    if (lastConversationId.current !== active?.id) {
+    const conversationChanged = lastConversationId.current !== active?.id
+    if (conversationChanged) {
       lastConversationId.current = active?.id
       shouldStickToBottom.current = true
     }
-    if (shouldStickToBottom.current) pane.scrollTop = pane.scrollHeight
-  }, [active?.id, activeMessages.length])
+    // Follow the latest message after the message, font and composer layout have settled.
+    if (!shouldStickToBottom.current) return
+    pane.scrollTop = pane.scrollHeight
+    let secondFrame = 0
+    const firstFrame = window.requestAnimationFrame(() => {
+      if (!threadBody.current || !shouldStickToBottom.current) return
+      threadBody.current.scrollTo({ top: threadBody.current.scrollHeight, behavior: conversationChanged ? 'auto' : 'smooth' })
+      secondFrame = window.requestAnimationFrame(() => {
+        if (threadBody.current && shouldStickToBottom.current) threadBody.current.scrollTop = threadBody.current.scrollHeight
+      })
+    })
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      if (secondFrame) window.cancelAnimationFrame(secondFrame)
+    }
+  }, [active?.id, activeMessages.length, activeMessages.at(-1)?.id]
 
   async function startDirect(personId: string) {
     if (!store || !meId) return
@@ -290,9 +307,12 @@ export function Messages() {
     if (!store || !active || !meId || !draft.trim() || sending) return
     const text = draft.trim().slice(0, 4000)
     setSending(true); setError('')
+    // A message we send must land at the bottom even if older history was open.
+    shouldStickToBottom.current = true
     const id = makeId()
+    const sentAt = Math.max(Date.now(), (activeMessages.at(-1)?.at || 0) + 1)
     try {
-      await store.set('messages/' + id, { conversationId: active.id, senderId: meId, text, at: Date.now(), ...(replyToMessageId ? { replyTo: replyToMessageId } : {}) })
+      await store.set('messages/' + id, { conversationId: active.id, senderId: meId, text, at: sentAt, ...(replyToMessageId ? { replyTo: replyToMessageId } : {}) })
       setDraft('')
       setReplyToMessageId(null)
       if (textarea.current) textarea.current.style.height = 'auto'
@@ -340,10 +360,11 @@ export function Messages() {
             <header className="chat-thread-head"><button className="chat-back-mobile" onClick={() => nav('/messages')} aria-label="Back to inbox"><Icon name="arrow-left" size={18} /></button>
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
+              {callUi.controls}
               <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
               <button className="chat-icon-btn chat-thread-menu-trigger" type="button" aria-label="Conversation options" title="Conversation options" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(active.id, r.left - 205, r.bottom + 6) }}><Icon name="more" size={18} /></button>
             </header>
-            <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 120 }}>
+            <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 150 }}>
               <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
               {activeMessages.filter(m => !messageHides.some(h => h.messageId === m.id && h.userId === meId)).map((m, i, renderedMessages) => {
                 const mine = m.senderId === meId
@@ -412,6 +433,7 @@ export function Messages() {
         <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-me', m) }}><Icon name="eye" size={15} />Delete for me</button>
         {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-all', m) }}><Icon name="trash" size={15} />Delete for everyone</button>}
       </div></>}
+      {callUi.overlay}
       <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
     </div>
   )
