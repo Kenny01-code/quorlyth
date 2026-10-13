@@ -6,7 +6,7 @@ import { useApp } from '../data/AppProvider'
 import { cn } from '../lib/util'
 import { Av } from './ui'
 
-const ITEMS: { path: string; label: string; icon: string; owner?: boolean; communityOwner?: boolean; guest?: boolean }[] = [
+const ITEMS: { path: string; label: string; icon: string; owner?: boolean; communityOwner?: boolean; platformOwnerOnly?: boolean; guest?: boolean }[] = [
   { path: '/', label: 'Home', icon: 'audience' },
   { path: '/demo', label: 'Try demo', icon: 'spark', guest: true },
   { path: '/signin', label: 'Sign in', icon: 'private', guest: true },
@@ -19,7 +19,7 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/promote', label: 'Promote', icon: 'promote', owner: true },
   { path: '/settings', label: 'Settings', icon: 'settings', owner: true },
   { path: '/me', label: 'My space', icon: 'member' },
-  { path: '/database', label: 'Database', icon: 'db', owner: true },
+  { path: '/database', label: 'Database', icon: 'db', owner: true, platformOwnerOnly: true },
 ]
 
 export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests, accessSent, demo, onDemo, onReplay }: { onSearch: () => void; onBell: () => void; unread: number; pendingRequests: number; unreadRequests: number; accessSent: boolean; demo: boolean; onDemo: () => void; onReplay: () => void }) {
@@ -28,6 +28,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   const app = useApp()
   const { me, owner } = app
   const communityOwner = !!me && app.data.communities.some(c => app.ownsCommunity(c.id))
+  const workspaceManager = owner || communityOwner
   const main = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const thumb = useRef<HTMLElement>(null)
@@ -82,7 +83,12 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
       <b>QUORLYTH</b>
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
-          {ITEMS.filter(i => demo ? (!i.owner || owner) && (!i.communityOwner || owner || communityOwner) && i.path !== '/demo' && i.path !== '/database' && i.path !== '/signin' : me ? (!i.owner || owner) && (!i.communityOwner || owner || communityOwner) && !i.guest : ['/', '/demo', '/signin'].includes(i.path)).map(i => (
+          {ITEMS.filter(i => {
+            if (i.platformOwnerOnly) return !!owner && !demo
+            if (demo) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
+            if (me) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
+            return ['/', '/demo', '/signin'].includes(i.path)
+          }).map(i => (
             <button key={i.path} className={cn(active(i.path) && 'on')} onClick={() => i.path === '/demo' ? onDemo() : nav(i.path === '/settings' && unreadRequests ? '/settings?tab=requests' : i.path)} title={i.label} aria-label={i.path === '/settings' && pendingRequests ? `${i.label}, ${pendingRequests} pending access requests` : i.path === '/access' && accessSent ? `${i.label}, request sent` : i.label} style={{ position: 'relative' }}>
               <Icon name={i.icon} size={18} /><span>{i.label}</span>
               {i.path === '/settings' && pendingRequests > 0 && <b className={cn('nav-count', unreadRequests > 0 && 'pulse')}>{pendingRequests > 9 ? '9+' : pendingRequests}</b>}

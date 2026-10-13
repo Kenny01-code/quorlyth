@@ -32,14 +32,18 @@ function Inner() {
   const [pub, setPub] = useState<string | null>(null)
   const ta = useRef<HTMLTextAreaElement>(null)
   const ctl = useRef<AbortController | null>(null)
-  const idea = data.ideas.find(i => i.id === pid)
-  const comments = useComments(pid || null)
-  const selected = data.ideas.filter(i => a.statusOf(i.id) === 'selected')
+  const managedCommunityIds = new Set(data.communities.filter(c => a.ownsCommunity(c.id)).map(c => c.id))
+  const visibleIdeas = data.ideas.filter(i => a.owner || managedCommunityIds.has(i.cid))
+  const visibleIdeaIds = new Set(visibleIdeas.map(i => i.id))
+  const idea = visibleIdeas.find(i => i.id === pid)
+  const comments = useComments(idea ? pid : null)
+  const selected = visibleIdeas.filter(i => a.statusOf(i.id) === 'selected')
+  const visiblePromotions = data.promotions.filter(p => visibleIdeaIds.has(p.ideaId))
 
-  const pubs = data.promotions.length ? (
+  const pubs = visiblePromotions.length ? (
     <div className="glass pad" style={{ margin: '24px auto 0', maxWidth: 760 }}>
       <h3 style={{ marginBottom: 8 }}>Ready to share</h3>
-      {data.promotions.map(p => <div key={p.id} className="row" style={{ cursor: 'default', alignItems: 'flex-start' }}><Icon name="publish" /><div className="t"><p style={{ whiteSpace: 'pre-wrap' }}>{p.text}</p><p className="dim" style={{ marginTop: 6 }}>{when(p.at)}</p></div></div>)}
+      {visiblePromotions.map(p => <div key={p.id} className="row" style={{ cursor: 'default', alignItems: 'flex-start' }}><Icon name="publish" /><div className="t"><p style={{ whiteSpace: 'pre-wrap' }}>{p.text}</p><p className="dim" style={{ marginTop: 6 }}>{when(p.at)}</p></div></div>)}
     </div>
   ) : null
 
