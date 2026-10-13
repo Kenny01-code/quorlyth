@@ -25,6 +25,7 @@ function Inner() {
   const { data } = a
   const w = { o: data.settings?.wo ?? 40, f: data.settings?.wf ?? 25, r: data.settings?.wr ?? 35 }
   const managedCommunityIds = new Set(data.communities.filter(c => a.ownsCommunity(c.id)).map(c => c.id))
+  const accessibleCommunities = a.owner ? data.communities : data.communities.filter(c => managedCommunityIds.has(c.id))
   const inScope = data.ideas.filter(i => (a.owner || managedCommunityIds.has(i.cid)) && (!qc || i.cid === qc))
   const list = inScope.filter(i => ['review', 'held', 'selected'].includes(a.statusOf(i.id))).sort((x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1))
   const d = list.find(i => i.id === sel) || list[0]
@@ -32,7 +33,9 @@ function Inner() {
 
   async function run(all = false, only?: string) {
     if (status) return
-    const base = (only ? data.ideas.filter(i => i.id === only) : inScope).filter(i => a.statusOf(i.id) !== 'declined')
+    // Never let a direct single-item review escape the current user's community scope.
+    const base = (only ? inScope.filter(i => i.id === only) : inScope)
+      .filter(i => ['review', 'held', 'selected'].includes(a.statusOf(i.id)))
     const todo = all || only ? base : base.filter(i => data.reviews[i.id]?.score == null)
     if (!todo.length) { setErr(base.length ? 'Every idea here already has a review. Choose Review all again.' : 'There are no ideas to review yet.'); return }
     setErr(''); ctl.current = new AbortController()
@@ -56,7 +59,7 @@ function Inner() {
       {err && <p className="aistat" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><Icon name="alert" size={16} />{err}</p>}
       <div style={{ marginBottom: 18 }}>
         <Chip on={!qc} onClick={() => setSp({})}>All</Chip>{' '}
-        {data.communities.map(c => <span key={c.id}><Chip on={qc === c.id} onClick={() => setSp({ c: c.id })}>{c.name}</Chip>{' '}</span>)}
+        {accessibleCommunities.map(c => <span key={c.id}><Chip on={qc === c.id} onClick={() => setSp({ c: c.id })}>{c.name}</Chip>{' '}</span>)}
       </div>
       {!list.length ? <Empty icon="queue" title="Nothing to review" text="New ideas from members will appear here." /> : d && (
         <div className="grid q">
