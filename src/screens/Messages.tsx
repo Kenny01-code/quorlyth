@@ -1,5 +1,4 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { useChatCalls } from '../components/ChatCalls'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Av, Empty, Head } from '../components/ui'
@@ -94,7 +93,6 @@ export function Messages() {
   }, [store, meId])
 
   const active = conversations.find(c => c.id === conversationId) || null
-  const callUi = useChatCalls({ active, meId, store, nameFor: a.nm, onToast: a.toast })
   const isPlatformAdmin = (id: string) => id === a.data.ownerId || !!(a.data.profiles[id] as any)?.platformAdmin || (!!a.me && id === a.me.id && a.owner)
   const isCommunityCreator = (id: string) => id !== a.data.ownerId && !(a.me && id === a.me.id && a.owner) && a.data.communities.some(c => c.ownerId === id || c.createdBy === id)
   const profileLink = (id: string) => '/me/' + encodeURIComponent(id)
@@ -360,7 +358,6 @@ export function Messages() {
             <header className="chat-thread-head"><button className="chat-back-mobile" onClick={() => nav('/messages')} aria-label="Back to inbox"><Icon name="arrow-left" size={18} /></button>
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
-              {callUi.controls}
               <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
               <button className="chat-icon-btn chat-thread-menu-trigger" type="button" aria-label="Conversation options" title="Conversation options" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(active.id, r.left - 205, r.bottom + 6) }}><Icon name="more" size={18} /></button>
             </header>
@@ -433,7 +430,6 @@ export function Messages() {
         <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-me', m) }}><Icon name="eye" size={15} />Delete for me</button>
         {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-all', m) }}><Icon name="trash" size={15} />Delete for everyone</button>}
       </div></>}
-      {callUi.overlay}
       <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
     </div>
   )
