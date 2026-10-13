@@ -3098,3 +3098,70 @@ main:has(.chat-page) > .on { min-height: calc(100dvh - 26px); }
   .chat-context-menu,.q-writing-robot-head,.q-writing-robot-eye,.q-writing-robot-glint,.q-writing-pulse { animation:none !important; }
   .q-writing-robot-button,.q-writing-modes button,.chat-context-menu > button[role="menuitem"] { transition:none !important; }
 }
+
+/* Latest-message anchoring + first-class calls: black obsidian glass, responsive at every width. */
+.chat-page .chat-thread-body { overflow-anchor: none; }
+.chat-page .chat-message-row { scroll-margin-block: 18px; }
+.chat-page .chat-call-actions { display:flex; align-items:center; gap:7px; flex:none; margin-left:auto; }
+.chat-page .chat-call-trigger {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:37px; padding:8px 11px;
+  border:1px solid rgba(255,255,255,.15); border-radius:13px; color:rgba(255,255,255,.82);
+  background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.018));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09); font-size:10px; white-space:nowrap; cursor:pointer;
+  transition:background .2s ease,border-color .2s ease,transform .2s ease,box-shadow .2s ease;
+}
+.chat-page .chat-call-trigger:hover:not(:disabled) { transform:translateY(-1px); border-color:rgba(255,255,255,.34); background:rgba(255,255,255,.1); box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 9px 22px -18px #fff; }
+.chat-page .chat-call-trigger:disabled { opacity:.35; cursor:not-allowed; }
+.q-call-veil { position:fixed; inset:0; z-index:10000; display:grid; place-items:center; padding:20px; background:rgba(0,0,0,.74); -webkit-backdrop-filter:blur(24px) saturate(115%); backdrop-filter:blur(24px) saturate(115%); animation:qCallFadeIn .2s ease both; }
+.q-call-panel { position:relative; display:flex; flex-direction:column; gap:16px; width:min(620px,100%); max-height:min(88dvh,900px); overflow:auto; padding:clamp(17px,3vw,25px); border:1px solid rgba(255,255,255,.24); border-radius:29px; color:#fff; background:radial-gradient(ellipse 100% 44% at 50% 0%,rgba(255,255,255,.12),transparent 76%),linear-gradient(145deg,rgba(29,29,29,.98),rgba(4,4,4,.99) 65%); box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(255,255,255,.035),0 36px 120px rgba(0,0,0,.8); }
+.q-call-head { display:flex; align-items:center; justify-content:space-between; gap:16px; min-width:0; }
+.q-call-head > div { min-width:0; }
+.q-call-eyebrow { color:rgba(255,255,255,.43); font-size:9px; letter-spacing:.18em; }
+.q-call-head h2 { margin-top:5px; font-size:clamp(20px,3vw,27px); font-weight:500; letter-spacing:-.04em; overflow-wrap:anywhere; }
+.q-call-state { display:inline-flex; align-items:center; gap:7px; flex:none; padding:7px 10px; border:1px solid rgba(255,255,255,.1); border-radius:999px; color:rgba(255,255,255,.63); background:rgba(255,255,255,.035); font-size:10px; }
+.q-call-state i { width:6px; height:6px; border-radius:50%; background:#8c8c8c; box-shadow:0 0 9px rgba(255,255,255,.24); }
+.q-call-state.is-live i { background:#fff; box-shadow:0 0 12px rgba(255,255,255,.8); animation:qCallPulse 1.3s ease-in-out infinite; }
+.q-call-error { padding:10px 12px; border:1px solid rgba(255,255,255,.16); border-radius:13px; color:rgba(255,255,255,.82); background:rgba(255,255,255,.045); font-size:11px; line-height:1.6; }
+.q-call-video-stage { position:relative; min-height:240px; aspect-ratio:16/9; overflow:hidden; border:1px solid rgba(255,255,255,.16); border-radius:22px; background:radial-gradient(ellipse at center,rgba(255,255,255,.08),transparent 70%),#050505; box-shadow:inset 0 1px 0 rgba(255,255,255,.1); }
+.q-call-remote-video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#050505; }
+.q-call-local-video { position:absolute; right:13px; bottom:13px; width:clamp(95px,23%,175px); aspect-ratio:4/3; object-fit:cover; border:1px solid rgba(255,255,255,.48); border-radius:15px; background:#171717; box-shadow:0 10px 30px rgba(0,0,0,.55); transform:scaleX(-1); }
+.q-call-video-placeholder { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; color:rgba(255,255,255,.85); pointer-events:none; }
+.q-call-video-placeholder b { font-size:14px; font-weight:500; }
+.q-call-video-placeholder small { color:rgba(255,255,255,.46); font-size:10px; }
+.q-call-avatar { display:grid; place-items:center; width:66px; height:66px; border:1px solid rgba(255,255,255,.28); border-radius:23px; color:rgba(255,255,255,.89); background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.025)),#090909; box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 0 40px -20px #fff; }
+.q-call-voice-stage { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; min-height:250px; padding:20px; border:1px solid rgba(255,255,255,.1); border-radius:22px; background:radial-gradient(ellipse 60% 65% at 50% 20%,rgba(255,255,255,.07),transparent 80%),rgba(0,0,0,.4); text-align:center; }
+.q-call-avatar-large { width:86px; height:86px; border-radius:29px; }
+.q-call-voice-stage h3 { font-size:20px; font-weight:500; }
+.q-call-voice-stage p { color:rgba(255,255,255,.5); font-size:11px; }
+.q-call-soundwave { display:flex; align-items:center; justify-content:center; gap:5px; height:26px; margin-top:5px; }
+.q-call-soundwave i { width:3px; height:9px; border-radius:4px; background:rgba(255,255,255,.7); animation:qCallWave .9s ease-in-out infinite alternate; }
+.q-call-soundwave i:nth-child(2),.q-call-soundwave i:nth-child(6) { animation-delay:.13s;height:15px; }
+.q-call-soundwave i:nth-child(3),.q-call-soundwave i:nth-child(5) { animation-delay:.26s;height:21px; }
+.q-call-soundwave i:nth-child(4) { animation-delay:.39s;height:12px; }
+.q-call-actions { display:flex; justify-content:center; align-items:center; gap:9px; flex-wrap:wrap; }
+.q-call-control,.q-call-accept,.q-call-decline,.q-call-hangup { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:10px 14px; border:1px solid rgba(255,255,255,.17); border-radius:14px; color:rgba(255,255,255,.84); background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.025)); font-size:11px; cursor:pointer; transition:transform .18s ease,border-color .18s ease,background .18s ease; }
+.q-call-control:hover,.q-call-accept:hover,.q-call-decline:hover,.q-call-hangup:hover { transform:translateY(-1px); border-color:rgba(255,255,255,.38); }
+.q-call-control.is-on { border-color:rgba(255,255,255,.36); background:rgba(255,255,255,.14); }
+.q-call-accept { color:#090909; border-color:#fff; background:linear-gradient(145deg,#fff,#ddd); font-weight:600; }
+.q-call-decline,.q-call-hangup { border-color:rgba(255,255,255,.27); background:rgba(255,255,255,.09); }
+.q-call-audio-sink { position:absolute; width:1px; height:1px; opacity:.001; pointer-events:none; }
+@keyframes qCallFadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes qCallPulse { 50% { opacity:.45; transform:scale(.86); } }
+@keyframes qCallWave { from { transform:scaleY(.55); opacity:.5; } to { transform:scaleY(1.08); opacity:1; } }
+@media (max-width:760px) {
+  .chat-page .chat-thread-head { gap:8px; }
+  .chat-page .chat-call-actions { gap:5px; }
+  .chat-page .chat-call-trigger { width:38px; min-height:37px; padding:0; gap:0; }
+  .chat-page .chat-call-trigger span { display:none; }
+  .chat-page .chat-private-label { display:none; }
+  .q-call-veil { align-items:end; padding:10px; }
+  .q-call-panel { border-radius:24px; padding:16px; gap:13px; max-height:calc(100dvh - 20px); }
+  .q-call-video-stage { min-height:220px; }
+  .q-call-voice-stage { min-height:210px; }
+  .q-call-actions { gap:7px; }
+  .q-call-control,.q-call-accept,.q-call-decline,.q-call-hangup { min-height:43px; padding:9px 11px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .q-call-veil,.q-call-state.is-live i,.q-call-soundwave i { animation:none!important; }
+  .chat-page .chat-call-trigger,.q-call-control,.q-call-accept,.q-call-decline,.q-call-hangup { transition:none!important; }
+}
