@@ -206,19 +206,19 @@ function Detail({ cid }: { cid: string }) {
         </div>
       )}
 
-      {tab === 3 && own && <Insights cid={cid} />}
+      {tab === 3 && own && <Insights cid={cid} creatorId={communityCreatorId} />}
       {tab === 4 && own && <CommunitySettings c={c} />}
     </>
   )
 }
 
-function Insights({ cid }: { cid: string }) {
+function Insights({ cid, creatorId }: { cid: string; creatorId: string }) {
   const a = useApp()
   const nav = useNavigate()
   const ideas = a.data.ideas.filter(i => i.cid === cid)
   const au: Record<string, number> = {}
   let bk = 0
-  ideas.forEach(i => { au[i.authorId] = (au[i.authorId] || 0) + 1; bk += a.votesOf(i.id) })
+  ideas.forEach(i => { if (i.authorId !== creatorId) au[i.authorId] = (au[i.authorId] || 0) + 1; bk += a.votesOf(i.id) })
   const top = Object.keys(au).sort((x, y) => au[y] - au[x]).slice(0, 5)
   return (
     <>
