@@ -145,7 +145,7 @@ export function Messages() {
     setMessageMenu({ messageId: id, x: Math.max(12, Math.min(x, window.innerWidth - 245)), y: Math.max(12, Math.min(y, window.innerHeight - 360)) })
   }
 
-  async function actOnConversation(action: 'pin' | 'folder' | 'mute' | 'delete' | 'unread' | 'read') {
+  async function actOnConversation(action: 'pin' | 'archive' | 'mute' | 'delete' | 'unread' | 'read') {
     const id = conversationMenu?.conversationId
     if (!id || !store || !meId) return
     const pref = preferenceFor(id)
@@ -159,7 +159,7 @@ export function Messages() {
       } else if (action === 'pin') {
         await saveChatPreference(id, { pinned: !pref?.pinned })
         a.toast(pref?.pinned ? 'Chat unpinned' : 'Chat pinned to the top')
-      } else if (action === 'folder') {
+      } else if (action === 'archive') {
         await saveChatPreference(id, { archived: !pref?.archived })
         a.toast(pref?.archived ? 'Chat restored to your inbox' : 'Chat archived')
       } else if (action === 'mute') {
@@ -175,11 +175,11 @@ export function Messages() {
     } catch (e) { setError('That chat action could not be saved. ' + readableChatError(e)) }
   }
 
-  async function actOnMessage(action: 'message' | 'copy' | 'edit' | 'delete-me' | 'delete-all' | 'react', m: Message, reaction?: string) {
+  async function actOnMessage(action: 'reply' | 'copy' | 'edit' | 'delete-me' | 'delete-all' | 'react', m: Message, reaction?: string) {
     if (!store || !meId) return
     setMessageMenu(null)
     try {
-      if (action === 'message') {
+      if (action === 'reply') {
         setReplyToMessageId(m.id)
         textarea.current?.focus()
         return
@@ -398,13 +398,13 @@ export function Messages() {
         <button role="menuitem" onClick={() => void actOnConversation('unread')}><Icon name="mail" size={15} />Mark as unread</button>
         <button role="menuitem" onClick={() => void actOnConversation('read')}><Icon name="mail" size={15} />Mark as read</button>
         <button role="menuitem" onClick={() => void actOnConversation('mute')}><Icon name={preferenceFor(conversationMenu.conversationId)?.muted ? 'bell' : 'bell'} size={15} />{preferenceFor(conversationMenu.conversationId)?.muted ? 'Unmute notifications' : 'Mute notifications'}</button>
-        <button role="menuitem" onClick={() => void actOnConversation('folder')}><Icon name={preferenceFor(conversationMenu.conversationId)?.archived ? 'folder' : 'folder'} size={15} />{preferenceFor(conversationMenu.conversationId)?.archived ? 'Restore from archive' : 'Archive chat'}</button>
+        <button role="menuitem" onClick={() => void actOnConversation('archive')}><Icon name={preferenceFor(conversationMenu.conversationId)?.archived ? 'folder' : 'folder'} size={15} />{preferenceFor(conversationMenu.conversationId)?.archived ? 'Restore from archive' : 'Archive chat'}</button>
         <div className="chat-context-divider" />
         <button role="menuitem" className="is-danger" onClick={() => void actOnConversation('delete')}><Icon name="trash" size={15} />Delete chat for me</button>
       </div></>}
       {messageMenu && activeMessages.find(m => m.id === messageMenu.messageId) && <><button className="chat-context-backdrop" aria-label="Close message options" onClick={() => setMessageMenu(null)} /><div className="chat-context-menu chat-message-context-menu" role="menu" style={{ left: messageMenu.x, top: messageMenu.y }} onClick={e => e.stopPropagation()}>
         <p>MESSAGE OPTIONS</p>
-        <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('message', m) }}><Icon name="message" size={15} />Reply to message</button>
+        <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('reply', m) }}><Icon name="message" size={15} />Reply to message</button>
         <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('copy', m) }}><Icon name="copy" size={15} />Copy text</button>
         <div className="chat-reaction-picker">{REACTIONS.map(emoji => <button type="button" key={emoji} title={'React ' + emoji} onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('react', m, emoji) }}>{emoji}</button>)}</div>
         {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('edit', m) }}><Icon name="edit" size={15} />Edit message</button>}
