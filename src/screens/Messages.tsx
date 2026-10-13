@@ -145,7 +145,7 @@ export function Messages() {
     setMessageMenu({ messageId: id, x: Math.max(12, Math.min(x, window.innerWidth - 245)), y: Math.max(12, Math.min(y, window.innerHeight - 360)) })
   }
 
-  async function actOnConversation(action: 'pin' | 'archive' | 'mute' | 'delete' | 'unread' | 'read') {
+  async function actOnConversation(action: 'pin' | 'folder' | 'mute' | 'delete' | 'unread' | 'read') {
     const id = conversationMenu?.conversationId
     if (!id || !store || !meId) return
     const pref = preferenceFor(id)
@@ -159,7 +159,7 @@ export function Messages() {
       } else if (action === 'pin') {
         await saveChatPreference(id, { pinned: !pref?.pinned })
         a.toast(pref?.pinned ? 'Chat unpinned' : 'Chat pinned to the top')
-      } else if (action === 'archive') {
+      } else if (action === 'folder') {
         await saveChatPreference(id, { archived: !pref?.archived })
         a.toast(pref?.archived ? 'Chat restored to your inbox' : 'Chat archived')
       } else if (action === 'mute') {
@@ -175,11 +175,11 @@ export function Messages() {
     } catch (e) { setError('That chat action could not be saved. ' + readableChatError(e)) }
   }
 
-  async function actOnMessage(action: 'reply' | 'copy' | 'edit' | 'delete-me' | 'delete-all' | 'react', m: Message, reaction?: string) {
+  async function actOnMessage(action: 'message' | 'copy' | 'edit' | 'delete-me' | 'delete-all' | 'react', m: Message, reaction?: string) {
     if (!store || !meId) return
     setMessageMenu(null)
     try {
-      if (action === 'reply') {
+      if (action === 'message') {
         setReplyToMessageId(m.id)
         textarea.current?.focus()
         return
@@ -326,9 +326,9 @@ export function Messages() {
               {c.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link" title={'View ' + titleOf(c) + "'s public profile"} aria-label={'View ' + titleOf(c) + ' public profile'} onClick={e => { e.stopPropagation(); nav(profileLink(c.members.find(id => id !== meId) || '')) }}><Av id={c.members.find(id => id !== meId) || ''} size={46} />{isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <span className="chat-conversation-copy"><span className="chat-conversation-title"><span className="chat-title-inline"><b>{titleOf(c)}</b>{c.type === 'direct' && isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ OWNER</span>}</span><small>{formatTime(last?.at || c.createdAt)}</small></span><span className="chat-preview">{last ? (last.senderId === meId ? 'You: ' : '') + last.text : c.type === 'group' ? c.members.length + ' people · Start the conversation' : 'Start the conversation'}</span></span>
               {pref?.pinned && <span className="chat-pin-indicator" title="Pinned chat"><Icon name="pin" size={12} /></span>}
-              {pref?.muted && <span className="chat-pin-indicator" title="Muted chat"><Icon name="bell-off" size={12} /></span>}
+              {pref?.muted && <span className="chat-pin-indicator" title="Muted chat"><Icon name="bell" size={12} /></span>}
               {unread > 0 && <span className="chat-unread-count" aria-label={unread + ' unread messages'}>{unread > 99 ? '99+' : unread}</span>}
-              <button className="chat-conversation-menu-trigger" type="button" aria-label={'Options for ' + titleOf(c)} title="Chat options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(c.id, r.right - 210, r.bottom + 4) }}><Icon name="more-horizontal" size={17} /></button>
+              <button className="chat-conversation-menu-trigger" type="button" aria-label={'Options for ' + titleOf(c)} title="Chat options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(c.id, r.right - 210, r.bottom + 4) }}><Icon name="more" size={17} /></button>
             </div>
           })}{!visibleConversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>{conversationFilter === 'archived' ? 'No archived conversations.' : 'Your inbox is a blank canvas.'}</b><p>{conversationFilter === 'archived' ? 'Chats you archive will live here until you restore them.' : 'Start a private conversation or bring your collaborators together.'}</p>{conversationFilter !== 'archived' && <button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button>}</div>}</div>
           <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Private conversations <span className="dim">· standard encryption in transit</span></div>
@@ -340,7 +340,7 @@ export function Messages() {
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
               <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
-              <button className="chat-icon-btn chat-thread-menu-trigger" type="button" aria-label="Conversation options" title="Conversation options" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(active.id, r.left - 205, r.bottom + 6) }}><Icon name="more-horizontal" size={18} /></button>
+              <button className="chat-icon-btn chat-thread-menu-trigger" type="button" aria-label="Conversation options" title="Conversation options" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(active.id, r.left - 205, r.bottom + 6) }}><Icon name="more" size={18} /></button>
             </header>
             <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 120 }}>
               <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
@@ -361,7 +361,7 @@ export function Messages() {
                       {editingMessageId === m.id ? <div className="chat-edit-block"><textarea value={editDraft} maxLength={4000} rows={3} onChange={e => setEditDraft(e.target.value)} aria-label="Edit message text" /><div><button type="button" className="chat-small-action" onClick={() => { setEditingMessageId(null); setEditDraft('') }}>Cancel</button><button type="button" className="chat-small-action is-primary" disabled={!editDraft.trim()} onClick={() => void saveMessageEdit(m)}>Save edit</button></div></div> : <p>{deleted ? 'This message was deleted.' : messageText(m)}</p>}
                       <time>{formatTime(m.at)}{messageEdits.some(edit => edit.messageId === m.id) && !deleted && ' · edited'}</time>
                     </div>
-                    <button className="chat-message-menu-trigger" type="button" aria-label="Message options" title="Message options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openMessageMenu(m.id, r.left - 215, r.top) }}><Icon name="more-horizontal" size={16} /></button>
+                    <button className="chat-message-menu-trigger" type="button" aria-label="Message options" title="Message options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openMessageMenu(m.id, r.left - 215, r.top) }}><Icon name="more" size={16} /></button>
                   </div>
                   {reactionTypes.length > 0 && !deleted && <div className="chat-message-reactions">{reactionTypes.map(emoji => <button type="button" key={emoji} className={cn('chat-reaction-pill', reactions.some(r => r.userId === meId && r.reaction === emoji) && 'mine')} onClick={() => void actOnMessage('react', m, emoji)}>{emoji}<span>{reactions.filter(r => r.reaction === emoji).length}</span></button>)}</div>}
                 </div>
@@ -394,21 +394,21 @@ export function Messages() {
       </div>
       {conversationMenu && <><button className="chat-context-backdrop" aria-label="Close chat options" onClick={() => setConversationMenu(null)} /><div className="chat-context-menu" role="menu" style={{ left: conversationMenu.x, top: conversationMenu.y }} onClick={e => e.stopPropagation()}>
         <p>CONVERSATION OPTIONS</p>
-        <button role="menuitem" onClick={() => void actOnConversation('pin')}><Icon name={preferenceFor(conversationMenu.conversationId)?.pinned ? 'pin-off' : 'pin'} size={15} />{preferenceFor(conversationMenu.conversationId)?.pinned ? 'Unpin chat' : 'Pin to top'}</button>
+        <button role="menuitem" onClick={() => void actOnConversation('pin')}><Icon name={preferenceFor(conversationMenu.conversationId)?.pinned ? 'pin' : 'pin'} size={15} />{preferenceFor(conversationMenu.conversationId)?.pinned ? 'Unpin chat' : 'Pin to top'}</button>
         <button role="menuitem" onClick={() => void actOnConversation('unread')}><Icon name="mail" size={15} />Mark as unread</button>
-        <button role="menuitem" onClick={() => void actOnConversation('read')}><Icon name="mail-check" size={15} />Mark as read</button>
-        <button role="menuitem" onClick={() => void actOnConversation('mute')}><Icon name={preferenceFor(conversationMenu.conversationId)?.muted ? 'bell' : 'bell-off'} size={15} />{preferenceFor(conversationMenu.conversationId)?.muted ? 'Unmute notifications' : 'Mute notifications'}</button>
-        <button role="menuitem" onClick={() => void actOnConversation('archive')}><Icon name={preferenceFor(conversationMenu.conversationId)?.archived ? 'archive-restore' : 'archive'} size={15} />{preferenceFor(conversationMenu.conversationId)?.archived ? 'Restore from archive' : 'Archive chat'}</button>
+        <button role="menuitem" onClick={() => void actOnConversation('read')}><Icon name="mail" size={15} />Mark as read</button>
+        <button role="menuitem" onClick={() => void actOnConversation('mute')}><Icon name={preferenceFor(conversationMenu.conversationId)?.muted ? 'bell' : 'bell'} size={15} />{preferenceFor(conversationMenu.conversationId)?.muted ? 'Unmute notifications' : 'Mute notifications'}</button>
+        <button role="menuitem" onClick={() => void actOnConversation('folder')}><Icon name={preferenceFor(conversationMenu.conversationId)?.archived ? 'folder' : 'folder'} size={15} />{preferenceFor(conversationMenu.conversationId)?.archived ? 'Restore from archive' : 'Archive chat'}</button>
         <div className="chat-context-divider" />
         <button role="menuitem" className="is-danger" onClick={() => void actOnConversation('delete')}><Icon name="trash" size={15} />Delete chat for me</button>
       </div></>}
       {messageMenu && activeMessages.find(m => m.id === messageMenu.messageId) && <><button className="chat-context-backdrop" aria-label="Close message options" onClick={() => setMessageMenu(null)} /><div className="chat-context-menu chat-message-context-menu" role="menu" style={{ left: messageMenu.x, top: messageMenu.y }} onClick={e => e.stopPropagation()}>
         <p>MESSAGE OPTIONS</p>
-        <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('reply', m) }}><Icon name="reply" size={15} />Reply to message</button>
+        <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('message', m) }}><Icon name="message" size={15} />Reply to message</button>
         <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('copy', m) }}><Icon name="copy" size={15} />Copy text</button>
         <div className="chat-reaction-picker">{REACTIONS.map(emoji => <button type="button" key={emoji} title={'React ' + emoji} onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('react', m, emoji) }}>{emoji}</button>)}</div>
-        {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('edit', m) }}><Icon name="edit-3" size={15} />Edit message</button>}
-        <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-me', m) }}><Icon name="eye-off" size={15} />Delete for me</button>
+        {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('edit', m) }}><Icon name="edit" size={15} />Edit message</button>}
+        <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-me', m) }}><Icon name="eye" size={15} />Delete for me</button>
         {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-all', m) }}><Icon name="trash" size={15} />Delete for everyone</button>}
       </div></>}
       <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
