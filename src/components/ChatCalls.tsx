@@ -83,11 +83,11 @@ export function useChatCalls({
     const offCalls = store.subscribe('calls', docs => {
       setCalls(docs.map(d => ({ id: d.id, ...d.data } as CallSession))
         .filter(c => c && typeof c.conversationId === 'string' && (c.callerId === meId || c.calleeId === meId))
-        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), report)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)))
     }, report)
     const offSignals = store.subscribe('callSignals', docs => {
       setSignals(docs.map(d => ({ id: d.id, ...d.data } as CallSignal))
-        .filter(s => typeof s.callId === 'string' && typeof s.toId === 'string' && s.toId === meId && !!s.candidate), report)
+        .filter(s => typeof s.callId === 'string' && typeof s.toId === 'string' && s.toId === meId && !!s.candidate))
     }, report)
     return () => { offCalls(); offSignals() }
   }, [store, meId])
