@@ -46,8 +46,9 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
         return
       }
       const thumbRatio = Math.min(1, m.clientWidth / m.scrollWidth)
-      const thumbWidth = thumbRatio * w.clientWidth
-      const travel = Math.max(0, w.clientWidth - thumbWidth)
+      const trackWidth = th.parentElement?.clientWidth || w.clientWidth
+      const thumbWidth = thumbRatio * trackWidth
+      const travel = Math.max(0, trackWidth - thumbWidth)
       const progress = Math.max(0, Math.min(1, m.scrollLeft / maxScroll))
       th.style.width = (thumbRatio * 100) + '%'
       th.style.transform = `translateX(${progress * travel}px)`
