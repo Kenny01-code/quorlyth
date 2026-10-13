@@ -270,7 +270,7 @@ export function Messages() {
       window.cancelAnimationFrame(firstFrame)
       if (secondFrame) window.cancelAnimationFrame(secondFrame)
     }
-  }, [active?.id, activeMessages.length, activeMessages.at(-1)?.id]
+  }, [active?.id, activeMessages.length, activeMessages.at(-1)?.id])
 
   async function startDirect(personId: string) {
     if (!store || !meId) return
