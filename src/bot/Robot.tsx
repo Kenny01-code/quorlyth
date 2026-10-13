@@ -1,5 +1,4 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { robot3d } from './robot3d'
 
 export interface RobotApi {
   set(n: string): void; wave(ms?: number): void; welcome(): void; cheer(ms?: number): void
@@ -20,13 +19,31 @@ export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolea
     setState('loading')
     const el = cv.current
     if (!el) return
-    try {
-      const R = robot3d(el, { tight: 1, drag: !!drag, theme, onerror: () => setState('fail') })
-      api.current = R
-      if (calm) R.calm(true)
-      setState('ok'); onReady?.()
-      return () => { R.dispose(); api.current = null }
-    } catch { setState('fail') }
+    let cancelled = false
+    let dispose: (() => void) | null = null
+    void import('./robot3d').then(({ robot3d }) => {
+      if (cancelled) return
+      try {
+        const R = robot3d(el, { tight: 1, drag: !!drag, theme, onerror: () => { if (!cancelled) setState('fail') } })
+        if (cancelled) { R.dispose(); return }
+        api.current = R
+        dispose = () => {
+          R.dispose()
+          if (api.current === R) api.current = null
+        }
+        if (calm) R.calm(true)
+        setState('ok')
+        onReady?.()
+      } catch {
+        if (!cancelled) setState('fail')
+      }
+    }).catch(() => {
+      if (!cancelled) setState('fail')
+    })
+    return () => {
+      cancelled = true
+      dispose?.()
+    }
   }, [try_])
 
   useEffect(() => { api.current?.theme(theme) }, [theme])
