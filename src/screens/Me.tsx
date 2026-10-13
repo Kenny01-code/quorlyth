@@ -13,6 +13,7 @@ import { useApp } from '../data/AppProvider'
 import { STATUS_LABEL } from '../lib/types'
 import { useUserState } from '../lib/userState'
 import { useDraftState } from '../lib/useDraftState'
+import { communityOwnerLookup, isCommunityOwnerContribution } from '../lib/contributors'
 
 export function Me() {
   const { id } = useParams()
@@ -39,10 +40,12 @@ function Mine() {
   const rc = my.reduce((n, i) => n + a.votesOf(i.id), 0)
   const communityIds = new Set(communities.map(c => c.id))
   const communityIdeas = a.data.ideas.filter(i => communityIds.has(i.cid))
+  const ownersByCommunity = communityOwnerLookup(a.data.communities, a.owner ? me.id : undefined)
+  const rankedCommunityIdeas = communityIdeas.filter(i => !isCommunityOwnerContribution(i, ownersByCommunity))
   const communityBackings = communityIdeas.reduce((n, i) => n + a.votesOf(i.id), 0)
   const shareReady = communityIdeas.filter(i => a.statusOf(i.id) === 'promoted').length
   const selectedIdeas = communityIdeas.filter(i => a.statusOf(i.id) === 'selected').length
-  const contributorStats = Object.values(communityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
+  const contributorStats = Object.values(rankedCommunityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
     const current = acc[idea.authorId] || { id: idea.authorId, ideas: 0, backings: 0 }
     current.ideas += 1
     current.backings += a.votesOf(idea.id)
@@ -139,10 +142,12 @@ function Public({ id }: { id: string }) {
   const communities = [...created, ...jc]
   const activityCommunityIds = new Set(communities.map(c => c.id))
   const communityIdeas = a.data.ideas.filter(i => activityCommunityIds.has(i.cid))
+  const ownersByCommunity = communityOwnerLookup(a.data.communities, id === a.me?.id && a.owner ? id : undefined)
+  const rankedCommunityIdeas = communityIdeas.filter(i => !isCommunityOwnerContribution(i, ownersByCommunity))
   const shareReady = communityIdeas.filter(i => a.statusOf(i.id) === 'promoted').length
   const selectedIdeas = communityIdeas.filter(i => a.statusOf(i.id) === 'selected').length
   const communityBackings = communityIdeas.reduce((n, i) => n + a.votesOf(i.id), 0)
-  const contributorStats = Object.values(communityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
+  const contributorStats = Object.values(rankedCommunityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
     const current = acc[idea.authorId] || { id: idea.authorId, ideas: 0, backings: 0 }
     current.ideas += 1
     current.backings += a.votesOf(idea.id)
