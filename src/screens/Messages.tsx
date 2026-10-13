@@ -86,8 +86,8 @@ export function Messages() {
     const offP = store.subscribe('chatPreferences', docs => setChatPreferences(docs.map(d => ({ id: d.id, ...d.data })).filter(p => p.userId === meId)), report)
     const offE = store.subscribe('chatMessageEdits', docs => setMessageEdits(docs.map(d => ({ id: d.id, ...d.data }))), report)
     const offT = store.subscribe('chatMessageTombstones', docs => setMessageTombstones(docs.map(d => ({ id: d.id, ...d.data }))), report)
-    const offH = store.subscribe('chatMessageHides', docs => setMessageHides(docs.map(d => ({ id: d.id, ...d.data })).filter(h => h.userId === meId), report)
-    const offReact = store.subscribe('chatMessageReactions', docs => setMessageReactions(docs.map(d => ({ id: d.id, ...d.data })).filter(r => typeof r.messageId === 'string' && typeof r.reaction === 'string' && r.reaction), report)
+    const offH = store.subscribe('chatMessageHides', docs => setMessageHides(docs.map(d => ({ id: d.id, ...d.data })).filter(h => h.userId === meId)), report)
+    const offReact = store.subscribe('chatMessageReactions', docs => setMessageReactions(docs.map(d => ({ id: d.id, ...d.data })).filter(r => typeof r.messageId === 'string' && typeof r.reaction === 'string' && r.reaction)), report)
     return () => { offC(); offM(); offR(); offP(); offE(); offT(); offH(); offReact() }
   }, [store, meId])
 
