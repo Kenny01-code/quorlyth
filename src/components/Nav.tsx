@@ -79,8 +79,8 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
 
   return (
     <nav className="glass" id="nav">
-      <button className="lgb" onClick={onReplay} title="Replay intro"><Logo size={26} /></button>
-      <b>QUORLYTH</b>
+      <button className="lgb" onClick={onReplay} title="Replay intro"><Logo size={26} breathe /></button>
+      <b className="nav-wordmark">{'QUORLYTH'.split('').map((c, i) => <span key={i} style={{ ['--word-index' as any]: i }}>{c}</span>)}</b>
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
           {ITEMS.filter(i => {
