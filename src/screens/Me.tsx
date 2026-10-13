@@ -78,7 +78,6 @@ function Mine() {
               <button className="pav" aria-label="Choose a new profile photo" title="Change profile photo" onClick={() => file.current?.click()}>
                 <span className="pav-initials" aria-hidden="true">{avatarInitials}</span>{photo && <img alt="" src={photo} onError={e => { e.currentTarget.style.display = 'none' }} />}<span className="cam"><Icon name="edit" size={14} /></span>
               </button>
-              {q.photo && <button className="profile-photo-remove" onClick={async () => { if (await a.saveProfile({ photo: '' })) setPhotoPreview('') }} aria-label="Remove profile photo" title="Remove profile photo"><Icon name="decline" size={13} /></button>}
             </div>
             <div className="myspace-role-line">{a.owner ? <span className="platform-verified-shield" title="Verified Quorlyth platform owner"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 28 7v9c0 8-4.7 13.6-12 18C8.7 29.6 4 24 4 16V7z" /><path d="m10 17 4 4 8-9" /></svg><span>VERIFIED PLATFORM OWNER</span></span> : created.length ? <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span> : <span className="chip">Member</span>}</div>
           </div>
