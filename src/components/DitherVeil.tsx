@@ -106,7 +106,7 @@ export default function DitherVeil({
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     let renderer
     try {
-      renderer = new Renderer({ dpr: Math.min(window.devicePixelRatio || 1, 2), alpha: false, antialias: false, webgl: 2 })
+      renderer = new Renderer({ dpr: Math.min(window.devicePixelRatio || 1, window.innerWidth <= 760 ? 1.4 : 1.75), alpha: false, antialias: false, webgl: 2 })
     } catch (error) {
       console.warn('Quorlyth dither background could not initialize WebGL.', error)
       return undefined
@@ -134,6 +134,7 @@ export default function DitherVeil({
       if (!pointer.placed) { pointer.x = brush.x = width / 2; pointer.y = brush.y = height / 2 }
     }
     const frame = (now) => {
+      if (document.visibilityState === 'hidden') { raf = 0; return }
       const settings = settingsRef.current
       const dpr = renderer.dpr
       const canWander = settings.wander && !reducedMotion
@@ -168,11 +169,21 @@ export default function DitherVeil({
     const onLeave = () => { pointer.inside = false }
     window.addEventListener('pointermove', onMove, { passive: true })
     window.addEventListener('pointerleave', onLeave, { passive: true })
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (raf) cancelAnimationFrame(raf)
+        raf = 0
+      } else if (!raf) {
+        raf = requestAnimationFrame(frame)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
     const resizeObserver = new ResizeObserver(layout)
     resizeObserver.observe(container); layout(); raf = requestAnimationFrame(frame)
     return () => {
       cancelAnimationFrame(raf); resizeObserver.disconnect(); image.onload = null; image.onerror = null
       window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerleave', onLeave)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
       gl.getExtension('WEBGL_lose_context')?.loseContext(); canvas.remove()
     }
   }, [src])
