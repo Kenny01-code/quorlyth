@@ -60,7 +60,7 @@ export function WritingAssistant() {
       if (target && !target.isConnected) {
         setTarget(null)
         setOpen(false)
-      } else position(target)
+      }
     })
     document.addEventListener('focusin', onFocusIn, true)
     window.addEventListener('resize', onMove)
