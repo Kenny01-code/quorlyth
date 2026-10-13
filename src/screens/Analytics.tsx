@@ -9,6 +9,7 @@ import { useApp } from '../data/AppProvider'
 import { ChartKey, ITEMS, TITLES, useChartSettings } from '../lib/chartSettings'
 import { STATUS_LABEL } from '../lib/types'
 import { cn } from '../lib/util'
+import { communityOwnerLookup, isCommunityOwnerContribution } from '../lib/contributors'
 
 export function Analytics() {
   return <Gate><Inner /></Gate>
@@ -32,6 +33,7 @@ function Inner() {
       promotions: rawData.promotions.filter(p => ideaIds.has(p.ideaId)),
     }
   }, [rawData, a.owner, ownedCommunities])
+  const ownersByCommunity = useMemo(() => communityOwnerLookup(data.communities, a.owner ? a.me?.id : undefined), [data.communities, a.owner, a.me?.id])
   const { cs, set, reset } = useChartSettings()
   const [rg, setRg] = useState(30)
   const [open, setOpen] = useState<ChartKey | null>(null)
@@ -40,14 +42,21 @@ function Inner() {
     const sc: Record<string, number> = { review: 0, selected: 0, held: 0, declined: 0, promoted: 0 }
     const auth: Record<string, number> = {}, back: Record<string, number> = {}
     let tv = 0
-    data.ideas.forEach(i => { sc[a.statusOf(i.id)]++; auth[i.authorId] = (auth[i.authorId] || 0) + 1; back[i.authorId] = (back[i.authorId] || 0) + a.votesOf(i.id); tv += a.votesOf(i.id) })
+    data.ideas.forEach(i => {
+      sc[a.statusOf(i.id)]++
+      if (!isCommunityOwnerContribution(i, ownersByCommunity)) {
+        auth[i.authorId] = (auth[i.authorId] || 0) + 1
+        back[i.authorId] = (back[i.authorId] || 0) + a.votesOf(i.id)
+      }
+      tv += a.votesOf(i.id)
+    })
     const communityIds = new Set(data.communities.map(c => c.id))
     const memberIds = new Set<string>()
     Object.entries(data.members).forEach(([uid, memberships]) => {
       if (Object.entries(memberships || {}).some(([cid, joined]) => joined && communityIds.has(cid))) memberIds.add(uid)
     })
     return { sc, auth, back, tv, mem: memberIds.size }
-  }, [data, a.statusOf, a.votesOf])
+  }, [data, a.statusOf, a.votesOf, ownersByCommunity])
 
   const daily = (n: number): Daily => {
     const d = 864e5, t0 = new Date().setHours(0, 0, 0, 0), v: number[] = [], dt: number[] = []
