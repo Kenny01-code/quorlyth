@@ -71,6 +71,12 @@ export function QuorlythBot() {
   const liveRecognition = useRef<any>(null)
   const audio = useRef<{ stop(): void } | null>(null)
   const [open, setOpen] = useState(false)
+  const [launcherHidden, setLauncherHidden] = useState(false)
+  const [showLauncherRestore, setShowLauncherRestore] = useState(false)
+  const launcherHoldTimer = useRef<number | null>(null)
+  const launcherRestoreTimer = useRef<number | null>(null)
+  const launcherHoldOrigin = useRef<{ x: number; y: number } | null>(null)
+  const launcherLongPressTriggered = useRef(false)
   const [mode, setMode] = useState<'compact' | 'large' | 'full' | 'custom'>('full')
   const [viewportNarrow, setViewportNarrow] = useState(() => window.innerWidth <= 980)
   const [side, setSide] = useState(() => window.innerWidth > 980)
@@ -168,6 +174,23 @@ export function QuorlythBot() {
     return () => clearTimeout(t)
   }, [a.ready, a.me?.id])
   useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight }, [cur?.msgs.length, busy])
+  useEffect(() => {
+    const restoreWithShortcut = (event: KeyboardEvent) => {
+      if (event.altKey && event.shiftKey && event.code === 'KeyB') {
+        event.preventDefault()
+        setLauncherHidden(false)
+        setShowLauncherRestore(false)
+        if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
+        launcherRestoreTimer.current = null
+      }
+    }
+    window.addEventListener('keydown', restoreWithShortcut)
+    return () => window.removeEventListener('keydown', restoreWithShortcut)
+  }, [])
+  useEffect(() => () => {
+    if (launcherHoldTimer.current !== null) window.clearTimeout(launcherHoldTimer.current)
+    if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
+  }, [])
 
   const accent = (cur?.color && (THEMES as any)[cur.color]) || null
   const style = accent ? ({ ['--ac1' as any]: accent.g1, ['--ac2' as any]: accent.g2, ['--acr' as any]: accent.cr } as React.CSSProperties) : undefined
@@ -179,6 +202,50 @@ export function QuorlythBot() {
     const name = a.me?.name.split(' ')[0]
     const msg = !a.me ? 'Welcome to Quorlyth. Sign in to enter your space.' : first ? `Welcome, ${name}. I am QuorlythBot, your concierge. Ask me anything, or let me show you around.` : `Welcome back, ${name}.`
     setTimeout(() => { setCaption(msg); first ? robot.current?.welcome() : robot.current?.wave(); say(msg); setTimeout(() => setCaption(''), 6000) }, 700)
+  }
+
+  function clearLauncherHold() {
+    if (launcherHoldTimer.current !== null) window.clearTimeout(launcherHoldTimer.current)
+    launcherHoldTimer.current = null
+    launcherHoldOrigin.current = null
+  }
+
+  function hideLauncher() {
+    if (open) return
+    setLauncherHidden(true)
+    setGreet('')
+    setShowLauncherRestore(true)
+    if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
+    launcherRestoreTimer.current = window.setTimeout(() => {
+      setShowLauncherRestore(false)
+      launcherRestoreTimer.current = null
+    }, 10000)
+  }
+
+  function restoreLauncher() {
+    setLauncherHidden(false)
+    setShowLauncherRestore(false)
+    if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
+    launcherRestoreTimer.current = null
+  }
+
+  function startLauncherHold(event: React.PointerEvent<HTMLButtonElement>) {
+    if (event.pointerType !== 'touch') return
+    clearLauncherHold()
+    launcherLongPressTriggered.current = false
+    launcherHoldOrigin.current = { x: event.clientX, y: event.clientY }
+    launcherHoldTimer.current = window.setTimeout(() => {
+      launcherLongPressTriggered.current = true
+      launcherHoldTimer.current = null
+      hideLauncher()
+      window.setTimeout(() => { launcherLongPressTriggered.current = false }, 900)
+    }, 650)
+  }
+
+  function moveLauncherHold(event: React.PointerEvent<HTMLButtonElement>) {
+    const origin = launcherHoldOrigin.current
+    if (!origin) return
+    if (Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 12) clearLauncherHold()
   }
 
   async function requestLiveContext(text: string) {
@@ -859,9 +926,35 @@ export function QuorlythBot() {
 
   return (
     <>
-      <button id="astl" className={cn('astl', open && 'hide')} aria-label="Open QuorlythBot" onClick={openPanel}>
+      {!launcherHidden && <button
+        id="astl"
+        className={cn('astl', open && 'hide')}
+        aria-label="Open QuorlythBot"
+        title="Right-click to hide · Press and hold on mobile to hide"
+        onClick={() => {
+          if (launcherLongPressTriggered.current) {
+            launcherLongPressTriggered.current = false
+            return
+          }
+          openPanel()
+        }}
+        onContextMenu={event => {
+          event.preventDefault()
+          hideLauncher()
+        }}
+        onPointerDown={startLauncherHold}
+        onPointerMove={moveLauncherHold}
+        onPointerUp={clearLauncherHold}
+        onPointerCancel={clearLauncherHold}
+        onPointerLeave={clearLauncherHold}
+      >
         <span className="astm"><Logo size={30} /></span>{greet && <span className="astb">{greet}</span>}
-      </button>
+      </button>}
+      {launcherHidden && showLauncherRestore && <div className="qbot-launcher-hidden-notice" role="status">
+        <span>QuorlythBot hidden</span>
+        <button type="button" onClick={restoreLauncher}>Undo</button>
+        <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
+      </div>}
       {open && (
         <div id="ast">
           <div id="bot" className={cn('astp glass bot qbot-sidebar-compact-v2', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
