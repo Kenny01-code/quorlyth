@@ -6,6 +6,7 @@ import { Intro } from './components/Intro'
 import { Palette } from './components/Palette'
 import { Shortcuts } from './components/Shortcuts'
 import { NotifPanel } from './components/NotifPanel'
+import { WritingAssistant } from './components/WritingAssistant'
 const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.Landing })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
 const Dashboard = lazy(() => import('./screens/Dashboard').then(m => ({ default: m.Dashboard })))
@@ -91,16 +92,20 @@ export default function App() {
     const uid = a.me?.id
     if (!store || !uid || a.demo) { knownMessages.current = null; return }
     let conversations: any[] = []
+    let mutedConversationIds = new Set<string>()
     const offConversations = store.subscribe('conversations', docs => {
       conversations = docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(uid))
     }, e => console.warn('Could not load conversations for notifications', e))
+    const offChatPreferences = store.subscribe('chatPreferences', docs => {
+      mutedConversationIds = new Set(docs.map(d => ({ id: d.id, ...d.data })).filter(p => p.userId === uid && p.muted).map(p => p.conversationId))
+    }, e => console.warn('Could not load muted chat preferences', e))
     const offMessages = store.subscribe('messages', docs => {
       const all = docs.map(d => ({ id: d.id, ...d.data })).filter(m => typeof m.conversationId === 'string' && typeof m.senderId === 'string' && typeof m.text === 'string')
       if (knownMessages.current === null) {
         knownMessages.current = new Set(all.map(m => m.id))
         return
       }
-      const incoming = all.filter(m => m.senderId !== uid && !knownMessages.current!.has(m.id) && conversations.some(c => c.id === m.conversationId))
+      const incoming = all.filter(m => m.senderId !== uid && !knownMessages.current!.has(m.id) && conversations.some(c => c.id === m.conversationId) && !mutedConversationIds.has(m.conversationId))
       for (const m of all) knownMessages.current.add(m.id)
       if (!incoming.length) return
       const latest = incoming[incoming.length - 1]
@@ -113,7 +118,7 @@ export default function App() {
         try { new Notification('New message from ' + sender, { body: latest.text.slice(0, 120), tag: latest.conversationId }) } catch {}
       }
     }, e => console.warn('Could not load messages for notifications', e))
-    return () => { offConversations(); offMessages(); knownMessages.current = null }
+    return () => { offConversations(); offMessages(); offChatPreferences(); knownMessages.current = null }
   }, [a.backend, a.me?.id, a.demo, a.nm, a.toast, sound])
 
   // keyboard: Ctrl K, /, ?, g then a letter, Escape
@@ -189,6 +194,7 @@ export default function App() {
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
       <Suspense fallback={null}><QuorlythBot /></Suspense>
       <Toast />
+      <WritingAssistant />
     </>
   )
 }
