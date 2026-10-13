@@ -9,6 +9,14 @@ import DitherVeil from '../components/DitherVeil'
 type Conversation = { id: string; title?: string; type: 'direct' | 'group'; members: string[]; createdBy: string; createdAt: number }
 type Message = { id: string; conversationId: string; senderId: string; text: string; at: number; replyTo?: string }
 type ReadState = { id: string; userId: string; conversationId: string; lastReadAt: number }
+type ChatPreference = { id: string; userId: string; conversationId: string; pinned?: boolean; archived?: boolean; hidden?: boolean; muted?: boolean; updatedAt?: number }
+type MessageEdit = { id: string; messageId: string; conversationId: string; senderId: string; text: string; editedAt: number }
+type MessageTombstone = { id: string; messageId: string; conversationId: string; senderId: string; deletedAt: number }
+type MessageHide = { id: string; messageId: string; conversationId: string; userId: string; hiddenAt: number }
+type MessageReaction = { id: string; messageId: string; conversationId: string; userId: string; reaction: string; at: number }
+type ConversationActionMenu = { conversationId: string; x: number; y: number }
+type MessageActionMenu = { messageId: string; x: number; y: number }
+const REACTIONS = ['👍', '❤️', '😂', '🔥', '👏', '👀']
 
 function readableChatError(error: unknown): string {
   if (error && typeof error === 'object') {
@@ -36,6 +44,16 @@ export function Messages() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [reads, setReads] = useState<ReadState[]>([])
+  const [chatPreferences, setChatPreferences] = useState<ChatPreference[]>([])
+  const [messageEdits, setMessageEdits] = useState<MessageEdit[]>([])
+  const [messageTombstones, setMessageTombstones] = useState<MessageTombstone[]>([])
+  const [messageHides, setMessageHides] = useState<MessageHide[]>([])
+  const [messageReactions, setMessageReactions] = useState<MessageReaction[]>([])
+  const [conversationMenu, setConversationMenu] = useState<ConversationActionMenu | null>(null)
+  const [messageMenu, setMessageMenu] = useState<MessageActionMenu | null>(null)
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState('')
+  const [replyToMessageId, setReplyToMessageId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState('')
   const [peopleOpen, setPeopleOpen] = useState(false)
@@ -43,7 +61,7 @@ export function Messages() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [peopleQuery, setPeopleQuery] = useState('')
-  const [conversationFilter, setConversationFilter] = useState<'all' | 'groups' | 'unread'>('all')
+  const [conversationFilter, setConversationFilter] = useState<'all' | 'groups' | 'unread' | 'archived'>('all')
   const [groupName, setGroupName] = useState('')
   const [selectedPeople, setSelectedPeople] = useState<string[]>([])
   const [sending, setSending] = useState(false)
@@ -60,12 +78,18 @@ export function Messages() {
   const meId = a.me?.id || ''
 
   useEffect(() => {
-    if (!store || !meId) { setConversations([]); setMessages([]); setReads([]); return }
+    if (!store || !meId) { setConversations([]); setMessages([]); setReads([]); setChatPreferences([]); setMessageEdits([]); setMessageTombstones([]); setMessageHides([]); setMessageReactions([]); return }
     const report = (e: unknown) => { console.error('Quorlyth chat sync failed:', e); setError('Live chat sync is unavailable. Check your connection and database setup.') }
+    const reportAdvanced = (e: unknown) => { console.warn('Advanced chat features are not available yet. Apply supabase/migrations/20261013_advanced_chat_features.sql to enable them.', e) }
     const offC = store.subscribe('conversations', docs => setConversations(docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(meId)).sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))), report)
     const offM = store.subscribe('messages', docs => setMessages(docs.map(d => ({ id: d.id, ...d.data })).filter(m => typeof m.conversationId === 'string' && typeof m.text === 'string').sort((x, y) => x.at - y.at)), report)
     const offR = store.subscribe('chatReads', docs => setReads(docs.map(d => ({ id: d.id, ...d.data })).filter(r => r.userId === meId)), report)
-    return () => { offC(); offM(); offR() }
+    const offP = store.subscribe('chatPreferences', docs => setChatPreferences(docs.map(d => ({ id: d.id, ...d.data })).filter(p => p.userId === meId)), reportAdvanced)
+    const offE = store.subscribe('chatMessageEdits', docs => setMessageEdits(docs.map(d => ({ id: d.id, ...d.data }))), reportAdvanced)
+    const offT = store.subscribe('chatMessageTombstones', docs => setMessageTombstones(docs.map(d => ({ id: d.id, ...d.data }))), reportAdvanced)
+    const offH = store.subscribe('chatMessageHides', docs => setMessageHides(docs.map(d => ({ id: d.id, ...d.data })).filter(h => h.userId === meId)), reportAdvanced)
+    const offReact = store.subscribe('chatMessageReactions', docs => setMessageReactions(docs.map(d => ({ id: d.id, ...d.data })).filter(r => typeof r.messageId === 'string' && typeof r.reaction === 'string' && r.reaction)), reportAdvanced)
+    return () => { offC(); offM(); offR(); offP(); offE(); offT(); offH(); offReact() }
   }, [store, meId])
 
   const active = conversations.find(c => c.id === conversationId) || null
@@ -88,6 +112,119 @@ export function Messages() {
   const unreadCount = (c: Conversation) => messages.filter(m => m.conversationId === c.id && m.senderId !== meId && m.at > readAt(c.id)).length
   const titleOf = (c: Conversation) => c.type === 'group' ? (c.title || 'Untitled group') : a.nm(c.members.find(id => id !== meId) || '')
   const lastMessage = (c: Conversation) => messages.filter(m => m.conversationId === c.id).at(-1)
+  const preferenceFor = (id: string) => chatPreferences.find(p => p.userId === meId && p.conversationId === id)
+  const messageText = (m: Message) => messageEdits.find(e => e.messageId === m.id)?.text || m.text
+  const isDeletedMessage = (id: string) => messageTombstones.some(t => t.messageId === id)
+  const visibleConversations = useMemo(() => conversations
+    .filter(c => {
+      const pref = chatPreferences.find(p => p.userId === meId && p.conversationId === c.id)
+      if (pref?.hidden) return false
+      if (conversationFilter === 'archived') { if (!pref?.archived) return false }
+      else if (pref?.archived) return false
+      if (conversationFilter === 'groups' && c.type !== 'group') return false
+      if (conversationFilter === 'unread' && unreadCount(c) === 0) return false
+      return titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())
+    })
+    .sort((x, y) => Number(!!preferenceFor(y.id)?.pinned) - Number(!!preferenceFor(x.id)?.pinned) || (y.createdAt || 0) - (x.createdAt || 0)),
+    [conversations, chatPreferences, meId, conversationFilter, query, messages, reads, a.nm])
+
+  async function saveChatPreference(conversationId: string, patch: Partial<ChatPreference>) {
+    if (!store || !meId) return
+    const current = chatPreferences.find(p => p.userId === meId && p.conversationId === conversationId)
+    const next: ChatPreference = { ...current, ...patch, userId: meId, conversationId, id: meId + '_' + conversationId, updatedAt: Date.now() }
+    await store.set('chatPreferences/' + meId + '_' + conversationId, next)
+    setChatPreferences(old => [...old.filter(p => !(p.userId === meId && p.conversationId === conversationId)), next])
+  }
+
+  function openConversationMenu(id: string, x: number, y: number) {
+    setMessageMenu(null)
+    setConversationMenu({ conversationId: id, x: Math.max(12, Math.min(x, window.innerWidth - 224)), y: Math.max(12, Math.min(y, window.innerHeight - 315)) })
+  }
+
+  function openMessageMenu(id: string, x: number, y: number) {
+    setConversationMenu(null)
+    setMessageMenu({ messageId: id, x: Math.max(12, Math.min(x, window.innerWidth - 245)), y: Math.max(12, Math.min(y, window.innerHeight - 360)) })
+  }
+
+  async function actOnConversation(action: 'pin' | 'archive' | 'mute' | 'delete' | 'unread' | 'read') {
+    const id = conversationMenu?.conversationId
+    if (!id || !store || !meId) return
+    const pref = preferenceFor(id)
+    setConversationMenu(null)
+    try {
+      if (action === 'delete') {
+        if (!window.confirm('Delete this chat from your inbox? This hides it only for you; other participants keep their conversation and messages.')) return
+        await saveChatPreference(id, { hidden: true, archived: false })
+        if (active?.id === id) nav('/messages')
+        a.toast('Chat removed from your inbox')
+      } else if (action === 'pin') {
+        await saveChatPreference(id, { pinned: !pref?.pinned })
+        a.toast(pref?.pinned ? 'Chat unpinned' : 'Chat pinned to the top')
+      } else if (action === 'archive') {
+        await saveChatPreference(id, { archived: !pref?.archived })
+        a.toast(pref?.archived ? 'Chat restored to your inbox' : 'Chat archived')
+      } else if (action === 'mute') {
+        await saveChatPreference(id, { muted: !pref?.muted })
+        a.toast(pref?.muted ? 'Chat unmuted' : 'Chat muted')
+      } else if (action === 'unread') {
+        await store.delete('chatReads/' + meId + '_' + id)
+        a.toast('Marked as unread')
+      } else {
+        await store.set('chatReads/' + meId + '_' + id, { userId: meId, conversationId: id, lastReadAt: Date.now() })
+        a.toast('Marked as read')
+      }
+    } catch (e) { setError('That chat action could not be saved. ' + readableChatError(e)) }
+  }
+
+  async function actOnMessage(action: 'reply' | 'copy' | 'edit' | 'delete-me' | 'delete-all' | 'react', m: Message, reaction?: string) {
+    if (!store || !meId) return
+    setMessageMenu(null)
+    try {
+      if (action === 'reply') {
+        setReplyToMessageId(m.id)
+        textarea.current?.focus()
+        return
+      }
+      if (action === 'copy') {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard access is unavailable in this browser.')
+        await navigator.clipboard.writeText(messageText(m))
+        a.toast('Message copied')
+        return
+      }
+      if (action === 'edit') {
+        if (m.senderId !== meId || isDeletedMessage(m.id)) return
+        setEditingMessageId(m.id)
+        setEditDraft(messageText(m))
+        return
+      }
+      if (action === 'delete-me') {
+        if (!window.confirm('Remove this message from your view? Other participants can still see it.')) return
+        await store.set('chatMessageHides/' + m.id + '_' + meId, { messageId: m.id, conversationId: m.conversationId, userId: meId, hiddenAt: Date.now() })
+        a.toast('Message removed from your view')
+        return
+      }
+      if (action === 'delete-all') {
+        if (m.senderId !== meId) return
+        if (!window.confirm('Delete this message for everyone in the conversation?')) return
+        await store.set('chatMessageTombstones/' + m.id, { messageId: m.id, conversationId: m.conversationId, senderId: meId, deletedAt: Date.now() })
+        a.toast('Message deleted for everyone')
+        return
+      }
+      if (action === 'react' && reaction) {
+        const existing = messageReactions.find(r => r.messageId === m.id && r.userId === meId)
+        await store.set('chatMessageReactions/' + m.id + '_' + meId, { messageId: m.id, conversationId: m.conversationId, userId: meId, reaction: existing?.reaction === reaction ? '' : reaction, at: Date.now() })
+      }
+    } catch (e) { setError('That message action could not be completed. ' + readableChatError(e)) }
+  }
+
+  async function saveMessageEdit(m: Message) {
+    if (!store || !meId || m.senderId !== meId || !editDraft.trim()) return
+    try {
+      await store.set('chatMessageEdits/' + m.id, { messageId: m.id, conversationId: m.conversationId, senderId: meId, text: editDraft.trim().slice(0, 4000), editedAt: Date.now() })
+      setEditingMessageId(null); setEditDraft('')
+      a.toast('Message updated')
+    } catch (e) { setError('Could not edit this message. ' + readableChatError(e)) }
+  }
   const formatTime = (at: number) => {
     if (!at) return ''
     const d = new Date(at)
@@ -122,7 +259,7 @@ export function Messages() {
     if (!store || !meId) return
     setError('')
     const existing = conversations.find(c => c.type === 'direct' && c.members.length === 2 && c.members.includes(personId) && c.members.includes(meId))
-    if (existing) { nav('/messages/' + existing.id); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); return }
+    if (existing) { try { await saveChatPreference(existing.id, { hidden: false, archived: false }) } catch {} nav('/messages/' + existing.id); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); return }
     const id = makeId()
     try {
       await store.set('conversations/' + id, { title: '', type: 'direct', members: [meId, personId], createdBy: meId, createdAt: Date.now() })
@@ -155,8 +292,9 @@ export function Messages() {
     setSending(true); setError('')
     const id = makeId()
     try {
-      await store.set('messages/' + id, { conversationId: active.id, senderId: meId, text, at: Date.now() })
+      await store.set('messages/' + id, { conversationId: active.id, senderId: meId, text, at: Date.now(), ...(replyToMessageId ? { replyTo: replyToMessageId } : {}) })
       setDraft('')
+      setReplyToMessageId(null)
       if (textarea.current) textarea.current.style.height = 'auto'
     } catch (e) { setError('Message not sent. ' + readableChatError(e)) }
     finally { setSending(false); textarea.current?.focus() }
@@ -181,15 +319,19 @@ export function Messages() {
           <div className="chat-inbox-panel">
            <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
           <label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" /></label>
-          <div className="chat-filter-tabs" role="group" aria-label="Filter conversations"><button className={cn(conversationFilter === 'all' && 'on')} onClick={() => setConversationFilter('all')}>All</button><button className={cn(conversationFilter === 'groups' && 'on')} onClick={() => setConversationFilter('groups')}>Groups</button><button className={cn(conversationFilter === 'unread' && 'on')} onClick={() => setConversationFilter('unread')}>Unread</button></div>
-          <div className="chat-conversation-list">{conversations.filter(c => conversationFilter === 'all' || (conversationFilter === 'groups' ? c.type === 'group' : unreadCount(c) > 0)).filter(c => titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())).map(c => {
+          <div className="chat-filter-tabs" role="group" aria-label="Filter conversations"><button className={cn(conversationFilter === 'all' && 'on')} onClick={() => setConversationFilter('all')}>All</button><button className={cn(conversationFilter === 'groups' && 'on')} onClick={() => setConversationFilter('groups')}>Groups</button><button className={cn(conversationFilter === 'unread' && 'on')} onClick={() => setConversationFilter('unread')}>Unread</button><button className={cn(conversationFilter === 'archived' && 'on')} onClick={() => setConversationFilter('archived')}>Archived</button></div>
+          <div className="chat-conversation-list">{visibleConversations.map(c => {
             const last = lastMessage(c), unread = unreadCount(c)
-            return <div key={c.id} role="button" tabIndex={0} className={cn('chat-conversation', active?.id === c.id && 'active', unread > 0 && 'unread')} onClick={() => nav('/messages/' + c.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav('/messages/' + c.id) } }}>
+            const pref = preferenceFor(c.id)
+            return <div key={c.id} id={'chat-list-' + c.id} role="button" tabIndex={0} className={cn('chat-conversation', active?.id === c.id && 'active', unread > 0 && 'unread', pref?.pinned && 'is-pinned', pref?.archived && 'is-archived')} onClick={() => nav('/messages/' + c.id)} onContextMenu={e => { e.preventDefault(); e.stopPropagation(); openConversationMenu(c.id, e.clientX, e.clientY) }} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav('/messages/' + c.id) } }}>
               {c.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link" title={'View ' + titleOf(c) + "'s public profile"} aria-label={'View ' + titleOf(c) + ' public profile'} onClick={e => { e.stopPropagation(); nav(profileLink(c.members.find(id => id !== meId) || '')) }}><Av id={c.members.find(id => id !== meId) || ''} size={46} />{isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
-              <span className="chat-conversation-copy"><span className="chat-conversation-title"><span className="chat-title-inline"><b>{titleOf(c)}</b>{c.type === 'direct' && isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ OWNER</span>}</span><small>{formatTime(last?.at || c.createdAt)}</small></span><span className="chat-preview">{last ? (last.senderId === meId ? 'You: ' : '') + last.text : c.type === 'group' ? c.members.length + ' people · Start the conversation' : 'Start the conversation'}</span></span>
+              <span className="chat-conversation-copy"><span className="chat-conversation-title"><span className="chat-title-inline"><b>{titleOf(c)}</b>{c.type === 'direct' && isPlatformAdmin(c.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ OWNER</span>}</span><small>{formatTime(last?.at || c.createdAt)}</small></span><span className="chat-preview">{last ? (last.senderId === meId ? 'You: ' : '') + (isDeletedMessage(last.id) ? 'Message deleted' : messageText(last)) : c.type === 'group' ? c.members.length + ' people · Start the conversation' : 'Start the conversation'}</span></span>
+              {pref?.pinned && <span className="chat-pin-indicator" title="Pinned chat"><Icon name="pin" size={12} /></span>}
+              {pref?.muted && <span className="chat-pin-indicator" title="Muted chat"><Icon name="bell" size={12} /></span>}
               {unread > 0 && <span className="chat-unread-count" aria-label={unread + ' unread messages'}>{unread > 99 ? '99+' : unread}</span>}
+              <button className="chat-conversation-menu-trigger" type="button" aria-label={'Options for ' + titleOf(c)} title="Chat options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(c.id, r.right - 210, r.bottom + 4) }}><Icon name="more" size={17} /></button>
             </div>
-          })}{!conversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>Your inbox is a blank canvas.</b><p>Start a private conversation or bring your collaborators together.</p><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button></div>}</div>
+          })}{!visibleConversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>{conversationFilter === 'archived' ? 'No archived conversations.' : 'Your inbox is a blank canvas.'}</b><p>{conversationFilter === 'archived' ? 'Chats you archive will live here until you restore them.' : 'Start a private conversation or bring your collaborators together.'}</p>{conversationFilter !== 'archived' && <button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button>}</div>}</div>
           <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Private conversations <span className="dim">· standard encryption in transit</span></div>
         </div>
          </aside>
@@ -199,18 +341,37 @@ export function Messages() {
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
               <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
+              <button className="chat-icon-btn chat-thread-menu-trigger" type="button" aria-label="Conversation options" title="Conversation options" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(active.id, r.left - 205, r.bottom + 6) }}><Icon name="more" size={18} /></button>
             </header>
             <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 120 }}>
               <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
-              {activeMessages.map((m, i) => {
+              {activeMessages.filter(m => !messageHides.some(h => h.messageId === m.id && h.userId === meId)).map((m, i, renderedMessages) => {
                 const mine = m.senderId === meId
-                const prev = activeMessages[i - 1]
+                const prev = renderedMessages[i - 1]
                 const showAuthor = active.type === 'group' && !mine && (!prev || prev.senderId !== m.senderId)
-                return <div key={m.id} className={cn('chat-message-row', mine && 'mine', showAuthor && 'with-author')}>{showAuthor && <div className="chat-message-author"><button className="chat-author-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"}><span>{a.nm(m.senderId)}</span>{isPlatformAdmin(m.senderId) && <span className="owner-badge" title="Platform owner">✦ OWNER</span>}</button></div>}<div className="chat-message-line"><button className="chat-avatar-link message-avatar-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"} aria-label={'View ' + a.nm(m.senderId) + ' public profile'}><Av id={m.senderId} size={30} />{isPlatformAdmin(m.senderId) && <span className="admin-orbit" title="Platform owner">✦</span>}</button><div className={cn('chat-bubble', mine ? 'mine' : 'theirs')}><p>{m.text}</p><time>{formatTime(m.at)}</time></div></div></div>
+                const deleted = isDeletedMessage(m.id)
+                const reply = m.replyTo ? activeMessages.find(message => message.id === m.replyTo) : undefined
+                const reactions = messageReactions.filter(r => r.messageId === m.id && r.reaction)
+                const reactionTypes = [...new Set(reactions.map(r => r.reaction))]
+                return <div id={'chat-message-' + m.id} key={m.id} className={cn('chat-message-row', mine && 'mine', showAuthor && 'with-author', deleted && 'is-deleted')} onContextMenu={e => { e.preventDefault(); e.stopPropagation(); openMessageMenu(m.id, e.clientX, e.clientY) }}>
+                  {showAuthor && <div className="chat-message-author"><button className="chat-author-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"}><span>{a.nm(m.senderId)}</span>{isPlatformAdmin(m.senderId) && <span className="owner-badge" title="Platform owner">✦ OWNER</span>}</button></div>}
+                  <div className="chat-message-line">
+                    <button className="chat-avatar-link message-avatar-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"} aria-label={'View ' + a.nm(m.senderId) + ' public profile'}><Av id={m.senderId} size={30} />{isPlatformAdmin(m.senderId) && <span className="admin-orbit" title="Platform owner">✦</span>}</button>
+                    <div className={cn('chat-bubble', mine ? 'mine' : 'theirs')}>
+                      {reply && <button className="chat-reply-reference" type="button" onClick={() => document.getElementById('chat-message-' + reply.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><span>{a.nm(reply.senderId)}</span><small>{messageText(reply).slice(0, 110)}</small></button>}
+                      {editingMessageId === m.id ? <div className="chat-edit-block"><textarea value={editDraft} maxLength={4000} rows={3} onChange={e => setEditDraft(e.target.value)} aria-label="Edit message text" /><div><button type="button" className="chat-small-action" onClick={() => { setEditingMessageId(null); setEditDraft('') }}>Cancel</button><button type="button" className="chat-small-action is-primary" disabled={!editDraft.trim()} onClick={() => void saveMessageEdit(m)}>Save edit</button></div></div> : <p>{deleted ? 'This message was deleted.' : messageText(m)}</p>}
+                      <time>{formatTime(m.at)}{messageEdits.some(edit => edit.messageId === m.id) && !deleted && ' · edited'}</time>
+                    </div>
+                    <button className="chat-message-menu-trigger" type="button" aria-label="Message options" title="Message options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openMessageMenu(m.id, r.left - 215, r.top) }}><Icon name="more" size={16} /></button>
+                  </div>
+                  {reactionTypes.length > 0 && !deleted && <div className="chat-message-reactions">{reactionTypes.map(emoji => <button type="button" key={emoji} className={cn('chat-reaction-pill', reactions.some(r => r.userId === meId && r.reaction === emoji) && 'mine')} onClick={() => void actOnMessage('react', m, emoji)}>{emoji}<span>{reactions.filter(r => r.reaction === emoji).length}</span></button>)}</div>}
+                </div>
               })}
               <div ref={bottom} />
             </div>
-            <form className="chat-composer" onSubmit={sendMessage}><div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
+            <form className="chat-composer" onSubmit={sendMessage}>
+              {replyToMessageId && <div className="chat-reply-composer"><div><b>Replying to {a.nm(activeMessages.find(m => m.id === replyToMessageId)?.senderId || meId)}</b><small>{messageText(activeMessages.find(m => m.id === replyToMessageId) || ({ id: '', conversationId: active.id, senderId: meId, text: '', at: 0 } as Message)).slice(0, 130)}</small></div><button type="button" aria-label="Cancel reply" onClick={() => setReplyToMessageId(null)}><Icon name="x" size={15} /></button></div>}
+              <div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
           </> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'spark'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
             <>Every great thing<br />starts somewhere.</>,
             <>One message can<br />start something real.</>,
@@ -232,6 +393,25 @@ export function Messages() {
           {settingsOpen && <div className="chat-panel-settings"><p className="chat-panel-intro">Make your messaging space feel like yours. Full account controls remain available in Quorlyth settings.</p><button className="chat-setting-row" onClick={() => nav('/settings')}><span className="chat-setting-icon"><Icon name="settings" size={17} /></span><span><b>Account & preferences</b><small>Manage your Quorlyth settings</small></span><Icon name="arrow-up-right" size={16} /></button><button className="chat-setting-row" onClick={() => nav('/me')}><span className="chat-setting-icon"><Icon name="member" size={17} /></span><span><b>Profile & identity</b><small>Update how others see you</small></span><Icon name="arrow-up-right" size={16} /></button><button className="chat-setting-row" onClick={() => { setSettingsOpen(false); setPeopleOpen(false); setGroupOpen(false); setProfileOpen(false); setConversationFilter('unread') }}><span className="chat-setting-icon"><Icon name="bell" size={17} /></span><span><b>Unread messages</b><small>Filter your inbox to unread conversations</small></span><Icon name="arrow-up-right" size={16} /></button><div className="chat-panel-note">Only settings that are implemented by the existing account system are shown as account controls. Messaging-specific preferences can be expanded without pretending unsupported features are active.</div></div>}
         </aside>}
       </div>
+      {conversationMenu && <><button className="chat-context-backdrop" aria-label="Close chat options" onClick={() => setConversationMenu(null)} /><div className="chat-context-menu" role="menu" style={{ left: conversationMenu.x, top: conversationMenu.y }} onClick={e => e.stopPropagation()}>
+        <p>CONVERSATION OPTIONS</p>
+        <button role="menuitem" onClick={() => void actOnConversation('pin')}><Icon name={preferenceFor(conversationMenu.conversationId)?.pinned ? 'pin' : 'pin'} size={15} />{preferenceFor(conversationMenu.conversationId)?.pinned ? 'Unpin chat' : 'Pin to top'}</button>
+        <button role="menuitem" onClick={() => void actOnConversation('unread')}><Icon name="mail" size={15} />Mark as unread</button>
+        <button role="menuitem" onClick={() => void actOnConversation('read')}><Icon name="mail" size={15} />Mark as read</button>
+        <button role="menuitem" onClick={() => void actOnConversation('mute')}><Icon name={preferenceFor(conversationMenu.conversationId)?.muted ? 'bell' : 'bell'} size={15} />{preferenceFor(conversationMenu.conversationId)?.muted ? 'Unmute notifications' : 'Mute notifications'}</button>
+        <button role="menuitem" onClick={() => void actOnConversation('archive')}><Icon name={preferenceFor(conversationMenu.conversationId)?.archived ? 'folder' : 'folder'} size={15} />{preferenceFor(conversationMenu.conversationId)?.archived ? 'Restore from archive' : 'Archive chat'}</button>
+        <div className="chat-context-divider" />
+        <button role="menuitem" className="is-danger" onClick={() => void actOnConversation('delete')}><Icon name="trash" size={15} />Delete chat for me</button>
+      </div></>}
+      {messageMenu && activeMessages.find(m => m.id === messageMenu.messageId) && <><button className="chat-context-backdrop" aria-label="Close message options" onClick={() => setMessageMenu(null)} /><div className="chat-context-menu chat-message-context-menu" role="menu" style={{ left: messageMenu.x, top: messageMenu.y }} onClick={e => e.stopPropagation()}>
+        <p>MESSAGE OPTIONS</p>
+        <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('reply', m) }}><Icon name="message" size={15} />Reply to message</button>
+        <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('copy', m) }}><Icon name="copy" size={15} />Copy text</button>
+        <div className="chat-reaction-picker">{REACTIONS.map(emoji => <button type="button" key={emoji} title={'React ' + emoji} onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('react', m, emoji) }}>{emoji}</button>)}</div>
+        {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('edit', m) }}><Icon name="edit" size={15} />Edit message</button>}
+        <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-me', m) }}><Icon name="eye" size={15} />Delete for me</button>
+        {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-all', m) }}><Icon name="trash" size={15} />Delete for everyone</button>}
+      </div></>}
       <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
     </div>
   )
