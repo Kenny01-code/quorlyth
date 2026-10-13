@@ -2644,3 +2644,161 @@ main:has(.chat-page) > .on { min-height: calc(100dvh - 26px); }
   .chat-page .chat-bubble,
   .chat-page .chat-avatar-link .av { transition: none !important; }
 }
+
+
+/* RESPONSIVE AUDIT: grid-based desktop panels, no fixed pixel placement. */
+@media (min-width: 901px) {
+  .chat-page {
+    justify-content: flex-start;
+  }
+
+  .chat-page .chat-workspace,
+  .chat-page .chat-workspace.size-compact,
+  .chat-page .chat-workspace.size-standard,
+  .chat-page .chat-workspace.size-expanded {
+    display: grid;
+    grid-template-columns: minmax(78px, 92px) minmax(0, 1.08fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: clamp(10px, 1.15vw, 16px);
+    width: min(1400px, calc(100vw - 32px));
+    height: clamp(500px, calc(100dvh - 150px), 760px);
+    min-height: 0;
+    max-height: 760px;
+    margin: 8px auto 16px;
+    padding: 0;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .chat-page .chat-workspace.with-sidepanel,
+  .chat-page .chat-workspace.with-sidepanel.size-compact,
+  .chat-page .chat-workspace.with-sidepanel.size-standard,
+  .chat-page .chat-workspace.with-sidepanel.size-expanded {
+    grid-template-columns: minmax(72px, 82px) minmax(0, .84fr) minmax(0, 1.02fr) minmax(0, .82fr);
+  }
+
+  .chat-page .chat-sidebar {
+    display: contents !important;
+  }
+
+  .chat-page .chat-utility-nav {
+    position: relative;
+    inset: auto;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    justify-self: stretch;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: auto;
+    margin: -14px 0 0;
+    padding: 6px;
+    overflow: hidden;
+    border-radius: 23px;
+    transform: translateY(-6px);
+    box-sizing: border-box;
+  }
+
+  .chat-page .chat-utility-item {
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    height: auto;
+    white-space: nowrap;
+  }
+
+  .chat-page .chat-inbox-panel,
+  .chat-page .chat-thread,
+  .chat-page .chat-create {
+    position: relative;
+    inset: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  .chat-page .chat-inbox-panel { grid-column: 2; }
+  .chat-page .chat-thread { grid-column: 3; }
+
+  .chat-page .chat-workspace.with-sidepanel .chat-inbox-panel { grid-column: 2; }
+  .chat-page .chat-workspace.with-sidepanel .chat-thread {
+    grid-column: 3;
+    visibility: visible;
+  }
+  .chat-page .chat-workspace.with-sidepanel .chat-create {
+    grid-column: 4;
+    grid-row: 1;
+    left: auto;
+    right: auto;
+    top: auto;
+    width: 100%;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  .chat-page .chat-workspace.with-sidepanel,
+  .chat-page .chat-workspace.with-sidepanel.size-compact,
+  .chat-page .chat-workspace.with-sidepanel.size-standard,
+  .chat-page .chat-workspace.with-sidepanel.size-expanded {
+    grid-template-columns: minmax(68px, 76px) minmax(0, .84fr) minmax(0, 1.02fr) minmax(0, .82fr);
+    gap: 10px;
+  }
+  .chat-page .chat-utility-nav { padding: 5px; }
+  .chat-page .chat-utility-item { padding-inline: 5px; font-size: 10px; }
+}
+
+@media (min-width: 901px) and (max-height: 720px) {
+  .chat-page .chat-workspace,
+  .chat-page .chat-workspace.size-compact,
+  .chat-page .chat-workspace.size-standard,
+  .chat-page .chat-workspace.size-expanded,
+  .chat-page .chat-workspace.with-sidepanel {
+    height: max(440px, calc(100dvh - 120px));
+    min-height: 0;
+  }
+}
+
+/* Hide the scrollbar chrome but keep native keyboard, wheel, trackpad and touch scrolling. */
+.chat-page .chat-thread-body,
+.chat-page .chat-conversation-list,
+.chat-page .chat-people-list,
+.chat-page .chat-panel-profile,
+.chat-page .chat-panel-settings {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.chat-page .chat-thread-body::-webkit-scrollbar,
+.chat-page .chat-conversation-list::-webkit-scrollbar,
+.chat-page .chat-people-list::-webkit-scrollbar,
+.chat-page .chat-panel-profile::-webkit-scrollbar,
+.chat-page .chat-panel-settings::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.chat-page .chat-thread-body {
+  scroll-behavior: smooth;
+  touch-action: pan-y;
+}
+.chat-page .chat-profile-card > div,
+.chat-page .chat-profile-card h4,
+.chat-page .chat-profile-card p,
+.chat-page .chat-profile-card small {
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: none;
+}
