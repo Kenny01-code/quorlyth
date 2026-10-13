@@ -217,6 +217,7 @@ export function useChatCalls({
     setCallError('')
     setCallStatus('Requesting microphone and camera…')
     let stream: MediaStream | null = null
+    let createdCall: CallSession | null = null
     try {
       stream = await ensureMedia(mode)
       const id = makeId()
@@ -231,6 +232,7 @@ export function useChatCalls({
       }
       // Create the authorized signaling row before local ICE gathering begins.
       await store.set('calls/' + id, call)
+      createdCall = call
       setCalls(current => [call, ...current.filter(c => c.id !== id)])
       setActiveCallId(id)
       const pc = createPeer(call, calleeId, stream)
@@ -241,6 +243,11 @@ export function useChatCalls({
       setCalls(current => [readyCall, ...current.filter(c => c.id !== id)])
       setCallStatus('Calling ' + nameFor(calleeId) + '…')
     } catch (error) {
+      if (createdCall && store) {
+        const abandoned = { ...createdCall, state: 'ended' as const, endedAt: Date.now() }
+        setCalls(current => [abandoned, ...current.filter(c => c.id !== abandoned.id)])
+        void store.set('calls/' + abandoned.id, abandoned).catch(syncError => console.warn('Could not close a failed call setup', syncError))
+      }
       stream?.getTracks().forEach(track => track.stop())
       releaseMedia()
       setActiveCallId(null)
@@ -269,6 +276,9 @@ export function useChatCalls({
       setCalls(current => [accepted, ...current.filter(c => c.id !== call.id)])
       setCallStatus('Connecting…')
     } catch (error) {
+      const declined = { ...call, state: 'declined' as const, endedAt: Date.now() }
+      setCalls(current => [declined, ...current.filter(c => c.id !== declined.id)])
+      void store.set('calls/' + declined.id, declined).catch(syncError => console.warn('Could not decline an unaccepted call', syncError))
       stream?.getTracks().forEach(track => track.stop())
       releaseMedia()
       setActiveCallId(null)
