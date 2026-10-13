@@ -80,14 +80,15 @@ export function Messages() {
   useEffect(() => {
     if (!store || !meId) { setConversations([]); setMessages([]); setReads([]); setChatPreferences([]); setMessageEdits([]); setMessageTombstones([]); setMessageHides([]); setMessageReactions([]); return }
     const report = (e: unknown) => { console.error('Quorlyth chat sync failed:', e); setError('Live chat sync is unavailable. Check your connection and database setup.') }
+    const reportAdvanced = (e: unknown) => { console.warn('Advanced chat features are not available yet. Apply supabase/migrations/20261013_advanced_chat_features.sql to enable them.', e) }
     const offC = store.subscribe('conversations', docs => setConversations(docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(meId)).sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))), report)
     const offM = store.subscribe('messages', docs => setMessages(docs.map(d => ({ id: d.id, ...d.data })).filter(m => typeof m.conversationId === 'string' && typeof m.text === 'string').sort((x, y) => x.at - y.at)), report)
     const offR = store.subscribe('chatReads', docs => setReads(docs.map(d => ({ id: d.id, ...d.data })).filter(r => r.userId === meId)), report)
-    const offP = store.subscribe('chatPreferences', docs => setChatPreferences(docs.map(d => ({ id: d.id, ...d.data })).filter(p => p.userId === meId)), report)
-    const offE = store.subscribe('chatMessageEdits', docs => setMessageEdits(docs.map(d => ({ id: d.id, ...d.data }))), report)
-    const offT = store.subscribe('chatMessageTombstones', docs => setMessageTombstones(docs.map(d => ({ id: d.id, ...d.data }))), report)
-    const offH = store.subscribe('chatMessageHides', docs => setMessageHides(docs.map(d => ({ id: d.id, ...d.data })).filter(h => h.userId === meId)), report)
-    const offReact = store.subscribe('chatMessageReactions', docs => setMessageReactions(docs.map(d => ({ id: d.id, ...d.data })).filter(r => typeof r.messageId === 'string' && typeof r.reaction === 'string' && r.reaction)), report)
+    const offP = store.subscribe('chatPreferences', docs => setChatPreferences(docs.map(d => ({ id: d.id, ...d.data })).filter(p => p.userId === meId)), reportAdvanced)
+    const offE = store.subscribe('chatMessageEdits', docs => setMessageEdits(docs.map(d => ({ id: d.id, ...d.data }))), reportAdvanced)
+    const offT = store.subscribe('chatMessageTombstones', docs => setMessageTombstones(docs.map(d => ({ id: d.id, ...d.data }))), reportAdvanced)
+    const offH = store.subscribe('chatMessageHides', docs => setMessageHides(docs.map(d => ({ id: d.id, ...d.data })).filter(h => h.userId === meId)), reportAdvanced)
+    const offReact = store.subscribe('chatMessageReactions', docs => setMessageReactions(docs.map(d => ({ id: d.id, ...d.data })).filter(r => typeof r.messageId === 'string' && typeof r.reaction === 'string' && r.reaction)), reportAdvanced)
     return () => { offC(); offM(); offR(); offP(); offE(); offT(); offH(); offReact() }
   }, [store, meId])
 
