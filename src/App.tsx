@@ -58,7 +58,7 @@ export default function App() {
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
   const unread = notifs.filter(n => n.unread).length
-  const pendingRequests = a.owner ? a.data.requests.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at }).length : 0
+  const pendingRequests = a.platformAdmin ? a.data.requests.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at }).length : 0
   const unreadRequests = notifs.filter(n => n.kind === 'settings' && n.unread).length
   const ownRequest = a.me && a.data.requests.find(r => r.id === a.me!.id)
   const ownDecision = a.me && a.data.decisions[a.me.id]

@@ -34,7 +34,7 @@ function Inner() {
   const [err, setErr] = useState('')
   const [preview, setPreview] = useState(false)
   let body
-  if (a.owner && !preview) body = <><h2 style={{ fontSize: 34 }}>You run this space.</h2><p className="mut" style={{ marginTop: 10 }}>Requests from members appear in Settings.</p><div className="acts"><button className="btn p" onClick={() => nav('/settings')}><Icon name="settings" />Open requests</button></div></>
+  if (a.platformAdmin && !preview) body = <><h2 style={{ fontSize: 34 }}>You manage platform access.</h2><p className="mut" style={{ marginTop: 10 }}>Global requests to enter Quorlyth are reviewed by authorized platform administrators.</p><div className="acts"><button className="btn p" onClick={() => nav('/settings?tab=requests')}><Icon name="settings" />Open platform requests</button></div></>
   else if (!preview && dc?.status === 'approved') body = <div className="done"><div className="score"><Icon name="approve" size={34} /></div><h2>You are in.</h2><p className="mut" style={{ marginTop: 12 }}>The owner approved your request.</p><div className="acts" style={{ justifyContent: 'center' }}><button className="btn p" onClick={() => nav('/communities')}>Browse communities</button></div></div>
   else if (!preview && rq && !(dc && dc.at > rq.at)) body = <><h2 style={{ fontSize: 34 }}>Request sent.</h2><p className="mut" style={{ marginTop: 10 }}>Waiting for the owner to review it. Sent {when(rq.at)}.</p><div className="row" style={{ cursor: 'default', marginTop: 20 }}><Icon name="status" /><div className="t"><h3 style={{ fontSize: 15 }}>Pending review</h3><p className="dim">{(rq.platforms || []).join(', ')}{rq.aud ? ' with an audience of ' + rq.aud : ''}</p></div></div><div className="acts"><button className="btn" onClick={() => a.backend!.store.delete('requests/' + me.id)}>Withdraw request</button></div></>
   else body = <>
@@ -53,7 +53,7 @@ function Inner() {
         <div className="fmk xl"><i className="hh" /><Logo size={84} breathe /></div>
         <h2 style={{ fontSize: 34 }}>Access is approved by the owner.</h2>
         <p className="mut" style={{ margin: '14px auto 0', maxWidth: 340 }}>Tell the owner a little about you. They will review your request and you will see the answer here.</p>
-        {a.owner && <button className="btn" style={{ marginTop: 20 }} onClick={() => setPreview(p => !p)}>{preview ? 'Exit form preview' : 'Preview request form'}</button>}
+        {a.platformAdmin && <button className="btn" style={{ marginTop: 20 }} onClick={() => setPreview(p => !p)}>{preview ? 'Exit form preview' : 'Preview request form'}</button>}
       </div>
       <div className="glass fm"><div>{body}</div></div>
     </div>

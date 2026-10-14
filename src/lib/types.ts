@@ -1,13 +1,14 @@
 export type Status = 'review' | 'selected' | 'held' | 'declined' | 'promoted'
 export const STATUS_LABEL: Record<Status, string> = { review: 'In review', selected: 'Selected', held: 'Held', declined: 'Declined', promoted: 'Ready to share' }
 export interface Me { id: string; name: string; email?: string; avatarUrl?: string }
-export interface Community { id: string; name: string; ownerId?: string; createdBy?: string; purpose?: string; icon?: string; cover?: string; vis?: 'listed' | 'unlisted'; post?: 'anyone' | 'members' | 'owner'; welcome?: string; rules?: string; arch?: boolean; pinned?: string; memberBadges?: Record<string, string>; at: number }
+export interface Community { id: string; name: string; ownerId?: string; createdBy?: string; purpose?: string; icon?: string; cover?: string; vis?: 'listed' | 'unlisted'; post?: 'anyone' | 'members' | 'owner'; joinApproval?: boolean; welcome?: string; rules?: string; arch?: boolean; pinned?: string; memberBadges?: Record<string, string>; at: number }
 export interface Idea { id: string; title: string; body?: string; cid: string; authorId: string; tags?: string[]; at: number }
 export interface Comment { id: string; authorId: string; text: string; at: number }
 export interface Review { id: string; o?: number; f?: number; r?: number; score?: number; reason?: string; status?: Status; at?: number }
 export interface Promotion { id: string; ideaId: string; text: string; credits: string[]; by: string; at: number }
 export interface Profile { id: string; name?: string; head?: string; bio?: string; photo?: string; authName?: string; authAvatarUrl?: string; at?: number }
 export interface Request { id: string; platforms?: string[]; aud?: string; note?: string; at: number }
+export interface CommunityJoinRequest { id: string; cid: string; userId: string; message?: string; status: 'pending' | 'approved' | 'declined'; at: number; reviewedAt?: number; reviewedBy?: string }
 export interface Decision { id: string; status: 'approved' | 'declined'; at: number }
 export type VolunteerStatus = 'pending' | 'accepted' | 'declined'
 export interface VolunteerApplication { id: string; ideaId: string; applicantId: string; message?: string; status: VolunteerStatus; at: number; reviewedAt?: number; reviewedBy?: string }
