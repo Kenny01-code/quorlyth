@@ -10,22 +10,35 @@ const XAI_KEY = () => process.env.XAI_API_KEY
 const XAI_MODEL = (tier) => tier === 'quick'
   ? process.env.XAI_QUICK_MODEL || process.env.XAI_MODEL || 'grok-4.7'
   : process.env.XAI_MODEL || 'grok-4.7'
-function textProvider() {
+const TEXT_PROVIDER_ORDER = ['gemini', 'grok', 'openai']
+
+function hasTextProviderKey(provider) {
+  if (provider === 'gemini') return Boolean(GEMINI_KEY())
+  if (provider === 'grok') return Boolean(XAI_KEY())
+  if (provider === 'openai') return Boolean(KEY())
+  return false
+}
+
+// AI_PROVIDER selects the preferred provider, not a single point of failure.
+function textProviders() {
   const selected = (process.env.AI_PROVIDER || 'auto').trim().toLowerCase()
-  if (selected === 'gemini' || selected === 'grok' || selected === 'openai') return selected
-  if (GEMINI_KEY()) return 'gemini'
-  if (XAI_KEY()) return 'grok'
-  return 'openai'
+  const order = TEXT_PROVIDER_ORDER.includes(selected)
+    ? [selected, ...TEXT_PROVIDER_ORDER.filter(provider => provider !== selected)]
+    : TEXT_PROVIDER_ORDER
+  return order.filter((provider, index) => order.indexOf(provider) === index && hasTextProviderKey(provider))
 }
 const GEMINI_MODEL = (tier) => tier === 'quick'
   ? process.env.GEMINI_QUICK_MODEL || 'gemini-3.5-flash-lite'
   : process.env.GEMINI_MODEL || 'gemini-3.8-flash'
 
 function needText() {
-  const provider = textProvider()
-  if (provider === 'gemini' && !GEMINI_KEY()) { const e = new Error('AI_PROVIDER is set to gemini, but GEMINI_API_KEY is missing.'); e.status = 503; throw e }
-  if (provider === 'grok' && !XAI_KEY()) { const e = new Error('AI_PROVIDER is set to grok, but XAI_API_KEY is missing.'); e.status = 503; throw e }
-  if (provider === 'openai' && !KEY()) { const e = new Error('Add GEMINI_API_KEY, XAI_API_KEY, or OPENAI_API_KEY to the server environment.'); e.status = 503; throw e }
+  const providers = textProviders()
+  if (!providers.length) {
+    const e = new Error('No text AI provider is configured. Add GEMINI_API_KEY, XAI_API_KEY, or OPENAI_API_KEY to the server environment.')
+    e.status = 503
+    throw e
+  }
+  return providers
 }
 function needOpenAI(feature) {
   if (!KEY()) { const e = new Error(`${feature} needs OPENAI_API_KEY. Gemini is configured for chat, but does not provide this OpenAI voice endpoint.`); e.status = 503; throw e }
@@ -63,14 +76,55 @@ async function geminiError(r) {
   let payload = {}
   try { payload = await r.json() } catch {}
   const code = payload.error?.status || payload.error?.code
-  if (code === 'RESOURCE_EXHAUSTED' || r.status === 429) return 'Gemini is temporarily unavailable because the API free-tier limit was reached. Check the project and model limits in Google AI Studio, then try again later.'
-  if (code === 'UNAVAILABLE' || r.status === 503) return 'Gemini is under heavy demand right now. QuorlythBot tried its backup model too; please try again in a few minutes.'
+  if (code === 'RESOURCE_EXHAUSTED' || r.status === 429) return 'Gemini is temporarily rate-limited.'
+  if (code === 'UNAVAILABLE' || r.status === 503) return 'Gemini is temporarily overloaded.'
   if (r.status === 401 || r.status === 403) return 'Gemini rejected the server API key. Check GEMINI_API_KEY in Vercel and redeploy.'
-  return payload.error?.message || 'Gemini could not complete this request. Please try again.'
+  return payload.error?.message || 'Gemini could not complete this request.'
+}
+
+const TRANSIENT_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
+const PROVIDER_FALLBACK_STATUSES = new Set([401, 403, 404, ...TRANSIENT_STATUSES])
+
+function isTransientResponse(response) {
+  return TRANSIENT_STATUSES.has(response.status) || response.status >= 500
+}
+
+function shouldTryAnotherProvider(response) {
+  return PROVIDER_FALLBACK_STATUSES.has(response.status) || response.status >= 500
+}
+
+async function fetchWithHeaderTimeout(url, options = {}) {
+  // Timeout only the wait for response headers, never a healthy streaming body.
+  const configuredTimeout = Number(process.env.AI_PROVIDER_TIMEOUT_MS)
+  const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
+    ? Math.min(configuredTimeout, 30000)
+    : 10000
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(new Error('AI provider timed out before returning headers')), timeoutMs)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function discardResponse(response) {
+  try { await response.body?.cancel() } catch {}
+}
+
+async function retryTransientRequest(makeRequest) {
+  let response
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    response = await makeRequest()
+    if (response.ok || !isTransientResponse(response) || attempt === 1) return response
+    await discardResponse(response)
+    await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)))
+  }
+  return response
 }
 
 async function shouldFallbackGemini(r) {
-  if (r.status === 429 || r.status >= 500) return true
+  if (shouldTryAnotherProvider(r)) return true
   try {
     const payload = await r.clone().json()
     return ['RESOURCE_EXHAUSTED', 'UNAVAILABLE'].includes(payload.error?.status)
@@ -79,10 +133,18 @@ async function shouldFallbackGemini(r) {
 
 async function fetchGeminiWithFallback(tier, makeRequest) {
   const primary = GEMINI_MODEL(tier)
-  let r = await makeRequest(primary)
   const backup = GEMINI_MODEL(tier === 'quick' ? 'smart' : 'quick')
-  if (!r.ok && backup !== primary && await shouldFallbackGemini(r)) r = await makeRequest(backup)
-  return r
+  let response
+  try {
+    response = await makeRequest(primary)
+  } catch (primaryError) {
+    if (backup === primary) throw primaryError
+    try { return await makeRequest(backup) } catch { throw primaryError }
+  }
+  if (!response.ok && backup !== primary && await shouldFallbackGemini(response)) {
+    try { return await makeRequest(backup) } catch { return response }
+  }
+  return response
 }
 
 function geminiContents(messages) {
@@ -94,26 +156,116 @@ function geminiUrl(model, stream = false) {
   return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${stream ? 'streamGenerateContent?alt=sse' : 'generateContent'}`
 }
 
-async function geminiChat(req, res, body) {
+async function requestGeminiChat(body) {
   const { messages = [], system, tier } = body
+  const lastMessage = Array.isArray(messages) ? messages[messages.length - 1]?.content || '' : ''
   const requestBody = JSON.stringify({
     ...(system ? { systemInstruction: { parts: [{ text: String(system) }] } } : {}),
-    contents: geminiContents(messages),
-    // Keep ordinary chat fast; only pay the grounding latency for queries that need current information.
-    ...((messages[messages.length - 1]?.content || '').match(/\b(latest|current|today|tonight|right now|live|breaking|recent|news|weather|forecast|temperature|price today|this week|opening hours|near me|nearby|search the web|look up online|source links)\b/i)
+    contents: geminiContents(Array.isArray(messages) ? messages : []),
+    ...((String(lastMessage).match(/\b(latest|current|today|tonight|right now|live|breaking|recent|news|weather|forecast|temperature|price today|this week|opening hours|near me|nearby|search the web|look up online|source links)\b/i))
       ? { tools: [{ google_search: {} }] }
       : {}),
     generationConfig: { temperature: 0.55, maxOutputTokens: tier === 'quick' ? 768 : 1536 },
   })
-  const r = await fetchGeminiWithFallback(tier, model => fetch(geminiUrl(model, true), {
+  return fetchGeminiWithFallback(tier, model => fetchWithHeaderTimeout(geminiUrl(model, true), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY() },
     body: requestBody,
   }))
-  if (!r.ok || !r.body) return send(res, r.status || 502, { error: await geminiError(r) })
+}
+
+async function requestGeminiJson(body) {
+  const { prompt = '', system = 'Reply with only valid JSON.', tier } = body
+  const requestBody = JSON.stringify({
+    systemInstruction: { parts: [{ text: String(system) }] },
+    contents: [{ role: 'user', parts: [{ text: String(prompt) }] }],
+    generationConfig: { responseMimeType: 'application/json', maxOutputTokens: tier === 'quick' ? 1024 : 2048 },
+  })
+  return fetchGeminiWithFallback(tier, model => fetchWithHeaderTimeout(geminiUrl(model), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY() },
+    body: requestBody,
+  }))
+}
+
+function openAICompatibleRequest(provider, body, structured = false) {
+  const grok = provider === 'grok'
+  const url = grok ? 'https://api.x.ai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions'
+  const key = grok ? XAI_KEY() : KEY()
+  const { messages = [], prompt = '', system = 'Reply with only valid JSON.', tier } = body
+  const requestBody = structured
+    ? {
+        model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
+        response_format: { type: 'json_object' },
+        max_tokens: tier === 'quick' ? 1024 : 2048,
+        messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
+      }
+    : {
+        model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
+        stream: true,
+        temperature: 0.7,
+        max_tokens: tier === 'quick' ? 1024 : 2048,
+        messages: [...(system ? [{ role: 'system', content: system }] : []), ...(Array.isArray(messages) ? messages : [])],
+      }
+  return () => fetchWithHeaderTimeout(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+    body: JSON.stringify(requestBody),
+  })
+}
+
+async function requestProviderChat(provider, body) {
+  if (provider === 'gemini') return requestGeminiChat(body)
+  return retryTransientRequest(openAICompatibleRequest(provider, body))
+}
+
+async function requestProviderJson(provider, body) {
+  if (provider === 'gemini') return requestGeminiJson(body)
+  return retryTransientRequest(openAICompatibleRequest(provider, body, true))
+}
+
+async function chooseProvider(providers, request, requireStream = false) {
+  let lastFailure = null
+  for (const provider of providers) {
+    try {
+      const response = await request(provider)
+      if (response.ok) {
+        if (!requireStream || response.body) return { provider, response }
+        lastFailure = { provider, error: new Error('The provider returned no response stream.') }
+        continue
+      }
+      lastFailure = { provider, response }
+      if (!shouldTryAnotherProvider(response)) return lastFailure
+      await discardResponse(response)
+    } catch (error) {
+      lastFailure = { provider, error }
+    }
+  }
+  return lastFailure
+}
+
+async function providerErrorMessage(provider, response) {
+  if (provider === 'gemini') return geminiError(response)
+  if (provider === 'grok') return xaiError(response)
+  return providerError(response)
+}
+
+async function sendProviderFailure(res, failure) {
+  const response = failure?.response
+  if (response && !shouldTryAnotherProvider(response)) {
+    return send(res, response.status || 502, { error: await providerErrorMessage(failure.provider, response) })
+  }
+  return send(res, 503, {
+    error: 'QuorlythBot could not get a response from the available AI services. Please try again shortly.',
+    retryable: true,
+  })
+}
+
+async function streamGeminiResponse(r, res) {
   res.statusCode = 200
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('X-Accel-Buffering', 'no')
   const dec = new TextDecoder()
   let buf = ''
   const emit = line => {
@@ -122,7 +274,7 @@ async function geminiChat(req, res, body) {
     try {
       const event = JSON.parse(l.slice(5).trim())
       const text = event.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('')
-      if (text) res.write(`data: ${JSON.stringify({ t: text })}\n\n`)
+      if (text) res.write('data: ' + JSON.stringify({ t: text }) + '\n\n')
     } catch {}
   }
   try {
@@ -135,57 +287,20 @@ async function geminiChat(req, res, body) {
     if (buf) emit(buf)
     res.write('data: {"done":true}\n\n')
     res.end()
-  } catch (e) {
-    if (!res.headersSent) return send(res, 502, { error: 'Gemini stream was interrupted. Please try again.' })
+  } catch {
+    if (!res.headersSent) return send(res, 502, { error: 'The AI response was interrupted before it began.' })
     res.end()
   }
 }
 
-async function geminiJson(req, res, body) {
-  const { prompt = '', system = 'Reply with only valid JSON.', tier } = body
-  const requestBody = JSON.stringify({
-    systemInstruction: { parts: [{ text: String(system) }] },
-    contents: [{ role: 'user', parts: [{ text: String(prompt) }] }],
-    generationConfig: { responseMimeType: 'application/json', maxOutputTokens: tier === 'quick' ? 1024 : 2048 },
-  })
-  const r = await fetchGeminiWithFallback(tier, model => fetch(geminiUrl(model), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY() },
-    body: requestBody,
-  }))
-  if (!r.ok) return send(res, r.status, { error: await geminiError(r) })
-  const payload = await r.json().catch(() => ({}))
-  const text = payload.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '{}'
-  try { send(res, 200, JSON.parse(text)) }
-  catch { send(res, 502, { error: 'Gemini returned an invalid JSON response. Please try again.' }) }
-}
-
-/** Streams a chat reply as server-sent events: data: {"t":"next piece of text"} */
-export async function chat(req, res) {
+async function streamOpenAICompatibleResponse(r, res) {
+  res.statusCode = 200
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('X-Accel-Buffering', 'no')
+  const dec = new TextDecoder()
+  let buf = ''
   try {
-    needText()
-    const body = await readBody(req)
-    const provider = textProvider()
-    if (provider === 'gemini') return await geminiChat(req, res, body)
-    const { messages = [], system, tier } = body
-    const grok = provider === 'grok'
-    const r = await fetch(grok ? 'https://api.x.ai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${grok ? XAI_KEY() : KEY()}` },
-      body: JSON.stringify({
-        model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
-        stream: true,
-        temperature: 0.7,
-        max_tokens: tier === 'quick' ? 1024 : 2048,
-        messages: [...(system ? [{ role: 'system', content: system }] : []), ...messages],
-      }),
-    })
-    if (!r.ok || !r.body) return send(res, r.status || 500, { error: await (grok ? xaiError(r) : providerError(r)) })
-    res.statusCode = 200
-    res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache')
-    const dec = new TextDecoder()
-    let buf = ''
     for await (const chunk of r.body) {
       buf += dec.decode(chunk, { stream: true })
       const lines = buf.split('\n')
@@ -193,42 +308,81 @@ export async function chat(req, res) {
       for (const line of lines) {
         const l = line.trim()
         if (!l.startsWith('data:')) continue
-        const d = l.slice(5).trim()
-        if (d === '[DONE]') continue
+        const data = l.slice(5).trim()
+        if (data === '[DONE]') continue
         try {
-          const t = JSON.parse(d).choices?.[0]?.delta?.content
-          if (t) res.write(`data: ${JSON.stringify({ t })}\n\n`)
+          const piece = JSON.parse(data).choices?.[0]?.delta?.content
+          if (piece) res.write('data: ' + JSON.stringify({ t: piece }) + '\n\n')
         } catch {}
       }
     }
     res.write('data: {"done":true}\n\n')
     res.end()
-  } catch (e) { send(res, e.status || 500, { error: String(e.message || e) }) }
+  } catch {
+    if (!res.headersSent) return send(res, 502, { error: 'The AI response was interrupted before it began.' })
+    res.end()
+  }
 }
 
-/** Returns structured JSON for a prompt. */
+/** Streams a chat reply. Provider failures are handled before the response starts. */
+export async function chat(req, res) {
+  try {
+    const body = await readBody(req)
+    const providers = needText()
+    const failure = await chooseProvider(providers, provider => requestProviderChat(provider, body), true)
+    if (!failure?.response?.ok || !failure.response.body) return await sendProviderFailure(res, failure)
+    if (failure.provider === 'gemini') return await streamGeminiResponse(failure.response, res)
+    return await streamOpenAICompatibleResponse(failure.response, res)
+  } catch (e) {
+    return send(res, e.status || 500, { error: String(e.message || e) })
+  }
+}
+
+function parseProviderJson(provider, payload) {
+  if (provider === 'gemini') {
+    const generated = payload.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '{}'
+    return JSON.parse(generated)
+  }
+  return JSON.parse(payload.choices?.[0]?.message?.content || '{}')
+}
+
+/** Returns structured JSON for a prompt, failing over on availability and parse errors. */
 export async function json(req, res) {
   try {
-    needText()
     const body = await readBody(req)
-    const provider = textProvider()
-    if (provider === 'gemini') return await geminiJson(req, res, body)
-    const { prompt = '', system = 'Reply with only valid JSON.', tier } = body
-    const grok = provider === 'grok'
-    const r = await fetch(grok ? 'https://api.x.ai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${grok ? XAI_KEY() : KEY()}` },
-      body: JSON.stringify({
-        model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
-        response_format: { type: 'json_object' },
-        max_tokens: tier === 'quick' ? 1024 : 2048,
-        messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
-      }),
-    })
-    const j = await r.json()
-    if (!r.ok) return send(res, r.status, { error: grok ? await xaiError(new Response(JSON.stringify(j), { status: r.status })) : j.error?.code === 'credit_balance_exhausted' || j.error?.code === 'insufficient_quota' ? 'QuorlythBot is temporarily unavailable because the OpenAI account has no API credits remaining. Add credits to the OpenAI project connected to this site, then try again.' : j.error?.message || 'The AI service could not complete this request. Please try again.' })
-    send(res, 200, JSON.parse(j.choices?.[0]?.message?.content || '{}'))
-  } catch (e) { send(res, e.status || 500, { error: String(e.message || e) }) }
+    const providers = needText()
+    let lastFailure = null
+
+    for (const provider of providers) {
+      let response
+      try {
+        response = await requestProviderJson(provider, body)
+      } catch (error) {
+        lastFailure = { provider, error }
+        continue
+      }
+
+      if (!response.ok) {
+        lastFailure = { provider, response }
+        if (shouldTryAnotherProvider(response)) {
+          await discardResponse(response)
+          continue
+        }
+        return send(res, response.status || 502, { error: await providerErrorMessage(provider, response) })
+      }
+
+      try {
+        const payload = await response.json()
+        return send(res, 200, parseProviderJson(provider, payload))
+      } catch (error) {
+        lastFailure = { provider, error }
+      }
+    }
+
+    return await sendProviderFailure(res, lastFailure)
+  } catch (e) {
+    return send(res, e.status || 500, { error: String(e.message || e) })
+  }
 }
 
 /** Mints a short lived key so the browser can talk to the Realtime API directly (voice, live). */
