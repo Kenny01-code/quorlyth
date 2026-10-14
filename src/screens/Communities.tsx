@@ -6,7 +6,7 @@ import { IdeaCard } from '../components/IdeaCard'
 import { Av, Chip, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { Community } from '../lib/types'
-import { cleanTag, cn } from '../lib/util'
+import { cleanTag, cn, when } from '../lib/util'
 import { ShareCard } from '../components/ShareCard'
 import { useDraftState } from '../lib/useDraftState'
 
