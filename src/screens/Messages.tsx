@@ -78,7 +78,19 @@ export function Messages() {
   const meId = a.me?.id || ''
 
   useEffect(() => {
-    if (!store || !meId) { setConversations([]); setMessages([]); setReads([]); setChatPreferences([]); setMessageEdits([]); setMessageTombstones([]); setMessageHides([]); setMessageReactions([]); return }
+    if (!meId) {
+      setConversations([]); setMessages([]); setReads([]); setChatPreferences([])
+      setMessageEdits([]); setMessageTombstones([]); setMessageHides([]); setMessageReactions([])
+      setError('')
+      return
+    }
+    if (!store) {
+      setConversations([]); setMessages([]); setReads([]); setChatPreferences([])
+      setMessageEdits([]); setMessageTombstones([]); setMessageHides([]); setMessageReactions([])
+      setError('Messaging storage is not connected for this session. Refresh the page or sign in again.')
+      return
+    }
+    setError('')
     const report = (e: unknown) => { console.error('Quorlyth chat sync failed:', e); setError('Live chat sync is unavailable. Check your connection and database setup.') }
     const reportAdvanced = (e: unknown) => { console.warn('Advanced chat features are not available yet. Apply supabase/migrations/20261013_advanced_chat_features.sql to enable them.', e) }
     const offC = store.subscribe('conversations', docs => setConversations(docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(meId)).sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))), report)
@@ -125,7 +137,7 @@ export function Messages() {
       if (conversationFilter === 'unread' && unreadCount(c) === 0) return false
       return titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())
     })
-    .sort((x, y) => Number(!!preferenceFor(y.id)?.pinned) - Number(!!preferenceFor(x.id)?.pinned) || (y.createdAt || 0) - (x.createdAt || 0)),
+    .sort((x, y) => Number(!!preferenceFor(y.id)?.pinned) - Number(!!preferenceFor(x.id)?.pinned) || ((lastMessage(y)?.at || y.createdAt || 0) - (lastMessage(x)?.at || x.createdAt || 0))),
     [conversations, chatPreferences, meId, conversationFilter, query, messages, reads, a.nm])
 
   async function saveChatPreference(conversationId: string, patch: Partial<ChatPreference>) {
@@ -274,7 +286,7 @@ export function Messages() {
     if (!store || !meId) return
     setError('')
     const existing = conversations.find(c => c.type === 'direct' && c.members.length === 2 && c.members.includes(personId) && c.members.includes(meId))
-    if (existing) { try { await saveChatPreference(existing.id, { hidden: false, archived: false }) } catch {} nav('/messages/' + existing.id); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); return }
+    if (existing) { try { await saveChatPreference(existing.id, { hidden: false, archived: false }) } catch (e) { setError('Could not restore this conversation. ' + readableChatError(e)); return } nav('/messages/' + existing.id); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); return }
     const id = makeId()
     try {
       await store.set('conversations/' + id, { title: '', type: 'direct', members: [meId, personId], createdBy: meId, createdAt: Date.now() })
@@ -326,7 +338,7 @@ export function Messages() {
       <div className="chat-dither-vignette" aria-hidden="true" />
       <div className="chat-topline"><div className="chat-page-heading"><span className="chat-heading-mark"><Icon name="message" size={17} /></span><div><h2 className="chat-title">Messages</h2><p className="mut">Your conversations, thoughtfully connected</p></div></div><div className="chat-top-actions"><button className="btn" onClick={() => { setGroupOpen(true); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="users" size={16} />New group</button><button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); setError('') }}><Icon name="plus" size={16} />New conversation</button></div></div>
       {error && <div className="chat-error" role="alert"><Icon name="alert" size={16} />{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
-      <div className={cn('chat-workspace', 'size-' + workspaceSize, (peopleOpen || groupOpen || settingsOpen || profileOpen) && 'with-sidepanel')}>
+      <div className={cn('chat-workspace', 'size-' + workspaceSize, active && 'has-active-chat', (peopleOpen || groupOpen || settingsOpen || profileOpen) && 'with-sidepanel')}>
         <aside className={cn('glass chat-sidebar', active && 'has-active')}>
           <nav className="chat-utility-nav" aria-label="Messaging navigation">
             <button className={cn('chat-utility-item', !peopleOpen && !groupOpen && !settingsOpen && !profileOpen && 'on')} onClick={() => { setPeopleOpen(false); setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setConversationFilter('all') }}><Icon name="message" size={16} /><span>Chats</span></button>
@@ -347,7 +359,6 @@ export function Messages() {
               {pref?.pinned && <span className="chat-pin-indicator" title="Pinned chat"><Icon name="pin" size={12} /></span>}
               {pref?.muted && <span className="chat-pin-indicator" title="Muted chat"><Icon name="bell" size={12} /></span>}
               {unread > 0 && <span className="chat-unread-count" aria-label={unread + ' unread messages'}>{unread > 99 ? '99+' : unread}</span>}
-              <button className="chat-conversation-menu-trigger" type="button" aria-label={'Options for ' + titleOf(c)} title="Chat options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(c.id, r.right - 210, r.bottom + 4) }}><Icon name="more" size={17} /></button>
             </div>
           })}{!visibleConversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>{conversationFilter === 'archived' ? 'No archived conversations.' : 'Your inbox is a blank canvas.'}</b><p>{conversationFilter === 'archived' ? 'Chats you archive will live here until you restore them.' : 'Start a private conversation or bring your collaborators together.'}</p>{conversationFilter !== 'archived' && <button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button>}</div>}</div>
           <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Private conversations <span className="dim">· standard encryption in transit</span></div>
@@ -359,7 +370,6 @@ export function Messages() {
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
               <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
-              <button className="chat-icon-btn chat-thread-menu-trigger" type="button" aria-label="Conversation options" title="Conversation options" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(active.id, r.left - 205, r.bottom + 6) }}><Icon name="more" size={18} /></button>
             </header>
             <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 150 }}>
               <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
@@ -380,7 +390,6 @@ export function Messages() {
                       {editingMessageId === m.id ? <div className="chat-edit-block"><textarea value={editDraft} maxLength={4000} rows={3} onChange={e => setEditDraft(e.target.value)} aria-label="Edit message text" /><div><button type="button" className="chat-small-action" onClick={() => { setEditingMessageId(null); setEditDraft('') }}>Cancel</button><button type="button" className="chat-small-action is-primary" disabled={!editDraft.trim()} onClick={() => void saveMessageEdit(m)}>Save edit</button></div></div> : <p>{deleted ? 'This message was deleted.' : messageText(m)}</p>}
                       <time>{formatTime(m.at)}{messageEdits.some(edit => edit.messageId === m.id) && !deleted && ' · edited'}</time>
                     </div>
-                    <button className="chat-message-menu-trigger" type="button" aria-label="Message options" title="Message options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openMessageMenu(m.id, r.left - 215, r.top) }}><Icon name="more" size={16} /></button>
                   </div>
                   {reactionTypes.length > 0 && !deleted && <div className="chat-message-reactions">{reactionTypes.map(emoji => <button type="button" key={emoji} className={cn('chat-reaction-pill', reactions.some(r => r.userId === meId && r.reaction === emoji) && 'mine')} onClick={() => void actOnMessage('react', m, emoji)}>{emoji}<span>{reactions.filter(r => r.reaction === emoji).length}</span></button>)}</div>}
                 </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import '../styles/analytics.css'
 import { useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
 import { Icon } from '../lib/Icon'
@@ -82,7 +83,7 @@ function Inner() {
   const src = cs.top.m === 'backs' ? X.back : X.auth
   const topIds = Object.keys(src).sort((x, y) => src[y] - src[x]).slice(0, cs.top.n)
 
-  if (!a.owner && ownedCommunities.length === 0) return <Empty icon="insight" title="Community-owner analytics" text="Analytics is available to the owners of communities. Create a community or open one you manage to see its activity here."><button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Open my communities</button></Empty>
+  if (!a.owner && ownedCommunities.length === 0) return <MemberAnalyticsView />
 
   function body(g: ChartKey) {
     if (g === 'area') return <div className="chs"><AreaChart dd={dd} o={cs.area} /></div>
@@ -133,7 +134,7 @@ function Inner() {
     d.save('quorlyth-report.pdf')
   }
 
-  if (!data.ideas.length && !X.mem) return <><Head kicker="Analytics" title="Your community in numbers." /><Empty icon="insight" title="Nothing to measure yet" text="Charts appear once members join and share ideas."><button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Open communities</button></Empty></>
+  if (a.owner && !rawData.communities.length && !rawData.ideas.length) return <><Head kicker="Analytics" title="Your platform in numbers." /><Empty icon="insight" title="Nothing to measure yet" text="Platform analytics will appear here as communities, members and ideas become active."><button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Open communities</button></Empty></>
 
   return (
     <>
@@ -162,6 +163,94 @@ function Inner() {
         </div>
       )}
     </>
+  )
+}
+
+
+/** Member analytics uses only the signed-in member's own ideas and participation. */
+function MemberAnalyticsView() {
+  const a = useApp()
+  const nav = useNavigate()
+  const [range, setRange] = useState(30)
+  const { cs } = useChartSettings()
+  const memberId = a.me?.id || ''
+  const joinedCommunities = useMemo(
+    () => a.data.communities.filter(community => a.joined(community.id)),
+    [a.data.communities, a.joined],
+  )
+  const myIdeas = useMemo(
+    () => a.data.ideas.filter(idea => idea.authorId === memberId),
+    [a.data.ideas, memberId],
+  )
+  const activity = useMemo<Daily>(() => {
+    const day = 86400000
+    const today = new Date().setHours(0, 0, 0, 0)
+    const dates: number[] = []
+    const values: number[] = []
+    for (let offset = range - 1; offset >= 0; offset -= 1) {
+      const timestamp = today - offset * day
+      dates.push(timestamp)
+      values.push(myIdeas.filter(idea => idea.at >= timestamp && idea.at < timestamp + day).length)
+    }
+    return { d: dates, v: values }
+  }, [range, myIdeas])
+  const statuses = useMemo(() => {
+    const count = (status: string) => myIdeas.filter(idea => a.statusOf(idea.id) === status).length
+    return [
+      ['In review', count('review'), '#bcbcbc'],
+      ['Selected', count('selected'), '#eeeeee'],
+      ['Held', count('held'), '#777777'],
+      ['Declined', count('declined'), '#4f4f4f'],
+      ['Ready to share', count('promoted'), '#ffffff'],
+    ] as [string, number, string][]
+  }, [myIdeas, a.statusOf])
+  const backingsReceived = myIdeas.reduce((sum, idea) => sum + a.votesOf(idea.id), 0)
+  const selectedIdeas = myIdeas.filter(idea => ['selected', 'promoted'].includes(a.statusOf(idea.id))).length
+  const recentIdeas = [...myIdeas].sort((first, second) => (second.at || 0) - (first.at || 0)).slice(0, 5)
+  const contributionsByCommunity = joinedCommunities.map(community => ({
+    community,
+    ideas: myIdeas.filter(idea => idea.cid === community.id),
+  })).sort((first, second) => second.ideas.length - first.ideas.length || first.community.name.localeCompare(second.community.name))
+
+  return (
+    <section className="member-analytics-page">
+      <Head kicker="MEMBER ANALYTICS" title="Your progress, at a glance." right={<div className="member-analytics-range" aria-label="Choose activity range">{[7, 30, 90].map(days => <Chip key={days} on={range === days} onClick={() => setRange(days)}>{days} days</Chip>)}</div>} />
+      <div className="member-analytics-stats">
+        <article className="glass pad member-analytics-stat"><span className="member-analytics-stat-icon"><Icon name="users" size={17} /></span><p>Communities joined</p><strong>{joinedCommunities.length}</strong><small>Your current memberships</small></article>
+        <article className="glass pad member-analytics-stat"><span className="member-analytics-stat-icon"><Icon name="idea" size={17} /></span><p>Ideas contributed</p><strong>{myIdeas.length}</strong><small>Ideas submitted by you</small></article>
+        <article className="glass pad member-analytics-stat"><span className="member-analytics-stat-icon"><Icon name="spark" size={17} /></span><p>Backings received</p><strong>{backingsReceived}</strong><small>Support on your ideas</small></article>
+        <article className="glass pad member-analytics-stat"><span className="member-analytics-stat-icon"><Icon name="check" size={17} /></span><p>Ideas selected</p><strong>{selectedIdeas}</strong><small>Selected or ready to share</small></article>
+      </div>
+      <div className="member-analytics-chart-grid">
+        <article className="glass pad member-analytics-card">
+          <div className="member-analytics-card-head"><div><p className="dim">YOUR CONTRIBUTIONS</p><h3>Ideas over time</h3></div><span>{activity.v.reduce((sum, value) => sum + value, 0)} submitted</span></div>
+          <div className="member-analytics-chart-frame">{activity.v.some(value => value > 0) ? <AreaChart dd={activity} o={cs.area} /> : <div className="member-analytics-empty-chart"><Icon name="insight" size={23} /><b>No submissions in this range</b><span>Your own idea activity will appear here when you contribute.</span></div>}</div>
+        </article>
+        <article className="glass pad member-analytics-card">
+          <div className="member-analytics-card-head"><div><p className="dim">YOUR IDEAS</p><h3>Review status</h3></div><span>{myIdeas.length} total</span></div>
+          {myIdeas.length ? <div className="member-analytics-donut"><Donut items={statuses} total={myIdeas.length} o={cs.don} /></div> : <div className="member-analytics-empty-chart"><Icon name="insight" size={23} /><b>Your status breakdown starts here</b><span>Share an idea to see how it moves through review.</span></div>}
+        </article>
+      </div>
+      <div className="member-analytics-lists">
+        <article className="glass pad member-analytics-card">
+          <div className="member-analytics-card-head"><div><p className="dim">PARTICIPATION</p><h3>Where you contribute</h3></div><span>{joinedCommunities.length} communities</span></div>
+          {contributionsByCommunity.length ? <div className="member-analytics-community-list">{contributionsByCommunity.slice(0, 6).map(({ community, ideas }) => <div className="member-analytics-community-row" key={community.id}><span className="member-analytics-community-mark"><Icon name="users" size={15} /></span><div className="member-analytics-community-copy"><b>{community.name}</b><small>{ideas.length ? ideas.length + ' of your ideas' : 'No ideas submitted here yet'}</small></div><strong>{ideas.length}</strong></div>)}</div> : <div className="member-analytics-inline-empty"><b>You have not joined a community yet.</b><span>Explore communities to start following ideas and meeting collaborators.</span><button className="btn" onClick={() => nav('/communities')}>Explore communities <Icon name="arrow" size={15} /></button></div>}
+        </article>
+        <article className="glass pad member-analytics-card">
+          <div className="member-analytics-card-head"><div><p className="dim">RECENT ACTIVITY</p><h3>Your latest ideas</h3></div><span>Last 5</span></div>
+          {recentIdeas.length ? <div className="member-analytics-recent-list">{recentIdeas.map(idea => <div className="member-analytics-recent-row" key={idea.id}><span className="member-analytics-recent-mark"><Icon name="idea" size={15} /></span><div className="member-analytics-recent-copy"><b>{idea.title}</b><small>{a.data.communities.find(community => community.id === idea.cid)?.name || 'Community'} · {new Date(idea.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</small></div><span className="member-analytics-status">{STATUS_LABEL[a.statusOf(idea.id)] || 'In review'}</span></div>)}</div> : <div className="member-analytics-inline-empty"><b>Your first idea is still ahead of you.</b><span>Contribute something useful to a community and track its progress here.</span><button className="btn" onClick={() => nav('/communities')}>Find a community <Icon name="arrow" size={15} /></button></div>}
+        </article>
+      </div>
+      <section className="member-analytics-locked" aria-labelledby="member-analytics-locked-title">
+        <div className="member-analytics-locked-heading"><span className="member-analytics-lock-icon"><Icon name="lock" size={18} /></span><div><p className="dim">COMMUNITY OWNER INSIGHTS</p><h3 id="member-analytics-locked-title">Unlock analytics for your own community</h3><p>These wider community visuals become available when you create or manage a community. Your member view stays focused on your own activity.</p></div></div>
+        <div className="member-analytics-locked-grid">
+          <div className="member-analytics-locked-card"><div className="member-analytics-mini-bars"><i /><i /><i /><i /><i /></div><b>Community growth</b><span>Membership and participation trends</span><em><Icon name="lock" size={12} /> Owner access</em></div>
+          <div className="member-analytics-locked-card"><div className="member-analytics-mini-funnel"><i /><i /><i /></div><b>Review funnel</b><span>Ideas, selections and promotion readiness</span><em><Icon name="lock" size={12} /> Owner access</em></div>
+          <div className="member-analytics-locked-card"><div className="member-analytics-mini-people"><i /><i /><i /><i /></div><b>Contributor insights</b><span>Activity across your community members</span><em><Icon name="lock" size={12} /> Owner access</em></div>
+        </div>
+        <div className="member-analytics-locked-footer"><span>Build a space of your own to unlock the full analytics workspace.</span><button className="btn p" onClick={() => nav('/communities')}>Create a community <Icon name="plus" size={15} /></button></div>
+      </section>
+    </section>
   )
 }
 
