@@ -15,7 +15,11 @@ export interface Auth {
   updatePassword(password: string): Promise<void>
   signOut(): Promise<void>
 }
-export interface Backend { store: DocStore; auth: Auth }
+export interface Backend {
+  store: DocStore; auth: Auth
+  isPlatformAdmin(): Promise<boolean>
+  reviewCommunityJoinRequest(cid: string, userId: string, status: 'approved' | 'declined'): Promise<void>
+}
 
 const ME_KEY = 'quorlyth:me'
 const LOCAL_ACCOUNTS_KEY = 'quorlyth:accounts:v1'
@@ -134,7 +138,18 @@ export async function createBackend(): Promise<Backend> {
         async updatePassword(password) { const { error } = await sb.auth.updateUser({ password }); if (error) throw error },
         async signOut() { const { error } = await sb.auth.signOut({ scope: 'local' }); if (error) throw error },
       }
-    return { store, auth }
+    return {
+      store, auth,
+      async isPlatformAdmin() {
+        const { data, error } = await sb.rpc('current_user_is_platform_admin')
+        if (error) throw error
+        return data === true
+      },
+      async reviewCommunityJoinRequest(cid, userId, status) {
+        const { error } = await sb.rpc('review_community_join_request', { p_cid: cid, p_user_id: userId, p_status: status })
+        if (error) throw error
+      },
+    }
   }
 
   // Local storage is used only when neither Supabase credential is configured.
@@ -145,5 +160,19 @@ export async function createBackend(): Promise<Backend> {
     await store.delete('config/owner')
     localStorage.setItem(OWNER_CLAIM_MIGRATION, '1')
   }
-  return { store, auth: localAuth() }
+  return {
+    store, auth: localAuth(),
+    async isPlatformAdmin() { return false },
+    async reviewCommunityJoinRequest(cid, userId, status) {
+      const path = 'communityJoinRequests/' + cid + '__' + userId
+      const request = await store.get(path)
+      if (!request || request.status !== 'pending') throw new Error('This join request is no longer pending.')
+      await store.set(path, { ...request, status, reviewedAt: Date.now() })
+      if (status === 'approved') {
+        const memberPath = 'members/' + userId
+        const current = await store.get(memberPath) || {}
+        await store.set(memberPath, { ...current, c: { ...(current.c || {}), [cid]: true } })
+      }
+    },
+  }
 }
