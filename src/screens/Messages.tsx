@@ -90,6 +90,7 @@ export function Messages() {
       setError('Messaging storage is not connected for this session. Refresh the page or sign in again.')
       return
     }
+    setError('')
     const report = (e: unknown) => { console.error('Quorlyth chat sync failed:', e); setError('Live chat sync is unavailable. Check your connection and database setup.') }
     const reportAdvanced = (e: unknown) => { console.warn('Advanced chat features are not available yet. Apply supabase/migrations/20261013_advanced_chat_features.sql to enable them.', e) }
     const offC = store.subscribe('conversations', docs => setConversations(docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(meId)).sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))), report)
@@ -369,7 +370,6 @@ export function Messages() {
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
               <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
-              <button className="chat-icon-btn chat-thread-menu-trigger" type="button" aria-label="Conversation options" title="Conversation options" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(active.id, r.left - 205, r.bottom + 6) }}><Icon name="more" size={18} /></button>
             </header>
             <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 150 }}>
               <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
