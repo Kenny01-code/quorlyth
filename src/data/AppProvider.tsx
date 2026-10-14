@@ -405,7 +405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),
       useComments: () => [],
     }
-  }, [ready, startupError, backend, me, owner, demo, enterDemo, exitDemo, data, toast, toastMsg, st])
+  }, [ready, startupError, backend, me, owner, platformAdmin, demo, enterDemo, exitDemo, data, toast, toastMsg, st])
 
   return <Ctx.Provider value={app}>{children}</Ctx.Provider>
 }
