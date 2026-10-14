@@ -1,27 +1,24 @@
--- Restore creator metadata for Quorlyth communities created before ownerId/createdBy
--- were stored. Run from the Supabase SQL Editor as the project database owner.
--- Only communities with missing ownership fields are changed.
-
-with verified_owner as (
-  select id::text as id
-  from auth.users
-  where lower(email) = 'ighiledivine77@gmail.com'
-    and email_confirmed_at is not null
-  order by created_at asc
+-- Restore creator metadata for legacy communities from the one-time owner claim.
+-- No personal email is used: ownership follows the verified Auth user ID recorded in
+-- config/owner. Only community records with missing ownership fields are backfilled.
+with claimed_owner as (
+  select u.id::text as id
+  from public.docs claim
+  join auth.users u on u.id = case
+    when coalesce(claim.data->>'id','') ~*
+      '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    then (claim.data->>'id')::uuid else null end
+  where claim.path = 'config/owner' and u.email_confirmed_at is not null
   limit 1
 )
 update public.docs as d
 set data = jsonb_set(
-             jsonb_set(d.data, '{ownerId}', to_jsonb(coalesce(nullif(d.data->>'ownerId',''), verified_owner.id)), true),
-             '{createdBy}', to_jsonb(coalesce(nullif(d.data->>'createdBy',''), verified_owner.id)), true
-           ),
+      jsonb_set(d.data, '{ownerId}', to_jsonb(coalesce(nullif(d.data->>'ownerId',''), claimed_owner.id)), true),
+      '{createdBy}', to_jsonb(coalesce(nullif(d.data->>'createdBy',''), claimed_owner.id)), true
+    ),
     updated_at = now()
-from verified_owner
-where d.path like 'communities/%'
-  and d.path !~ '^communities/[^/]+/.+'
-  and (
-    nullif(d.data->>'ownerId','') is null
-    or nullif(d.data->>'createdBy','') is null
-  );
+from claimed_owner
+where d.path ~ '^communities/[^/]+$'
+  and (nullif(d.data->>'ownerId','') is null or nullif(d.data->>'createdBy','') is null);
 
 notify pgrst, 'reload schema';
