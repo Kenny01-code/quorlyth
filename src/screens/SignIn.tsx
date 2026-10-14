@@ -66,7 +66,7 @@ export function SignIn() {
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (mode !== 'recovery' && !/^\\S+@\\S+\\.\\S+$/.test(email)) return toast('Enter a valid email address')
+    if (mode !== 'recovery' && !/^\S+@\S+\.\S+$/.test(email)) return toast('Enter a valid email address')
     if (mode === 'otp' && !/^\\d{6}$/.test(otp.trim())) return toast('Enter the 6-digit code from your email')
     setBusy(true)
     try {
@@ -158,7 +158,7 @@ export function SignIn() {
             {mode !== 'recovery' && <label className="field"><span>Email</span>
               <div className="iw"><Icon name="mail" /><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@studio.com" autoComplete="email" required /></div></label>}
             {mode === 'otp' && <label className="field"><span>6-digit recovery code</span>
-              <div className="iw"><Icon name="key-round" /><input type="text" value={otp} onChange={e => setOtp(e.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="000000" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></div>
+              <div className="iw"><Icon name="key-round" /><input type="text" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000000" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></div>
             </label>}
             {mode !== 'reset' && mode !== 'otp' && <label className="field"><span>{mode === 'recovery' ? 'New password' : 'Password'}</span>
               <div className="iw"><Icon name="private" /><input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder={mode === 'signin' ? 'Your password' : 'At least 8 characters'} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} minLength={8} required /><button type="button" className="eye" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} title={showPassword ? 'Hide password' : 'Show password'}><Icon name="eye" size={16} /></button></div></label>}
