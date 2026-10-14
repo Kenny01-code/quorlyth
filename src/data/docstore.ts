@@ -6,6 +6,8 @@ export interface Doc<T = any> { id: string; data: T }
 
 export interface DocStore {
   get(path: string): Promise<any | null>
+  /** Create a brand-new record without ON CONFLICT UPDATE semantics. */
+  create(path: string, data: any): Promise<void>
   set(path: string, data: any): Promise<void>
   update(path: string, patch: any): Promise<void>
   delete(path: string): Promise<void>
