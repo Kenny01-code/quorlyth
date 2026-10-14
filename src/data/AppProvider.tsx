@@ -2,15 +2,14 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { Backend, createBackend } from '../backend'
 import { Comment, Community, Decision, Idea, Me, Milestone, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus } from '../lib/types'
 import { slug } from '../lib/util'
-import { OWNER_EMAIL } from '../lib/owner'
 import { createDemoBackend, DEMO_ME } from './demo'
 
 type Rec<T> = Record<string, T>
 interface Data {
-  communities: Community[]; ideas: Idea[]; reviews: Rec<Review>; votes: Rec<Rec<boolean>>; members: Rec<Rec<boolean>>
+  communities: Community[]; ideas: Idea[]; reviews: Rec<Review>; outcomes: Rec<Pick<Review, 'status' | 'at'>>; votes: Rec<Rec<boolean>>; members: Rec<Rec<boolean>>
   profiles: Rec<Profile>; requests: Request[]; decisions: Rec<Decision>; promotions: Promotion[]; volunteers: VolunteerApplication[]; projects: Rec<Project>; milestones: Milestone[]; settings: SpaceSettings | null; ownerId: string | null
 }
-const EMPTY: Data = { communities: [], ideas: [], reviews: {}, votes: {}, members: {}, profiles: {}, requests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], settings: null, ownerId: null }
+const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], settings: null, ownerId: null }
 
 export interface App {
   ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; demo: boolean; data: Data
@@ -22,7 +21,6 @@ export interface App {
   ownsCommunity: (cid: string) => boolean
   canManageCommunity: (cid: string) => boolean
   canPost: () => boolean
-  claimOwner: () => Promise<boolean>
   createCommunity: (c: Partial<Community>) => Promise<boolean>
   createCommunityDetailed: (c: Partial<Community>) => Promise<{ ok: boolean; error?: string }>
   saveCommunity: (id: string, patch: Partial<Community>) => Promise<boolean>
@@ -177,6 +175,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       s.subscribe('config', d => set('ownerId', d.find(x => x.id === 'owner')?.data?.id ?? null), onReadError),
       ...(me ? [
         s.subscribe('reviews', d => set('reviews', asMap<Review>(d)), onReadError),
+        s.subscribe('ideaOutcomes', d => set('outcomes', asMap<Pick<Review, 'status' | 'at'>>(d)), onReadError),
         s.subscribe('votes', d => set('votes', Object.fromEntries(d.map(x => [x.id, x.data?.ideas || {}]))), onReadError),
         s.subscribe('members', d => set('members', Object.fromEntries(d.map(x => [x.id, x.data?.c || {}]))), onReadError),
         s.subscribe('requests', d => set('requests', asList<Request>(d)), onReadError),
@@ -209,9 +208,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, me?.name, me?.avatarUrl])
 
   const st = backend?.store
-  const owner = demo || (!!me && (backend?.auth.mode === 'supabase'
-    ? me.email?.trim().toLowerCase() === OWNER_EMAIL
-    : data.ownerId === me.id))
+  // Production ownership comes only from the server-authorized config/owner row.
+  // Never infer privileged access from email or user-editable Auth metadata.
+  const owner = demo || (!!me && data.ownerId === me.id)
 
   const enterDemo = useCallback(() => {
     sessionStorage.setItem('quorlyth:demo', '1')
@@ -302,12 +301,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       avatar: id => data.profiles[id]?.photo || data.profiles[id]?.authAvatarUrl || (me && id === me.id ? me.avatarUrl || '' : ''),
       votesOf,
       iVoted: id => !!(me && data.votes[me.id]?.[id]),
-      statusOf: id => data.reviews[id]?.status || 'review',
+      statusOf: id => data.reviews[id]?.status || data.outcomes[id]?.status || 'review',
       joined: cid => !!(me && data.members[me.id]?.[cid]),
       ownsCommunity,
       canManageCommunity,
       canPost: () => owner || !data.settings?.appr || data.decisions[me?.id || '']?.status === 'approved',
-      claimOwner: () => w(() => st!.set('config/owner', { id: me!.id }), 'You now own this space'),
       createCommunity: c => createCommunityDetailed(c).then(r => r.ok),
       createCommunityDetailed,
       saveCommunity: (id, p) => w(async () => {
@@ -348,7 +346,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addComment: (id, text) => w(() => st!.set(`ideas/${id}/comments/${slug()}`, { authorId: me!.id, text, at: Date.now() }), 'Reply posted'),
       setStatus: (id, status, extra) => w(() => up('reviews/' + id, { status, at: Date.now(), ...extra }), status === 'selected' ? 'Selected for promotion' : status === 'held' ? 'Held for later' : status === 'declined' ? 'Declined' : 'Done'),
       saveReview: (id, r) => w(() => up('reviews/' + id, { ...r, at: Date.now() })),
-      publish: (id, text, credits) => w(async () => { await st!.set('promotions/' + slug(), { ideaId: id, text, credits, by: me!.id, at: Date.now() }); await up('reviews/' + id, { status: 'promoted', at: Date.now() }) }, 'Post prepared to share'),
+      publish: (id, text, credits) => w(async () => { await st!.set('promotions/' + slug(), { ideaId: id, text, credits, by: me!.id, at: Date.now(), status: 'draft', published: false }); await up('reviews/' + id, { status: 'promoted', at: Date.now() }) }, 'Post prepared to share'),
       applyToCollaborate: (ideaId, message) => {
         if (data.volunteers.some(v => v.ideaId === ideaId && v.applicantId === me?.id && v.status !== 'declined')) {
           toast('You already have an active application for this idea')
