@@ -12,7 +12,7 @@ import { useUserState } from '../lib/userState'
 import { useNotifs } from '../lib/notifs'
 
 export function Settings() {
-  return <Gate owner><Inner /></Gate>
+  return <Gate platformAdminOnly><Inner /></Gate>
 }
 
 function Inner() {
@@ -68,7 +68,7 @@ function Inner() {
             <div className="acts"><button className="btn p" onClick={async () => { if (await a.saveSettings({ wo: w[0], wf: w[1], wr: w[2] })) clearWeightsDraft(w) }}>Save weights</button><button className="btn" onClick={async () => { setW([40, 25, 35]); if (await a.saveSettings({ wo: 40, wf: 25, wr: 35 })) clearWeightsDraft([40, 25, 35]) }}><Icon name="rotate" size={16} />Reset</button></div>
           </>}
           {tab === 2 && <>
-            <h3>Access requests</h3>
+            <h3>Platform access requests</h3><p className="dim" style={{ marginTop: 4 }}>Only platform administrators can review requests to enter Quorlyth. Community join requests are managed inside each community.</p>
             {reqs.length ? reqs.map(r => {
               const d = a.data.decisions[r.id]; const open = !d || d.at < r.at
               return (
