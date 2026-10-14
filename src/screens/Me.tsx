@@ -82,7 +82,7 @@ function Mine() {
                 <span className="pav-initials" aria-hidden="true">{avatarInitials}</span>{photo && <img alt="" src={photo} onError={e => { e.currentTarget.style.display = 'none' }} />}<span className="cam"><Icon name="edit" size={14} /></span>
               </button>
             </div>
-            <div className="myspace-role-line">{a.owner ? <span className="platform-verified-shield" title="Verified Quorlyth platform owner"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 28 7v9c0 8-4.7 13.6-12 18C8.7 29.6 4 24 4 16V7z" /><path d="m10 17 4 4 8-9" /></svg><span>VERIFIED PLATFORM OWNER</span></span> : created.length ? <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span> : <span className="chip">Member</span>}</div>
+            <div className="myspace-role-line">{(a.platformAdmin || a.owner) ? <span className="platform-verified-shield" title="Verified Quorlyth platform administrator"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 28 7v9c0 8-4.7 13.6-12 18C8.7 29.6 4 24 4 16V7z" /><path d="m10 17 4 4 8-9" /></svg><span>PLATFORM ADMIN</span></span> : created.length ? <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span> : <span className="chip">Member</span>}</div>
           </div>
           <input ref={file} type="file" accept="image/*" className="hide" onChange={e => { const fl = e.target.files?.[0]; e.target.value = ''; if (fl) fl.size > 12e6 ? a.toast('That image is too large') : setCrop(fl) }} />
           <p className="dim" style={{ margin: '12px 0 0' }}>Profile edits are saved as a draft on this device until you save them.</p>
@@ -158,7 +158,7 @@ function Public({ id }: { id: string }) {
   const contributorIds = Object.keys(contributorSource).sort((x, y) => contributorSource[y] - contributorSource[x]).slice(0, cs.top.n)
   const communityMemberIds = new Set<string>()
   Object.entries(a.data.members).forEach(([uid, memberships]) => { if (Object.entries(memberships || {}).some(([cid, joined]) => joined && activityCommunityIds.has(cid))) communityMemberIds.add(uid) })
-  const isPlatformOwner = id === a.data.ownerId || !!(q as any)?.platformAdmin
+  const isPlatformAdmin = id === a.me?.id ? (a.platformAdmin || a.owner) : id === a.data.ownerId
   // Show the role badge even when the owner's communities are unlisted; never reveal those community names.
   const isCommunityCreator = a.data.communities.some(c => isCreatorOf(c))
   return (
@@ -166,7 +166,7 @@ function Public({ id }: { id: string }) {
       <div className="head"><div><button className="chip" onClick={() => nav(-1)}>Back</button></div><div className="public-profile-actions">{id === a.me?.id && <button className="btn" onClick={() => nav('/me')}><Icon name="edit" size={16} />Edit profile</button>}<button className="btn" onClick={() => nav('/messages')}><Icon name="message" size={16} />Messages</button></div></div>
       <div className="glass pad">
         <div className="pw"><span className="avx" style={{ width: 112, height: 112 }}><Av id={id} size={112} /></span>
-          <div style={{ minWidth: 0 }}><div className="profile-name-row"><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{isPlatformOwner ? <span className="platform-verified-shield" title="Verified Quorlyth platform owner"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 28 7v9c0 8-4.7 13.6-12 18C8.7 29.6 4 24 4 16V7z" /><path d="m10 17 4 4 8-9" /></svg><span>VERIFIED PLATFORM OWNER</span></span> : isCommunityCreator && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span>}</div>{created.length > 0 && !isPlatformOwner && <p className="dim profile-creator-proof">{created.length} {created.length === 1 ? 'community' : 'communities'} started</p>}{q?.head && <p className="mut" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
+          <div style={{ minWidth: 0 }}><div className="profile-name-row"><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{isPlatformAdmin ? <span className="platform-verified-shield" title="Verified Quorlyth platform owner"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 28 7v9c0 8-4.7 13.6-12 18C8.7 29.6 4 24 4 16V7z" /><path d="m10 17 4 4 8-9" /></svg><span>PLATFORM ADMIN</span></span> : isCommunityCreator && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span>}</div>{created.length > 0 && !isPlatformAdmin && <p className="dim profile-creator-proof">{created.length} {created.length === 1 ? 'community' : 'communities'} started</p>}{q?.head && <p className="mut" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
         <div className="stat3" style={{ marginTop: 28 }}><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{communities.length}</p></div></div>
       </div>
       <ShareCard title="Profile link" url={location.origin + '/me/' + id} sub="Scan or open to view this profile." />
