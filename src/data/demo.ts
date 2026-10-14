@@ -93,6 +93,18 @@ export function createDemoBackend(): Backend {
   })
   return {
     store,
+    isPlatformAdmin: async () => true,
+    async reviewCommunityJoinRequest(cid, userId, status) {
+      const path = 'communityJoinRequests/' + cid + '__' + userId
+      const request = await store.get(path)
+      if (!request || request.status !== 'pending') throw new Error('This join request is no longer pending.')
+      await store.set(path, { ...request, status, reviewedAt: Date.now(), reviewedBy: DEMO_ME.id })
+      if (status === 'approved') {
+        const memberPath = 'members/' + userId
+        const current = await store.get(memberPath) || {}
+        await store.set(memberPath, { ...current, c: { ...(current.c || {}), [cid]: true } })
+      }
+    },
     auth: {
       mode: 'local', async current() { return DEMO_ME }, onChange() { return () => {} },
       async signInGoogle() {}, async signInEmail() {}, async signUpEmail() { return {} },
