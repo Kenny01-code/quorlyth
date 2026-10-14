@@ -1,18 +1,18 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Backend, createBackend } from '../backend'
-import { Comment, Community, Decision, Idea, Me, Milestone, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus } from '../lib/types'
+import { Comment, Community, CommunityJoinRequest, Decision, Idea, Me, Milestone, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus } from '../lib/types'
 import { slug } from '../lib/util'
 import { createDemoBackend, DEMO_ME } from './demo'
 
 type Rec<T> = Record<string, T>
 interface Data {
   communities: Community[]; ideas: Idea[]; reviews: Rec<Review>; outcomes: Rec<Pick<Review, 'status' | 'at'>>; votes: Rec<Rec<boolean>>; members: Rec<Rec<boolean>>
-  profiles: Rec<Profile>; requests: Request[]; decisions: Rec<Decision>; promotions: Promotion[]; volunteers: VolunteerApplication[]; projects: Rec<Project>; milestones: Milestone[]; settings: SpaceSettings | null; ownerId: string | null
+  profiles: Rec<Profile>; requests: Request[]; joinRequests: CommunityJoinRequest[]; decisions: Rec<Decision>; promotions: Promotion[]; volunteers: VolunteerApplication[]; projects: Rec<Project>; milestones: Milestone[]; settings: SpaceSettings | null; ownerId: string | null
 }
-const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], settings: null, ownerId: null }
+const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], settings: null, ownerId: null }
 
 export interface App {
-  ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; demo: boolean; data: Data
+  ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformAdmin: boolean; demo: boolean; data: Data
   enterDemo: () => void; exitDemo: () => Promise<void>
   toast: (m: string) => void; toastMsg: string
   nm: (id: string) => string; avatar: (id: string) => string
@@ -40,6 +40,8 @@ export interface App {
   updateMilestone: (milestoneId: string, patch: Partial<Pick<Milestone, 'title' | 'description' | 'status'>>) => Promise<boolean>
   saveSettings: (p: Partial<SpaceSettings>) => Promise<boolean>
   saveProfile: (p: Partial<Profile>) => Promise<boolean>
+  requestCommunityJoin: (cid: string, message?: string) => Promise<boolean>
+  reviewCommunityJoinRequest: (cid: string, userId: string, status: 'approved' | 'declined') => Promise<boolean>
   sendRequest: (r: Partial<Request>) => Promise<boolean>
   decide: (uid: string, status: 'approved' | 'declined') => Promise<boolean>
   useComments: (ideaId: string | null) => Comment[]
@@ -59,6 +61,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
   const [data, setData] = useState<Data>(EMPTY)
+  const [platformAdmin, setPlatformAdmin] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const tt = useRef<number>()
   const realBackend = useRef<Backend | null>(null)
@@ -179,6 +182,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         s.subscribe('votes', d => set('votes', Object.fromEntries(d.map(x => [x.id, x.data?.ideas || {}]))), onReadError),
         s.subscribe('members', d => set('members', Object.fromEntries(d.map(x => [x.id, x.data?.c || {}]))), onReadError),
         s.subscribe('requests', d => set('requests', asList<Request>(d)), onReadError),
+        s.subscribe('communityJoinRequests', d => set('joinRequests', asList<CommunityJoinRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
         s.subscribe('decisions', d => set('decisions', asMap<Decision>(d)), onReadError),
         s.subscribe('promotions', d => set('promotions', asList<Promotion>(d).sort((a, b) => b.at - a.at)), onReadError),
         s.subscribe('volunteers', d => set('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
@@ -206,6 +210,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })()
     return () => { active = false }
   }, [backend, me?.id, me?.name, me?.avatarUrl])
+
+  useEffect(() => {
+    if (!backend || !me) { setPlatformAdmin(false); return }
+    if (demo) { setPlatformAdmin(true); return }
+    let active = true
+    setPlatformAdmin(false)
+    void backend.isPlatformAdmin().then(value => { if (active) setPlatformAdmin(value) }).catch(error => {
+      console.warn('Could not resolve platform administrator permissions', error)
+      if (active) setPlatformAdmin(false)
+    })
+    return () => { active = false }
+  }, [backend, me?.id, demo])
 
   const st = backend?.store
   // Production ownership comes only from the server-authorized config/owner row.
@@ -255,11 +271,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (owner && !c.ownerId && !c.createdBy)))
-    const canManageCommunity = (cid: string) => !!me && (owner || ownsCommunity(cid))
+    const canManageCommunity = (cid: string) => !!me && (platformAdmin || ownsCommunity(cid))
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
       try {
-        await st!.create('communities/' + slug(), { name: c.name, ownerId: me.id, createdBy: me.id, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
+        await st!.create('communities/' + slug(), { name: c.name, ownerId: me.id, createdBy: me.id, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', joinApproval: !!c.joinApproval, cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
         toast('Community created')
         return { ok: true }
       } catch (e: any) {
@@ -296,7 +312,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 }
     return {
-      ready, startupError, backend, me, owner, demo, enterDemo, exitDemo, data, toast, toastMsg,
+      ready, startupError, backend, me, owner, platformAdmin, demo, enterDemo, exitDemo, data, toast, toastMsg,
       nm: id => data.profiles[id]?.name || data.profiles[id]?.authName || (me && id === me.id ? me.name : 'Member'),
       avatar: id => data.profiles[id]?.photo || data.profiles[id]?.authAvatarUrl || (me && id === me.id ? me.avatarUrl || '' : ''),
       votesOf,
@@ -367,6 +383,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (ok && me) setData(d => ({ ...d, profiles: { ...d.profiles, [me.id]: { ...d.profiles[me.id], ...p, id: me.id, at: Date.now() } } }))
         return ok
       },
+      requestCommunityJoin: (cid, message = '') => w(async () => {
+        if (!me) throw new Error('Sign in before requesting to join a community.')
+        const community = data.communities.find(c => c.id === cid)
+        if (!community || !community.joinApproval || community.arch) throw new Error('This community is not accepting join requests.')
+        if (data.members[me.id]?.[cid]) throw new Error('You are already a member of this community.')
+        const path = 'communityJoinRequests/' + cid + '__' + me.id
+        const previous = await st!.get(path)
+        if (previous?.status === 'pending') throw new Error('Your join request is already pending.')
+        if (previous?.status === 'approved') throw new Error('Your join request was approved. Refresh the community.')
+        const request = { cid, userId: me.id, message: message.trim().slice(0, 500), status: 'pending', at: Date.now() }
+        if (previous) await st!.set(path, request)
+        else await st!.create(path, request)
+      }, 'Join request sent'),
+      reviewCommunityJoinRequest: (cid, userId, status) => w(async () => {
+        if (!me || !canManageCommunity(cid)) throw new Error('Only this community’s owner or a platform administrator can review its join requests.')
+        if (!backend) throw new Error('The backend is not ready.')
+        await backend.reviewCommunityJoinRequest(cid, userId, status)
+      }, status === 'approved' ? 'Join request approved' : 'Join request declined'),
       sendRequest: r => w(() => st!.set('requests/' + me!.id, { platforms: r.platforms || [], aud: r.aud || '', note: r.note || '', at: Date.now() }), 'Request sent'),
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),
       useComments: () => [],
