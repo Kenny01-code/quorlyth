@@ -35,7 +35,7 @@ function List() {
   const nav = useNavigate()
   const { data } = a
   const [filter, setFilter] = useState<'owned' | 'joined' | 'discover'>('discover')
-  const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone' }
+  const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone', joinApproval: false }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const creatorId = (community: Community) => community.ownerId || community.createdBy || (a.owner ? a.me?.id || '' : '')
   const members = (id: string) => { const community = data.communities.find(x => x.id === id); const creator = community ? creatorId(community) : ''; return Object.keys(data.members).filter(u => data.members[u]?.[id] && u !== creator).length }
@@ -79,6 +79,7 @@ function List() {
           <Pick label="Icon" value={f.icon} onChange={v => setF({ ...f, icon: v })} opts={ICONS.map(i => [i, <Icon key={i} name={i} size={18} />])} />
           <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={() => setF({ ...f, cover: key })}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
           <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
+          <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">People must request to join before they become members.</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
           <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner only']]} />
           <div className="acts"><button className="btn p" onClick={async () => { if (!f.name.trim()) return a.toast('Give it a name'); if (await a.createCommunity({ ...f, name: f.name.trim() } as any)) clearDraft(emptyCommunity) }}>Create community</button><button className="btn" onClick={() => clearDraft(emptyCommunity)}>Discard draft</button></div>
         </div>
@@ -105,6 +106,7 @@ function Detail({ cid }: { cid: string }) {
 
   const own = a.canManageCommunity(cid) && !preview
   const joined = own ? false : preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid)
+  const myJoinRequest = a.data.joinRequests.find(r => r.cid === cid && r.userId === a.me?.id)
   const spaceOk = preview ? preview === 'member' || !data.settings?.appr : a.canPost()
   const rule = c.post || 'anyone'
   const canPost = !c.arch && (rule === 'owner' ? own : rule === 'members' ? own || joined : true) && (own || spaceOk)
@@ -115,7 +117,7 @@ function Detail({ cid }: { cid: string }) {
   list = [...list].sort(sort === 1 ? (x, y) => a.votesOf(y.id) - a.votesOf(x.id) : sort === 2 ? (x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1) : (x, y) => y.at - x.at)
   const pin = c.pinned ? data.ideas.find(i => i.id === c.pinned) : null
   const tags = Object.entries(list.reduce((o: Record<string, number>, i) => { (i.tags || []).forEach(t => (o[t] = (o[t] || 0) + 1)); return o }, {})).sort((x, y) => y[1] - x[1]).slice(0, 10).map(x => x[0])
-  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Insights', 'Settings'] : [])]
+  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'Insights', 'Settings'] : [])]
 
   async function post() {
     if (!f.title.trim()) return a.toast('Give your idea a title')
@@ -148,7 +150,12 @@ function Detail({ cid }: { cid: string }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}><Av id={communityCreatorId} size={36} /><div><p className="dim" style={{ fontSize: 10, letterSpacing: '.08em' }}>CREATED BY</p><button className="lk" onClick={() => communityCreatorId && nav('/me/' + communityCreatorId)}>{communityCreatorId && a.nm(communityCreatorId) !== 'Member' ? a.nm(communityCreatorId) : 'Community creator'}</button></div></div>
             <span style={{ display: 'flex', marginLeft: 8 }}>{mem.filter(u => u !== communityCreatorId).slice(0, 5).map(u => <Av key={u} id={u} size={28} />)}</span>
             <span className="dim">{mem.length} member{mem.length === 1 ? '' : 's'}</span>
-            {!own && <button className={cn('btn', !joined && 'p')} style={{ marginLeft: 'auto' }} onClick={() => preview ? a.toast('This is a preview. Nothing is saved.') : a.join(cid, !joined)}><Icon name={joined ? 'approve' : 'community'} size={16} />{joined ? 'Joined' : 'Join community'}</button>}
+            {!own && <button className={cn('btn', !joined && 'p')} style={{ marginLeft: 'auto' }} disabled={!joined && !!c.joinApproval && myJoinRequest?.status === 'pending'} onClick={() => {
+              if (preview) return a.toast('This is a preview. Nothing is saved.')
+              if (joined) return void a.join(cid, false)
+              if (c.joinApproval) return void a.requestCommunityJoin(cid)
+              return void a.join(cid, true)
+            }}><Icon name={joined ? 'approve' : myJoinRequest?.status === 'pending' ? 'status' : 'community'} size={16} />{joined ? 'Joined' : c.joinApproval ? myJoinRequest?.status === 'pending' ? 'Request pending' : myJoinRequest?.status === 'declined' ? 'Request again' : 'Request to join' : 'Join community'}</button>}
           </div>
         </div>
       </div>
@@ -206,10 +213,23 @@ function Detail({ cid }: { cid: string }) {
         </div>
       )}
 
-      {tab === 3 && own && <Insights cid={cid} creatorId={communityCreatorId} />}
-      {tab === 4 && own && <CommunitySettings c={c} />}
+      {tab === 3 && own && <JoinRequests cid={cid} />}
+      {tab === 4 && own && <Insights cid={cid} creatorId={communityCreatorId} />}
+      {tab === 5 && own && <CommunitySettings c={c} />}
     </>
   )
+}
+
+function JoinRequests({ cid }: { cid: string }) {
+  const a = useApp()
+  const requests = a.data.joinRequests.filter(r => r.cid === cid).sort((x, y) => y.at - x.at)
+  return <div className="glass pad">
+    <div className="profile-section-heading"><div><p className="dim">COMMUNITY MANAGEMENT</p><h3 style={{ marginBottom: 4 }}>Join requests</h3><p className="mut">Review requests for this community only. Platform access is managed separately.</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
+    {requests.length ? requests.map(r => <div key={r.id} className="set" style={{ alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 12, minWidth: 0 }}><Av id={r.userId} size={38} /><div><h3 style={{ fontSize: 15 }}>{a.nm(r.userId)}</h3><p className="dim">{when(r.at)}</p>{r.message && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.message}</p>}</div></div>
+      <div className="acts" style={{ margin: 0, flexShrink: 0 }}>{r.status === 'pending' ? <><button className="btn p" style={{ padding: '9px 18px' }} onClick={() => void a.reviewCommunityJoinRequest(cid, r.userId, 'approved')}>Approve</button><button className="btn" style={{ padding: '9px 18px' }} onClick={() => void a.reviewCommunityJoinRequest(cid, r.userId, 'declined')}>Decline</button></> : <span className="chip">{r.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
+    </div>) : <p className="mut" style={{ padding: '20px 0' }}>No join requests for this community yet.</p>}
+  </div>
 }
 
 function Insights({ cid, creatorId }: { cid: string; creatorId: string }) {
@@ -235,7 +255,7 @@ function Insights({ cid, creatorId }: { cid: string; creatorId: string }) {
 function CommunitySettings({ c }: { c: Community }) {
   const a = useApp()
   const nav = useNavigate()
-  const initial = { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', cover: c.cover || 'a', vis: c.vis || 'listed', post: c.post || 'anyone', welcome: c.welcome || '', rules: c.rules || '', arch: !!c.arch }
+  const initial = { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', cover: c.cover || 'a', vis: c.vis || 'listed', post: c.post || 'anyone', joinApproval: !!c.joinApproval, welcome: c.welcome || '', rules: c.rules || '', arch: !!c.arch }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:settings:${c.id}`, initial)
   const [del, setDel] = useState(false)
   return (
@@ -256,6 +276,7 @@ function CommunitySettings({ c }: { c: Community }) {
           }
         }}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
       <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v as any })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
+      <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">People must request to join this community before they become members.</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
       <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v as any })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner only']]} />
       <label className="field"><span>Welcome message</span><textarea value={f.welcome} maxLength={400} onChange={e => setF({ ...f, welcome: e.target.value })} placeholder="Shown to new members" /></label>
       <label className="field"><span>Guidelines</span><textarea value={f.rules} maxLength={600} onChange={e => setF({ ...f, rules: e.target.value })} placeholder="A few simple rules" /></label>
