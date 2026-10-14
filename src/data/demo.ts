@@ -108,7 +108,7 @@ export function createDemoBackend(): Backend {
     auth: {
       mode: 'local', async current() { return DEMO_ME }, onChange() { return () => {} },
       async signInGoogle() {}, async signInEmail() {}, async signUpEmail() { return {} },
-      async resetPassword() {}, async updatePassword() {}, async signOut() {},
+      async resetPassword() { throw new Error('Password reset email needs a real Supabase account.') }, async verifyRecoveryOtp() { throw new Error('Password recovery codes are unavailable in demo mode.') }, async updatePassword() {}, async signOut() {},
     },
   }
 }

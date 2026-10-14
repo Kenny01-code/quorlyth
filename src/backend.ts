@@ -12,6 +12,7 @@ export interface Auth {
   signInEmail(email: string, password: string): Promise<void>
   signUpEmail(email: string, password: string): Promise<{ sentLink?: boolean }>
   resetPassword(email: string): Promise<void>
+  verifyRecoveryOtp(email: string, token: string): Promise<void>
   updatePassword(password: string): Promise<void>
   signOut(): Promise<void>
 }
@@ -83,6 +84,7 @@ function localAuth(): Auth {
       return {}
     },
     async resetPassword() { throw new Error('Password reset email needs Supabase. Configure real auth in .env.') },
+    async verifyRecoveryOtp() { throw new Error('Email OTP recovery requires a configured Supabase backend.') },
     async updatePassword(password) {
       const me = get()
       if (!me?.email) throw new Error('Sign in again before changing your password.')
@@ -132,7 +134,11 @@ export async function createBackend(): Promise<Backend> {
           return { sentLink: !data.session }
         },
         async resetPassword(email) {
-          const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/signin?recovery=1' })
+          const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin + '/signin?recovery=1' })
+          if (error) throw error
+        },
+        async verifyRecoveryOtp(email, token) {
+          const { error } = await sb.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'recovery' })
           if (error) throw error
         },
         async updatePassword(password) { const { error } = await sb.auth.updateUser({ password }); if (error) throw error },
