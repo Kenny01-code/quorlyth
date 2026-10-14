@@ -15,6 +15,11 @@ export async function createSupabaseStore(url: string, key: string) {
       if (error) throw error
       return data?.data ?? null
     },
+    async create(path, data) {
+      // New records must use INSERT: upsert invokes ON CONFLICT UPDATE policies too.
+      const { error } = await sb.from('docs').insert({ path, data })
+      if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the write')
+    },
     async set(path, data) {
       // Chat records are append-only. INSERT avoids Postgres requiring an UPDATE
       // policy for PostgREST upserts, while preserving upsert behavior for mutable docs.

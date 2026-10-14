@@ -16,6 +16,12 @@ export function createLocalStore(): DocStore {
 
   return {
     async get(path) { return read()[path] ?? null },
+    async create(path, data) {
+      const m = read()
+      if (Object.prototype.hasOwnProperty.call(m, path)) throw new Error('already_exists')
+      m[path] = JSON.parse(JSON.stringify(data))
+      write(m); ping()
+    },
     async set(path, data) { const m = read(); m[path] = JSON.parse(JSON.stringify(data)); write(m); ping() },
     async update(path, patch) {
       const m = read()

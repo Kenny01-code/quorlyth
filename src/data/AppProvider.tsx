@@ -259,7 +259,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
       try {
-        await st!.set('communities/' + slug(), { name: c.name, ownerId: me.id, createdBy: me.id, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
+        await st!.create('communities/' + slug(), { name: c.name, ownerId: me.id, createdBy: me.id, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
         toast('Community created')
         return { ok: true }
       } catch (e: any) {

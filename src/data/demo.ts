@@ -56,6 +56,10 @@ export function createDemoBackend(): Backend {
   }
   const store: DocStore = {
     async get(path) { return docs[path] ?? null },
+    async create(path, data) {
+      if (Object.prototype.hasOwnProperty.call(docs, path)) throw new Error('already_exists')
+      docs[path] = JSON.parse(JSON.stringify(data)); emit(path)
+    },
     async set(path, data) { docs[path] = JSON.parse(JSON.stringify(data)); emit(path) },
     async update(path, patch) { if (!docs[path]) throw new Error('not_found'); docs[path] = deepMerge(docs[path], patch); emit(path) },
     async delete(path) { Object.keys(docs).filter(k => k === path || k.startsWith(path + '/')).forEach(k => delete docs[k]); emit(path) },
