@@ -58,10 +58,17 @@ test('security migration locks creator data and supports the real collaboration-
 
   await db.exec(bootstrap)
   await db.query("insert into public.docs(path,data) values ('settings/space',$1::jsonb)", [JSON.stringify({ appr: false, name: 'Fan Space' })])
-  const migration = await readFile(new URL('../supabase/migrations/20261014055904_security_hardening_owner_scoped_access.sql', import.meta.url), 'utf8')
+  const migration = await readFile(new URL('../supabase/migrations/20261014075832_security_hardening_owner_scoped_access.sql', import.meta.url), 'utf8')
   assert.ok(migration.includes('create policy docs_read_scoped'))
   assert.ok(migration.includes('create policy docs_insert_scoped'))
   await db.exec(migration)
+  const managerGrant = await readFile(new URL('../supabase/migrations/20261015070600_grant_manage_community_rls_exec.sql', import.meta.url), 'utf8')
+  await db.exec(managerGrant)
+  await t.test('community request RLS helper can run for authenticated users but not anonymous visitors', async () => {
+    const { rows } = await db.query("select has_function_privilege('authenticated', 'private.can_manage_community(text)', 'EXECUTE') as authenticated_can_execute, has_function_privilege('anon', 'private.can_manage_community(text)', 'EXECUTE') as anon_can_execute")
+    assert.equal(rows[0].authenticated_can_execute, true)
+    assert.equal(rows[0].anon_can_execute, false)
+  })
 
   const assume = async (userId, role = 'authenticated') => {
     await db.exec('reset role')

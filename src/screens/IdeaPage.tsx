@@ -70,6 +70,9 @@ function Inner() {
           </div>
           <button className="btn" style={{ width: '100%', justifyContent: 'center', marginTop: 14 }} onClick={() => us.patch({ saved: { [idea.id]: !us.st.saved?.[idea.id] } })}><Icon name="save" />{us.st.saved?.[idea.id] ? 'Saved' : 'Save for later'}</button>
           {r?.score != null && <>{row('Originality', r.o)}{row('Feasibility', r.f)}{row('Relevance', r.r)}</>}
+          {(a.data.projects[idea.id] || s === 'selected' || s === 'promoted') && <div className="acts" style={{ marginTop: 14 }}>
+            <button className="btn" onClick={() => nav('/projects?idea=' + encodeURIComponent(idea.id))}><Icon name="insight" size={16} />{a.data.projects[idea.id] ? 'View project progress' : 'View selected idea progress'}</button>
+          </div>}
           {a.owner && (
             <div className="acts">
               <button className="btn" disabled={rev} onClick={async () => { setRev(true); try { await reviewIdeas(a, [idea]); a.toast('Reviewed') } catch (e: any) { a.toast(e.message || 'The review could not finish') } setRev(false) }}><span className="aiic"><Icon name="spark" size={16} /></span>{rev ? 'Reviewing...' : 'Review with AI'}</button>

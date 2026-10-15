@@ -79,28 +79,32 @@ Use two separate accounts where practical: one creator/owner and one audience me
 
 ## Current implementation map
 
-The repository currently contains screens for communities, idea details, review queue, promotion preparation, analytics, settings, profiles, access requests, and a dashboard. Its shared data layer includes communities, ideas, votes, members, reviews, collaboration applications, projects, milestones, promotions, profiles, and settings. Server-side AI endpoints and tests are located in `server/` and `api/`.
+The repository contains screens for communities, idea details, review queue, promotion preparation, analytics, settings, profiles, access requests, messages, and projects. The review queue derives each idea's backers from the persisted vote map and links each backer's avatar/name to their public profile. Collaboration applications appear with the selected idea, including pending/accepted/declined state and owner-only decision controls. The Projects page exposes project creation, summary editing, milestone create/edit/status updates, project completion, and read-only progress for users who can access the underlying idea/project. Server-side AI endpoints and automated tests are located in server/ and api/.
 
-The latest code change also adds collaboration-related data/actions and improves startup/read error handling and promotion status wording. These are implementation notes, not proof that the full acceptance scenario has passed in a live deployment.
+These improvements are implementation and automated-test evidence, not proof that the full acceptance scenario has passed in a live browser with two production accounts.
 
 ## Verification status
 
-- [x] Latest code commit is present on GitHub `main`.
-- [x] Local build completed successfully in the recorded verification run.
-- [x] Six AI-provider handler tests passed in the recorded verification run.
-- [ ] Re-run build and tests against the current remote checkout.
-- [ ] Complete the end-to-end scenario using separate creator/member accounts against production Supabase.
-- [ ] Verify RLS for each table and role, including read and write denial cases.
-- [ ] Verify production AI requests with the configured Vercel environment variables.
-- [ ] Verify that the live Vercel deployment contains the latest GitHub commit.
-- [ ] Configure or confirm Git-connected continuous deployment from `main`.
+- [x] Production Supabase migration history was inspected. The latest tracked security migration is 20261015070600_grant_manage_community_rls_exec; the matching SQL is included in this branch.
+- [x] Added a regression test proving authenticated can execute the community-management helper required by join-request RLS while anon cannot.
+- [x] Automated security tests cover the simulated creator/member idea → collaboration → project/milestone path and creator-only decision/update permissions.
+- [x] Production RLS smoke checks with a synthetic unrelated authenticated UID returned no review rows and no platform-admin role; anonymous checks returned no review or settings rows. Listed communities and the explicitly public, read-only settings/space record remain discoverable by policy.
+- [x] npm test passed: 23 tests, zero failures.
+- [x] npm run typecheck passed.
+- [x] npm run build passed; Vite still prints a non-blocking large-chunk-size warning.
+- [x] A live production /api/json smoke test with ten synthetic ideas returned ten unique, structurally valid reviews; no application records were written.
+- [x] A source scan found no hardcoded platform-owner email or provider API key configured in frontend code.
+- [ ] Complete the end-to-end scenario with two separate real accounts against production Supabase.
+- [ ] Exercise the signed-in production UI for supporter profile links, application accept/decline, project/milestone edits, message creation, and refresh persistence.
+- [ ] Complete a production denial matrix for each sensitive record category and role; the existing automated suite is simulated, not a full live-role denial matrix.
+- [ ] After merging this branch, confirm Vercel's production deployment SHA matches the resulting GitHub main SHA.
 
 ## Submission evidence to capture
 
 1. Landing page and creator dashboard.
-2. Community creation and member join flow.
-3. Idea submission, vote/comment, and collaboration application.
-4. Creator review queue and AI rationale.
-5. Project/milestone progress.
-6. Promotion draft showing honest publishing status.
-7. A successful build/test run and the exact production deployment commit SHA.
+2. Community creation by the creator and successful join by the audience member.
+3. Audience idea submission, second-member backing/comment, and collaboration application.
+4. Review queue showing actual backer avatars/profile links, applicant details, real AI rationale, and accepted/declined state.
+5. Project creation, milestone edit/status change, and the audience member's read-only view of progress after refresh.
+6. Promotion draft showing the external post is prepared, not published.
+7. npm test, npm run typecheck, npm run build output, and the exact production deployment commit SHA.

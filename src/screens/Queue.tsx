@@ -48,6 +48,9 @@ function Inner() {
 
   const m = (l: string, v?: number) => v == null ? null : <div style={{ marginTop: 18 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{l}</span><span>{v}</span></div><Bar value={v} /></div>
   const r = d ? data.reviews[d.id] : undefined
+  const backers = d ? Object.entries(data.votes).filter(([, ideas]) => !!ideas?.[d.id]).map(([uid]) => uid) : []
+  const applications = d ? data.volunteers.filter(application => application.ideaId === d.id).sort((x, y) => y.at - x.at) : []
+  const canManageSelectedIdea = !!d && a.canManageCommunity(d.cid)
 
   return (
     <>
@@ -80,13 +83,50 @@ function Inner() {
             <p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{d.body}</p>
             {r?.score != null ? <>{m('Originality', r.o)}{m('Feasibility', r.f)}{m('Audience relevance', r.r)}<div className="reason" style={{ marginTop: 28 }}><span className="dim">Why this score</span><p>{r.reason}</p></div></>
               : <p className="dim" style={{ marginTop: 20 }}>Not reviewed by the AI yet.</p>}
-            <div className="reason"><span className="dim">Contributor</span><div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><Av id={d.authorId} size={30} /><span>{a.nm(d.authorId)}</span><span className="dim">{a.votesOf(d.id)} backing</span></div></div>
+            <div className="reason">
+              <span className="dim">Idea author</span>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button type="button" className="chip" aria-label={"View " + a.nm(d.authorId) + "'s profile"} onClick={() => nav('/me/' + d.authorId)} style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}><Av id={d.authorId} size={30} />{a.nm(d.authorId)}</button>
+              </div>
+            </div>
+            <div className="reason">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span className="dim">People backing this idea</span>
+                <span className="chip">{backers.length} {backers.length === 1 ? 'backer' : 'backers'}</span>
+              </div>
+              {backers.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                {backers.map(uid => <button key={uid} type="button" className="chip" title={"Open " + a.nm(uid) + "'s profile"} aria-label={"View " + a.nm(uid) + "'s profile"} onClick={() => nav('/me/' + uid)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px', minHeight: 42 }}>
+                  <Av id={uid} size={28} /><span>{a.nm(uid)}</span>
+                </button>)}
+              </div> : <p className="mut" style={{ marginTop: 10, fontSize: 13 }}>No members have backed this idea yet.</p>}
+            </div>
+            <div className="reason">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span className="dim">Collaboration applications</span>
+                <span className="chip">{applications.length} {applications.length === 1 ? 'application' : 'applications'}</span>
+              </div>
+              {applications.length ? <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+                {applications.map(application => <div key={application.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 8, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <button type="button" className="chip" aria-label={"View " + a.nm(application.applicantId) + "'s profile"} onClick={() => nav('/me/' + application.applicantId)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <Av id={application.applicantId} size={32} /><span>{a.nm(application.applicantId)}</span>
+                    </button>
+                    <span className="chip">{application.status === 'pending' ? 'Pending' : application.status === 'accepted' ? 'Accepted' : 'Declined'}</span>
+                  </div>
+                  {application.message && <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{application.message}</p>}
+                  {canManageSelectedIdea && application.status === 'pending' && <div className="acts" style={{ margin: 0 }}>
+                    <button type="button" className="btn p" onClick={() => void a.decideVolunteer(application.id, 'accepted')}><Icon name="approve" size={15} />Accept applicant</button>
+                    <button type="button" className="btn" onClick={() => void a.decideVolunteer(application.id, 'declined')}><Icon name="decline" size={15} />Decline</button>
+                  </div>}
+                </div>)}
+              </div> : <p className="mut" style={{ marginTop: 10, fontSize: 13 }}>No collaboration applications for this idea yet.</p>}
+            </div>
             <div className="acts">
               <button className="btn" onClick={() => run(false, d.id)}><span className="aiic"><Icon name="spark" size={16} /></span>Review with AI</button>
               <button className="btn p" onClick={() => a.setStatus(d.id, 'selected')}><Icon name="approve" />Select</button>
               <button className="btn" onClick={() => a.setStatus(d.id, 'held')}><Icon name="hold" />Hold</button>
               <button className="btn" onClick={() => a.setStatus(d.id, 'declined')}><Icon name="decline" />Decline</button>
-              {a.statusOf(d.id) === 'selected' && <button className="btn" onClick={() => nav('/promote?idea=' + d.id)}><Icon name="promote" />Promote</button>}
+              {a.statusOf(d.id) === 'selected' && <><button className="btn p" onClick={() => nav('/projects?idea=' + encodeURIComponent(d.id))}><Icon name={data.projects[d.id] ? 'insight' : 'contribute'} />{data.projects[d.id] ? 'Manage project' : 'Create project'}</button><button className="btn" onClick={() => nav('/promote?idea=' + encodeURIComponent(d.id))}><Icon name="promote" />Prepare promotion</button></>}
             </div>
           </div>
         </div>

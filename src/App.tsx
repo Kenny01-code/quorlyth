@@ -14,6 +14,7 @@ const Communities = lazy(() => import('./screens/Communities').then(m => ({ defa
 const Messages = lazy(() => import('./screens/Messages').then(m => ({ default: m.Messages })))
 const IdeaPage = lazy(() => import('./screens/IdeaPage').then(m => ({ default: m.IdeaPage })))
 const Queue = lazy(() => import('./screens/Queue').then(m => ({ default: m.Queue })))
+const Projects = lazy(() => import('./screens/Projects').then(m => ({ default: m.Projects })))
 const Promote = lazy(() => import('./screens/Promote').then(m => ({ default: m.Promote })))
 const Me = lazy(() => import('./screens/Me').then(m => ({ default: m.Me })))
 const Analytics = lazy(() => import('./screens/Analytics').then(m => ({ default: m.Analytics })))
@@ -176,6 +177,7 @@ export default function App() {
               <Route path="/messages/:conversationId" element={<Messages />} />
               <Route path="/idea/:id" element={<IdeaPage />} />
               <Route path="/queue" element={<Queue />} />
+              <Route path="/projects" element={<Projects />} />
               <Route path="/promote" element={<Promote />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/settings" element={<Settings />} />

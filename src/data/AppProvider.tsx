@@ -36,6 +36,7 @@ export interface App {
   applyToCollaborate: (ideaId: string, message: string) => Promise<boolean>
   decideVolunteer: (applicationId: string, status: VolunteerStatus) => Promise<boolean>
   createProject: (ideaId: string, summary: string) => Promise<boolean>
+  updateProject: (projectId: string, patch: Partial<Pick<Project, 'summary' | 'status'>>) => Promise<boolean>
   addMilestone: (projectId: string, title: string, description: string) => Promise<boolean>
   updateMilestone: (milestoneId: string, patch: Partial<Pick<Milestone, 'title' | 'description' | 'status'>>) => Promise<boolean>
   saveSettings: (p: Partial<SpaceSettings>) => Promise<boolean>
@@ -371,13 +372,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         return w(() => st!.set('volunteers/' + slug(), { ideaId, applicantId: me!.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
       },
-      decideVolunteer: (applicationId, status) => w(() => up('volunteers/' + applicationId, { status, reviewedAt: Date.now(), reviewedBy: me!.id }), status === 'accepted' ? 'Contributor accepted' : 'Application declined'),
+      decideVolunteer: (applicationId, status) => w(async () => {
+        const reviewedAt = Date.now()
+        await up('volunteers/' + applicationId, { status, reviewedAt, reviewedBy: me!.id })
+        setData(d => ({ ...d, volunteers: d.volunteers.map(application => application.id === applicationId ? { ...application, status, reviewedAt, reviewedBy: me!.id } : application) }))
+      }, status === 'accepted' ? 'Contributor accepted' : 'Application declined'),
       createProject: (ideaId, summary) => w(async () => {
-        await st!.set('projects/' + ideaId, { ideaId, summary: summary.trim(), status: 'active', createdBy: me!.id, at: Date.now() })
-        await up('reviews/' + ideaId, { status: 'selected', at: Date.now() })
+        const cleanSummary = summary.trim()
+        if (!cleanSummary) throw new Error('Add a short project summary first.')
+        const at = Date.now()
+        const project: Project = { id: ideaId, ideaId, summary: cleanSummary, status: 'active', createdBy: me!.id, at, updatedAt: at }
+        await st!.set('projects/' + ideaId, { ideaId, summary: cleanSummary, status: 'active', createdBy: me!.id, at, updatedAt: at })
+        await up('reviews/' + ideaId, { status: 'selected', at })
+        setData(d => ({ ...d, projects: { ...d.projects, [ideaId]: project }, reviews: { ...d.reviews, [ideaId]: { ...d.reviews[ideaId], status: 'selected', at } } }))
       }, 'Project created'),
-      addMilestone: (projectId, title, description) => w(() => st!.set('milestones/' + slug(), { projectId, title: title.trim(), description: description.trim(), status: 'todo', createdBy: me!.id, at: Date.now() }), 'Milestone added'),
-      updateMilestone: (milestoneId, patch) => w(() => up('milestones/' + milestoneId, { ...patch, updatedAt: Date.now() }), 'Milestone updated'),
+      updateProject: (projectId, patch) => w(async () => {
+        const current = data.projects[projectId]
+        if (!current) throw new Error('Project not found. Refresh the page and try again.')
+        const safePatch = { ...patch, ...(patch.summary !== undefined ? { summary: patch.summary.trim() } : {}), updatedAt: Date.now() }
+        if ('summary' in safePatch && !safePatch.summary) throw new Error('A project summary cannot be empty.')
+        await up('projects/' + projectId, safePatch)
+        setData(d => ({ ...d, projects: { ...d.projects, [projectId]: { ...d.projects[projectId], ...safePatch } } }))
+      }, 'Project updated'),
+      addMilestone: (projectId, title, description) => w(async () => {
+        const cleanTitle = title.trim()
+        if (!cleanTitle) throw new Error('Milestones need a title.')
+        if (!data.projects[projectId]) throw new Error('Create the project before adding milestones.')
+        const id = slug()
+        const at = Date.now()
+        const milestone: Milestone = { id, projectId, title: cleanTitle, description: description.trim(), status: 'todo', createdBy: me!.id, at, updatedAt: at }
+        await st!.set('milestones/' + id, { projectId, title: cleanTitle, description: description.trim(), status: 'todo', createdBy: me!.id, at, updatedAt: at })
+        setData(d => ({ ...d, milestones: [...d.milestones.filter(item => item.id !== id), milestone] }))
+      }, 'Milestone added'),
+      updateMilestone: (milestoneId, patch) => w(async () => {
+        const current = data.milestones.find(item => item.id === milestoneId)
+        if (!current) throw new Error('Milestone not found. Refresh the page and try again.')
+        const updatedAt = Date.now()
+        await up('milestones/' + milestoneId, { ...patch, updatedAt })
+        setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...patch, updatedAt } : item) }))
+      }, 'Milestone updated'),
       saveSettings: p => w(() => up('settings/space', p), 'Saved'),
       saveProfile: async p => {
         const ok = await w(() => up('profiles/' + me!.id, { ...p, at: Date.now() }), 'Profile saved')
