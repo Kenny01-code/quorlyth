@@ -84,8 +84,20 @@ export default function App() {
     if (!a.ready) return
     if (known.current === null) { const t = setTimeout(() => (known.current = new Set(notifs.map(n => n.key))), 3000); return () => clearTimeout(t) }
     const fresh = notifs.filter(n => n.unread && !known.current!.has(n.key))
-    if (fresh.length) { if (sound) chime(); a.toast(fresh[0].text); fresh.forEach(n => known.current!.add(n.key)) }
-  }, [notifs, a.ready])
+    if (fresh.length) {
+      if (sound) chime()
+      a.toast(fresh[0].text)
+      if (document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+          new Notification(fresh[0].text, {
+            body: fresh[0].kind === 'join' ? 'Open Quorlyth to review this community join request.' : 'Open Quorlyth to view the update.',
+            tag: fresh[0].key,
+          })
+        } catch {}
+      }
+      fresh.forEach(n => known.current!.add(n.key))
+    }
+  }, [notifs, a.ready, a.toast, sound])
 
   // Message notifications are account-scoped and work from every page, not only the inbox.
   useEffect(() => {

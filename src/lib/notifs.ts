@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { App } from '../data/AppProvider'
 import { UserState } from './userState'
 
-export interface Notif { key: string; at: number; icon: string; text: string; kind: 'idea' | 'promo' | 'access' | 'settings'; id?: string; unread: boolean }
+export interface Notif { key: string; at: number; icon: string; text: string; kind: 'idea' | 'promo' | 'access' | 'settings' | 'join'; id?: string; target?: string; unread: boolean }
 
 const keyOf = (k: string, id: string | undefined, at: number) => `${k}_${id || 'x'}_${at}`.replace(/[^\w]/g, '_')
 
@@ -22,6 +22,18 @@ export function useNotifs(a: App, st: UserState): Notif[] {
     const dc = d.decisions[m]
     if (dc?.at) out.push({ at: dc.at, icon: dc.status === 'approved' ? 'approve' : 'alert', text: `Your access request was ${dc.status}`, kind: 'access' })
     if (a.owner) d.requests.forEach(r => { const x = d.decisions[r.id]; if (r.at && (!x || x.at < r.at)) out.push({ at: r.at, icon: 'invite', text: `${a.nm(r.id)} requested access`, kind: 'settings', id: r.id }) })
+    d.joinRequests.forEach(r => {
+      if (r.status !== 'pending' || (!a.owner && !a.canManageCommunity(r.cid))) return
+      const community = d.communities.find(c => c.id === r.cid)
+      out.push({
+        at: r.at,
+        icon: 'member',
+        text: `${a.nm(r.userId)} requested to join ${community?.name || 'your community'}`,
+        kind: 'join',
+        id: r.cid + '__' + r.userId,
+        target: r.cid,
+      })
+    })
     return out.sort((x, y) => y.at - x.at).slice(0, 25).map(n => { const key = keyOf(n.kind, n.id, n.at); return { ...n, key, unread: n.at > seen && !rd[key] } })
   }, [a.data, a.me?.id, a.owner, st])
 }

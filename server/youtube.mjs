@@ -130,16 +130,58 @@ async function fetchTopic(query, { apiKey, fetchImpl, now }) {
     return fallback('', 'unavailable', apiErrorMessage(''), query, now)
   }
 
-  const searchItems = Array.isArray(searchPayload.items) ? searchPayload.items : []
-  const ids = searchItems.map(item => item?.id?.videoId).filter(id => typeof id === 'string' && id).slice(0, VIDEO_MAX_RESULTS)
-  const snippetById = new Map(searchItems
+  let searchItems = Array.isArray(searchPayload.items) ? searchPayload.items : []
+  let ids = searchItems.map(item => item?.id?.videoId).filter(id => typeof id === 'string' && id).slice(0, VIDEO_MAX_RESULTS)
+  let snippetById = new Map(searchItems
     .filter(item => item?.id?.videoId)
     .map(item => [item.id.videoId, item.snippet || {}]))
+  let usedBroaderSearch = false
+
+  // A strict recent/date-ranked search can miss a real topic when its keywords
+  // are too specific. Retry once with fewer keywords and relevance ranking,
+  // without a date cutoff; historical videos are labelled as context, not demand.
+  if (!ids.length) {
+    const broaderQuery = [...new Set(tokenize(query))].slice(0, 4).join(' ') || query
+    if (searchesToday >= MAX_SEARCHES_PER_DAY) {
+      return fallback('', 'no_results', 'The recent search found no videos and the broader search was skipped because the conservative YouTube search budget was exhausted. This result is inconclusive; no demand is inferred.', query, now)
+    }
+
+    const broaderUrl = new URL(API_ROOT + '/search')
+    broaderUrl.search = new URLSearchParams({
+      key: apiKey,
+      part: 'snippet',
+      type: 'video',
+      order: 'relevance',
+      maxResults: String(SEARCH_MAX_RESULTS),
+      q: broaderQuery,
+      safeSearch: 'moderate',
+    }).toString()
+
+    searchesToday += 1
+    try {
+      const broaderPayload = await getJson(broaderUrl, fetchImpl)
+      searchItems = Array.isArray(broaderPayload.items) ? broaderPayload.items : []
+      ids = searchItems.map(item => item?.id?.videoId).filter(id => typeof id === 'string' && id).slice(0, VIDEO_MAX_RESULTS)
+      snippetById = new Map(searchItems
+        .filter(item => item?.id?.videoId)
+        .map(item => [item.id.videoId, item.snippet || {}]))
+      usedBroaderSearch = true
+    } catch (error) {
+      if (error.code === 'quotaExceeded' || error.code === 'dailyLimitExceeded' || error.code === 'rateLimitExceeded') {
+        quotaBlockedDay = day
+        return fallback('', 'quota_exceeded', apiErrorMessage(error.code), broaderQuery, now)
+      }
+      return fallback('', 'unavailable', 'The recent search found no videos, and the broader YouTube search failed. No conclusion about demand can be drawn; AI scoring continued without external video data.', broaderQuery, now)
+    }
+  }
+
   if (!ids.length) {
     return {
       ideaId: '',
       status: 'no_results',
-      message: 'No recent public videos matched the extracted topic keywords. No demand is inferred from this empty result.',
+      message: usedBroaderSearch
+        ? 'Neither the recent search nor a broader all-time public-video search returned matching videos. This is not evidence that demand is absent.'
+        : 'The recent search returned no public videos and the broader search could not run. This result is inconclusive; no demand is inferred.',
       query,
       fetchedAt: now,
       expiresAt: now + DATA_RETENTION_MS,
@@ -182,14 +224,26 @@ async function fetchTopic(query, { apiKey, fetchImpl, now }) {
     }
   })
   const anyMetrics = videos.some(video => video.viewCount !== null || video.likeCount !== null || video.commentCount !== null)
+  const recentCutoff = now - RECENT_DAYS * 24 * 60 * 60 * 1000
+  const hasRecentVideo = videos.some(video => {
+    const published = Date.parse(video.publishedAt || '')
+    return Number.isFinite(published) && published >= recentCutoff
+  })
+  const olderOnly = usedBroaderSearch && !hasRecentVideo
 
   return {
     ideaId: '',
-    status: statisticsAvailable && anyMetrics ? 'available' : 'partial',
-    message: statisticsAvailable
-      ? (anyMetrics ? 'Public per-video YouTube statistics were retrieved. Each count belongs to its source video; these are not Quorlyth votes or member activity.' : 'Recent public video details were retrieved, but engagement counts are not publicly available for these results.')
-      : 'Recent public video titles and channels were found, but detailed engagement statistics could not be retrieved.',
-    query,
+    status: olderOnly ? 'partial' : statisticsAvailable && anyMetrics ? 'available' : 'partial',
+    message: olderOnly
+      ? 'No videos matched the recent search window, but a broader search found older public videos. Treat these as background context, not evidence of current demand.'
+      : usedBroaderSearch
+        ? (statisticsAvailable && anyMetrics
+          ? 'The strict recent search found no match, but a broader YouTube search found public videos and their available per-video statistics. These are external signals, not Quorlyth votes or member activity.'
+          : 'The strict recent search found no match, but a broader YouTube search found public video titles and channels. Engagement statistics were unavailable or incomplete.')
+        : statisticsAvailable
+          ? (anyMetrics ? 'Public per-video YouTube statistics were retrieved. Each count belongs to its source video; these are not Quorlyth votes or member activity.' : 'Recent public video details were retrieved, but engagement counts are not publicly available for these results.')
+          : 'Recent public video titles and channels were found, but detailed engagement statistics could not be retrieved.',
+    query: usedBroaderSearch ? [...new Set(tokenize(query))].slice(0, 4).join(' ') || query : query,
     fetchedAt: now,
     expiresAt: now + DATA_RETENTION_MS,
     videos,

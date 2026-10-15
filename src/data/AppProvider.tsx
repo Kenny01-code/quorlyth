@@ -503,6 +503,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!me || !canManageCommunity(cid)) throw new Error('Only this community’s owner or a platform administrator can review its join requests.')
         if (!backend) throw new Error('The backend is not ready.')
         await backend.reviewCommunityJoinRequest(cid, userId, status)
+        const reviewedAt = Date.now()
+        setData(d => ({
+          ...d,
+          joinRequests: d.joinRequests.map(request => request.cid === cid && request.userId === userId
+            ? { ...request, status, reviewedAt, reviewedBy: me.id }
+            : request),
+          ...(status === 'approved' ? {
+            members: { ...d.members, [userId]: { ...(d.members[userId] || {}), [cid]: true } },
+          } : {}),
+        }))
       }, status === 'approved' ? 'Join request approved' : 'Join request declined'),
       sendRequest: r => w(() => st!.set('requests/' + me!.id, { platforms: r.platforms || [], aud: r.aud || '', note: r.note || '', at: Date.now() }), 'Request sent'),
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),

@@ -89,6 +89,43 @@ test('fetches recent public video metadata and real public statistics from YouTu
   assert.match(signals.videos[0].url, /youtube\.com\/watch\?v=video-1/)
 })
 
+test('empty recent search retries with broader relevance search and labels older videos as context', async () => {
+  const requested = []
+  const now = Date.parse('2026-10-15T12:00:00.000Z')
+  const fetchImpl = async url => {
+    const u = new URL(String(url))
+    requested.push(u)
+    if (u.pathname.endsWith('/search')) {
+      if (requested.filter(x => x.pathname.endsWith('/search')).length === 1) {
+        assert.ok(u.searchParams.has('publishedAfter'))
+        assert.equal(u.searchParams.get('order'), 'date')
+        return okJson({ items: [] })
+      }
+      assert.equal(u.searchParams.get('order'), 'relevance')
+      assert.equal(u.searchParams.has('publishedAfter'), false)
+      return okJson({ items: [
+        { id: { videoId: 'older-video' }, snippet: { title: 'Older related video', channelTitle: 'Topic channel', publishedAt: '2024-06-01T00:00:00Z' } },
+      ] })
+    }
+    assert.ok(u.pathname.endsWith('/videos'))
+    return okJson({ items: [
+      { id: 'older-video', snippet: { title: 'Older related video', channelTitle: 'Topic channel', publishedAt: '2024-06-01T00:00:00Z' }, statistics: { viewCount: '2400' } },
+    ] })
+  }
+
+  const result = await fetchYouTubeSignalsForIdeas([
+    { id: 'idea-fallback', title: 'Solar-powered study lamp', body: 'Affordable rechargeable lamp for students', tags: ['solar', 'education'] },
+  ], { apiKey: 'server-test-key', fetchImpl, now })
+
+  const signal = result.byIdea['idea-fallback']
+  assert.equal(requested.filter(u => u.pathname.endsWith('/search')).length, 2)
+  assert.equal(signal.status, 'partial')
+  assert.equal(signal.videos[0].videoId, 'older-video')
+  assert.equal(signal.videos[0].viewCount, 2400)
+  assert.match(signal.message, /older public videos/i)
+  assert.match(signal.message, /not evidence of current demand|background context/i)
+})
+
 test('same query is cached and shared between ideas to protect the search quota', async () => {
   let searchCalls = 0
   let videoCalls = 0
