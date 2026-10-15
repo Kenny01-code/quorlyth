@@ -23,7 +23,7 @@ function Stage({ greeting }: { greeting: string }) {
 }
 
 export function SignIn() {
-  const { backend, me, toast, enterDemo } = useApp()
+  const { backend, me, toast, enterDemo, signOut } = useApp()
   const nav = useNavigate()
   const [params] = useSearchParams()
   const requested = params.get('next') || ''
@@ -60,7 +60,7 @@ export function SignIn() {
       <div className="lg"><Stage greeting={`Hello, ${me.name.split(' ')[0]}. Welcome back to Quorlyth.`} />
         <div className="glass fm"><h2 style={{ fontSize: 40 }}>Welcome back, {me.name.split(' ')[0]}.</h2>
           <div className="acts"><button className="btn p" onClick={() => nav('/dashboard')}><Icon name="home" />Open dashboard</button>
-            <button className="btn" onClick={() => backend?.auth.signOut()}>Sign out</button></div></div></div>
+            <button className="btn" disabled={busy} onClick={async () => { setBusy(true); try { await signOut(); sessionStorage.removeItem('qreturn'); nav('/signin', { replace: true }); toast('Signed out. You can sign in again below.') } catch (error: any) { toast(error?.message || 'Could not sign out. Please try again.') } finally { setBusy(false) } }}>{busy ? 'Signing out…' : 'Sign out'}</button></div></div></div>
     )
   }
 
