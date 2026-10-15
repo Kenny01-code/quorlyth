@@ -2619,9 +2619,29 @@ main:has(.chat-page) > .on { width: 100%; min-width: 0; }
 .chat-pin-indicator { display:inline-grid; place-items:center; flex:none; width:18px; height:18px; color:rgba(255,255,255,.62); }
 .chat-conversation.is-pinned { border-color:rgba(255,255,255,.09); }
 .chat-conversation.is-archived .chat-conversation-copy { opacity:.72; }
-.chat-thread-menu-trigger { flex:none; }
-.chat-message-menu-trigger { position:absolute; right:-31px; bottom:0; z-index:4; }
-.chat-message-row.mine .chat-message-menu-trigger { right:auto; left:-31px; }
+.chat-thread-menu-trigger { flex:none; display:grid; place-items:center; width:36px; height:36px; border-radius:12px; }
+.chat-page .chat-conversation-menu-trigger {
+  display:grid; place-items:center; flex:0 0 30px; width:30px; height:30px; margin-left:2px;
+  border:1px solid transparent; border-radius:10px; background:transparent; color:rgba(255,255,255,.68);
+  opacity:0; cursor:pointer; transition:opacity .18s ease,color .18s ease,background .18s ease,border-color .18s ease;
+}
+.chat-page .chat-conversation:hover .chat-conversation-menu-trigger,
+.chat-page .chat-conversation:focus-within .chat-conversation-menu-trigger,
+.chat-page .chat-conversation-menu-trigger:focus-visible { opacity:1; }
+.chat-page .chat-conversation-menu-trigger:hover,
+.chat-page .chat-conversation-menu-trigger:focus-visible,
+.chat-page .chat-thread-menu-trigger:hover,
+.chat-page .chat-thread-menu-trigger:focus-visible { color:#fff; background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.17); }
+.chat-message-menu-trigger { position:absolute; right:0; bottom:-8px; z-index:4; display:grid; place-items:center; width:28px; height:28px; border-radius:9px; opacity:0; }
+.chat-message-row:hover .chat-message-menu-trigger,
+.chat-message-row:focus-within .chat-message-menu-trigger,
+.chat-message-menu-trigger:focus-visible { opacity:1; }
+.chat-message-menu-trigger:hover,
+.chat-message-menu-trigger:focus-visible { color:#fff; background:rgba(255,255,255,.1); }
+@media (hover:none) {
+  .chat-page .chat-conversation-menu-trigger,
+  .chat-page .chat-message-menu-trigger { opacity:.8; }
+}
 .chat-message-line { position:relative; }
 .chat-message-row.mine .chat-message-line { justify-content:flex-start; }
 .chat-message-row.is-deleted .chat-bubble { opacity:.72; font-style:italic; }
