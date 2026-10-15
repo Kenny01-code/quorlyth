@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { App } from '../data/AppProvider'
 import { UserState } from './userState'
 
-export interface Notif { key: string; at: number; icon: string; text: string; kind: 'idea' | 'promo' | 'access' | 'settings' | 'join'; id?: string; target?: string; unread: boolean }
+export interface Notif { key: string; at: number; icon: string; text: string; kind: 'idea' | 'promo' | 'access' | 'settings' | 'join' | 'collaboration' | 'collab-request'; id?: string; target?: string; unread: boolean }
 
 const keyOf = (k: string, id: string | undefined, at: number) => `${k}_${id || 'x'}_${at}`.replace(/[^\w]/g, '_')
 
@@ -33,6 +33,16 @@ export function useNotifs(a: App, st: UserState): Notif[] {
         id: r.cid + '__' + r.userId,
         target: r.cid,
       })
+    })
+    d.volunteers.forEach(application => {
+      const idea = d.ideas.find(item => item.id === application.ideaId)
+      if (!idea) return
+      if (application.status === 'pending' && a.canManageCommunity(idea.cid)) {
+        out.push({ at: application.at, icon: 'collab', text: a.nm(application.applicantId) + ' applied to collaborate on "' + idea.title + '"', kind: 'collab-request', id: application.id, target: idea.id })
+      }
+      if (application.applicantId === m && application.status !== 'pending' && application.reviewedAt) {
+        out.push({ at: application.reviewedAt, icon: application.status === 'accepted' ? 'approve' : 'decline', text: 'Your collaboration application for "' + idea.title + '" was ' + application.status, kind: 'collaboration', id: idea.id, target: idea.id })
+      }
     })
     return out.sort((x, y) => y.at - x.at).slice(0, 25).map(n => { const key = keyOf(n.kind, n.id, n.at); return { ...n, key, unread: n.at > seen && !rd[key] } })
   }, [a.data, a.me?.id, a.owner, st])

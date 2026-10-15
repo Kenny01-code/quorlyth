@@ -20,7 +20,7 @@ export function NotifPanel({ list, sound, onSound, onOpen, onMarkAll, onClose }:
         <div className="np-scroll">
         {list.length ? list.map(n => (
           <div key={n.key} className="nitem" role="button" tabIndex={0}
-            onClick={() => { onOpen(n); onClose(); nav(n.kind === 'idea' ? '/idea/' + n.id : n.kind === 'settings' ? '/settings?tab=requests' : n.kind === 'access' ? '/access' : n.kind === 'join' ? '/communities/' + (n.target || n.id || '').split('__')[0] + '?tab=join-requests' : '/communities') }}>
+            onClick={() => { onOpen(n); onClose(); nav(n.kind === 'idea' ? '/idea/' + n.id : n.kind === 'settings' ? '/settings?tab=requests' : n.kind === 'access' ? '/access' : n.kind === 'join' ? '/communities/' + (n.target || n.id || '').split('__')[0] + '?tab=join-requests' : n.kind === 'collab-request' ? '/queue?idea=' + encodeURIComponent(n.target || '') : n.kind === 'collaboration' ? '/idea/' + (n.target || n.id || '') : '/communities') }}>
             {n.unread ? <i className="dot" /> : <i className="nd2" />}<Icon name={n.icon} size={18} />
             <div style={{ minWidth: 0 }}><p style={{ fontSize: 14 }}>{n.text}</p><p className="dim">{when(n.at)}</p></div>
           </div>

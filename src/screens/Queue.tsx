@@ -18,6 +18,7 @@ function Inner() {
   const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
   const qc = sp.get('c') || ''
+  const requestedIdeaId = sp.get('idea') || ''
   const [sel, setSel] = useState<string>('')
   const [status, setStatus] = useState('')
   const [err, setErr] = useState('')
@@ -27,7 +28,7 @@ function Inner() {
   const managedCommunityIds = new Set(data.communities.filter(c => a.ownsCommunity(c.id)).map(c => c.id))
   const accessibleCommunities = a.owner ? data.communities : data.communities.filter(c => managedCommunityIds.has(c.id))
   const inScope = data.ideas.filter(i => (a.owner || managedCommunityIds.has(i.cid)) && (!qc || i.cid === qc))
-  const list = inScope.filter(i => ['review', 'held', 'selected'].includes(a.statusOf(i.id))).sort((x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1))
+  const list = inScope.filter(i => (!requestedIdeaId || i.id === requestedIdeaId) && ['review', 'held', 'selected'].includes(a.statusOf(i.id))).sort((x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1))
   const d = list.find(i => i.id === sel) || list[0]
   const unreviewed = list.filter(i => data.reviews[i.id]?.score == null).length
 
@@ -114,6 +115,7 @@ function Inner() {
                     <span className="chip">{application.status === 'pending' ? 'Pending' : application.status === 'accepted' ? 'Accepted' : 'Declined'}</span>
                   </div>
                   {application.message && <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{application.message}</p>}
+                  {application.status === 'accepted' && data.projects[d.id] && <button type="button" className="btn" onClick={() => nav('/collaboration/' + d.id)}><Icon name="collab" size={15} />Open collaboration space</button>}
                   {canManageSelectedIdea && application.status === 'pending' && <div className="acts" style={{ margin: 0 }}>
                     <button type="button" className="btn p" onClick={() => void a.decideVolunteer(application.id, 'accepted')}><Icon name="approve" size={15} />Accept applicant</button>
                     <button type="button" className="btn" onClick={() => void a.decideVolunteer(application.id, 'declined')}><Icon name="decline" size={15} />Decline</button>

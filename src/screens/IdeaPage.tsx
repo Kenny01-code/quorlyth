@@ -23,12 +23,17 @@ function Inner() {
   const [text, setText, clearReplyDraft] = useDraftState(`q-draft:${a.me?.id}:reply:${id || 'new'}`, '')
   const us = useUserState()
   const [rev, setRev] = useState(false)
+  const [applicationMessage, setApplicationMessage] = useState('')
+  const [applying, setApplying] = useState(false)
   const idea = a.data.ideas.find(i => i.id === id)
   if (!idea) return <Empty icon="idea" title="This idea is not available" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back to communities</button></Empty>
   const r = a.data.reviews[idea.id]
   const s = a.statusOf(idea.id)
   const voted = a.iVoted(idea.id)
   const communityOwner = a.canManageCommunity(idea.cid)
+  const myApplication = a.data.volunteers.filter(v => v.ideaId === idea.id && v.applicantId === a.me?.id).sort((x, y) => y.at - x.at)[0]
+  const acceptedCollaborator = myApplication?.status === 'accepted'
+  const canOpenWorkspace = communityOwner || acceptedCollaborator
   const backers = Object.entries(a.data.votes)
     .filter(([, ideas]) => !!ideas?.[idea.id])
     .map(([uid]) => uid)
@@ -51,6 +56,17 @@ function Inner() {
             <Av id={idea.authorId} size={32} /><button className="lk dim" onClick={() => nav('/me/' + idea.authorId)}>{a.nm(idea.authorId)}</button><span className="dim">{when(idea.at)}</span>
           </div>
           <p className="mut" style={{ fontSize: 17, whiteSpace: 'pre-wrap' }}>{idea.body}</p>
+          {!communityOwner && idea.authorId !== a.me?.id && <div className="reason" style={{ marginTop: 20 }}>
+            <h3 style={{ fontSize: 18 }}>Collaborate on this idea</h3>
+            <p className="mut" style={{ marginTop: 6 }}>Apply to join the work. If the owner accepts, your collaboration space will appear in Collaborations.</p>
+            {acceptedCollaborator ? <button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={15} />Open collaboration space</button>
+              : myApplication?.status === 'pending' ? <span className="chip" style={{ marginTop: 12, display: 'inline-flex' }}>Application pending review</span>
+              : !a.joined(idea.cid) ? <div className="acts" style={{ marginTop: 12 }}><button className="btn" onClick={() => nav('/communities/' + idea.cid)}>Join this community to apply</button></div>
+              : <form onSubmit={async event => { event.preventDefault(); setApplying(true); const ok = await a.applyToCollaborate(idea.id, applicationMessage); if (ok) setApplicationMessage(''); setApplying(false) }} style={{ marginTop: 12 }}>
+                <label className="field"><span>Why would you like to collaborate? (optional)</span><textarea value={applicationMessage} onChange={e => setApplicationMessage(e.target.value)} maxLength={600} placeholder="Share your skills, ideas, or how you can contribute…" /></label>
+                <button className="btn p" disabled={applying}><Icon name="send" size={15} />{applying ? 'Sending application…' : 'Apply to collaborate'}</button>
+              </form>}
+          </div>}
           {r?.score != null && <div className="reason" style={{ marginTop: 26 }}><span className="dim">AI review {r.score}</span><p>{r.reason}</p></div>}
           <h3 style={{ margin: '26px 0 4px' }}>Discussion</h3>
           {comments.length ? comments.map(c => (
@@ -72,6 +88,7 @@ function Inner() {
           {r?.score != null && <>{row('Originality', r.o)}{row('Feasibility', r.f)}{row('Relevance', r.r)}</>}
           {(a.data.projects[idea.id] || s === 'selected' || s === 'promoted') && <div className="acts" style={{ marginTop: 14 }}>
             <button className="btn" onClick={() => nav('/projects?idea=' + encodeURIComponent(idea.id))}><Icon name="insight" size={16} />{a.data.projects[idea.id] ? 'View project progress' : 'View selected idea progress'}</button>
+            {canOpenWorkspace && a.data.projects[idea.id] && <button className="btn p" onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={16} />Open collaboration space</button>}
           </div>}
           {a.owner && (
             <div className="acts">

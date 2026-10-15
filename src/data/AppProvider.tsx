@@ -295,6 +295,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (legacyOwner && !c.ownerId && !c.createdBy)))
     const canManageCommunity = (cid: string) => !!me && (platformAdmin || ownsCommunity(cid))
+    const canCollaborateOnIdea = (ideaId: string) => {
+      const idea = data.ideas.find(item => item.id === ideaId)
+      return !!me && !!idea && (canManageCommunity(idea.cid) || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted'))
+    }
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
       try {
@@ -387,18 +391,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveReview: (id, r) => w(() => up('reviews/' + id, { ...r, at: Date.now() })),
       publish: (id, text, credits) => w(async () => { await st!.set('promotions/' + slug(), { ideaId: id, text, credits, by: me!.id, at: Date.now(), status: 'draft', published: false }); await up('reviews/' + id, { status: 'promoted', at: Date.now() }) }, 'Post prepared to share'),
       applyToCollaborate: (ideaId, message) => {
-        if (data.volunteers.some(v => v.ideaId === ideaId && v.applicantId === me?.id && v.status !== 'declined')) {
+        if (!me) { toast('Sign in before applying to collaborate.'); return Promise.resolve(false) }
+        const idea = data.ideas.find(item => item.id === ideaId)
+        if (!idea) { toast('This idea is no longer available.'); return Promise.resolve(false) }
+        if (idea.authorId === me.id) { toast('You cannot apply to collaborate on your own idea.'); return Promise.resolve(false) }
+        if (!canManageCommunity(idea.cid) && !data.members[me.id]?.[idea.cid]) { toast('Join the idea community before applying to collaborate.'); return Promise.resolve(false) }
+        if (data.volunteers.some(v => v.ideaId === ideaId && v.applicantId === me.id && v.status !== 'declined')) {
           toast('You already have an active application for this idea')
           return Promise.resolve(false)
         }
-        return w(() => st!.set('volunteers/' + slug(), { ideaId, applicantId: me!.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
+        return w(() => st!.set('volunteers/' + slug(), { ideaId, applicantId: me.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
       },
       decideVolunteer: (applicationId, status) => w(async () => {
         const application = data.volunteers.find(item => item.id === applicationId)
         if (!application) throw new Error('This collaboration request is no longer available. Refresh and try again.')
+        if (application.status !== 'pending') throw new Error('This application has already been reviewed.')
+        const applicationIdea = data.ideas.find(item => item.id === application.ideaId)
+        if (!applicationIdea) throw new Error('The idea for this collaboration is no longer available.')
+        if (!canManageCommunity(applicationIdea.cid)) throw new Error('Only the community owner or a platform administrator can review this application.')
         const reviewedAt = Date.now()
-        const idea = status === 'accepted' ? data.ideas.find(item => item.id === application.ideaId) : undefined
-        if (status === 'accepted' && !idea) throw new Error('The idea for this collaboration is no longer available.')
+        const idea = status === 'accepted' ? applicationIdea : undefined
         const currentReview = idea ? data.reviews[idea.id] || data.outcomes[idea.id] : undefined
         const nextReviewStatus = currentReview?.status === 'promoted' ? 'promoted' as const : 'selected' as const
         const needsProject = !!idea && !data.projects[idea.id]
@@ -458,6 +470,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateProject: (projectId, patch) => w(async () => {
         const current = data.projects[projectId]
         if (!current) throw new Error('Project not found. Refresh the page and try again.')
+        const projectIdea = data.ideas.find(item => item.id === current.ideaId)
+        if (!projectIdea || !canManageCommunity(projectIdea.cid)) throw new Error('Only the community owner or a platform administrator can edit the project brief or status.')
         const safePatch = { ...patch, ...(patch.summary !== undefined ? { summary: patch.summary.trim() } : {}), updatedAt: Date.now() }
         if ('summary' in safePatch && !safePatch.summary) throw new Error('A project summary cannot be empty.')
         await up('projects/' + projectId, safePatch)
@@ -466,7 +480,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addMilestone: (projectId, title, description) => w(async () => {
         const cleanTitle = title.trim()
         if (!cleanTitle) throw new Error('Milestones need a title.')
-        if (!data.projects[projectId]) throw new Error('Create the project before adding milestones.')
+        const project = data.projects[projectId]
+        if (!project) throw new Error('Create the project before adding milestones.')
+        if (!canCollaborateOnIdea(project.ideaId)) throw new Error('Only accepted collaborators and the community owner can add milestones.')
+        if (project.status !== 'active') throw new Error('Reopen the project before adding milestones.')
         const id = slug()
         const at = Date.now()
         const milestone: Milestone = { id, projectId, title: cleanTitle, description: description.trim(), status: 'todo', createdBy: me!.id, at, updatedAt: at }
@@ -476,6 +493,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateMilestone: (milestoneId, patch) => w(async () => {
         const current = data.milestones.find(item => item.id === milestoneId)
         if (!current) throw new Error('Milestone not found. Refresh the page and try again.')
+        if (!canCollaborateOnIdea(current.projectId)) throw new Error('Only accepted collaborators and the community owner can update milestones.')
         const updatedAt = Date.now()
         await up('milestones/' + milestoneId, { ...patch, updatedAt })
         setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...patch, updatedAt } : item) }))
