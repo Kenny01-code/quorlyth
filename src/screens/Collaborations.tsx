@@ -4,7 +4,7 @@ import { Gate } from '../components/Gate'
 import { Av, Empty, Head } from '../components/ui'
 import { useApp, useComments } from '../data/AppProvider'
 import { Icon } from '../lib/Icon'
-import { Idea, Milestone } from '../lib/types'
+import { Milestone } from '../lib/types'
 import { when } from '../lib/util'
 
 export function Collaborations() {
