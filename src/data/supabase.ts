@@ -10,6 +10,20 @@ export async function createSupabaseStore(url: string, key: string) {
   const sb = createClient(url, key)
 
   const store: DocStore = {
+    async exportAll() {
+      // Page the complete docs table; PostgreSQL row-level security limits this export
+      // to records visible to the currently authenticated user.
+      const pageSize = 500
+      const records: { path: string; data: any; updatedAt?: string | null }[] = []
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await sb.from('docs').select('path,data,updated_at').order('path', { ascending: true }).range(offset, offset + pageSize - 1)
+        if (error) throw error
+        const page = (data || []) as { path: string; data: any; updated_at?: string | null }[]
+        records.push(...page.map(row => ({ path: row.path, data: row.data, updatedAt: row.updated_at ?? null })))
+        if (page.length < pageSize) break
+      }
+      return records
+    },
     async get(path) {
       const { data, error } = await sb.from('docs').select('data').eq('path', path).maybeSingle()
       if (error) throw error
