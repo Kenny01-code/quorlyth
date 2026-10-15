@@ -40,15 +40,12 @@ function List() {
   const creatorId = (community: Community) => community.ownerId || community.createdBy || (a.owner ? a.me?.id || '' : '')
   const members = (id: string) => { const community = data.communities.find(x => x.id === id); const creator = community ? creatorId(community) : ''; return Object.keys(data.members).filter(u => data.members[u]?.[id] && u !== creator).length }
   const visible = data.communities.filter(c => c.vis !== 'unlisted' || a.canManageCommunity(c.id) || a.joined(c.id))
-  // Platform administrators need one place to find every community, including unlisted
-  // communities created by accounts they manage. The database still enforces admin permissions.
-  const effectiveFilter = a.platformAdmin && filter === 'discover' ? 'owned' : filter
-  const shown = visible.filter(c => effectiveFilter === 'owned' ? (a.platformAdmin ? a.canManageCommunity(c.id) : a.ownsCommunity(c.id)) : effectiveFilter === 'joined' ? a.joined(c.id) && !a.ownsCommunity(c.id) : !a.ownsCommunity(c.id) && !a.joined(c.id) && c.vis !== 'unlisted')
+  const shown = visible.filter(c => filter === 'owned' ? a.ownsCommunity(c.id) : filter === 'joined' ? a.joined(c.id) && !a.ownsCommunity(c.id) : !a.ownsCommunity(c.id) && !a.joined(c.id) && c.vis !== 'unlisted')
   return (
     <>
       <Head kicker="Communities" title="Where ideas gather." right={a.me ? <button className="btn p" onClick={() => document.getElementById('newc')?.scrollIntoView({ behavior: 'smooth' })}><Icon name="contribute" size={16} />New community</button> : null} />
       <div className="acts" style={{ margin: '12px 0 18px', flexWrap: 'wrap' }}>
-        {(a.platformAdmin ? ([['owned', 'All communities'], ['joined', 'Joined']] as const) : ([['owned', 'My communities'], ['joined', 'Joined'], ['discover', 'Discover']] as const)).map(([key, label]) => <button key={key} className={cn('chip', effectiveFilter === key && 'on')} onClick={() => setFilter(key)}>{label}</button>)}
+        {([['owned', 'My Communities'], ['joined', 'Joined'], ['discover', 'Discover']] as const).map(([key, label]) => <button key={key} className={cn('chip', filter === key && 'on')} onClick={() => setFilter(key)}>{label}</button>)}
       </div>
       {shown.length ? (
         <div className="grid g3">
