@@ -10,6 +10,7 @@ const originalXaiKey = process.env.XAI_API_KEY
 const originalXaiModel = process.env.XAI_MODEL
 const originalXaiQuickModel = process.env.XAI_QUICK_MODEL
 const originalAiProvider = process.env.AI_PROVIDER
+const originalYoutubeKey = process.env.YOUTUBE_API_KEY
 
 function response() {
   return {
@@ -38,6 +39,8 @@ afterEach(() => {
   else process.env.XAI_QUICK_MODEL = originalXaiQuickModel
   if (originalAiProvider === undefined) delete process.env.AI_PROVIDER
   else process.env.AI_PROVIDER = originalAiProvider
+  if (originalYoutubeKey === undefined) delete process.env.YOUTUBE_API_KEY
+  else process.env.YOUTUBE_API_KEY = originalYoutubeKey
 })
 
 test('Grok streams chat from xAI when selected', async () => {
@@ -250,4 +253,86 @@ test('exhausted providers return a calm retryable message instead of the old Gem
   assert.equal(payload.retryable, true)
   assert.match(payload.error, /available AI services/i)
   assert.doesNotMatch(payload.error, /Gemini is under heavy demand/i)
+})
+
+
+test('structured idea review includes real YouTube evidence server-side and returns the signal section', async () => {
+  process.env.AI_PROVIDER = 'openai'
+  process.env.OPENAI_API_KEY = 'test-openai-secret'
+  process.env.YOUTUBE_API_KEY = 'test-youtube-secret'
+  let providerPrompt = ''
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    const parsedUrl = new URL(String(url))
+    requested.push(parsedUrl)
+    if (parsedUrl.hostname === 'www.googleapis.com' && parsedUrl.pathname.endsWith('/search')) {
+      assert.equal(parsedUrl.searchParams.get('key'), 'test-youtube-secret')
+      return new Response(JSON.stringify({ items: [
+        { id: { videoId: 'video-e2e' }, snippet: { title: 'Solar study lamp test', channelTitle: 'Real channel', publishedAt: '2026-10-01T00:00:00Z' } },
+      ] }), { status: 200 })
+    }
+    if (parsedUrl.hostname === 'www.googleapis.com' && parsedUrl.pathname.endsWith('/videos')) {
+      return new Response(JSON.stringify({ items: [
+        { id: 'video-e2e', snippet: { title: 'Solar study lamp test', channelTitle: 'Real channel', publishedAt: '2026-10-01T00:00:00Z' }, statistics: { viewCount: '4300', likeCount: '155', commentCount: '21' } },
+      ] }), { status: 200 })
+    }
+    assert.equal(parsedUrl.hostname, 'api.openai.com')
+    const sent = JSON.parse(options.body)
+    providerPrompt = sent.messages[1].content
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
+      reviews: [{ id: 'idea-e2e', originality: 82, feasibility: 76, relevance: 88, reason: 'The idea description identifies a clear use case for students.', youtubeRationale: 'The public video “Solar study lamp test” from Real channel (published 2026-10-01) has 4,300 views and 155 likes.' }],
+    }) } }] }), { status: 200 })
+  }
+  const res = response()
+  await json({ body: {
+    prompt: 'Review the synthetic idea and return one JSON review.',
+    system: 'Return JSON only.',
+    tier: 'smart',
+    youtubeIdeas: [{ id: 'idea-e2e', title: 'Solar powered study lamp', body: 'Affordable light for students', tags: ['solar', 'education'] }],
+  } }, res)
+  const payload = JSON.parse(res.output)
+  assert.equal(res.statusCode, 200)
+  assert.match(providerPrompt, /YOUTUBE SOCIAL SIGNALS/)
+  assert.match(providerPrompt, /4300|Recent public video|Real channel/)
+  assert.match(providerPrompt, /do not calculate averages/i)
+  assert.equal(payload.reviews[0].id, 'idea-e2e')
+  assert.equal(payload.youtubeSignalsByIdea['idea-e2e'].videos[0].likeCount, 155)
+  assert.equal(payload.youtubeSignalsByIdea['idea-e2e'].expiresAt - payload.youtubeSignalsByIdea['idea-e2e'].fetchedAt, 29 * 24 * 60 * 60 * 1000)
+  assert.equal(res.output.includes('test-youtube-secret'), false)
+  assert.match(payload.reviews[0].youtubeRationale, /4,300 views/)
+  assert.equal(requested.filter(url => url.hostname === 'www.googleapis.com').length, 2)
+})
+
+test('idea review without YouTube key still uses AI and returns an explicit fallback', async () => {
+  process.env.AI_PROVIDER = 'openai'
+  process.env.OPENAI_API_KEY = 'test-openai-secret'
+  delete process.env.YOUTUBE_API_KEY
+  let requests = 0
+  let sentPrompt = ''
+  globalThis.fetch = async (url, options = {}) => {
+    requests++
+    const parsedUrl = new URL(String(url))
+    assert.equal(parsedUrl.hostname, 'api.openai.com')
+    const sent = JSON.parse(options.body)
+    sentPrompt = sent.messages[1].content
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({
+        reviews: [{ id: 'idea-no-key', originality: 70, feasibility: 75, relevance: 80, reason: 'Based on the idea text.', youtubeRationale: '' }],
+      }) } }],
+    }), { status: 200 })
+  }
+  const res = response()
+  await json({ body: {
+    prompt: 'Review the idea using only supplied context.',
+    system: 'Return JSON only.',
+    tier: 'smart',
+    youtubeIdeas: [{ id: 'idea-no-key', title: 'Accessible solar study lamp', body: 'Affordable study lighting', tags: ['solar'] }],
+  } }, res)
+  const payload = JSON.parse(res.output)
+  assert.equal(requests, 1)
+  assert.equal(res.statusCode, 200)
+  assert.match(sentPrompt, /not configured/i)
+  assert.equal(payload.reviews[0].id, 'idea-no-key')
+  assert.equal(payload.youtubeSignalsByIdea['idea-no-key'].status, 'not_configured')
+  assert.match(payload.youtubeSignalsByIdea['idea-no-key'].message, /AI scoring continued/i)
 })
