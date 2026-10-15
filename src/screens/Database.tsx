@@ -27,7 +27,42 @@ function Inner() {
   const [del, setDel] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [backupBusy, setBackupBusy] = useState(false)
+  const [backupStatus, setBackupStatus] = useState('')
   const file = useRef<HTMLInputElement>(null)
+
+  async function exportFullBackup() {
+    if (!a.backend || backupBusy) return
+    setBackupBusy(true)
+    setBackupStatus('')
+    try {
+      const records = await a.backend.store.exportAll()
+      const collectionCounts: Record<string, number> = {}
+      for (const record of records) {
+        const collection = record.path.split('/')[0] || '(root)'
+        collectionCounts[collection] = (collectionCounts[collection] || 0) + 1
+      }
+      records.sort((x, y) => x.path.localeCompare(y.path))
+      const payload = {
+        format: 'quorlyth-application-backup',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        documentCount: records.length,
+        collectionCounts,
+        coverage: 'Application documents visible to the authenticated platform administrator. This includes community records, contributor profiles, memberships, ideas, votes/backings, reviews, outcomes, promotions, projects, messages, conversations, and other visible document paths.',
+        limitations: 'Database row-level security continues to protect other users’ private per-user data. This app export does not include Supabase Auth system tables, database schema/migration history, or Storage objects. Keep a Supabase-native database backup as the separate recovery copy for those.',
+        records,
+      }
+      const date = new Date().toISOString().slice(0, 10)
+      download(`quorlyth-full-app-backup-${date}.json`, 'application/json;charset=utf-8', JSON.stringify(payload, null, 2))
+      setBackupStatus(`Backup downloaded successfully: ${records.length} records across ${Object.keys(collectionCounts).length} collections.`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setBackupStatus('Backup could not be created. ' + message.slice(0, 240))
+    } finally {
+      setBackupBusy(false)
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -65,7 +100,8 @@ function Inner() {
 
   return (
     <>
-      <Head kicker="Database" title="Your data, in full." right={<div className="acts" style={{ margin: 0 }}>{edit && !showEditor && <button className="btn" onClick={() => setShowEditor(true)}><Icon name="edit" size={16} />Resume draft</button>}<button className="btn" disabled={refreshing} onClick={() => { setRefreshing(true); setRefreshKey(k => k + 1) }}><Icon name="rotate" size={16} />{refreshing ? 'Refreshing' : 'Refresh data'}</button><button className="btn p" onClick={() => { setEdit({ id: '', isNew: true, json: '{\n  \n}', newId: '' }); setShowEditor(true) }}><Icon name="contribute" size={16} />New document</button></div>} />
+      <Head kicker="Database" title="Your data, in full." right={<div className="acts" style={{ margin: 0 }}>{edit && !showEditor && <button className="btn" onClick={() => setShowEditor(true)}><Icon name="edit" size={16} />Resume draft</button>}<button className="btn" disabled={backupBusy} onClick={() => void exportFullBackup()}><Icon name="download" size={16} />{backupBusy ? 'Preparing backup…' : 'Full backup'}</button><button className="btn" disabled={refreshing} onClick={() => { setRefreshing(true); setRefreshKey(k => k + 1) }}><Icon name="rotate" size={16} />{refreshing ? 'Refreshing' : 'Refresh data'}</button><button className="btn p" onClick={() => { setEdit({ id: '', isNew: true, json: '{\n  \n}', newId: '' }); setShowEditor(true) }}><Icon name="contribute" size={16} />New document</button></div>} />
+      {backupStatus && <p className="dim" role="status" style={{ margin: '-6px 0 14px', overflowWrap: 'anywhere' }}>{backupStatus}</p>}
       <div className="glass pad">
         <div className="acts" style={{ margin: '0 0 16px' }}>{COLLS.map(c => <button key={c} className={cn('chip', path === c && 'on')} onClick={() => { setPath(c); setQ('') }}>{c}</button>)}</div>
         <div className="acts" style={{ margin: '0 0 18px' }}>
