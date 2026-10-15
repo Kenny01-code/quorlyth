@@ -56,6 +56,7 @@ export function createDemoBackend(): Backend {
   }
   const store: DocStore = {
     async get(path) { return docs[path] ?? null },
+    async exportAll() { return Object.entries(docs).map(([path, data]) => ({ path, data: JSON.parse(JSON.stringify(data)) })) },
     async create(path, data) {
       if (Object.prototype.hasOwnProperty.call(docs, path)) throw new Error('already_exists')
       docs[path] = JSON.parse(JSON.stringify(data)); emit(path)
