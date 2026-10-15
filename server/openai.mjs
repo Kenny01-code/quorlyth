@@ -1,3 +1,4 @@
+import { fetchYouTubeSignalsForIdeas, formatYouTubeSignalsContext } from './youtube.mjs'
 // All OpenAI calls happen here, on the server. The key never reaches the browser.
 const KEY = () => process.env.OPENAI_API_KEY
 const MODEL = () => process.env.OPENAI_MODEL || 'gpt-4o'
@@ -351,12 +352,42 @@ export async function json(req, res) {
   try {
     const body = await readBody(req)
     const providers = needText()
+    let providerBody = body
+    let youtubeSignalsByIdea = null
+    if (Array.isArray(body.youtubeIdeas)) {
+      const { youtubeIdeas, ...safeBody } = body
+      const safeIdeas = youtubeIdeas.slice(0, 10).map(idea => ({
+        id: String(idea?.id || '').slice(0, 100),
+        title: String(idea?.title || '').slice(0, 200),
+        body: String(idea?.body || '').slice(0, 600),
+        tags: Array.isArray(idea?.tags) ? idea.tags.slice(0, 10).map(tag => String(tag).slice(0, 60)) : [],
+      }))
+      try {
+        const enrichment = await fetchYouTubeSignalsForIdeas(safeIdeas)
+        youtubeSignalsByIdea = enrichment.byIdea
+      } catch {
+        youtubeSignalsByIdea = Object.fromEntries(safeIdeas.map(idea => [idea.id, {
+          ideaId: idea.id,
+          status: 'unavailable',
+          message: 'YouTube enrichment failed unexpectedly. AI scoring continued without external video data.',
+          query: '',
+          fetchedAt: Date.now(),
+          expiresAt: Date.now() + 29 * 24 * 60 * 60 * 1000,
+          videos: [],
+        }]))
+      }
+      providerBody = {
+        ...safeBody,
+        prompt: String(body.prompt || '') + String.fromCharCode(10, 10) + formatYouTubeSignalsContext(youtubeSignalsByIdea)
+          + String.fromCharCode(10, 10) + 'Score the idea and write the main reason using idea text and supplied Quorlyth in-app data only; do not let YouTube data affect numeric scores or the main reason. If available, use youtubeRationale for at most one specific video and its exact title/channel/date/individual counts. Do not calculate averages or aggregate video metrics. YouTube counts are external platform data, never Quorlyth votes, members, or in-app activity; missing data cannot imply demand.',
+      }
+    }
     let lastFailure = null
 
     for (const provider of providers) {
       let response
       try {
-        response = await requestProviderJson(provider, body)
+        response = await requestProviderJson(provider, providerBody)
       } catch (error) {
         lastFailure = { provider, error }
         continue
@@ -373,7 +404,12 @@ export async function json(req, res) {
 
       try {
         const payload = await response.json()
-        return send(res, 200, parseProviderJson(provider, payload))
+        const parsed = parseProviderJson(provider, payload)
+        if (youtubeSignalsByIdea) {
+          const result = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : { result: parsed }
+          return send(res, 200, { ...result, youtubeSignalsByIdea })
+        }
+        return send(res, 200, parsed)
       } catch (error) {
         lastFailure = { provider, error }
       }

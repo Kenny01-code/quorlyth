@@ -4,7 +4,27 @@ export interface Me { id: string; name: string; email?: string; avatarUrl?: stri
 export interface Community { id: string; name: string; ownerId?: string; createdBy?: string; purpose?: string; icon?: string; cover?: string; vis?: 'listed' | 'unlisted'; post?: 'anyone' | 'members' | 'owner'; joinApproval?: boolean; welcome?: string; rules?: string; arch?: boolean; pinned?: string; memberBadges?: Record<string, string>; at: number }
 export interface Idea { id: string; title: string; body?: string; cid: string; authorId: string; tags?: string[]; at: number }
 export interface Comment { id: string; authorId: string; text: string; at: number }
-export interface Review { id: string; o?: number; f?: number; r?: number; score?: number; reason?: string; status?: Status; at?: number }
+export type YouTubeSignalStatus = 'available' | 'partial' | 'no_results' | 'not_configured' | 'quota_exceeded' | 'budget_limited' | 'unavailable' | 'invalid_query'
+export interface YouTubeVideoSignal {
+  videoId: string
+  title: string
+  channelTitle: string
+  publishedAt: string | null
+  viewCount: number | null
+  likeCount: number | null
+  commentCount: number | null
+  url: string
+}
+export interface YouTubeSocialSignals {
+  ideaId?: string
+  status: YouTubeSignalStatus
+  message: string
+  query: string
+  fetchedAt: number
+  expiresAt: number
+  videos: YouTubeVideoSignal[]
+}
+export interface Review { id: string; o?: number; f?: number; r?: number; score?: number; reason?: string; youtubeRationale?: string; youtubeSignals?: YouTubeSocialSignals; status?: Status; at?: number }
 export interface Promotion { id: string; ideaId: string; text: string; credits: string[]; by: string; at: number }
 export interface Profile { id: string; name?: string; head?: string; bio?: string; photo?: string; authName?: string; authAvatarUrl?: string; at?: number }
 export interface Request { id: string; platforms?: string[]; aud?: string; note?: string; at: number }

@@ -62,10 +62,20 @@ export async function streamChat(messages: { role: 'user' | 'assistant'; content
   return full
 }
 
-export async function askJson<T = any>(prompt: string, o: { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal } = {}): Promise<T> {
+export async function askJson<T = any>(prompt: string, o: {
+  system?: string
+  tier?: 'quick' | 'smart'
+  signal?: AbortSignal
+  youtubeIdeas?: Array<{ id: string; title: string; body?: string; tags?: string[] }>
+} = {}): Promise<T> {
   const r = await fetch('/api/json', {
     method: 'POST', signal: o.signal, headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, system: o.system, tier: o.tier === 'quick' ? 'quick' : 'smart' }),
+    body: JSON.stringify({
+      prompt,
+      system: o.system,
+      tier: o.tier === 'quick' ? 'quick' : 'smart',
+      ...(o.youtubeIdeas ? { youtubeIdeas: o.youtubeIdeas } : {}),
+    }),
   })
   if (!r.ok) throw new Error(await readError(r))
   return r.json()

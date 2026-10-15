@@ -84,10 +84,13 @@ Start with the names in [`.env.example`](./.env.example). Common AI settings are
 - `GEMINI_API_KEY`
 - `XAI_API_KEY`
 - `OPENAI_API_KEY`
+- `YOUTUBE_API_KEY` — optional, server-only YouTube Data API v3 evidence for live idea reviews. Missing keys, quota limits, and API failures do not block AI scoring.
+  - The server caches identical queries for six hours, limits cache-miss search calls per warm instance, and stops after quota errors. Google separately enforces the project-wide search.list quota (100 calls/day by default).
+  - The review queue displays direct per-video counts only; it does not calculate averages or aggregate metrics. Stored video evidence and its YouTube-specific rationale expire after 29 days, then the scheduled Supabase retention job removes them.
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-Provider keys must remain server-side. Do not commit `.env`, paste API keys into source files, or expose secret keys in browser code. OpenAI is currently used for live voice/natural speech paths; check the implementation and provider availability before assuming every modality is supported by every provider.
+Provider keys and `YOUTUBE_API_KEY` must remain server-side. Never prefix these secrets with `VITE_`. Do not commit `.env`, paste API keys into source files, or expose secret keys in browser code. OpenAI is currently used for live voice/natural speech paths; check the implementation and provider availability before assuming every modality is supported by every provider.
 
 ## Supabase setup
 
