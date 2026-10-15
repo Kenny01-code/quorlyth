@@ -17,7 +17,11 @@ function CollaborationList() {
   const myId = a.me?.id
   const items = a.data.ideas.filter(idea => {
     const accepted = a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === myId && v.status === 'accepted')
-    return !!a.data.projects[idea.id] && (accepted || a.canManageCommunity(idea.cid))
+    const hasAcceptedTeam = a.data.volunteers.some(v => v.ideaId === idea.id && v.status === 'accepted')
+    const projectExists = !!a.data.projects[idea.id]
+    // Keep accepted collaborations visible even if an older approval never
+    // created its project record; the owner can finish setup from the workspace.
+    return accepted || (a.canManageCommunity(idea.cid) && (projectExists || hasAcceptedTeam))
   }).sort((x, y) => (a.data.projects[y.id]?.updatedAt || a.data.projects[y.id]?.at || 0) - (a.data.projects[x.id]?.updatedAt || a.data.projects[x.id]?.at || 0))
 
   return <>
@@ -35,16 +39,16 @@ function CollaborationList() {
         return <button key={idea.id} type="button" className="glass pad" onClick={() => nav('/collaboration/' + idea.id)} style={{ display: 'block', textAlign: 'left', width: '100%', cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <p className="dim">{community?.name || 'Community'} · {project.status === 'completed' ? 'Completed' : 'Active project'}</p>
+              <p className="dim">{community?.name || 'Community'} · {!project ? 'Workspace setup needed' : project.status === 'completed' ? 'Completed' : 'Active project'}</p>
               <h3 style={{ fontSize: 20, marginTop: 5, overflowWrap: 'anywhere' }}>{idea.title}</h3>
-              <p className="mut" style={{ marginTop: 7 }}>{project.summary}</p>
+              <p className="mut" style={{ marginTop: 7 }}>{project?.summary || (!project ? 'This accepted collaboration needs its workspace initialized. Open it to finish setup.' : 'No project brief has been added yet.')}</p>
             </div>
             <span className="chip"><Icon name="collab" size={14} />Open workspace</span>
           </div>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 14 }}>
             <span className="dim"><Icon name="users" size={14} /> {acceptedCount} accepted contributor{acceptedCount === 1 ? '' : 's'}</span>
             <span className="dim"><Icon name="approve" size={14} /> {done}/{milestones.length} milestones complete</span>
-            <span className="dim">Updated {when(project.updatedAt || project.at) || 'recently'}</span>
+            <span className="dim">{project ? 'Updated ' + (when(project.updatedAt || project.at) || 'recently') : 'Workspace not initialized'}</span>
           </div>
         </button>
       })}
@@ -64,6 +68,7 @@ function Workspace() {
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [reply, setReply] = useState('')
+  const [workspaceSummary, setWorkspaceSummary] = useState('Collaboration workspace ready. Add a project plan and milestones to coordinate the work.')
   const [busy, setBusy] = useState(false)
   const idea = a.data.ideas.find(item => item.id === id)
   const project = a.data.projects[id]
@@ -79,12 +84,39 @@ function Workspace() {
   if (!idea) return <Empty icon="collab" title="Collaboration not found" text="This idea may have been removed, or you may not have access to it."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/collaborations')}>Back to collaborations</button></Empty>
   if (!canAccess) {
     const ownApplication = a.data.volunteers.find(v => v.ideaId === id && v.applicantId === a.me?.id)
-    return <Empty icon="private" title="This workspace is private" text={ownApplication?.status === 'pending' ? 'Your application is still waiting for the owner. The workspace opens after acceptance.' : 'Only the community owner and accepted collaborators can enter this workspace.'}>
+    return <Empty icon="private" title="This workspace is private" text={ownApplication?.status === 'pending' ? 'Your application is still waiting for review. The workspace opens after acceptance.' : 'Only the community owner and accepted collaborators can enter this workspace.'}>
       <div className="acts" style={{ justifyContent: 'center', marginTop: 12 }}>
         <button className="btn" onClick={() => nav('/idea/' + idea.id)}>View idea</button>
         <button className="btn" onClick={() => nav('/collaborations')}>My collaborations</button>
       </div>
     </Empty>
+  }
+
+  if (!project) {
+    return <div style={{ maxWidth: 820, display: 'grid', gap: 16 }}>
+      <div><button className="chip" onClick={() => nav('/collaborations')}><Icon name="arrow-left" size={14} />All collaborations</button></div>
+      <Head kicker={community?.name || 'Collaboration workspace'} title={idea.title} />
+      <section className="glass pad">
+        <span className="chip"><Icon name="collab" size={14} />Accepted collaboration</span>
+        <h3 style={{ fontSize: 20, marginTop: 14 }}>{canManage ? 'Finish setting up this workspace' : 'Your workspace is being set up'}</h3>
+        <p className="mut" style={{ marginTop: 8 }}>{canManage
+          ? 'This collaboration was accepted, but its project record is missing. Create the project brief here to open the shared milestones and team discussion.'
+          : 'Your application is accepted, so you do not need to apply again. The project workspace has not been initialized yet. The community owner can open this same page and finish setup.'}</p>
+        {canManage ? <form className="reason" style={{ marginTop: 16 }} onSubmit={async event => {
+          event.preventDefault()
+          if (!workspaceSummary.trim()) return a.toast('Add a short project brief first.')
+          setBusy(true)
+          await a.createProject(id, workspaceSummary.trim())
+          setBusy(false)
+        }}>
+          <label className="field"><span>Project brief</span><textarea value={workspaceSummary} onChange={e => setWorkspaceSummary(e.target.value)} maxLength={1200} required placeholder="Describe the goal, scope, and first outcome for this collaboration." /></label>
+          <button className="btn p" disabled={busy || !workspaceSummary.trim()}><Icon name="collab" size={15} />{busy ? 'Creating workspace…' : 'Initialize collaboration workspace'}</button>
+        </form> : <div className="acts" style={{ marginTop: 14 }}>
+          <button className="btn" onClick={() => nav('/idea/' + idea.id)}>View original idea</button>
+          <button className="btn" onClick={() => nav('/collaborations')}>Back to collaborations</button>
+        </div>}
+      </section>
+    </div>
   }
 
   async function addMilestone(event: FormEvent) {
