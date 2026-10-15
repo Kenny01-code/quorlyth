@@ -98,7 +98,7 @@ export function Messages() {
     setConversationsLoaded(false)
     setOpeningTimedOut(false)
     setError('')
-    const report = (e: unknown) => { console.error('Quorlyth chat sync failed:', e); setConversationsLoaded(true); setError('Live chat sync is unavailable. Check your connection and database setup.') }
+    const report = (e: unknown) => { console.error('Quorlyth chat sync failed:', e); setError('Live chat sync is unavailable. Check your connection and database setup.') }
     const reportAdvanced = (e: unknown) => { console.warn('Advanced chat features are not available yet. Apply supabase/migrations/20261013_advanced_chat_features.sql to enable them.', e) }
     const offC = store.subscribe('conversations', docs => {
       setConversations(docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(meId)).sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0)))
