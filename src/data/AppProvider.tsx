@@ -295,6 +295,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (legacyOwner && !c.ownerId && !c.createdBy)))
     const canManageCommunity = (cid: string) => !!me && (platformAdmin || ownsCommunity(cid))
+    const canCollaborateOnIdea = (ideaId: string) => {
+      const idea = data.ideas.find(item => item.id === ideaId)
+      return !!me && !!idea && (canManageCommunity(idea.cid) || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted'))
+    }
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
       try {
