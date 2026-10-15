@@ -8,7 +8,7 @@ import { Doc } from '../data/docstore'
 import { cn, slug } from '../lib/util'
 import { useDraftState } from '../lib/useDraftState'
 
-const COLLS = ['communities', 'ideas', 'reviews', 'votes', 'members', 'profiles', 'requests', 'decisions', 'promotions', 'settings', 'config']
+const COLLS = ['communities', 'ideas', 'reviews', 'ideaOutcomes', 'votes', 'members', 'profiles', 'requests', 'decisions', 'promotions', 'projects', 'milestones', 'volunteers', 'settings', 'config', 'communityJoinRequests', 'conversations', 'messages', 'chatReads', 'chatPreferences', 'chatMessageHides', 'chatMessageReactions', 'chatMessageEdits', 'chatMessageTombstones', 'calls', 'callSignals', 'data']
 const cell = (v: any) => v == null ? '' : typeof v === 'number' && v > 1e12 && v < 4e12 ? new Date(v).toLocaleString() : typeof v === 'object' ? JSON.stringify(v) : String(v)
 
 export function Database() {
