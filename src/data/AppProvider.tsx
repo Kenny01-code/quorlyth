@@ -376,49 +376,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const application = data.volunteers.find(item => item.id === applicationId)
         if (!application) throw new Error('This collaboration request is no longer available. Refresh and try again.')
         const reviewedAt = Date.now()
+        const idea = status === 'accepted' ? data.ideas.find(item => item.id === application.ideaId) : undefined
+        if (status === 'accepted' && !idea) throw new Error('The idea for this collaboration is no longer available.')
+        const currentReview = idea ? data.reviews[idea.id] || data.outcomes[idea.id] : undefined
+        const nextReviewStatus = currentReview?.status === 'promoted' ? 'promoted' as const : 'selected' as const
+        const needsProject = !!idea && !data.projects[idea.id]
+        const workspaceSummary = 'Collaboration workspace ready. Add a project plan and milestones to coordinate the work.'
 
-        // Acceptance must leave contributors with a real workspace, not an accepted
-        // application that still depends on the owner visiting Projects later.
-        if (status === 'accepted') {
-          const idea = data.ideas.find(item => item.id === application.ideaId)
-          if (!idea) throw new Error('The idea for this collaboration is no longer available.')
-          const currentReview = data.reviews[idea.id] || data.outcomes[idea.id]
-          if (!data.projects[idea.id]) {
-            if (!['selected', 'promoted'].includes(currentReview?.status || '')) {
-              await up('reviews/' + idea.id, { status: 'selected', at: reviewedAt })
-            }
-            await st!.create('projects/' + idea.id, {
-              ideaId: idea.id,
-              summary: 'Collaboration workspace ready. Add a project plan and milestones to coordinate the work.',
-              status: 'active',
-              createdBy: me!.id,
-              at: reviewedAt,
-              updatedAt: reviewedAt,
-            })
-          }
+        // Approval should initialize the shared workspace before the application is
+        // marked accepted. Contributors should never be accepted into a missing project.
+        if (idea && currentReview?.status !== 'selected' && currentReview?.status !== 'promoted') {
+          await up('reviews/' + idea.id, { status: 'selected', at: reviewedAt })
+        }
+        if (idea && needsProject) {
+          await st!.create('projects/' + idea.id, {
+            ideaId: idea.id,
+            summary: workspaceSummary,
+            status: 'active',
+            createdBy: me!.id,
+            at: reviewedAt,
+            updatedAt: reviewedAt,
+          })
         }
 
         await up('volunteers/' + applicationId, { status, reviewedAt, reviewedBy: me!.id })
         setData(d => ({
           ...d,
           volunteers: d.volunteers.map(item => item.id === applicationId ? { ...item, status, reviewedAt, reviewedBy: me!.id } : item),
-          ...(status === 'accepted' && !d.projects[application.ideaId] ? {
-            projects: {
-              ...d.projects,
-              [application.ideaId]: {
-                id: application.ideaId,
-                ideaId: application.ideaId,
-                summary: 'Collaboration workspace ready. Add a project plan and milestones to coordinate the work.',
-                status: 'active' as const,
-                createdBy: me!.id,
-                at: reviewedAt,
-                updatedAt: reviewedAt,
-              },
-            },
+          ...(idea ? {
             reviews: {
               ...d.reviews,
-              [application.ideaId]: { ...d.reviews[application.ideaId], status: 'selected' as const, at: reviewedAt },
+              [idea.id]: { ...d.reviews[idea.id], status: nextReviewStatus, at: reviewedAt },
             },
+            ...(needsProject ? {
+              projects: {
+                ...d.projects,
+                [idea.id]: {
+                  id: idea.id,
+                  ideaId: idea.id,
+                  summary: workspaceSummary,
+                  status: 'active' as const,
+                  createdBy: me!.id,
+                  at: reviewedAt,
+                  updatedAt: reviewedAt,
+                },
+              },
+            } : {}),
           } : {}),
         }))
       }, status === 'accepted' ? 'Contributor accepted and workspace opened' : 'Application declined'),
