@@ -4,8 +4,12 @@
  */
 export interface Doc<T = any> { id: string; data: T }
 
+export interface ExportDoc<T = any> { path: string; data: T; updatedAt?: string | null }
+
 export interface DocStore {
   get(path: string): Promise<any | null>
+  /** Export every document visible to the current backend identity. Supabase RLS remains authoritative. */
+  exportAll(): Promise<ExportDoc[]>
   /** Create a brand-new record without ON CONFLICT UPDATE semantics. */
   create(path: string, data: any): Promise<void>
   set(path: string, data: any): Promise<void>
