@@ -88,7 +88,7 @@ function Inner() {
           {r?.score != null && <>{row('Originality', r.o)}{row('Feasibility', r.f)}{row('Relevance', r.r)}</>}
           {(a.data.projects[idea.id] || s === 'selected' || s === 'promoted') && <div className="acts" style={{ marginTop: 14 }}>
             <button className="btn" onClick={() => nav('/projects?idea=' + encodeURIComponent(idea.id))}><Icon name="insight" size={16} />{a.data.projects[idea.id] ? 'View project progress' : 'View selected idea progress'}</button>
-            {canOpenWorkspace && a.data.projects[idea.id] && <button className="btn p" onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={16} />Open collaboration space</button>
+            {canOpenWorkspace && a.data.projects[idea.id] && <button className="btn p" onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={16} />Open collaboration space</button>}
           </div>}
           {a.owner && (
             <div className="acts">
