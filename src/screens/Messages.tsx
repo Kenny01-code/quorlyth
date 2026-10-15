@@ -42,6 +42,8 @@ export function Messages() {
   const nav = useNavigate()
   const { conversationId } = useParams()
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [conversationsLoaded, setConversationsLoaded] = useState(false)
+  const [openingTimedOut, setOpeningTimedOut] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [reads, setReads] = useState<ReadState[]>([])
   const [chatPreferences, setChatPreferences] = useState<ChatPreference[]>([])
@@ -82,19 +84,26 @@ export function Messages() {
     if (!meId) {
       setConversations([]); setMessages([]); setReads([]); setChatPreferences([])
       setMessageEdits([]); setMessageTombstones([]); setMessageHides([]); setMessageReactions([])
+      setConversationsLoaded(true)
       setError('')
       return
     }
     if (!store) {
       setConversations([]); setMessages([]); setReads([]); setChatPreferences([])
       setMessageEdits([]); setMessageTombstones([]); setMessageHides([]); setMessageReactions([])
+      setConversationsLoaded(true)
       setError('Messaging storage is not connected for this session. Refresh the page or sign in again.')
       return
     }
+    setConversationsLoaded(false)
+    setOpeningTimedOut(false)
     setError('')
     const report = (e: unknown) => { console.error('Quorlyth chat sync failed:', e); setError('Live chat sync is unavailable. Check your connection and database setup.') }
     const reportAdvanced = (e: unknown) => { console.warn('Advanced chat features are not available yet. Apply supabase/migrations/20261013_advanced_chat_features.sql to enable them.', e) }
-    const offC = store.subscribe('conversations', docs => setConversations(docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(meId)).sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))), report)
+    const offC = store.subscribe('conversations', docs => {
+      setConversations(docs.map(d => ({ id: d.id, ...d.data })).filter(c => Array.isArray(c.members) && c.members.includes(meId)).sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0)))
+      setConversationsLoaded(true)
+    }, report)
     const offM = store.subscribe('messages', docs => setMessages(docs.map(d => ({ id: d.id, ...d.data })).filter(m => typeof m.conversationId === 'string' && typeof m.text === 'string').sort((x, y) => x.at - y.at)), report)
     const offR = store.subscribe('chatReads', docs => setReads(docs.map(d => ({ id: d.id, ...d.data })).filter(r => r.userId === meId)), report)
     const offP = store.subscribe('chatPreferences', docs => setChatPreferences(docs.map(d => ({ id: d.id, ...d.data })).filter(p => p.userId === meId)), reportAdvanced)
@@ -106,6 +115,16 @@ export function Messages() {
   }, [store, meId])
 
   const active = conversations.find(c => c.id === conversationId) || null
+
+  useEffect(() => {
+    if (!conversationId || active) {
+      setOpeningTimedOut(false)
+      return
+    }
+    setOpeningTimedOut(false)
+    const timer = window.setTimeout(() => setOpeningTimedOut(true), 8500)
+    return () => window.clearTimeout(timer)
+  }, [conversationId, active?.id])
   const isPlatformAdmin = (id: string) => id === a.data.ownerId || !!(a.data.profiles[id] as any)?.platformAdmin || (!!a.me && id === a.me.id && a.owner)
   const isCommunityCreator = (id: string) => id !== a.data.ownerId && !(a.me && id === a.me.id && a.owner) && a.data.communities.some(c => c.ownerId === id || c.createdBy === id)
   const profileLink = (id: string) => '/me/' + encodeURIComponent(id)
@@ -287,9 +306,11 @@ export function Messages() {
     if (!store || !meId || !personId || personId === meId || startingPerson) return
     setStartingPerson(personId)
     setError('')
+    let conversationIdToVerify: string | null = null
     try {
       const existing = conversations.find(c => c.type === 'direct' && c.members.length === 2 && c.members.includes(personId) && c.members.includes(meId))
       if (existing) {
+        conversationIdToVerify = existing.id
         await saveChatPreference(existing.id, { hidden: false, archived: false })
         // Restore the chat in local state before changing routes. The live subscription is
         // asynchronous, so relying on it alone can briefly render an empty/new-chat screen.
@@ -303,6 +324,7 @@ export function Messages() {
         id: makeId(), title: '', type: 'direct', members: [meId, personId],
         createdBy: meId, createdAt: Date.now(),
       }
+      conversationIdToVerify = conversation.id
       await store.set('conversations/' + conversation.id, {
         title: conversation.title, type: conversation.type, members: conversation.members,
         createdBy: conversation.createdBy, createdAt: conversation.createdAt,
@@ -313,7 +335,25 @@ export function Messages() {
       nav('/messages/' + conversation.id)
       setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('')
     } catch (e) {
-      setError('Could not start this conversation. ' + readableChatError(e))
+      const detail = readableChatError(e)
+      // A failed fetch can occur after the server committed an INSERT but before the
+      // browser received its response. Verify the record before telling the user it failed.
+      if (e instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(detail) && conversationIdToVerify) {
+        try {
+          const persisted = await store.get('conversations/' + conversationIdToVerify)
+          if (persisted && Array.isArray(persisted.members) && persisted.members.includes(meId) && persisted.members.includes(personId)) {
+            const recovered = { id: conversationIdToVerify, ...persisted } as Conversation
+            setConversations(current => [recovered, ...current.filter(c => c.id !== recovered.id)])
+            nav('/messages/' + recovered.id)
+            setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('')
+            a.toast('Conversation opened')
+            return
+          }
+        } catch { /* preserve the original network diagnosis below */ }
+        setError('Quorlyth could not reach the messaging service. Check your connection and try again. If this keeps happening, refresh the page and retry.')
+      } else {
+        setError('Could not start this conversation. ' + (detail || 'Please try again.'))
+      }
     } finally {
       setStartingPerson(null)
     }
@@ -424,8 +464,8 @@ export function Messages() {
             </div>
             <form className="chat-composer" onSubmit={sendMessage}>
               {replyToMessageId && <div className="chat-reply-composer"><div><b>Replying to {a.nm(activeMessages.find(m => m.id === replyToMessageId)?.senderId || meId)}</b><small>{messageText(activeMessages.find(m => m.id === replyToMessageId) || ({ id: '', conversationId: active.id, senderId: meId, text: '', at: 0 } as Message)).slice(0, 130)}</small></div><button type="button" aria-label="Cancel reply" onClick={() => setReplyToMessageId(null)}><Icon name="x" size={15} /></button></div>}
-              <div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
-          </> : conversationId ? <div className="chat-no-thread" role="status"><p className="dim">Opening your conversation…</p></div> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'spark'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
+              <div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label={sending ? 'Sending message' : 'Send message'} title={sending ? 'Sending message' : 'Send message'}><span className="chat-send-content">{sending ? <span className="chat-spinner" aria-hidden="true" /> : <Icon name="arrow-up" size={17} />}<span className="chat-send-label">{sending ? 'Sending' : 'Send'}</span></span></button></div></div></form>
+          </> : conversationId ? (conversationsLoaded || openingTimedOut) ? <div className="chat-no-thread chat-conversation-unavailable" role="status"><span className="chat-empty-icon"><Icon name="message" size={24} /></span><p className="chat-eyebrow">CONVERSATION</p><h3>{conversationsLoaded ? 'This conversation is unavailable' : 'Still trying to connect'}</h3><p className="mut">{conversationsLoaded ? 'It may have been removed, or your account may not have access to it.' : 'The messaging service has not responded yet. Check your connection, then try again.'}</p><div className="chat-no-actions"><button className="btn p" onClick={() => nav('/messages')}><Icon name="arrow-left" size={16} />Back to messages</button><button className="btn" onClick={() => window.location.reload()}><Icon name="rotate" size={16} />Try again</button></div></div> : <div className="chat-no-thread" role="status"><span className="chat-spinner" aria-hidden="true" /><p className="dim">Opening your conversation…</p></div> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'spark'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
             <>Every great thing<br />starts somewhere.</>,
             <>One message can<br />start something real.</>,
             <>Good ideas deserve<br />to find their people.</>,
