@@ -391,11 +391,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveReview: (id, r) => w(() => up('reviews/' + id, { ...r, at: Date.now() })),
       publish: (id, text, credits) => w(async () => { await st!.set('promotions/' + slug(), { ideaId: id, text, credits, by: me!.id, at: Date.now(), status: 'draft', published: false }); await up('reviews/' + id, { status: 'promoted', at: Date.now() }) }, 'Post prepared to share'),
       applyToCollaborate: (ideaId, message) => {
-        if (data.volunteers.some(v => v.ideaId === ideaId && v.applicantId === me?.id && v.status !== 'declined')) {
+        if (!me) { toast('Sign in before applying to collaborate.'); return Promise.resolve(false) }
+        const idea = data.ideas.find(item => item.id === ideaId)
+        if (!idea) { toast('This idea is no longer available.'); return Promise.resolve(false) }
+        if (idea.authorId === me.id) { toast('You cannot apply to collaborate on your own idea.'); return Promise.resolve(false) }
+        if (!canManageCommunity(idea.cid) && !data.members[me.id]?.[idea.cid]) { toast('Join the idea community before applying to collaborate.'); return Promise.resolve(false) }
+        if (data.volunteers.some(v => v.ideaId === ideaId && v.applicantId === me.id && v.status !== 'declined')) {
           toast('You already have an active application for this idea')
           return Promise.resolve(false)
         }
-        return w(() => st!.set('volunteers/' + slug(), { ideaId, applicantId: me!.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
+        return w(() => st!.set('volunteers/' + slug(), { ideaId, applicantId: me.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
       },
       decideVolunteer: (applicationId, status) => w(async () => {
         const application = data.volunteers.find(item => item.id === applicationId)
