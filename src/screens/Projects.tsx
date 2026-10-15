@@ -13,11 +13,12 @@ const MILESTONE_LABEL: Record<Milestone['status'], string> = {
   done: 'Done',
 }
 
-function ProjectCard({ idea, project, milestones, canManage }: {
+function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
   idea: Idea
   project?: Project
   milestones: Milestone[]
   canManage: boolean
+  canCollaborate: boolean
 }) {
   const a = useApp()
   const nav = useNavigate()
@@ -103,6 +104,7 @@ function ProjectCard({ idea, project, milestones, canManage }: {
           <Av id={idea.authorId} size={28} />Idea by {a.nm(idea.authorId)}
         </button>
         <button type="button" className="chip" onClick={() => nav('/idea/' + idea.id)}><Icon name="idea" size={14} />Open idea</button>
+        {project && canCollaborate && <button type="button" className="chip" onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={14} />Collaboration space</button>}
       </div>
 
       {!project ? (
@@ -209,7 +211,7 @@ function Inner() {
       {!ideas.length ? <Empty icon="insight" title="No selected ideas or projects yet" text="Select an idea in the review queue to start a tracked project.">
         <button type="button" className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/queue')}>Open review queue</button>
       </Empty> : <div style={{ display: 'grid', gap: 16, maxWidth: 900 }}>
-        {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.canManageCommunity(idea.cid)} />)}
+        {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.canManageCommunity(idea.cid)} canCollaborate={a.canManageCommunity(idea.cid) || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')} />)}
       </div>}
     </>
   )
