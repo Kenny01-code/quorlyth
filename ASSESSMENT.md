@@ -97,7 +97,7 @@ These improvements are implementation and automated-test evidence, not proof tha
 - [ ] Complete the end-to-end scenario with two separate real accounts against production Supabase.
 - [ ] Exercise the signed-in production UI for supporter profile links, application accept/decline, project/milestone edits, message creation, and refresh persistence.
 - [ ] Complete a production denial matrix for each sensitive record category and role; the existing automated suite is simulated, not a full live-role denial matrix.
-- [ ] After merging this branch, confirm Vercel's production deployment SHA matches the resulting GitHub main SHA.
+- [x] On 2026-10-15, confirmed the merged application commit `e171f25323eafb2ebfb8bf30a5b874cbad7c52bd` deployed to Vercel production with state READY. The `quorlyth.vercel.app` alias, entry JS/CSS, Review Queue chunk, and Projects chunk returned HTTP 200; the latest one-hour runtime-error summary was empty.
 
 ## Submission evidence to capture
 
