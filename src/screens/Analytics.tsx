@@ -256,5 +256,12 @@ function MemberAnalyticsView() {
 
 export function download(name: string, type: string, data: string) {
   const u = URL.createObjectURL(new Blob([data], { type }))
-  const l = document.createElement('a'); l.href = u; l.download = name; l.click(); URL.revokeObjectURL(u)
+  const l = document.createElement('a')
+  l.href = u; l.download = name
+  l.style.display = 'none'
+  document.body.appendChild(l)
+  l.click()
+  l.remove()
+  // Let the browser start writing the download before releasing the Blob URL.
+  window.setTimeout(() => URL.revokeObjectURL(u), 1000)
 }

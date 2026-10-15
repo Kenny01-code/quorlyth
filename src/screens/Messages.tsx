@@ -61,6 +61,7 @@ export function Messages() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [peopleQuery, setPeopleQuery] = useState('')
+  const [startingPerson, setStartingPerson] = useState<string | null>(null)
   const [conversationFilter, setConversationFilter] = useState<'all' | 'groups' | 'unread' | 'archived'>('all')
   const [groupName, setGroupName] = useState('')
   const [selectedPeople, setSelectedPeople] = useState<string[]>([])
@@ -283,16 +284,39 @@ export function Messages() {
   }, [active?.id, activeMessages.length, activeMessages.at(-1)?.id])
 
   async function startDirect(personId: string) {
-    if (!store || !meId) return
+    if (!store || !meId || !personId || personId === meId || startingPerson) return
+    setStartingPerson(personId)
     setError('')
-    const existing = conversations.find(c => c.type === 'direct' && c.members.length === 2 && c.members.includes(personId) && c.members.includes(meId))
-    if (existing) { try { await saveChatPreference(existing.id, { hidden: false, archived: false }) } catch (e) { setError('Could not restore this conversation. ' + readableChatError(e)); return } nav('/messages/' + existing.id); setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery(''); return }
-    const id = makeId()
     try {
-      await store.set('conversations/' + id, { title: '', type: 'direct', members: [meId, personId], createdBy: meId, createdAt: Date.now() })
-      nav('/messages/' + id)
+      const existing = conversations.find(c => c.type === 'direct' && c.members.length === 2 && c.members.includes(personId) && c.members.includes(meId))
+      if (existing) {
+        await saveChatPreference(existing.id, { hidden: false, archived: false })
+        // Restore the chat in local state before changing routes. The live subscription is
+        // asynchronous, so relying on it alone can briefly render an empty/new-chat screen.
+        setConversations(current => [existing, ...current.filter(c => c.id !== existing.id)])
+        nav('/messages/' + existing.id)
+        setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('')
+        return
+      }
+
+      const conversation: Conversation = {
+        id: makeId(), title: '', type: 'direct', members: [meId, personId],
+        createdBy: meId, createdAt: Date.now(),
+      }
+      await store.set('conversations/' + conversation.id, {
+        title: conversation.title, type: conversation.type, members: conversation.members,
+        createdBy: conversation.createdBy, createdAt: conversation.createdAt,
+      })
+      // Optimistically insert the persisted conversation so the thread becomes active
+      // immediately instead of waiting for the next Supabase realtime round-trip.
+      setConversations(current => [conversation, ...current.filter(c => c.id !== conversation.id)])
+      nav('/messages/' + conversation.id)
       setPeopleOpen(false); setSettingsOpen(false); setProfileOpen(false); setPeopleQuery('')
-    } catch (e) { setError('Could not start this conversation. ' + readableChatError(e)) }
+    } catch (e) {
+      setError('Could not start this conversation. ' + readableChatError(e))
+    } finally {
+      setStartingPerson(null)
+    }
   }
 
   async function createGroup() {
@@ -302,7 +326,9 @@ export function Messages() {
     if (members.length < 3) { setError('Choose at least two other people for a group chat.'); return }
     const id = makeId()
     try {
-      await store.set('conversations/' + id, { title: groupName.trim().slice(0, 60), type: 'group', members, createdBy: meId, createdAt: Date.now() })
+      const conversation: Conversation = { id, title: groupName.trim().slice(0, 60), type: 'group', members, createdBy: meId, createdAt: Date.now() }
+      await store.set('conversations/' + id, { title: conversation.title, type: conversation.type, members, createdBy: meId, createdAt: conversation.createdAt })
+      setConversations(current => [conversation, ...current.filter(c => c.id !== id)])
       nav('/messages/' + id)
       setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setSelectedPeople([]); setGroupName(''); setPeopleQuery('')
     } catch (e) {
@@ -399,7 +425,7 @@ export function Messages() {
             <form className="chat-composer" onSubmit={sendMessage}>
               {replyToMessageId && <div className="chat-reply-composer"><div><b>Replying to {a.nm(activeMessages.find(m => m.id === replyToMessageId)?.senderId || meId)}</b><small>{messageText(activeMessages.find(m => m.id === replyToMessageId) || ({ id: '', conversationId: active.id, senderId: meId, text: '', at: 0 } as Message)).slice(0, 130)}</small></div><button type="button" aria-label="Cancel reply" onClick={() => setReplyToMessageId(null)}><Icon name="x" size={15} /></button></div>}
               <div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label="Send message">{sending ? <span className="chat-spinner" /> : <Icon name="arrow-up" size={19} />}</button></div></div></form>
-          </> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'spark'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
+          </> : conversationId ? <div className="chat-no-thread" role="status"><p className="dim">Opening your conversation…</p></div> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'spark'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
             <>Every great thing<br />starts somewhere.</>,
             <>One message can<br />start something real.</>,
             <>Good ideas deserve<br />to find their people.</>,
@@ -413,7 +439,7 @@ export function Messages() {
           {(peopleOpen || groupOpen) && <>
             {groupOpen && <label className="chat-group-name"><span>Group name</span><input value={groupName} onChange={e => setGroupName(e.target.value)} maxLength={60} placeholder="e.g. The next big idea" /></label>}
             <label className="chat-search"><Icon name="search" size={18} /><input value={peopleQuery} onChange={e => setPeopleQuery(e.target.value)} placeholder="Search people by name..." autoFocus /></label>
-            <div className="chat-people-list">{visiblePeople.map(p => <button className="chat-person" key={p.id} onClick={() => groupOpen ? setSelectedPeople(old => old.includes(p.id) ? old.filter(x => x !== p.id) : [...old, p.id]) : void startDirect(p.id)}><Av id={p.id} size={42} /><span className="chat-person-copy"><b>{p.name}</b>{isPlatformAdmin(p.id) && <span className="owner-badge">✦ PLATFORM OWNER</span>}{isCommunityCreator(p.id) && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}<small>{a.data.profiles[p.id]?.head || 'Quorlyth member'}</small></span>{groupOpen ? <span className={cn('chat-check', selectedPeople.includes(p.id) && 'on')}>{selectedPeople.includes(p.id) && <Icon name="check" size={14} />}</span> : <Icon name="arrow-up-right" size={17} />}</button>)}{!visiblePeople.length && <p className="mut chat-empty">No matching members found yet. People appear here after their profiles or community activity is available.</p>}</div>
+            <div className="chat-people-list">{visiblePeople.map(p => <button className="chat-person" key={p.id} disabled={!groupOpen && startingPerson !== null} onClick={() => groupOpen ? setSelectedPeople(old => old.includes(p.id) ? old.filter(x => x !== p.id) : [...old, p.id]) : void startDirect(p.id)}><Av id={p.id} size={42} /><span className="chat-person-copy"><b>{p.name}</b>{isPlatformAdmin(p.id) && <span className="owner-badge">✦ PLATFORM OWNER</span>}{isCommunityCreator(p.id) && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}<small>{a.data.profiles[p.id]?.head || 'Quorlyth member'}</small></span>{groupOpen ? <span className={cn('chat-check', selectedPeople.includes(p.id) && 'on')}>{selectedPeople.includes(p.id) && <Icon name="check" size={14} />}</span> : startingPerson === p.id ? <span className="chat-spinner" aria-label="Starting conversation" /> : <Icon name="arrow-up-right" size={17} />}</button>)}{!visiblePeople.length && <p className="mut chat-empty">No matching members found yet. People appear here after their profiles or community activity is available.</p>}</div>
             {groupOpen && <div className="chat-create-footer"><span className="dim">{selectedPeople.length} selected · choose at least 2</span><button className="btn p" disabled={selectedPeople.length < 2 || !groupName.trim()} onClick={() => void createGroup()}>Create group <Icon name="arrow" size={16} /></button></div>}
           </>}
           {profileOpen && <div className="chat-panel-profile"><div className="chat-profile-card"><Av id={meId} size={72} /><div><h4>{a.nm(meId)}</h4><p>{a.data.profiles[meId]?.head || 'Quorlyth member'}</p><small>Signed in to Quorlyth</small></div></div><div className="chat-panel-note">Your profile is how people recognize you across conversations and communities.</div><button className="btn p chat-panel-action" onClick={() => nav('/me')}><Icon name="member" size={16} />Open my profile <Icon name="arrow-up-right" size={15} /></button><button className="btn chat-panel-action" onClick={() => nav('/settings')}><Icon name="settings" size={16} />Account settings <Icon name="arrow-up-right" size={15} /></button></div>}

@@ -16,6 +16,7 @@ export function createLocalStore(): DocStore {
 
   return {
     async get(path) { return read()[path] ?? null },
+    async exportAll() { return Object.entries(read()).map(([path, data]) => ({ path, data })) },
     async create(path, data) {
       const m = read()
       if (Object.prototype.hasOwnProperty.call(m, path)) throw new Error('already_exists')

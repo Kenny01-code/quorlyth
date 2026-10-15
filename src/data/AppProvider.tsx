@@ -224,9 +224,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, demo])
 
   const st = backend?.store
-  // Production ownership comes only from the server-authorized config/owner row.
-  // Never infer privileged access from email or user-editable Auth metadata.
-  const owner = demo || (!!me && data.ownerId === me.id)
+  // Platform-level UI privileges come from the server-authorized platform_roles RPC.
+  // Keep legacy config ownership for older workspaces, but never infer privileges
+  // from an email address or user-editable Auth metadata.
+  const owner = demo || platformAdmin || (!!me && data.ownerId === me.id)
 
   const enterDemo = useCallback(() => {
     sessionStorage.setItem('quorlyth:demo', '1')
