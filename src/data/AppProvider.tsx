@@ -292,7 +292,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!i.title.trim()) return { ok: false, error: 'An idea title is required.' }
       if (!data.communities.some(c => c.id === i.cid && !c.arch)) return { ok: false, error: 'The selected community does not exist or is archived.' }
       try {
-        await st!.set('ideas/' + slug(), { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me.id, tags: i.tags || [], at: Date.now() })
+        await st!.create('ideas/' + slug(), { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me.id, tags: i.tags || [], at: Date.now() })
         toast('Idea shared')
         return { ok: true }
       } catch (e: any) {
@@ -358,7 +358,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await st!.delete('communities/' + id)
       }, 'Community and its linked ideas deleted'),
       join: (cid, on) => w(() => up('members/' + me!.id, { c: { [cid]: on } }), on ? 'You joined' : 'You left'),
-      postIdea: i => w(() => st!.set('ideas/' + slug(), { title: i.title, body: i.body || '', cid: i.cid, authorId: me!.id, tags: i.tags || [], at: Date.now() }), 'Idea shared'),
+      postIdea: i => w(() => st!.create('ideas/' + slug(), { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me!.id, tags: i.tags || [], at: Date.now() }), 'Idea shared'),
       postIdeaDetailed,
       vote: id => w(() => up('votes/' + me!.id, { ideas: { [id]: !data.votes[me!.id]?.[id] } })),
       addComment: (id, text) => w(() => st!.set(`ideas/${id}/comments/${slug()}`, { authorId: me!.id, text, at: Date.now() }), 'Reply posted'),
@@ -373,10 +373,58 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return w(() => st!.set('volunteers/' + slug(), { ideaId, applicantId: me!.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
       },
       decideVolunteer: (applicationId, status) => w(async () => {
+        const application = data.volunteers.find(item => item.id === applicationId)
+        if (!application) throw new Error('This collaboration request is no longer available. Refresh and try again.')
         const reviewedAt = Date.now()
+        const idea = status === 'accepted' ? data.ideas.find(item => item.id === application.ideaId) : undefined
+        if (status === 'accepted' && !idea) throw new Error('The idea for this collaboration is no longer available.')
+        const currentReview = idea ? data.reviews[idea.id] || data.outcomes[idea.id] : undefined
+        const nextReviewStatus = currentReview?.status === 'promoted' ? 'promoted' as const : 'selected' as const
+        const needsProject = !!idea && !data.projects[idea.id]
+        const workspaceSummary = 'Collaboration workspace ready. Add a project plan and milestones to coordinate the work.'
+
+        // Approval should initialize the shared workspace before the application is
+        // marked accepted. Contributors should never be accepted into a missing project.
+        if (idea && currentReview?.status !== 'selected' && currentReview?.status !== 'promoted') {
+          await up('reviews/' + idea.id, { status: 'selected', at: reviewedAt })
+        }
+        if (idea && needsProject) {
+          await st!.create('projects/' + idea.id, {
+            ideaId: idea.id,
+            summary: workspaceSummary,
+            status: 'active',
+            createdBy: me!.id,
+            at: reviewedAt,
+            updatedAt: reviewedAt,
+          })
+        }
+
         await up('volunteers/' + applicationId, { status, reviewedAt, reviewedBy: me!.id })
-        setData(d => ({ ...d, volunteers: d.volunteers.map(application => application.id === applicationId ? { ...application, status, reviewedAt, reviewedBy: me!.id } : application) }))
-      }, status === 'accepted' ? 'Contributor accepted' : 'Application declined'),
+        setData(d => ({
+          ...d,
+          volunteers: d.volunteers.map(item => item.id === applicationId ? { ...item, status, reviewedAt, reviewedBy: me!.id } : item),
+          ...(idea ? {
+            reviews: {
+              ...d.reviews,
+              [idea.id]: { ...d.reviews[idea.id], id: idea.id, status: nextReviewStatus, at: reviewedAt },
+            },
+            ...(needsProject ? {
+              projects: {
+                ...d.projects,
+                [idea.id]: {
+                  id: idea.id,
+                  ideaId: idea.id,
+                  summary: workspaceSummary,
+                  status: 'active' as const,
+                  createdBy: me!.id,
+                  at: reviewedAt,
+                  updatedAt: reviewedAt,
+                },
+              },
+            } : {}),
+          } : {}),
+        }))
+      }, status === 'accepted' ? 'Contributor accepted and workspace opened' : 'Application declined'),
       createProject: (ideaId, summary) => w(async () => {
         const cleanSummary = summary.trim()
         if (!cleanSummary) throw new Error('Add a short project summary first.')
