@@ -373,10 +373,55 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return w(() => st!.set('volunteers/' + slug(), { ideaId, applicantId: me!.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
       },
       decideVolunteer: (applicationId, status) => w(async () => {
+        const application = data.volunteers.find(item => item.id === applicationId)
+        if (!application) throw new Error('This collaboration request is no longer available. Refresh and try again.')
         const reviewedAt = Date.now()
+
+        // Acceptance must leave contributors with a real workspace, not an accepted
+        // application that still depends on the owner visiting Projects later.
+        if (status === 'accepted') {
+          const idea = data.ideas.find(item => item.id === application.ideaId)
+          if (!idea) throw new Error('The idea for this collaboration is no longer available.')
+          const currentReview = data.reviews[idea.id] || data.outcomes[idea.id]
+          if (!data.projects[idea.id]) {
+            if (!['selected', 'promoted'].includes(currentReview?.status || '')) {
+              await up('reviews/' + idea.id, { status: 'selected', at: reviewedAt })
+            }
+            await st!.create('projects/' + idea.id, {
+              ideaId: idea.id,
+              summary: 'Collaboration workspace ready. Add a project plan and milestones to coordinate the work.',
+              status: 'active',
+              createdBy: me!.id,
+              at: reviewedAt,
+              updatedAt: reviewedAt,
+            })
+          }
+        }
+
         await up('volunteers/' + applicationId, { status, reviewedAt, reviewedBy: me!.id })
-        setData(d => ({ ...d, volunteers: d.volunteers.map(application => application.id === applicationId ? { ...application, status, reviewedAt, reviewedBy: me!.id } : application) }))
-      }, status === 'accepted' ? 'Contributor accepted' : 'Application declined'),
+        setData(d => ({
+          ...d,
+          volunteers: d.volunteers.map(item => item.id === applicationId ? { ...item, status, reviewedAt, reviewedBy: me!.id } : item),
+          ...(status === 'accepted' && !d.projects[application.ideaId] ? {
+            projects: {
+              ...d.projects,
+              [application.ideaId]: {
+                id: application.ideaId,
+                ideaId: application.ideaId,
+                summary: 'Collaboration workspace ready. Add a project plan and milestones to coordinate the work.',
+                status: 'active' as const,
+                createdBy: me!.id,
+                at: reviewedAt,
+                updatedAt: reviewedAt,
+              },
+            },
+            reviews: {
+              ...d.reviews,
+              [application.ideaId]: { ...d.reviews[application.ideaId], status: 'selected' as const, at: reviewedAt },
+            },
+          } : {}),
+        }))
+      }, status === 'accepted' ? 'Contributor accepted and workspace opened' : 'Application declined'),
       createProject: (ideaId, summary) => w(async () => {
         const cleanSummary = summary.trim()
         if (!cleanSummary) throw new Error('Add a short project summary first.')
