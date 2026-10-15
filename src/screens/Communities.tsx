@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
 import { IdeaCard } from '../components/IdeaCard'
@@ -93,20 +93,27 @@ type Preview = null | 'visitor' | 'member'
 function Detail({ cid }: { cid: string }) {
   const a = useApp()
   const nav = useNavigate()
+  const loc = useLocation()
   const { data } = a
   const c = data.communities.find(x => x.id === cid)
-  const [tab, setTab] = useState(0)
+  const [tab, setTab] = useState(() => new URLSearchParams(loc.search).get('tab') === 'join-requests' ? 3 : 0)
   const [shareOpen, setShareOpen] = useState(false)
   const [preview, setPreview] = useState<Preview>(() => (new URLSearchParams(location.search).get('preview') as Preview) || null)
   const [sort, setSort] = useState(0)
   const [tag, setTag] = useState('')
   const emptyIdea = { title: '', body: '', tags: '' }
   const [f, setF, clearIdeaDraft] = useDraftState(`q-draft:${a.me?.id}:idea:${cid}`, emptyIdea)
+  useEffect(() => {
+    const wantsJoinRequests = new URLSearchParams(loc.search).get('tab') === 'join-requests'
+    if (wantsJoinRequests && a.canManageCommunity(cid)) setTab(3)
+    else if (!wantsJoinRequests) setTab(0)
+  }, [loc.search, cid, a.me?.id, a.platformAdmin, a.data.communities])
   if (!c) return <Empty icon="community" title="Community not found" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back</button></Empty>
 
   const own = a.canManageCommunity(cid) && !preview
-  const joined = own ? false : preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid)
   const myJoinRequest = a.data.joinRequests.find(r => r.cid === cid && r.userId === a.me?.id)
+  // An approved request is itself authoritative membership evidence while the member doc subscription catches up.
+  const joined = own ? false : preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid) || myJoinRequest?.status === 'approved'
   const spaceOk = preview ? preview === 'member' || !data.settings?.appr : a.canPost()
   const rule = c.post || 'anyone'
   const canPost = !c.arch && (rule === 'owner' ? own : rule === 'members' ? own || joined : true) && (own || spaceOk)
