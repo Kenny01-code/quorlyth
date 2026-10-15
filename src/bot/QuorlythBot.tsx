@@ -173,11 +173,11 @@ export function QuorlythBot() {
     const t = setTimeout(() => setGreet(''), 7000)
     return () => clearTimeout(t)
   }, [a.ready, a.me?.id])
-  const latestMessageText = cur?.msgs[cur.msgs.length - 1]?.t
+  const latestMessageText = cur ? cur.msgs[cur.msgs.length - 1]?.t : undefined
   useEffect(() => {
     const scroller = log.current
     if (!scroller) return
-    const last = cur?.msgs[cur.msgs.length - 1]
+    const last = cur ? cur.msgs[cur.msgs.length - 1] : undefined
     const distanceFromBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
     if (last?.r === 'u' || distanceFromBottom < 160) scroller.scrollTop = scroller.scrollHeight
   }, [cur?.msgs.length, latestMessageText, busy])
