@@ -25,6 +25,8 @@ function Inner() {
   const [rev, setRev] = useState(false)
   const [applicationMessage, setApplicationMessage] = useState('')
   const [applying, setApplying] = useState(false)
+  const [replyTo, setReplyTo] = useState<string | null>(null)
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
   const idea = a.data.ideas.find(i => i.id === id)
   if (!idea) return <Empty icon="idea" title="This idea is not available" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back to communities</button></Empty>
   const r = a.data.reviews[idea.id]
@@ -39,9 +41,37 @@ function Inner() {
     .map(([uid]) => uid)
   const cname = a.data.communities.find(c => c.id === idea.cid)?.name || 'Community'
   const row = (l: string, v?: number) => v == null ? null : <div style={{ marginTop: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{l}</span><span>{v}</span></div><Bar value={v} /></div>
+  const startReply = (commentId?: string, personId?: string) => {
+    setReplyTo(commentId || null)
+    if (personId) {
+      const mention = '@' + a.nm(personId).replace(/^@/, '')
+      setText((current: string) => current.trim() ? current.trimEnd() + ' ' + mention + ' ' : mention + ' ')
+      setMentionedUserIds(current => [...new Set([...current, personId])])
+    }
+    window.setTimeout(() => document.getElementById('idea-discussion-reply')?.focus(), 0)
+  }
   const postReply = async () => {
     if (!text.trim()) return a.toast('Write a reply first')
-    if (await a.addComment(idea.id, text.trim())) clearReplyDraft('')
+    const ok = await a.addComment(idea.id, text.trim(), replyTo || undefined, mentionedUserIds)
+    if (ok) { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]) }
+  }
+  const topLevelComments = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
+  const renderComment = (comment: typeof comments[number], nested = false) => {
+    const replies = comments.filter(item => item.parentId === comment.id)
+    return <div key={comment.id} style={{ marginLeft: nested ? 18 : 0, marginTop: 12, paddingLeft: nested ? 12 : 0, borderLeft: nested ? '1px solid var(--line, rgba(255,255,255,.12))' : undefined }}>
+      <div className="msg" style={{ alignItems: 'flex-start' }}><Av id={comment.authorId} size={30} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 style={{ fontSize: 15 }}><button className="lk" onClick={() => nav('/me/' + comment.authorId)}>{a.nm(comment.authorId)}</button> <span className="dim">{when(comment.at)}</span></h3>
+          <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{comment.text}</p>
+          {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 12, marginTop: 5 }}>Tagged: {comment.mentionedUserIds.map(uid => a.nm(uid)).join(', ')}</p> : null}
+          <div className="acts" style={{ marginTop: 7, gap: 8 }}>
+            <button className="chip" type="button" onClick={() => startReply(comment.id)}><Icon name="reply" size={13} />Reply</button>
+            <button className="chip" type="button" onClick={() => startReply(comment.id, comment.authorId)}><Icon name="at-sign" size={13} />Reply & tag {a.nm(comment.authorId)}</button>
+          </div>
+        </div>
+      </div>
+      {replies.map(reply => renderComment(reply, true))}
+    </div>
   }
 
   return (
@@ -69,13 +99,11 @@ function Inner() {
           </div>}
           {r?.score != null && <div className="reason" style={{ marginTop: 26 }}><span className="dim">AI review {r.score}</span><p>{r.reason}</p></div>}
           <h3 style={{ margin: '26px 0 4px' }}>Discussion</h3>
-          {comments.length ? comments.map(c => (
-            <div key={c.id} className="msg"><Av id={c.authorId} size={30} />
-              <div><h3 style={{ fontSize: 15 }}><button className="lk" onClick={() => nav('/me/' + c.authorId)}>{a.nm(c.authorId)}</button> <span className="dim">{when(c.at)}</span></h3><p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{c.text}</p></div></div>
-          )) : <p className="mut" style={{ padding: '14px 0' }}>No replies yet. Start the conversation.</p>}
-          <label className="field"><span>{communityOwner ? 'Reply to this idea as the community owner' : 'Add to the idea'}</span><input value={text} maxLength={1000} onChange={e => setText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && text.trim()) { e.preventDefault(); void postReply() } }} placeholder="Build on this" /></label>
-          <p className="dim">Unfinished replies are saved as drafts on this device.</p>
-          <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={postReply}><Icon name={communityOwner ? 'send' : 'collab'} />{communityOwner ? 'Reply as owner' : 'Post reply'}</button><button className="chip" onClick={() => clearReplyDraft('')}>Discard draft</button></div>
+          {comments.length ? topLevelComments.map(comment => renderComment(comment)) : <p className="mut" style={{ padding: '14px 0' }}>No replies yet. Start the conversation.</p>}
+          {replyTo && <div className="chip" style={{ marginTop: 14, display: 'inline-flex', gap: 8 }}>Replying to a specific discussion <button type="button" className="lk" onClick={() => setReplyTo(null)}>Cancel</button></div>}
+          <label className="field" style={{ marginTop: 14 }}><span>{replyTo ? 'Your reply to this discussion' : communityOwner ? 'Reply to this idea as the community owner' : 'Add to the idea'}</span><textarea id="idea-discussion-reply" value={text} maxLength={1000} onChange={e => setText(e.target.value)} rows={3} placeholder={replyTo ? 'Write a thoughtful reply… Use the tag button on any discussion to mention its author.' : 'Share your thoughts…'} /></label>
+          <p className="dim">Use “Reply & tag” under any discussion to reply directly to that person and mention them. Unfinished replies are saved as drafts on this device.</p>
+          <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={postReply}><Icon name={communityOwner ? 'send' : 'collab'} />{replyTo ? 'Post threaded reply' : communityOwner ? 'Reply as owner' : 'Post reply'}</button><button className="chip" onClick={() => { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]) }}>Discard draft</button></div>
         </div>
         <div className="glass pad">
           <button className={voted ? 'btn' : 'btn p'} style={{ width: '100%', justifyContent: 'center' }} onClick={() => a.vote(idea.id)}><Icon name="support" />{voted ? 'Backed' : 'Back this idea'}</button>
