@@ -406,7 +406,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...(idea ? {
             reviews: {
               ...d.reviews,
-              [idea.id]: { ...d.reviews[idea.id], status: nextReviewStatus, at: reviewedAt },
+              [idea.id]: { ...d.reviews[idea.id], id: idea.id, status: nextReviewStatus, at: reviewedAt },
             },
             ...(needsProject ? {
               projects: {
