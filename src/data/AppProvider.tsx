@@ -224,10 +224,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, demo])
 
   const st = backend?.store
-  // Platform-level UI privileges come from the server-authorized platform_roles RPC.
-  // Keep legacy config ownership for older workspaces, but never infer privileges
-  // from an email address or user-editable Auth metadata.
-  const owner = demo || platformAdmin || (!!me && data.ownerId === me.id)
+  // Keep legacy workspace ownership separate from platform-admin privileges:
+  // admins get global tools, but are not treated as the creator of unowned legacy communities.
+  const legacyOwner = demo || (!!me && data.ownerId === me.id)
+  const owner = legacyOwner || platformAdmin
 
   const enterDemo = useCallback(() => {
     sessionStorage.setItem('quorlyth:demo', '1')
@@ -271,7 +271,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false
       }
     }
-    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (owner && !c.ownerId && !c.createdBy)))
+    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (legacyOwner && !c.ownerId && !c.createdBy)))
     const canManageCommunity = (cid: string) => !!me && (platformAdmin || ownsCommunity(cid))
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
@@ -406,7 +406,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),
       useComments: () => [],
     }
-  }, [ready, startupError, backend, me, owner, platformAdmin, demo, enterDemo, exitDemo, data, toast, toastMsg, st])
+  }, [ready, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, data, toast, toastMsg, st])
 
   return <Ctx.Provider value={app}>{children}</Ctx.Provider>
 }
