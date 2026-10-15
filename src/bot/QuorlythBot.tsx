@@ -173,7 +173,14 @@ export function QuorlythBot() {
     const t = setTimeout(() => setGreet(''), 7000)
     return () => clearTimeout(t)
   }, [a.ready, a.me?.id])
-  useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight }, [cur?.msgs.length, busy])
+  const latestMessageText = cur ? cur.msgs[cur.msgs.length - 1]?.t : undefined
+  useEffect(() => {
+    const scroller = log.current
+    if (!scroller) return
+    const last = cur ? cur.msgs[cur.msgs.length - 1] : undefined
+    const distanceFromBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
+    if (last?.r === 'u' || distanceFromBottom < 160) scroller.scrollTop = scroller.scrollHeight
+  }, [cur?.msgs.length, latestMessageText, busy])
   useEffect(() => {
     const restoreWithShortcut = (event: KeyboardEvent) => {
       if (event.altKey && event.shiftKey && event.code === 'KeyB') {
@@ -394,19 +401,27 @@ export function QuorlythBot() {
     let c = add(cur, { r: 'u', t })
     setBusy(true); robot.current?.think(true); setStatus('Thinking'); setThinkingTask(taskPreview(t)); setCaption('')
     ctl.current = new AbortController()
+    let renderTimer: number | null = null
+    let latestClean = ''
     try {
       const turns = c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
       const liveContext = await requestLiveContext(t)
       let first = true
       const full = await streamChat(turns, {
-        system: buildContext(a, bs, loc.pathname, project) + '\\nBrowser/device context: ' + browserContext() + (liveContext ? '\\nLocation and live weather context: ' + liveContext : ''), tier: bs.model, signal: ctl.current.signal,
+        system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : ''), tier: bs.model, signal: ctl.current.signal,
         onText: f => {
           if (first) { first = false; setThinkingTask(''); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
-          const clean = f.replace(/\[\[[\s\S]*$/, '').trim()
-          setCaption(clean.slice(-140))
-          setCur(prev => prev ? { ...prev, msgs: prev.msgs.filter(m => !(m as any).live).concat([{ r: 'a', t: clean, live: true } as any]) } : prev)
+          latestClean = f.replace(/\[\[[\s\S]*$/, '').trim()
+          if (renderTimer === null) {
+            renderTimer = window.setTimeout(() => {
+              renderTimer = null
+              setCaption(latestClean.slice(-140))
+              setCur(prev => prev ? { ...prev, msgs: prev.msgs.filter(m => !(m as any).live).concat([{ r: 'a', t: latestClean, live: true } as any]) } : prev)
+            }, 32)
+          }
         },
       })
+      if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
       const btns: ChatMsg['btns'] = []
       const g = full.match(/\[\[go:([^\]]+)\]\]/), o = full.match(/\[\[open:([\w-]+)\]\]/)
       if (g) btns.push({ a: 'go', id: g[1], l: 'Open ' + g[1].replace('/', '') || 'home' })
@@ -417,6 +432,7 @@ export function QuorlythBot() {
       robot.current?.talk(false); say(clean)
       setTimeout(() => setCaption(''), 1500)
     } catch (e: any) {
+      if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
       robot.current?.think(false); robot.current?.talk(false)
       if (e.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: e.message?.includes('OPENAI_API_KEY') ? 'The AI key is missing on the server. Add OPENAI_API_KEY to your .env file and restart npm run dev:ai.' : 'Sorry, that did not go through. ' + (e.message || '') }] }; persist(c) }
       else setCur(c)
@@ -817,7 +833,9 @@ export function QuorlythBot() {
 
     const wantsIdea = /\b(create|write|submit|post|add)\b/i.test(s) && /\bidea\b/i.test(s)
     if (wantsIdea && a.me) {
-      const pathCid = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1]
+      const pathIdeaId = loc.pathname.match(/^\/idea\/([^/]+)/)?.[1]
+      const pathIdeaCommunity = a.data.ideas.find(i => i.id === pathIdeaId)?.cid
+      const pathCid = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1] || pathIdeaCommunity || project?.cid
       const mentioned = a.data.communities
         .filter(x => lower.includes(x.name.toLowerCase()))
         .sort((x, y) => y.name.length - x.name.length)[0]
@@ -1041,13 +1059,13 @@ export function QuorlythBot() {
                   </div>
                 </div>
               )}
-              <div className="qbot-conversation" style={view === 'chat' ? undefined : { padding: '6px 4px' }}>
+              <div className="qbot-conversation" ref={log} style={view === 'chat' ? undefined : { padding: '6px 4px' }}>
                 {view === 'chat' ? (
                   !msgs.length ? (
                     <div className="bhero"><p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p><h3>{project ? project.name : 'How can I help?'}</h3><p className="mut">Ask anything about your space, or pick a skill.</p>
                       <div className="bgrid sm">{SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map(s => <button key={s.id} className="bsk" onClick={() => skill(s.id)}><span className="bski"><Icon name={s.icon} size={20} /></span><b>{s.n}</b></button>)}</div></div>
                   ) : (
-                    <div className="ast-log" ref={log} aria-live="polite">
+                    <div className="ast-log" aria-live="polite">
                       {msgs.map((m, i) => m.r === 'u' ? <div key={i} className="am mu">{m.t}</div> : (
                         <div key={i} className="am ma"><div className="mt">{m.t}{(m as any).live && <span className="btyping" aria-label="QuorlythBot is typing"><i /><i /><i /></span>}</div>
                           {m.btns?.length ? <div style={{ marginTop: 8 }}>{m.btns.map((b, k) => <button key={k} className="chip on" onClick={() => act(b)}>{b.l}</button>)}</div> : null}
@@ -1071,7 +1089,7 @@ export function QuorlythBot() {
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
                     <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
                     <button className={cn('btn', live && 'rec')} aria-label={live ? 'End live talk' : 'Talk live'} title={live ? 'End live talk' : 'Start live talk'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'stop' : 'live'} size={18} /></button>
-                    <button className="btn p" aria-label="Send" style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
+                    <button className="btn p" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
                   </div>
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
                 </div>

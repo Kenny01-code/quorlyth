@@ -1230,3 +1230,49 @@ main:has(.chat-page) > .on {
   .chat-page::before { animation: none !important; }
   .chat-page .chat-message-row { animation: none !important; }
 }
+
+
+/* Production performance pass: retain the liquid-glass look without expensive full-frame blur. */
+.glass,.lift,.card,.panel,.modal,.dialog,.popover,.dropdown,.menu,.sheet,.ast-stage,.bstage,
+.bot .bh,.bot .bv,.bot .bc,.bot .ast-in,.bot .ast-log,.bot .bsl {
+  -webkit-backdrop-filter: blur(16px) saturate(120%) !important;
+  backdrop-filter: blur(16px) saturate(120%) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot),
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).m-large,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot).m-full {
+  -webkit-backdrop-filter: blur(12px) saturate(115%) !important;
+  backdrop-filter: blur(12px) saturate(115%) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsl {
+  -webkit-backdrop-filter: blur(10px) saturate(112%) !important;
+  backdrop-filter: blur(10px) saturate(112%) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  scroll-behavior: auto !important;
+  contain: layout;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-log {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+#ast .bot button,#ast .bot [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass,.lift,.card,.panel,.modal,.dialog,.popover,.dropdown,.menu,.sheet,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}

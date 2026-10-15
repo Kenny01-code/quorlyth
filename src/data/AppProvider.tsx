@@ -13,7 +13,7 @@ const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, vot
 
 export interface App {
   ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformAdmin: boolean; demo: boolean; data: Data
-  enterDemo: () => void; exitDemo: () => Promise<void>
+  enterDemo: () => void; exitDemo: () => Promise<void>; signOut: () => Promise<void>
   toast: (m: string) => void; toastMsg: string
   nm: (id: string) => string; avatar: (id: string) => string
   votesOf: (ideaId: string) => number; iVoted: (ideaId: string) => boolean; statusOf: (ideaId: string) => Status
@@ -188,7 +188,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         s.subscribe('promotions', d => set('promotions', asList<Promotion>(d).sort((a, b) => b.at - a.at)), onReadError),
         s.subscribe('volunteers', d => set('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
         s.subscribe('projects', d => set('projects', asMap<Project>(d)), onReadError),
-        s.subscribe('milestones', d => set('milestones', asList<Milestone>(d).sort((a, b) => a.at - b.at)), onReadError),
+        s.subscribe('milestones', d => set('milestones', asList<Milestone>(d).map(item => ({ ...item, status: String(item.status) === 'completed' ? 'done' as const : item.status })).sort((a, b) => a.at - b.at)), onReadError),
         s.subscribe('settings', d => set('settings', d.find(x => x.id === 'space')?.data ?? null), onReadError),
       ] : []),
     ]
@@ -261,6 +261,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [toast])
 
+  const signOut = useCallback(async () => {
+    let authBackend = backend
+    if (demo) {
+      authBackend = realBackend.current
+      if (!authBackend) {
+        authBackend = await createBackend()
+        realBackend.current = authBackend
+      }
+      sessionStorage.removeItem('quorlyth:demo')
+      authOff.current()
+      setDemo(false)
+      setData(EMPTY)
+      setBackend(authBackend)
+      authOff.current = authBackend.auth.onChange(setMe)
+    }
+    if (!authBackend) throw new Error('Authentication is not ready. Reload Quorlyth and try again.')
+    await authBackend.auth.signOut()
+    setMe(null)
+    setData(EMPTY)
+  }, [backend, demo])
+
   const app = useMemo<App>(() => {
     const votesOf = (id: string) => Object.values(data.votes).filter(v => v && v[id]).length
     const w = async (fn: () => Promise<any>, ok?: string) => {
@@ -314,7 +335,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 }
     return {
-      ready, startupError, backend, me, owner, platformAdmin, demo, enterDemo, exitDemo, data, toast, toastMsg,
+      ready, startupError, backend, me, owner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, toast, toastMsg,
       nm: id => data.profiles[id]?.name || data.profiles[id]?.authName || (me && id === me.id ? me.name : 'Member'),
       avatar: id => data.profiles[id]?.photo || data.profiles[id]?.authAvatarUrl || (me && id === me.id ? me.avatarUrl || '' : ''),
       votesOf,
@@ -487,7 +508,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),
       useComments: () => [],
     }
-  }, [ready, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, data, toast, toastMsg, st])
+  }, [ready, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, toast, toastMsg, st])
 
   return <Ctx.Provider value={app}>{children}</Ctx.Provider>
 }
