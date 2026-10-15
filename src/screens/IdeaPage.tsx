@@ -56,7 +56,7 @@ function Inner() {
     if (ok) { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]) }
   }
   const topLevelComments = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
-  const renderComment = (comment: typeof comments[number], nested = false) => {
+  const renderComment = (comment: (typeof comments)[number], nested = false): import('react').ReactNode => {
     const replies = comments.filter(item => item.parentId === comment.id)
     return <div key={comment.id} style={{ marginLeft: nested ? 18 : 0, marginTop: 12, paddingLeft: nested ? 12 : 0, borderLeft: nested ? '1px solid var(--line, rgba(255,255,255,.12))' : undefined }}>
       <div className="msg" style={{ alignItems: 'flex-start' }}><Av id={comment.authorId} size={30} />
