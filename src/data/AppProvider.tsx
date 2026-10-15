@@ -29,7 +29,7 @@ export interface App {
   postIdea: (i: { title: string; body?: string; cid: string; tags?: string[] }) => Promise<boolean>
   postIdeaDetailed: (i: { title: string; body?: string; cid: string; tags?: string[] }) => Promise<{ ok: boolean; error?: string }>
   vote: (ideaId: string) => Promise<boolean>
-  addComment: (ideaId: string, text: string) => Promise<boolean>
+  addComment: (ideaId: string, text: string, parentId?: string, mentionedUserIds?: string[]) => Promise<boolean>
   setStatus: (ideaId: string, status: Status, extra?: Partial<Review>) => Promise<boolean>
   saveReview: (ideaId: string, r: Partial<Review>) => Promise<boolean>
   publish: (ideaId: string, text: string, credits: string[]) => Promise<boolean>
@@ -386,7 +386,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       postIdea: i => w(() => st!.create('ideas/' + slug(), { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me!.id, tags: i.tags || [], at: Date.now() }), 'Idea shared'),
       postIdeaDetailed,
       vote: id => w(() => up('votes/' + me!.id, { ideas: { [id]: !data.votes[me!.id]?.[id] } })),
-      addComment: (id, text) => w(() => st!.set(`ideas/${id}/comments/${slug()}`, { authorId: me!.id, text, at: Date.now() }), 'Reply posted'),
+      addComment: (id, text, parentId, mentionedUserIds = []) => w(async () => {
+        if (!me) throw new Error('Sign in before replying to a discussion.')
+        const idea = data.ideas.find(item => item.id === id)
+        if (!idea) throw new Error('This discussion is no longer available.')
+        if (!text.trim()) throw new Error('Write a reply first.')
+        const uniqueMentions = [...new Set(mentionedUserIds)].filter(uid => uid && uid !== me.id).slice(0, 20)
+        await st!.set(`ideas/${id}/comments/${slug()}`, { authorId: me.id, text: text.trim().slice(0, 1000), at: Date.now(), ...(parentId ? { parentId } : {}), ...(uniqueMentions.length ? { mentionedUserIds: uniqueMentions } : {}) })
+      }, 'Reply posted'),
       setStatus: (id, status, extra) => w(() => up('reviews/' + id, { status, at: Date.now(), ...extra }), status === 'selected' ? 'Selected for promotion' : status === 'held' ? 'Held for later' : status === 'declined' ? 'Declined' : 'Done'),
       saveReview: (id, r) => w(() => up('reviews/' + id, { ...r, at: Date.now() })),
       publish: (id, text, credits) => w(async () => { await st!.set('promotions/' + slug(), { ideaId: id, text, credits, by: me!.id, at: Date.now(), status: 'draft', published: false }); await up('reviews/' + id, { status: 'promoted', at: Date.now() }) }, 'Post prepared to share'),
