@@ -835,9 +835,7 @@ export function QuorlythBot() {
     if (wantsIdea && a.me) {
       const pathIdeaId = loc.pathname.match(/^\/idea\/([^/]+)/)?.[1]
       const pathIdeaCommunity = a.data.ideas.find(i => i.id === pathIdeaId)?.cid
-      const pathIdeaId = loc.pathname.match(/^\/idea\/([^/]+)/)?.[1]
-      const pathIdeaCommunity = a.data.ideas.find(i => i.id === pathIdeaId)?.cid
-      const pathCid = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1] || pathIdeaCommunity || project?.cid || pathIdeaCommunity || project?.cid
+      const pathCid = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1] || pathIdeaCommunity || project?.cid
       const mentioned = a.data.communities
         .filter(x => lower.includes(x.name.toLowerCase()))
         .sort((x, y) => y.name.length - x.name.length)[0]
