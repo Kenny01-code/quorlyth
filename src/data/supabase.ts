@@ -9,6 +9,38 @@ export async function createSupabaseStore(url: string, key: string) {
   const { createClient } = await import('@supabase/supabase-js')
   const sb = createClient(url, key)
 
+  // Fan out the single docs-table change stream to interested collections. One
+  // channel per collection scales poorly because every docs write reaches every
+  // channel and can trigger a burst of redundant SELECTs.
+  const realtimeListeners = new Map<symbol, {
+    collection: string
+    refresh: () => void
+    onRealtimeError: (status: string, error: unknown) => void
+  }>()
+  let sharedDocsChannel: ReturnType<typeof sb.channel> | null = null
+
+  const ensureSharedDocsChannel = () => {
+    if (sharedDocsChannel) return
+    sharedDocsChannel = sb.channel('docs:shared:' + Math.random().toString(36).slice(2))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, payload => {
+        const newPath = (payload.new as { path?: unknown } | null)?.path
+        const oldPath = (payload.old as { path?: unknown } | null)?.path
+        const changedPaths = [newPath, oldPath].filter((path): path is string => typeof path === 'string')
+        for (const listener of realtimeListeners.values()) {
+          // Some DELETE payloads may contain only the primary key; if a future
+          // payload omits it entirely, refresh safely rather than miss an update.
+          if (!changedPaths.length || changedPaths.some(path => isDirectChild(listener.collection, path))) {
+            listener.refresh()
+          }
+        }
+      })
+      .subscribe((status, error) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          for (const listener of realtimeListeners.values()) listener.onRealtimeError(status, error)
+        }
+      })
+  }
+
   const store: DocStore = {
     async listCommunityMembers(cid) {
       const { data, error } = await sb.rpc('list_community_member_ids', { p_cid: cid })
@@ -124,28 +156,27 @@ export async function createSupabaseStore(url: string, key: string) {
         }
       }
 
+      const token = Symbol(collection)
+      realtimeListeners.set(token, {
+        collection,
+        refresh: () => { void load() },
+        onRealtimeError: (status, error) => {
+          reportError(error || new Error(`Realtime subscription status: ${status}`))
+          scheduleRetry()
+        },
+      })
+      ensureSharedDocsChannel()
       void load()
-      const ch = sb.channel('docs:' + collection + ':' + Math.random().toString(36).slice(2))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, payload => {
-          // The shared docs table backs many collections. Ignore unrelated row
-          // changes so one write does not trigger a reload for every subscription.
-          const newPath = (payload.new as { path?: string } | null)?.path
-          const oldPath = (payload.old as { path?: string } | null)?.path
-          if ((newPath && isDirectChild(collection, newPath)) || (oldPath && isDirectChild(collection, oldPath))) {
-            void load()
-          }
-        })
-        .subscribe((status, error) => {
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            reportError(error || new Error(`Realtime subscription status: ${status}`))
-            scheduleRetry()
-          }
-        })
 
       return () => {
         stopped = true
         if (retryTimer) clearTimeout(retryTimer)
-        sb.removeChannel(ch)
+        realtimeListeners.delete(token)
+        if (realtimeListeners.size === 0 && sharedDocsChannel) {
+          const channel = sharedDocsChannel
+          sharedDocsChannel = null
+          void sb.removeChannel(channel)
+        }
       }
     },
   }
