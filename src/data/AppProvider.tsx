@@ -512,7 +512,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!cleanTitle) throw new Error('Milestones need a title.')
         const project = data.projects[projectId]
         if (!project) throw new Error('Create the project before adding milestones.')
-        if (!canCollaborateOnIdea(project.ideaId)) throw new Error('Only accepted collaborators and the community owner can add milestones.')
+        if (!canCollaborateOnIdea(project.ideaId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can add milestones.')
         if (project.status !== 'active') throw new Error('Reopen the project before adding milestones.')
         const id = slug()
         const at = Date.now()
@@ -523,7 +523,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateMilestone: (milestoneId, patch) => w(async () => {
         const current = data.milestones.find(item => item.id === milestoneId)
         if (!current) throw new Error('Milestone not found. Refresh the page and try again.')
-        if (!canCollaborateOnIdea(current.projectId)) throw new Error('Only accepted collaborators and the community owner can update milestones.')
+        if (!canCollaborateOnIdea(current.projectId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can update milestones.')
         const updatedAt = Date.now()
         await up('milestones/' + milestoneId, { ...patch, updatedAt })
         setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...patch, updatedAt } : item) }))
