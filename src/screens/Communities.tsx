@@ -100,6 +100,18 @@ function Detail({ cid }: { cid: string }) {
   const [shareOpen, setShareOpen] = useState(false)
   const [preview, setPreview] = useState<Preview>(() => (new URLSearchParams(location.search).get('preview') as Preview) || null)
   const [sort, setSort] = useState(0)
+  const [memberIds, setMemberIds] = useState<string[]>([])
+  useEffect(() => {
+    let active = true
+    if (!a.me || !a.backend) { setMemberIds([]); return }
+    void a.backend.store.listCommunityMembers(cid).then(ids => {
+      if (active) setMemberIds(ids)
+    }).catch(error => {
+      console.error('Could not load community members:', error)
+      if (active) a.toast('Could not load community members. Refresh and try again.')
+    })
+    return () => { active = false }
+  }, [a.backend, a.me?.id, a.data.members, cid, tab])
   const [tag, setTag] = useState('')
   const emptyIdea = { title: '', body: '', tags: '' }
   const [f, setF, clearIdeaDraft] = useDraftState(`q-draft:${a.me?.id}:idea:${cid}`, emptyIdea)
