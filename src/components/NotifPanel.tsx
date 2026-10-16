@@ -35,6 +35,7 @@ export function NotifPanel({ list, sound, onSound, desktopPermission, onDesktop,
                 n.kind === 'collab-request' ? '/queue?idea=' + encodeURIComponent(n.target || '') :
                 n.kind === 'collaboration' ? '/idea/' + (n.target || n.id || '') :
                 n.kind === 'message' ? '/messages/' + (n.target || n.id || '') :
+                n.kind === 'call' ? '/messages/' + (n.target || n.id || '') :
                 n.kind === 'project' || n.kind === 'milestone' ? '/collaboration/' + (n.target || n.id || '') :
                 n.kind === 'community' ? '/communities/' + (n.target || n.id || '') :
                 n.kind === 'announcement' ? '/dashboard' :
