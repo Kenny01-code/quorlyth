@@ -318,7 +318,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false
       }
     }
-    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (platformOwner && !c.ownerId && !c.createdBy)))
+    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => {
+      if (c.id !== cid) return false
+      // An explicit ownerId is authoritative. createdBy is only a fallback for
+      // older community records that predate ownerId; it must not override a
+      // different, explicitly assigned owner.
+      if (c.ownerId) return c.ownerId === me.id
+      if (c.createdBy) return c.createdBy === me.id
+      return platformOwner
+    })
     const canManageCommunity = (cid: string) => !!me && (platformAdmin || ownsCommunity(cid))
     const canCollaborateOnIdea = (ideaId: string) => {
       const idea = data.ideas.find(item => item.id === ideaId)
