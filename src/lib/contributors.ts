@@ -1,13 +1,13 @@
 import { Community, Idea } from './types'
 
-/** Resolve the creator responsible for each community, including legacy platform-owned spaces. */
+/** Resolve the current owner, never treating historical createdBy metadata as ownership. */
 export function communityOwnerLookup(
   communities: readonly Pick<Community, 'id' | 'ownerId' | 'createdBy'>[],
   fallbackOwnerId?: string | null,
 ): Map<string, string> {
   return new Map(communities.map(community => [
     community.id,
-    community.ownerId || community.createdBy || fallbackOwnerId || '',
+    community.ownerId || (!community.createdBy ? fallbackOwnerId || '' : ''),
   ]))
 }
 
