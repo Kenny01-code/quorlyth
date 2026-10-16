@@ -35,7 +35,7 @@ function Inner() {
   const communityOwner = a.canManageCommunity(idea.cid)
   const myApplication = a.data.volunteers.filter(v => v.ideaId === idea.id && v.applicantId === a.me?.id).sort((x, y) => y.at - x.at)[0]
   const acceptedCollaborator = myApplication?.status === 'accepted'
-  const canOpenWorkspace = communityOwner || acceptedCollaborator
+  const canOpenWorkspace = communityOwner || acceptedCollaborator || idea.authorId === a.me?.id
   const backers = Object.entries(a.data.votes)
     .filter(([, ideas]) => !!ideas?.[idea.id])
     .map(([uid]) => uid)
@@ -86,6 +86,12 @@ function Inner() {
             <Av id={idea.authorId} size={32} /><button className="lk dim" onClick={() => nav('/me/' + idea.authorId)}>{a.nm(idea.authorId)}</button><span className="dim">{when(idea.at)}</span>
           </div>
           <p className="mut" style={{ fontSize: 17, whiteSpace: 'pre-wrap' }}>{idea.body}</p>
+          {idea.authorId === a.me?.id && <div className="reason" style={{ marginTop: 20 }}>
+            <h3 style={{ fontSize: 18 }}>Your idea, your collaboration</h3>
+            {a.data.projects[idea.id]
+              ? <><p className="mut" style={{ marginTop: 6 }}>You can join the shared workspace as the idea creator and work alongside accepted contributors.</p><button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={15} />Open collaboration space</button></>
+              : <p className="mut" style={{ marginTop: 6 }}>When the community manager creates a project or accepts a collaborator, you will be able to participate in the shared workspace for this idea.</p>}
+          </div>}
           {!communityOwner && idea.authorId !== a.me?.id && <div className="reason" style={{ marginTop: 20 }}>
             <h3 style={{ fontSize: 18 }}>Collaborate on this idea</h3>
             <p className="mut" style={{ marginTop: 6 }}>Apply to join the work. If the owner accepts, your collaboration space will appear in Collaborations.</p>
