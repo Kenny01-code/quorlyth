@@ -35,7 +35,7 @@ const GLYPH_FOR_ICON: Record<string, QuorlythGlyphName> = {
   'insight': 'progress',
   'home': 'brand',
   'discuss': 'message',
-  'support': 'contribute',
+  'support': 'add',
   'private': 'lock',
   'status': 'due',
   'publish': 'send',
