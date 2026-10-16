@@ -320,7 +320,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const canManageCommunity = (cid: string) => !!me && (platformAdmin || ownsCommunity(cid))
     const canCollaborateOnIdea = (ideaId: string) => {
       const idea = data.ideas.find(item => item.id === ideaId)
-      return !!me && !!idea && (canManageCommunity(idea.cid) || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted'))
+      return !!me && !!idea && (canManageCommunity(idea.cid) || idea.authorId === me.id || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted'))
     }
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
@@ -512,7 +512,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!cleanTitle) throw new Error('Milestones need a title.')
         const project = data.projects[projectId]
         if (!project) throw new Error('Create the project before adding milestones.')
-        if (!canCollaborateOnIdea(project.ideaId)) throw new Error('Only accepted collaborators and the community owner can add milestones.')
+        if (!canCollaborateOnIdea(project.ideaId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can add milestones.')
         if (project.status !== 'active') throw new Error('Reopen the project before adding milestones.')
         const id = slug()
         const at = Date.now()
@@ -523,7 +523,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateMilestone: (milestoneId, patch) => w(async () => {
         const current = data.milestones.find(item => item.id === milestoneId)
         if (!current) throw new Error('Milestone not found. Refresh the page and try again.')
-        if (!canCollaborateOnIdea(current.projectId)) throw new Error('Only accepted collaborators and the community owner can update milestones.')
+        if (!canCollaborateOnIdea(current.projectId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can update milestones.')
         const updatedAt = Date.now()
         await up('milestones/' + milestoneId, { ...patch, updatedAt })
         setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...patch, updatedAt } : item) }))

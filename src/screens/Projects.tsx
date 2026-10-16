@@ -162,7 +162,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
                     </div>
                     <span className="chip">{MILESTONE_LABEL[milestone.status]}</span>
                   </div>
-                  {canManage && <div className="acts" style={{ marginTop: 12 }}>
+                  {canCollaborate && <div className="acts" style={{ marginTop: 12 }}>
                     <button type="button" className="btn" onClick={() => setMilestoneDraft({ id: milestone.id, title: milestone.title, description: milestone.description || '' })}><Icon name="edit" size={14} />Edit</button>
                     {milestone.status === 'todo' && <button type="button" className="btn" disabled={busy === 'milestone-' + milestone.id} onClick={() => void setMilestoneStatus(milestone, 'in_progress')}>Start</button>}
                     {milestone.status !== 'done' && <button type="button" className="btn p" disabled={busy === 'milestone-' + milestone.id} onClick={() => void setMilestoneStatus(milestone, 'done')}><Icon name="approve" size={14} />Mark done</button>}
@@ -173,7 +173,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
             </div>)}
           </div> : <p className="mut" style={{ marginBottom: 16 }}>No milestones yet. Add the first step so contributors can see what happens next.</p>}
 
-          {canManage && project.status !== 'completed' && (
+          {canCollaborate && project.status !== 'completed' && (
             <form onSubmit={addMilestone} className="reason" style={{ marginTop: 16 }}>
               <h4 style={{ fontSize: 16, marginBottom: 4 }}>Add a milestone</h4>
               <label className="field"><span>Milestone title</span><input value={newTitle} onChange={e => setNewTitle(e.target.value)} maxLength={120} required placeholder="e.g. Confirm the creative brief" /></label>
@@ -207,11 +207,11 @@ function Inner() {
   return (
     <>
       <Head kicker="Projects" title="Make progress visible." right={<button type="button" className="btn" onClick={() => nav('/queue')}><Icon name="queue" size={16} />Review queue</button>} />
-      <p className="mut" style={{ maxWidth: 760, marginBottom: 18 }}>Turn selected ideas into real work. Project summaries and milestone statuses stay visible to members who can access the idea, while only the community owner or platform administrator can change them.</p>
+      <p className="mut" style={{ maxWidth: 760, marginBottom: 18 }}>Turn selected ideas into real work. Community managers control the project brief and overall status; idea creators and accepted collaborators can add milestones and update shared progress.</p>
       {!ideas.length ? <Empty icon="insight" title="No selected ideas or projects yet" text="Select an idea in the review queue to start a tracked project.">
         <button type="button" className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/queue')}>Open review queue</button>
       </Empty> : <div style={{ display: 'grid', gap: 16, maxWidth: 900 }}>
-        {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.canManageCommunity(idea.cid)} canCollaborate={a.canManageCommunity(idea.cid) || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')} />)}
+        {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.canManageCommunity(idea.cid)} canCollaborate={a.canManageCommunity(idea.cid) || idea.authorId === a.me?.id || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')} />)}
       </div>}
     </>
   )
