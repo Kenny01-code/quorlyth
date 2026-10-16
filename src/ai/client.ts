@@ -67,6 +67,7 @@ export async function askJson<T = any>(prompt: string, o: {
   tier?: 'quick' | 'smart'
   signal?: AbortSignal
   youtubeIdeas?: Array<{ id: string; title: string; body?: string; tags?: string[] }>
+  forceYoutubeRefresh?: boolean
 } = {}): Promise<T> {
   const r = await fetch('/api/json', {
     method: 'POST', signal: o.signal, headers: { 'Content-Type': 'application/json' },
@@ -75,6 +76,7 @@ export async function askJson<T = any>(prompt: string, o: {
       system: o.system,
       tier: o.tier === 'quick' ? 'quick' : 'smart',
       ...(o.youtubeIdeas ? { youtubeIdeas: o.youtubeIdeas } : {}),
+      ...(o.forceYoutubeRefresh ? { forceYoutubeRefresh: true } : {}),
     }),
   })
   if (!r.ok) throw new Error(await readError(r))

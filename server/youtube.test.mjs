@@ -149,6 +149,44 @@ test('same query is cached and shared between ideas to protect the search quota'
   assert.equal(result.byIdea['idea-two'].ideaId, 'idea-two')
 })
 
+test('explicit refresh bypasses a warm cache and fetches the newest public video data', async () => {
+  let searchCalls = 0
+  let videoCalls = 0
+  const fetchImpl = async url => {
+    const u = new URL(String(url))
+    if (u.pathname.endsWith('/search')) {
+      searchCalls++
+      return okJson({ items: [{
+        id: { videoId: 'fresh-video-' + searchCalls },
+        snippet: { title: 'Fresh title ' + searchCalls, channelTitle: 'Live channel', publishedAt: '2026-10-15T12:00:00Z' },
+      }] })
+    }
+    videoCalls++
+    const id = u.searchParams.get('id')
+    return okJson({ items: [{
+      id,
+      snippet: { title: 'Fresh title ' + searchCalls, channelTitle: 'Live channel', publishedAt: '2026-10-15T12:00:00Z' },
+      statistics: { viewCount: String(100 * videoCalls), likeCount: String(videoCalls) },
+    }] })
+  }
+  const idea = { id: 'live-idea', title: 'Fresh solar charging lantern', body: 'Solar powered camping lantern with USB charging', tags: ['solar', 'charging'] }
+  const now = Date.parse('2026-10-15T12:00:00Z')
+  const first = await fetchYouTubeSignalsForIdeas([idea], { apiKey: 'server-test-key', fetchImpl, now })
+  const second = await fetchYouTubeSignalsForIdeas([idea], {
+    apiKey: 'server-test-key',
+    fetchImpl,
+    now: now + 60_000,
+    forceRefresh: true,
+  })
+
+  assert.equal(searchCalls, 2)
+  assert.equal(videoCalls, 2)
+  assert.equal(first.byIdea['live-idea'].videos[0].videoId, 'fresh-video-1')
+  assert.equal(second.byIdea['live-idea'].videos[0].videoId, 'fresh-video-2')
+  assert.equal(first.byIdea['live-idea'].videos[0].viewCount, 100)
+  assert.equal(second.byIdea['live-idea'].videos[0].viewCount, 200)
+})
+
 test('quota failures are honest and trip a daily circuit breaker', async () => {
   let calls = 0
   const fetchImpl = async () => { calls++; return quotaJson() }

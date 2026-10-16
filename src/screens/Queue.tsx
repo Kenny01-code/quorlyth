@@ -48,7 +48,7 @@ function YouTubePreview({ signal, onRefresh, refreshing }: {
           </p>
         </div>
         <button type="button" className="btn" onClick={onRefresh} disabled={refreshing} style={{ flexShrink: 0 }}>
-          <Icon name="refresh-cw" size={14} />{refreshing ? 'Refreshing…' : 'Re-run AI + refresh'}
+          <Icon name="refresh-cw" size={14} />{refreshing ? 'Refreshing…' : 'Refresh YouTube + re-run AI'}
         </button>
       </div>
 
@@ -176,7 +176,7 @@ function Inner() {
   const d = list.find(i => i.id === sel) || list[0]
   const unreviewed = list.filter(i => data.reviews[i.id]?.score == null).length
 
-  async function run(all = false, only?: string) {
+  async function run(all = false, only?: string, forceYoutubeRefresh = false) {
     if (status) return
     // Never let a direct single-item review escape the current user's community scope.
     const base = only ? inScope.filter(i => i.id === only) : inScope
@@ -184,7 +184,12 @@ function Inner() {
     if (!todo.length) { setErr(base.length ? 'Every idea here already has a review. Choose Review all again.' : 'There are no ideas to review yet.'); return }
     setErr(''); ctl.current = new AbortController()
     try {
-      const done = await reviewIdeas(a, todo, { community: qc ? data.communities.find(c => c.id === qc)?.name : undefined, signal: ctl.current.signal, onProgress: setStatus })
+      const done = await reviewIdeas(a, todo, {
+        community: qc ? data.communities.find(c => c.id === qc)?.name : undefined,
+        signal: ctl.current.signal,
+        onProgress: setStatus,
+        forceYoutubeRefresh,
+      })
       a.toast(`${done} idea${done === 1 ? '' : 's'} reviewed`)
     } catch (e: any) { if (e.name !== 'AbortError') setErr(e.message || 'The AI review could not finish.') }
     setStatus(''); ctl.current = null
@@ -238,7 +243,7 @@ function Inner() {
             <span className="chip">{STATUS_LABEL[a.statusOf(d.id)]}</span>
             <h2 style={{ margin: '18px 0 12px' }}>{d.title}</h2>
             <p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{d.body}</p>
-            {r?.score != null ? <>{m('Originality', r.o)}{m('Feasibility', r.f)}{m('Audience relevance', r.r)}<div className="reason" style={{ marginTop: 28 }}><span className="dim">Why this score</span><p>{r.reason}</p></div>{r.youtubeSignals && <YouTubePreview key={d.id} signal={r.youtubeSignals} refreshing={!!status} onRefresh={() => { void run(false, d.id) }} />}</>
+            {r?.score != null ? <>{m('Originality', r.o)}{m('Feasibility', r.f)}{m('Audience relevance', r.r)}<div className="reason" style={{ marginTop: 28 }}><span className="dim">Why this score</span><p>{r.reason}</p></div>{r.youtubeSignals && <YouTubePreview key={d.id} signal={r.youtubeSignals} refreshing={!!status} onRefresh={() => { void run(false, d.id, true) }} />}</>
               : <p className="dim" style={{ marginTop: 20 }}>Not reviewed by the AI yet.</p>}
             <div className="reason">
               <span className="dim">Idea author</span>

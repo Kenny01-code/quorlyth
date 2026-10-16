@@ -355,7 +355,7 @@ export async function json(req, res) {
     let providerBody = body
     let youtubeSignalsByIdea = null
     if (Array.isArray(body.youtubeIdeas)) {
-      const { youtubeIdeas, ...safeBody } = body
+      const { youtubeIdeas, forceYoutubeRefresh, ...safeBody } = body
       const safeIdeas = youtubeIdeas.slice(0, 10).map(idea => ({
         id: String(idea?.id || '').slice(0, 100),
         title: String(idea?.title || '').slice(0, 200),
@@ -363,7 +363,9 @@ export async function json(req, res) {
         tags: Array.isArray(idea?.tags) ? idea.tags.slice(0, 10).map(tag => String(tag).slice(0, 60)) : [],
       }))
       try {
-        const enrichment = await fetchYouTubeSignalsForIdeas(safeIdeas)
+        const enrichment = await fetchYouTubeSignalsForIdeas(safeIdeas, {
+          forceRefresh: forceYoutubeRefresh === true,
+        })
         youtubeSignalsByIdea = enrichment.byIdea
       } catch {
         youtubeSignalsByIdea = Object.fromEntries(safeIdeas.map(idea => [idea.id, {
