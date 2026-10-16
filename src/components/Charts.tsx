@@ -103,6 +103,7 @@ export function Funnel({ rows, o }: { rows: [string, number][]; o: { pct: boolea
     const width = Math.max(0, Math.min(100, (Math.max(0, r[1]) / fm) * 100))
     return <div key={r[0]} style={{ marginTop: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{r[0]}</span><span>{r[1]}{o.pct && <span className="dim"> {pc}%</span>}</span></div><div className="bar" style={{ height: 6 }}><i style={{ width: width + '%' }} /></div></div>
   })}</>
+}
 
 export function TopList({ ids, src, nm }: { ids: string[]; src: Record<string, number>; nm: (id: string) => string }) {
   if (!ids.length) return <p className="mut" style={{ padding: '18px 0' }}>No contributions yet.</p>
