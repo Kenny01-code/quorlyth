@@ -5,7 +5,6 @@ import { Av, Head } from '../components/ui'
 import { MilestoneBoard } from '../components/MilestoneBoard'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp, useComments } from '../data/AppProvider'
-import { Idea, Project } from '../lib/types'
 import { when } from '../lib/util'
 
 
@@ -171,8 +170,8 @@ function CollaborationList() {
             : 'Your workspace appears after a community manager accepts one of your collaboration applications. Start by finding an idea you would genuinely like to help build.'}
         </p>
         <div className="acts" style={{ justifyContent: 'center', marginTop: 8 }}>
-          <button className="btn p" onClick={() => nav('/communities')}><Icon name="community" size={15} />Find ideas</button>
-          {canReviewAny && <button className="btn" onClick={() => nav('/queue')}><Icon name="queue" size={15} />Open review queue</button>}
+          <button className="btn p" onClick={() => nav('/communities')}><QuorlythGlyph name="community" size={15} />Find ideas</button>
+          {canReviewAny && <button className="btn" onClick={() => nav('/queue')}><QuorlythGlyph name="review" size={15} />Open review queue</button>}
           <button className="btn" onClick={() => nav('/me')}><QuorlythGlyph name="profile" size={15} />My ideas</button>
         </div>
       </div> : <div style={{ display: 'grid', gap: 14, maxWidth: 1000 }}>
@@ -189,7 +188,7 @@ function CollaborationList() {
                 <h3 style={{ fontSize: 20, marginTop: 5, overflowWrap: 'anywhere' }}>{idea.title}</h3>
                 <p className="mut" style={{ marginTop: 7 }}>{project?.summary || (!project ? 'This accepted collaboration needs its workspace initialized. Open it to finish setup.' : 'No project brief has been added yet.')}</p>
               </div>
-              <span className="chip"><Icon name="collab" size={14} />Open workspace</span>
+              <span className="chip"><QuorlythGlyph name="workspace" size={14} />Open workspace</span>
             </div>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 14 }}>
               <span className="dim"><QuorlythGlyph name="team" size={14} /> {acceptedCount} accepted contributor{acceptedCount === 1 ? '' : 's'}</span>
@@ -240,7 +239,7 @@ function Workspace() {
       <div><button className="chip" onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} />All collaborations</button></div>
       <Head kicker={community?.name || 'Collaboration workspace'} title={idea.title} />
       <section className="glass pad">
-        <span className="chip"><Icon name="collab" size={14} />Accepted collaboration</span>
+        <span className="chip"><QuorlythGlyph name="workspace" size={14} />Accepted collaboration</span>
         <h3 style={{ fontSize: 20, marginTop: 14 }}>{canManage ? 'Finish setting up this workspace' : 'Your workspace is being set up'}</h3>
         <p className="mut" style={{ marginTop: 8 }}>{canManage
           ? 'This collaboration was accepted, but its project record is missing. Create the project brief here to open the shared milestones and team discussion.'
@@ -274,9 +273,9 @@ function Workspace() {
 
   return <>
     <div className="head" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
-      <div><button className="chip" onClick={() => nav('/collaborations')}><Icon name="arrow-left" size={14} /> All collaborations</button></div>
+      <div><button className="chip" onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} /> All collaborations</button></div>
       <div className="acts" style={{ margin: 0 }}>
-        <button className="btn" onClick={() => nav('/idea/' + id)}><Icon name="idea" size={15} />Original idea</button>
+        <button className="btn" onClick={() => nav('/idea/' + id)}><QuorlythGlyph name="idea" size={15} />Original idea</button>
         {canManage && <button className="btn" onClick={() => nav('/projects?idea=' + encodeURIComponent(id))}><QuorlythGlyph name="plan" size={15} />Project settings</button>}
       </div>
     </div>
@@ -285,7 +284,7 @@ function Workspace() {
       <div style={{ display: 'grid', gap: 14, minWidth: 0 }}>
         <section className="glass pad">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span className="chip"><Icon name="collab" size={14} />Shared workspace</span>
+            <span className="chip"><QuorlythGlyph name="workspace" size={14} />Shared workspace</span>
             <span className="chip">{project?.status === 'completed' ? 'Completed' : 'Active'}</span>
           </div>
           <h3 style={{ fontSize: 18, marginTop: 16 }}>Project brief</h3>
