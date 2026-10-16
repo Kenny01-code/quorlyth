@@ -104,8 +104,11 @@ export default function App() {
   useEffect(() => {
     if (!a.ready) return
     if (known.current === null) {
-      const t = setTimeout(() => { known.current = new Set(notifs.map(n => n.key)) }, 3000)
-      return () => clearTimeout(t)
+      // Establish the initial snapshot immediately. Event timestamps below decide
+      // whether a newly synchronized item is recent enough to toast, so late-loading
+      // history cannot be mistaken for a live event.
+      known.current = new Set(notifs.map(n => n.key))
+      return
     }
     const now = Date.now()
     const maxToastAgeMs = 2 * 60 * 1000
