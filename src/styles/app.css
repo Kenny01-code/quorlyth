@@ -1851,3 +1851,88 @@ body > .qbot-drawer-portal.bot .cmx .danger:focus-visible {
   }
   .qbot-launcher-shortcut { display: none; }
 }
+
+
+/* Quorlyth chart heading sweep and visible horizontal chart scroll track. */
+.chart-heading-animated {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding-bottom: 9px;
+}
+.chart-heading-animated::after,
+.chart-heading-animated::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px;
+}
+.chart-heading-animated::after {
+  right: 0;
+  background: rgba(255, 255, 255, .12);
+}
+.chart-heading-animated::before {
+  z-index: 1;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.94), transparent);
+  box-shadow: 0 0 10px rgba(255,255,255,.24);
+  animation: quorlyth-chart-heading-sweep 3.2s ease-in-out infinite;
+}
+@keyframes quorlyth-chart-heading-sweep {
+  from { transform: translateX(0); }
+  to { transform: translateX(235%); }
+}
+.chs {
+  min-width: 0;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: rgba(255,255,255,.38) rgba(255,255,255,.045);
+}
+.chs::-webkit-scrollbar { height: 4px; }
+.chs::-webkit-scrollbar-track { background: rgba(255,255,255,.045); border-radius: 999px; }
+.chs::-webkit-scrollbar-thumb { background: rgba(255,255,255,.38); border-radius: 999px; }
+.discussion-reply-compose { position: relative; min-width: 0; margin-top: 14px; }
+.discussion-reply-compose .field { margin-top: 0 !important; }
+.discussion-mention-menu {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  max-height: min(280px, 42dvh);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 16px;
+  background: rgba(10,10,10,.94);
+  -webkit-backdrop-filter: blur(26px) saturate(135%);
+  backdrop-filter: blur(26px) saturate(135%);
+  box-shadow: 0 18px 55px rgba(0,0,0,.52);
+}
+.discussion-mention-option {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  color: inherit;
+  text-align: left;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  cursor: pointer;
+}
+.discussion-mention-option:hover,
+.discussion-mention-option:focus-visible { background: rgba(255,255,255,.09); outline: none; }
+.discussion-mention-option > span { display: grid; min-width: 0; flex: 1; gap: 3px; }
+.discussion-mention-option strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.discussion-mention-option small { color: rgba(255,255,255,.48); font-size: 11px; }
+.discussion-mention-status { padding: 12px 10px; font-size: 12px; }
+@media (prefers-reduced-motion: reduce) {
+  .chart-heading-animated::before { animation: none; transform: translateX(115%); }
+}
