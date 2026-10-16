@@ -90,10 +90,18 @@ export function Heat({ ideas, val }: { ideas: { at: number }[]; val: boolean }) 
 }
 
 export function Funnel({ rows, o }: { rows: [string, number][]; o: { pct: boolean; rel: boolean } }) {
-  const fm = Math.max(1, ...rows.map(r => r[1]))
+  const fm = Math.max(1, ...rows.map(r => Math.max(0, r[1])))
+  const baseline = rows[0]?.[1] || 0
   return <>{rows.map((r, i) => {
-    const pc = o.rel ? (i && rows[i - 1][1] ? Math.round((r[1] / rows[i - 1][1]) * 100) : 100) : rows[0][1] ? Math.round((r[1] / rows[0][1]) * 100) : 0
-    return <div key={r[0]} style={{ marginTop: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{r[0]}</span><span>{r[1]}{o.pct && <span className="dim"> {pc}%</span>}</span></div><div className="bar" style={{ height: 6 }}><i style={{ width: (r[1] / fm) * 100 + '%' }} /></div></div>
+    const previous = i > 0 ? Math.max(0, rows[i - 1][1]) : 0
+    const rawPercent = i === 0
+      ? (Math.max(0, r[1]) > 0 ? 100 : 0)
+      : o.rel
+        ? (previous > 0 ? (Math.max(0, r[1]) / previous) * 100 : 0)
+        : (baseline > 0 ? (Math.max(0, r[1]) / baseline) * 100 : 0)
+    const pc = Math.max(0, Math.min(100, Math.round(rawPercent)))
+    const width = Math.max(0, Math.min(100, (Math.max(0, r[1]) / fm) * 100))
+    return <div key={r[0]} style={{ marginTop: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{r[0]}</span><span>{r[1]}{o.pct && <span className="dim"> {pc}%</span>}</span></div><div className="bar" style={{ height: 6 }}><i style={{ width: width + '%' }} /></div></div>
   })}</>
 }
 

@@ -7,7 +7,7 @@ import { Gate } from '../components/Gate'
 import { AreaChart, BarChart, Daily, Donut, Funnel, Heat, TopList, fd } from '../components/Charts'
 import { Chip, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
-import { ChartKey, ITEMS, TITLES, useChartSettings } from '../lib/chartSettings'
+import { ChartKey, ITEMS, MEMBER_ITEMS, TITLES, useChartSettings } from '../lib/chartSettings'
 import { STATUS_LABEL } from '../lib/types'
 import { cn } from '../lib/util'
 import { communityOwnerLookup, isCommunityOwnerContribution } from '../lib/contributors'
@@ -135,7 +135,7 @@ function Inner() {
     return o.n ? rows.slice(0, o.n) : rows
   }
   const donut: [string, number, string][] = [['Ready to share', X.sc.promoted, '#fff'], ['Selected', X.sc.selected, '#d0d0d0'], ['In review', X.sc.review, '#8a8a8a'], ['Held', X.sc.held, '#555'], ['Declined', X.sc.declined, '#333']]
-  const funnel: [string, number][] = [['Members', X.mem], ['Contributors', Object.keys(X.auth).length], ['Ideas', data.ideas.length], ['Selected', X.sc.selected + X.sc.promoted], ['Ready to share', data.promotions.length]]
+  const funnel: [string, number][] = [['Ideas submitted', data.ideas.length], ['Selected or ready to share', X.sc.selected + X.sc.promoted], ['Ready to share', X.sc.promoted]]
   const src = cs.top.m === 'backs' ? X.back : X.auth
   const topIds = Object.keys(src).sort((x, y) => src[y] - src[x]).slice(0, cs.top.n)
 
@@ -175,10 +175,10 @@ function Inner() {
     d.setDrawColor(200, 200, 200); d.setLineWidth(0.2); for (let g = 0; g <= 4; g++) { const gy = y + (chh * g) / 4; d.line(cx, gy, cx + cw, gy); d.setFontSize(7); d.setTextColor(120, 120, 120); d.text(String(Math.round(mx * (1 - g / 4))), cx - 2, gy + 1, { align: 'right' }) }
     d.setDrawColor(0, 0, 0); d.setLineWidth(0.5); for (let i = 1; i < n; i++) d.line(cx + ((i - 1) / (n - 1)) * cw, y + chh - (dd.v[i - 1] / mx) * chh, cx + (i / (n - 1)) * cw, y + chh - (dd.v[i] / mx) * chh)
     d.setFontSize(7); d.setTextColor(120, 120, 120); ;[0, Math.floor((n - 1) / 2), n - 1].forEach(i => d.text(fd(dd.d[i]), cx + (i / (n - 1 || 1)) * cw, y + chh + 6, { align: i === 0 ? 'left' : i === n - 1 ? 'right' : 'center' }))
-    y += chh + 14; H1('Ideas by community')
+    y += chh + 14; H1(cs.bar.m === 'backs' ? 'Backings by community' : cs.bar.m === 'members' ? 'Members by community' : cs.bar.m === 'pub' ? 'Posts prepared to share by community' : 'Ideas by community')
     const rows = barRows(), bm = Math.max(1, ...rows.map(r => r.v))
     rows.forEach(r => { ck(9); d.setFontSize(9); d.setTextColor(0, 0, 0); d.text(T(r.n, 24), M, y + 4); d.setFillColor(0, 0, 0); d.rect(M + 50, y, Math.max((r.v / bm) * 100, 0.8), 5, 'F'); d.text(String(r.v), M + 50 + Math.max((r.v / bm) * 100, 0.8) + 3, y + 4); y += 9 })
-    y += 6; H1('Idea pipeline')
+    y += 6; H1('Idea status breakdown')
     donut.forEach(r => { ck(8); d.setFontSize(9); d.setTextColor(0, 0, 0); d.text(r[0], M, y + 4); d.text(String(r[1]), M + 50, y + 4); d.text(data.ideas.length ? Math.round((r[1] / data.ideas.length) * 100) + '%' : '0%', M + 70, y + 4); y += 7 })
     y += 6; H1('Top contributors')
     Object.keys(X.auth).sort((p, q) => X.auth[q] - X.auth[p]).slice(0, 10).forEach((u, i) => { ck(8); d.setFontSize(9); d.setTextColor(0, 0, 0); d.text(String(i + 1), M, y + 4); d.text(T(a.nm(u), 30), M + 8, y + 4); d.text(X.auth[u] + ' ideas', M + 90, y + 4); d.text(X.back[u] + ' backings', M + 120, y + 4); y += 7 })
@@ -200,7 +200,7 @@ function Inner() {
       </div>
       <div className="grid g32" style={{ marginBottom: 18 }}>{card('area', `Last ${rg} days`)}{card('don', 'By review status')}</div>
       <div style={{ marginBottom: 18 }}>{card('bar', ({ ideas: 'Ideas shared', backs: 'Backings received', members: 'Members', pub: 'Posts prepared to share' } as any)[cs.bar.m])}</div>
-      <div className="grid g2" style={{ marginBottom: 18 }}>{card('heat', 'By day and time, all time')}{card('fun', 'How people move through your space')}</div>
+      <div className="grid g2" style={{ marginBottom: 18 }}>{card('heat', 'By day and time, all time')}{card('fun', 'Idea progress from submission to share-ready')}</div>
       {card('top', 'Your most active people')}
 
       {open && (
@@ -227,7 +227,7 @@ function Inner() {
 function MemberAnalyticsView() {
   const a = useApp()
   const nav = useNavigate()
-  const { cs, set, reset } = useChartSettings()
+  const { cs, set, reset } = useChartSettings('member')
   const [rg, setRg] = useState(30)
   const [open, setOpen] = useState<ChartKey | null>(null)
   const memberId = a.me?.id || ''
@@ -239,6 +239,10 @@ function MemberAnalyticsView() {
     () => a.data.ideas.filter(idea => idea.authorId === memberId),
     [a.data.ideas, memberId],
   )
+  const activityCommunities = useMemo(() => {
+    const ids = new Set([...joinedCommunities.map(community => community.id), ...myIdeas.map(idea => idea.cid)])
+    return a.data.communities.filter(community => ids.has(community.id))
+  }, [a.data.communities, joinedCommunities, myIdeas])
   const activity = useMemo<Daily>(() => {
     const day = 86400000
     const today = new Date().setHours(0, 0, 0, 0)
@@ -265,9 +269,10 @@ function MemberAnalyticsView() {
   const readyIdeas = countStatus('promoted')
   const ideasInRange = activity.v.reduce((sum, value) => sum + value, 0)
   const effectiveBarMeasure = cs.bar.m === 'backs' ? 'backs' : 'ideas'
+  const effectiveTopSort = cs.top.m === 'backs' ? 'backs' : 'ideas'
 
   function barRows() {
-    let rows = joinedCommunities.map(community => {
+    let rows = activityCommunities.map(community => {
       const communityIdeas = myIdeas.filter(idea => idea.cid === community.id)
       const value = effectiveBarMeasure === 'backs'
         ? communityIdeas.reduce((sum, idea) => sum + a.votesOf(idea.id), 0)
@@ -285,7 +290,7 @@ function MemberAnalyticsView() {
     ['Ready to share', readyIdeas],
   ]
   const topIdeas = [...myIdeas]
-    .sort((first, second) => cs.top.m === 'backs'
+    .sort((first, second) => effectiveTopSort === 'backs'
       ? a.votesOf(second.id) - a.votesOf(first.id) || second.at - first.at
       : second.at - first.at)
     .slice(0, cs.top.n)
@@ -296,7 +301,7 @@ function MemberAnalyticsView() {
     don: 'Your idea statuses',
     heat: 'When you contribute',
     fun: 'Your idea journey',
-    top: cs.top.m === 'backs' ? 'Your most backed ideas' : 'Your latest ideas',
+    top: effectiveTopSort === 'backs' ? 'Your most backed ideas' : 'Your latest ideas',
   }
 
   function body(g: ChartKey) {
@@ -317,11 +322,11 @@ function MemberAnalyticsView() {
       const communityName = a.data.communities.find(community => community.id === idea.cid)?.name || 'Community'
       return (
         <button key={idea.id} className="row rowbtn" onClick={() => nav('/idea/' + idea.id)}>
-          <div className="score" style={{ width: 42, height: 42, fontSize: 14 }}>{cs.top.m === 'backs' ? backings : index + 1}</div>
+          <div className="score" style={{ width: 42, height: 42, fontSize: 14 }}>{effectiveTopSort === 'backs' ? backings : index + 1}</div>
           <div className="t">
             <h3 style={{ fontSize: 15 }}>{idea.title}</h3>
             <p className="dim">{communityName} · {new Date(idea.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
-            {cs.top.m === 'backs' && <div className="bar"><i style={{ width: (backings / maxBackings) * 100 + '%' }} /></div>}
+            {effectiveTopSort === 'backs' && <div className="bar"><i style={{ width: (backings / maxBackings) * 100 + '%' }} /></div>}
           </div>
           <span className="dim">{backings} {backings === 1 ? 'backing' : 'backings'}</span>
         </button>
@@ -424,7 +429,7 @@ function MemberAnalyticsView() {
       <div className="grid g32" style={{ marginBottom: 18 }}>{card('area', 'Last ' + rg + ' days')}{card('don', 'By status of your ideas')}</div>
       <div style={{ marginBottom: 18 }}>{card('bar', effectiveBarMeasure === 'backs' ? 'Backings received on your ideas' : 'Ideas submitted by you')}</div>
       <div className="grid g2" style={{ marginBottom: 18 }}>{card('heat', 'By day and time, your ideas only')}{card('fun', 'From submission to share-ready')}</div>
-      {card('top', cs.top.m === 'backs' ? 'Sorted by backings received' : 'Most recently submitted')}
+      {card('top', effectiveTopSort === 'backs' ? 'Sorted by backings received' : 'Most recent first')}
       {open && (
         <div id="csd" onClick={e => e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('csd-b') ? setOpen(null) : null}>
           <div className="csd-b" />
@@ -432,9 +437,12 @@ function MemberAnalyticsView() {
             <div className="csd-h"><div><p className="dim">Chart settings</p><h3 style={{ fontSize: 22, fontWeight: 300 }}>{titles[open]}</h3></div><button className="chip" onClick={() => setOpen(null)}>Done</button></div>
             <div className="csd-pv"><p className="dim" style={{ marginBottom: 8 }}>Live preview</p>{body(open)}</div>
             <div className="csd-c">
-              {(open === 'bar' ? ITEMS.bar.map(it => it[0] === 'c' && it[1] === 'm' ? ['c', 'm', 'Measure', [['ideas', 'Ideas'], ['backs', 'Backings']]] as (typeof ITEMS.bar)[number] : it) : ITEMS[open]).map(it => it[0] === 't'
-                ? <div key={it[1]} className="csr"><span className="mut">{it[2]}</span><button className={cn('tg', (cs[open] as any)[it[1]] && 'on')} role="switch" aria-checked={!!(cs[open] as any)[it[1]]} aria-label={it[2]} onClick={() => set(open, it[1], !(cs[open] as any)[it[1]])}><i /></button></div>
-                : <div key={it[1]} className="csr"><span className="mut">{it[2]}</span><div className="acts" style={{ margin: 0, gap: 6 }}>{it[3].map(([value, label]) => <Chip key={String(value)} on={String(open === 'bar' && it[1] === 'm' && !['ideas', 'backs'].includes(String((cs[open] as any)[it[1]])) ? 'ideas' : (cs[open] as any)[it[1]]) === String(value)} onClick={() => set(open, it[1], value)}>{label}</Chip>)}</div></div>)}
+              {MEMBER_ITEMS[open].map(it => {
+                const value = open === 'bar' && it[1] === 'm' ? effectiveBarMeasure : open === 'top' && it[1] === 'm' ? effectiveTopSort : (cs[open] as any)[it[1]]
+                return it[0] === 't'
+                  ? <div key={it[1]} className="csr"><span className="mut">{it[2]}</span><button className={cn('tg', (cs[open] as any)[it[1]] && 'on')} role="switch" aria-checked={!!(cs[open] as any)[it[1]]} aria-label={it[2]} onClick={() => set(open, it[1], !(cs[open] as any)[it[1]])}><i /></button></div>
+                  : <div key={it[1]} className="csr"><span className="mut">{it[2]}</span><div className="acts" style={{ margin: 0, gap: 6 }}>{it[3].map(([option, label]) => <Chip key={String(option)} on={String(value) === String(option)} onClick={() => set(open, it[1], option)}>{label}</Chip>)}</div></div>
+              })}
             </div>
             <div className="acts"><button className="btn" onClick={() => reset(open)}><Icon name="rotate" size={16} />Reset</button><button className="btn p" onClick={() => setOpen(null)}>Done</button></div>
           </div>
