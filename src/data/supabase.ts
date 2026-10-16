@@ -10,6 +10,11 @@ export async function createSupabaseStore(url: string, key: string) {
   const sb = createClient(url, key)
 
   const store: DocStore = {
+    async listCommunityMembers(cid) {
+      const { data, error } = await sb.rpc('list_community_member_ids', { p_cid: cid })
+      if (error) throw new Error(error.message || 'Could not load community members')
+      return (data || []).map((row: { user_id: string }) => row.user_id)
+    },
     async exportAll() {
       // Page the complete docs table; PostgreSQL row-level security limits this export
       // to records visible to the currently authenticated user.

@@ -10,6 +10,8 @@ export interface DocStore {
   get(path: string): Promise<any | null>
   /** Export every document visible to the current backend identity. Supabase RLS remains authoritative. */
   exportAll(): Promise<ExportDoc[]>
+  /** Return only user IDs who belong to a community the current user may view. */
+  listCommunityMembers(cid: string): Promise<string[]>
   /** Create a brand-new record without ON CONFLICT UPDATE semantics. */
   create(path: string, data: any): Promise<void>
   set(path: string, data: any): Promise<void>
