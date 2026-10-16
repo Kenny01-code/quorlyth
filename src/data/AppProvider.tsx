@@ -63,6 +63,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [startupError, setStartupError] = useState<string | null>(null)
   const [data, setData] = useState<Data>(EMPTY)
   const [platformAdmin, setPlatformAdmin] = useState(false)
+  const [platformOwnerRole, setPlatformOwnerRole] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const tt = useRef<number>()
   const realBackend = useRef<Backend | null>(null)
@@ -213,22 +214,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, me?.name, me?.avatarUrl])
 
   useEffect(() => {
-    if (!backend || !me) { setPlatformAdmin(false); return }
-    if (demo) { setPlatformAdmin(true); return }
+    if (!backend || !me) {
+      setPlatformAdmin(false)
+      setPlatformOwnerRole(false)
+      return
+    }
+    if (demo) {
+      setPlatformAdmin(true)
+      setPlatformOwnerRole(true)
+      return
+    }
     let active = true
     setPlatformAdmin(false)
-    void backend.isPlatformAdmin().then(value => { if (active) setPlatformAdmin(value) }).catch(error => {
-      console.warn('Could not resolve platform administrator permissions', error)
-      if (active) setPlatformAdmin(false)
+    setPlatformOwnerRole(false)
+    void Promise.all([
+      backend.isPlatformAdmin(),
+      backend.isPlatformOwner ? backend.isPlatformOwner() : Promise.resolve(false),
+    ]).then(([isAdmin, isOwner]) => {
+      if (!active) return
+      setPlatformAdmin(isAdmin)
+      setPlatformOwnerRole(isOwner)
+    }).catch(error => {
+      console.warn('Could not resolve platform permissions', error)
+      if (active) {
+        setPlatformAdmin(false)
+        setPlatformOwnerRole(false)
+      }
     })
     return () => { active = false }
   }, [backend, me?.id, demo])
 
   const st = backend?.store
-  // Keep legacy workspace ownership separate from platform-admin privileges:
-  // admins get global tools, but are not treated as the creator of unowned legacy communities.
-  const legacyOwner = demo || (!!me && data.ownerId === me.id)
-  const platformOwner = legacyOwner
+  // The private platform_roles table is authoritative. The config claim is retained
+  // as a compatibility fallback for legacy records while the role table is canonical.
+  const platformOwner = demo || platformOwnerRole || (!!me && data.ownerId === me.id)
+  const legacyOwner = platformOwner
   // `owner` remains the broad workspace-manager capability for existing surfaces;
   // platform-owner-only permissions must check `platformOwner` explicitly.
   const owner = platformOwner || platformAdmin
@@ -296,7 +316,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false
       }
     }
-    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (legacyOwner && !c.ownerId && !c.createdBy)))
+    const ownsCommunity = (cid: string) => !!me && data.communities.some(c => c.id === cid && (c.ownerId === me.id || c.createdBy === me.id || (platformOwner && !c.ownerId && !c.createdBy)))
     const canManageCommunity = (cid: string) => !!me && (platformAdmin || ownsCommunity(cid))
     const canCollaborateOnIdea = (ideaId: string) => {
       const idea = data.ideas.find(item => item.id === ideaId)
