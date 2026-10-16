@@ -9,6 +9,38 @@ export async function createSupabaseStore(url: string, key: string) {
   const { createClient } = await import('@supabase/supabase-js')
   const sb = createClient(url, key)
 
+  // Fan out the single docs-table change stream to interested collections. One
+  // channel per collection scales poorly because every docs write reaches every
+  // channel and can trigger a burst of redundant SELECTs.
+  const realtimeListeners = new Map<symbol, {
+    collection: string
+    refresh: () => void
+    onRealtimeError: (status: string, error: unknown) => void
+  }>()
+  let sharedDocsChannel: ReturnType<typeof sb.channel> | null = null
+
+  const ensureSharedDocsChannel = () => {
+    if (sharedDocsChannel) return
+    sharedDocsChannel = sb.channel('docs:shared:' + Math.random().toString(36).slice(2))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, payload => {
+        const newPath = (payload.new as { path?: unknown } | null)?.path
+        const oldPath = (payload.old as { path?: unknown } | null)?.path
+        const changedPaths = [newPath, oldPath].filter((path): path is string => typeof path === 'string')
+        for (const listener of realtimeListeners.values()) {
+          // Some DELETE payloads may contain only the primary key; if a future
+          // payload omits it entirely, refresh safely rather than miss an update.
+          if (!changedPaths.length || changedPaths.some(path => isDirectChild(listener.collection, path))) {
+            listener.refresh()
+          }
+        }
+      })
+      .subscribe((status, error) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          for (const listener of realtimeListeners.values()) listener.onRealtimeError(status, error)
+        }
+      })
+  }
+
   const store: DocStore = {
     async listCommunityMembers(cid) {
       const { data, error } = await sb.rpc('list_community_member_ids', { p_cid: cid })
@@ -69,24 +101,83 @@ export async function createSupabaseStore(url: string, key: string) {
     },
     subscribe(collection, cb, onError) {
       let lastErrorMessage = ''
+      let retryAttempt = 0
+      let retryTimer: ReturnType<typeof setTimeout> | undefined
+      let stopped = false
+      const retryDelays = [1500, 3000, 7000, 15000, 30000]
+
+      const reportError = (error: unknown) => {
+        const detail = error as { message?: string; code?: string; cause?: unknown } | null
+        const message = detail?.message || String(error)
+        const scopedError = Object.assign(new Error(`[shared data: ${collection}] ${message}`), {
+          collection,
+          code: detail?.code,
+          cause: error,
+        })
+        if (message !== lastErrorMessage) onError?.(scopedError)
+        lastErrorMessage = message
+      }
+
+      const scheduleRetry = () => {
+        if (stopped || retryTimer || retryAttempt >= retryDelays.length) return
+        const delay = retryDelays[retryAttempt++]
+        retryTimer = setTimeout(() => {
+          retryTimer = undefined
+          void load()
+        }, delay)
+      }
+
       const load = async () => {
+        if (stopped) return
         try {
-          const { data, error } = await sb.from('docs').select('path,data').like('path', collection + '/%')
-          if (error) throw error
+          // Exclude deeper descendants on the server rather than downloading all
+          // nested comments/children and discarding them in the browser.
+          const { data, error } = await sb.from('docs')
+            .select('path,data')
+            .like('path', collection + '/%')
+            .not('path', 'like', collection + '/%/%')
+          if (error) {
+            reportError(error)
+            scheduleRetry()
+            return
+          }
+
+          if (retryTimer) clearTimeout(retryTimer)
+          retryTimer = undefined
+          retryAttempt = 0
           lastErrorMessage = ''
-          const docs: Doc[] = (data || []).filter(r => isDirectChild(collection, r.path)).map(r => ({ id: r.path.slice(collection.length + 1), data: r.data }))
+          const docs: Doc[] = (data || [])
+            .filter(r => isDirectChild(collection, r.path))
+            .map(r => ({ id: r.path.slice(collection.length + 1), data: r.data }))
           cb(docs)
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          if (message !== lastErrorMessage) onError?.(error)
-          lastErrorMessage = message
+          reportError(error)
+          scheduleRetry()
         }
       }
+
+      const token = Symbol(collection)
+      realtimeListeners.set(token, {
+        collection,
+        refresh: () => { void load() },
+        onRealtimeError: (status, error) => {
+          reportError(error || new Error(`Realtime subscription status: ${status}`))
+          scheduleRetry()
+        },
+      })
+      ensureSharedDocsChannel()
       void load()
-      const ch = sb.channel('docs:' + collection + ':' + Math.random().toString(36).slice(2))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, () => { void load() })
-        .subscribe()
-      return () => { sb.removeChannel(ch) }
+
+      return () => {
+        stopped = true
+        if (retryTimer) clearTimeout(retryTimer)
+        realtimeListeners.delete(token)
+        if (realtimeListeners.size === 0 && sharedDocsChannel) {
+          const channel = sharedDocsChannel
+          sharedDocsChannel = null
+          void sb.removeChannel(channel)
+        }
+      }
     },
   }
   return { store, sb }
