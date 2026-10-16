@@ -69,24 +69,84 @@ export async function createSupabaseStore(url: string, key: string) {
     },
     subscribe(collection, cb, onError) {
       let lastErrorMessage = ''
+      let retryAttempt = 0
+      let retryTimer: ReturnType<typeof setTimeout> | undefined
+      let stopped = false
+      const retryDelays = [1500, 3000, 7000, 15000, 30000]
+
+      const reportError = (error: unknown) => {
+        const detail = error as { message?: string; code?: string; cause?: unknown } | null
+        const message = detail?.message || String(error)
+        const scopedError = Object.assign(new Error(`[shared data: ${collection}] ${message}`), {
+          collection,
+          code: detail?.code,
+          cause: error,
+        })
+        if (message !== lastErrorMessage) onError?.(scopedError)
+        lastErrorMessage = message
+      }
+
+      const scheduleRetry = () => {
+        if (stopped || retryTimer || retryAttempt >= retryDelays.length) return
+        const delay = retryDelays[retryAttempt++]
+        retryTimer = setTimeout(() => {
+          retryTimer = undefined
+          void load()
+        }, delay)
+      }
+
       const load = async () => {
+        if (stopped) return
         try {
-          const { data, error } = await sb.from('docs').select('path,data').like('path', collection + '/%')
-          if (error) throw error
+          // Exclude deeper descendants on the server rather than downloading all
+          // nested comments/children and discarding them in the browser.
+          const { data, error } = await sb.from('docs')
+            .select('path,data')
+            .like('path', collection + '/%')
+            .not('path', 'like', collection + '/%/%')
+          if (error) {
+            reportError(error)
+            scheduleRetry()
+            return
+          }
+
+          if (retryTimer) clearTimeout(retryTimer)
+          retryTimer = undefined
+          retryAttempt = 0
           lastErrorMessage = ''
-          const docs: Doc[] = (data || []).filter(r => isDirectChild(collection, r.path)).map(r => ({ id: r.path.slice(collection.length + 1), data: r.data }))
+          const docs: Doc[] = (data || [])
+            .filter(r => isDirectChild(collection, r.path))
+            .map(r => ({ id: r.path.slice(collection.length + 1), data: r.data }))
           cb(docs)
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          if (message !== lastErrorMessage) onError?.(error)
-          lastErrorMessage = message
+          reportError(error)
+          scheduleRetry()
         }
       }
+
       void load()
       const ch = sb.channel('docs:' + collection + ':' + Math.random().toString(36).slice(2))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, () => { void load() })
-        .subscribe()
-      return () => { sb.removeChannel(ch) }
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, payload => {
+          // The shared docs table backs many collections. Ignore unrelated row
+          // changes so one write does not trigger a reload for every subscription.
+          const newPath = (payload.new as { path?: string } | null)?.path
+          const oldPath = (payload.old as { path?: string } | null)?.path
+          if ((newPath && isDirectChild(collection, newPath)) || (oldPath && isDirectChild(collection, oldPath))) {
+            void load()
+          }
+        })
+        .subscribe((status, error) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            reportError(error || new Error(`Realtime subscription status: ${status}`))
+            scheduleRetry()
+          }
+        })
+
+      return () => {
+        stopped = true
+        if (retryTimer) clearTimeout(retryTimer)
+        sb.removeChannel(ch)
+      }
     },
   }
   return { store, sb }
