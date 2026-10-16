@@ -126,8 +126,12 @@ export async function createSupabaseStore(url: string, key: string) {
       }
 
       const scheduleRetry = () => {
-        if (stopped || retryTimer || retryAttempt >= retryDelays.length) return
-        const delay = retryDelays[retryAttempt++]
+        if (stopped || retryTimer) return
+        // Keep recovering from transient Supabase/network failures for the entire
+        // lifetime of the subscription. A finite retry list could leave a tab stale
+        // forever after a prolonged outage, even after the network recovered.
+        const delay = retryDelays[Math.min(retryAttempt, retryDelays.length - 1)]
+        retryAttempt = Math.min(retryAttempt + 1, retryDelays.length - 1)
         retryTimer = setTimeout(() => {
           retryTimer = undefined
           void load()
