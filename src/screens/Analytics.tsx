@@ -89,8 +89,6 @@ function Inner() {
           back[contributor.userId] = (back[contributor.userId] || 0) + contributor.backings
         }
       }
-      const memberIds = new Set(Object.values(scopedMembers).flat())
-      memberIds.forEach(userId => { if (userId) void userId })
     } else {
       data.ideas.forEach(idea => {
         if (!isCommunityOwnerContribution(idea, ownersByCommunity)) {
