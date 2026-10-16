@@ -23,12 +23,15 @@ function Inner() {
   const [text, setText, clearReplyDraft] = useDraftState(`q-draft:${a.me?.id}:reply:${id || 'new'}`, '')
   const us = useUserState()
   const [rev, setRev] = useState(false)
+  const [voting, setVoting] = useState(false)
   const [applicationMessage, setApplicationMessage] = useState('')
   const [applying, setApplying] = useState(false)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
   const idea = a.data.ideas.find(i => i.id === id)
   if (!idea) return <Empty icon="idea" title="This idea is not available" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back to communities</button></Empty>
+  const ideaCommunity = a.data.communities.find(c => c.id === idea.cid)
+  const archivedCommunity = !!ideaCommunity?.arch
   const r = a.data.reviews[idea.id]
   const s = a.statusOf(idea.id)
   const voted = a.iVoted(idea.id)
@@ -39,7 +42,7 @@ function Inner() {
   const backers = Object.entries(a.data.votes)
     .filter(([, ideas]) => !!ideas?.[idea.id])
     .map(([uid]) => uid)
-  const cname = a.data.communities.find(c => c.id === idea.cid)?.name || 'Community'
+  const cname = ideaCommunity?.name || 'Community'
   const row = (l: string, v?: number) => v == null ? null : <div style={{ marginTop: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{l}</span><span>{v}</span></div><Bar value={v} /></div>
   const startReply = (commentId?: string, personId?: string) => {
     setReplyTo(commentId || null)
@@ -49,6 +52,11 @@ function Inner() {
       setMentionedUserIds(current => [...new Set([...current, personId])])
     }
     window.setTimeout(() => document.getElementById('idea-discussion-reply')?.focus(), 0)
+  }
+  const toggleBacking = async () => {
+    if (!ideaCommunity || archivedCommunity || voting) return
+    setVoting(true)
+    try { await a.vote(idea.id) } finally { setVoting(false) }
   }
   const postReply = async () => {
     if (!text.trim()) return a.toast('Write a reply first')
@@ -112,7 +120,7 @@ function Inner() {
           <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={postReply}><Icon name={communityOwner ? 'send' : 'collab'} />{replyTo ? 'Post threaded reply' : communityOwner ? 'Reply as owner' : 'Post reply'}</button><button className="chip" onClick={() => { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]) }}>Discard draft</button></div>
         </div>
         <div className="glass pad">
-          <button className={voted ? 'btn' : 'btn p'} style={{ width: '100%', justifyContent: 'center' }} onClick={() => a.vote(idea.id)}><Icon name="support" />{voted ? 'Backed' : 'Back this idea'}</button>
+          <button disabled={!ideaCommunity || archivedCommunity || voting} className={voted ? 'btn' : 'btn p'} style={{ width: '100%', justifyContent: 'center' }} onClick={() => { void toggleBacking() }}><Icon name="support" />{!ideaCommunity ? 'Loading community…' : archivedCommunity ? 'Archived · read-only' : voting ? 'Saving…' : voted ? 'Backed' : 'Back this idea'}</button>
           <p className="num" style={{ textAlign: 'center' }}>{a.votesOf(idea.id)}</p><p className="dim" style={{ textAlign: 'center' }}>members backing</p>
           <div style={{ marginTop: 18 }}>
             <h3 style={{ marginBottom: 10 }}>People backing this idea</h3>
