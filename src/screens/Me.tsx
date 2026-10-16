@@ -38,7 +38,7 @@ function Mine() {
   const joined = a.data.communities.filter(c => a.joined(c.id) && !a.ownsCommunity(c.id))
   const communities = [...created, ...joined]
   const rc = my.reduce((n, i) => n + a.votesOf(i.id), 0)
-  const communityIds = new Set(communities.map(c => c.id))
+  const communityIds = new Set(created.map(c => c.id))
   const communityIdeas = a.data.ideas.filter(i => communityIds.has(i.cid))
   const ownersByCommunity = communityOwnerLookup(a.data.communities, a.owner ? me.id : undefined)
   const rankedCommunityIdeas = communityIdeas.filter(i => !isCommunityOwnerContribution(i, ownersByCommunity))
@@ -107,7 +107,8 @@ function Mine() {
         {saved.length ? saved.map(i => <div key={i.id} className="row" onClick={() => nav('/idea/' + i.id)}><Icon name="save" /><div className="t"><h3 style={{ fontSize: 15 }}>{i.title}</h3><p className="dim">{a.nm(i.authorId)}</p></div></div>) : <p className="mut" style={{ padding: '14px 0' }}>Save an idea to find it here.</p>}</div>
       <div className="glass pad"><h3 style={{ marginBottom: 8 }}>My contributions</h3>
         {my.length ? my.map(i => <div key={i.id} className="row" onClick={() => nav('/idea/' + i.id)}><div className="score" style={{ width: 44, height: 44 }}><Icon name={a.statusOf(i.id) === 'promoted' ? 'publish' : a.statusOf(i.id) === 'selected' ? 'select' : 'status'} size={18} /></div><div className="t"><h3>{i.title}</h3><p className="dim">{STATUS_LABEL[a.statusOf(i.id)]}, {a.votesOf(i.id)} backing</p></div></div>) : <p className="mut" style={{ padding: '14px 0' }}>You have not shared an idea yet.</p>}</div></div>
-      <section className="myspace-live-insights" aria-label="Live community insights">
+{created.length > 0 && (
+      <section className="myspace-live-insights" aria-label="Owner insights for communities you manage">
         <div className="grid g2" style={{ marginBottom: 18 }}>
           <div className="glass pad">
             <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.heat}</h3><p className="dim">By day and time, all time</p></div></div>
@@ -123,6 +124,7 @@ function Mine() {
           <TopList ids={contributorIds} src={contributorSource} nm={a.nm} />
         </div>
       </section>
+      )}
       {crop && <CropModal file={crop} onCancel={() => setCrop(null)} onSave={async d => { if (!await a.saveProfile({ photo: d })) return false; setPhotoPreview(d); setCrop(null); return true }} />}
     </>
   )
