@@ -27,7 +27,135 @@ export function createLocalStore(): DocStore {
       const community = docs['communities/' + cid] || {}
       const ownerId = community.ownerId || community.createdBy || docs['config/owner']?.id || ''
       const ideas = Object.entries(docs)
-        .filter(([path, data]) => /^ideas\\/[^/]+$/.test(path) && data?.cid === cid && typeof data?.authorId === 'string' && data.authorId !== ownerId)
+        .filter(([path, data]) => new RegExp('^ideas/[^/]+ && data?.cid === cid && typeof data?.authorId === 'string' && data.authorId !== ownerId)
+        .map(([path, data]) => ({ id: path.slice('ideas/'.length), userId: data.authorId as string }))
+      const totals = new Map<string, { userId: string; ideas: number; backings: number }>()
+      const voteMaps = Object.entries(docs)
+        .filter(([path]) => new RegExp('^votes/[^/]+)
+        .map(([, data]) => data?.ideas || {})
+      for (const idea of ideas) {
+        const row = totals.get(idea.userId) || { userId: idea.userId, ideas: 0, backings: 0 }
+        row.ideas += 1
+        for (const voteMap of voteMaps) if (voteMap[idea.id] === true) row.backings += 1
+        totals.set(idea.userId, row)
+      }
+      return [...totals.values()].sort((a, b) => b.ideas - a.ideas || b.backings - a.backings || a.userId.localeCompare(b.userId))
+    },
+    async create(path, data) {
+      const m = read()
+      if (Object.prototype.hasOwnProperty.call(m, path)) throw new Error('already_exists')
+      m[path] = JSON.parse(JSON.stringify(data))
+      write(m); ping()
+    },
+    async set(path, data) { const m = read(); m[path] = JSON.parse(JSON.stringify(data)); write(m); ping() },
+    async update(path, patch) {
+      const m = read()
+      if (!m[path]) throw new Error('not_found')
+      m[path] = deepMerge(m[path], JSON.parse(JSON.stringify(patch)))
+      write(m); ping()
+    },
+    async delete(path) {
+      const m = read()
+      Object.keys(m).filter(k => k === path || k.startsWith(path + '/')).forEach(k => delete m[k])
+      write(m); ping()
+    },
+    subscribe(collection, cb) {
+      const emit = () => {
+        const m = read()
+        const docs: Doc[] = Object.keys(m).filter(k => isDirectChild(collection, k)).map(k => ({ id: k.slice(collection.length + 1), data: m[k] }))
+        cb(docs)
+      }
+      subs.add(emit)
+      emit()
+      return () => { subs.delete(emit) }
+    },
+  }
+}
+).test(path) && data?.cid === cid && typeof data?.authorId === 'string' && data.authorId !== ownerId)
+        .map(([path, data]) => ({ id: path.slice('ideas/'.length), userId: data.authorId as string }))
+      const totals = new Map<string, { userId: string; ideas: number; backings: number }>()
+      const voteMaps = Object.entries(docs)
+        .filter(([path]) => /^votes\\/[^/]+$/.test(path))
+        .map(([, data]) => data?.ideas || {})
+      for (const idea of ideas) {
+        const row = totals.get(idea.userId) || { userId: idea.userId, ideas: 0, backings: 0 }
+        row.ideas += 1
+        for (const voteMap of voteMaps) if (voteMap[idea.id] === true) row.backings += 1
+        totals.set(idea.userId, row)
+      }
+      return [...totals.values()].sort((a, b) => b.ideas - a.ideas || b.backings - a.backings || a.userId.localeCompare(b.userId))
+    },
+    async create(path, data) {
+      const m = read()
+      if (Object.prototype.hasOwnProperty.call(m, path)) throw new Error('already_exists')
+      m[path] = JSON.parse(JSON.stringify(data))
+      write(m); ping()
+    },
+    async set(path, data) { const m = read(); m[path] = JSON.parse(JSON.stringify(data)); write(m); ping() },
+    async update(path, patch) {
+      const m = read()
+      if (!m[path]) throw new Error('not_found')
+      m[path] = deepMerge(m[path], JSON.parse(JSON.stringify(patch)))
+      write(m); ping()
+    },
+    async delete(path) {
+      const m = read()
+      Object.keys(m).filter(k => k === path || k.startsWith(path + '/')).forEach(k => delete m[k])
+      write(m); ping()
+    },
+    subscribe(collection, cb) {
+      const emit = () => {
+        const m = read()
+        const docs: Doc[] = Object.keys(m).filter(k => isDirectChild(collection, k)).map(k => ({ id: k.slice(collection.length + 1), data: m[k] }))
+        cb(docs)
+      }
+      subs.add(emit)
+      emit()
+      return () => { subs.delete(emit) }
+    },
+  }
+}
+).test(path))
+        .map(([, data]) => data?.ideas || {})
+      for (const idea of ideas) {
+        const row = totals.get(idea.userId) || { userId: idea.userId, ideas: 0, backings: 0 }
+        row.ideas += 1
+        for (const voteMap of voteMaps) if (voteMap[idea.id] === true) row.backings += 1
+        totals.set(idea.userId, row)
+      }
+      return [...totals.values()].sort((a, b) => b.ideas - a.ideas || b.backings - a.backings || a.userId.localeCompare(b.userId))
+    },
+    async create(path, data) {
+      const m = read()
+      if (Object.prototype.hasOwnProperty.call(m, path)) throw new Error('already_exists')
+      m[path] = JSON.parse(JSON.stringify(data))
+      write(m); ping()
+    },
+    async set(path, data) { const m = read(); m[path] = JSON.parse(JSON.stringify(data)); write(m); ping() },
+    async update(path, patch) {
+      const m = read()
+      if (!m[path]) throw new Error('not_found')
+      m[path] = deepMerge(m[path], JSON.parse(JSON.stringify(patch)))
+      write(m); ping()
+    },
+    async delete(path) {
+      const m = read()
+      Object.keys(m).filter(k => k === path || k.startsWith(path + '/')).forEach(k => delete m[k])
+      write(m); ping()
+    },
+    subscribe(collection, cb) {
+      const emit = () => {
+        const m = read()
+        const docs: Doc[] = Object.keys(m).filter(k => isDirectChild(collection, k)).map(k => ({ id: k.slice(collection.length + 1), data: m[k] }))
+        cb(docs)
+      }
+      subs.add(emit)
+      emit()
+      return () => { subs.delete(emit) }
+    },
+  }
+}
+).test(path) && data?.cid === cid && typeof data?.authorId === 'string' && data.authorId !== ownerId)
         .map(([path, data]) => ({ id: path.slice('ideas/'.length), userId: data.authorId as string }))
       const totals = new Map<string, { userId: string; ideas: number; backings: number }>()
       const voteMaps = Object.entries(docs)
