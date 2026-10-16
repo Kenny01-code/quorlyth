@@ -33,6 +33,31 @@ function Inner() {
   const setNote = (value: string) => setRequestDraft(d => ({ ...d, note: value }))
   const [err, setErr] = useState('')
   const [preview, setPreview] = useState(false)
+  const approved = dc?.status === 'approved'
+  const pending = !!rq && !(dc && dc.at > rq.at) && !approved
+  const declined = !!dc && dc.status === 'declined' && (!rq || dc.at > rq.at)
+  const panelTitle = preview
+    ? 'Previewing the access request form.'
+    : a.platformAdmin
+      ? 'You manage platform access.'
+      : approved
+        ? 'Your access is approved.'
+        : pending
+          ? 'Your request is under review.'
+          : declined
+            ? 'Your last request was declined.'
+            : 'Request access to Quorlyth.'
+  const panelDescription = preview
+    ? 'This is how a signed-in member can request access. Preview mode does not submit a real request.'
+    : a.platformAdmin
+      ? 'Global requests to enter Quorlyth are reviewed by authorized platform administrators.'
+      : approved
+        ? 'Your approval is saved. You can browse communities and use analytics for your role.'
+        : pending
+          ? 'Your request is waiting for a platform administrator to review it.'
+          : declined
+            ? 'You can send a new request with updated details.'
+            : 'Tell the platform owner a little about yourself so they can review your request.'
   let body
   if (a.platformAdmin && !preview) body = <><h2 style={{ fontSize: 34 }}>You manage platform access.</h2><p className="mut" style={{ marginTop: 10 }}>Global requests to enter Quorlyth are reviewed by authorized platform administrators.</p><div className="acts"><button className="btn p" onClick={() => nav('/settings?tab=requests')}><Icon name="settings" />Open platform requests</button></div></>
   else if (!preview && dc?.status === 'approved') body = <div className="done"><div className="score"><Icon name="approve" size={34} /></div><h2>You are in.</h2><p className="mut" style={{ marginTop: 12 }}>The owner approved your request.</p><div className="acts" style={{ justifyContent: 'center' }}><button className="btn p" onClick={() => nav('/communities')}>Browse communities</button></div></div>
@@ -51,8 +76,8 @@ function Inner() {
     <div className="lg">
       <div className="glass stage" style={{ minHeight: 520, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: 40 }}>
         <div className="fmk xl"><i className="hh" /><Logo size={84} breathe /></div>
-        <h2 style={{ fontSize: 34 }}>Access is approved by the owner.</h2>
-        <p className="mut" style={{ margin: '14px auto 0', maxWidth: 340 }}>Tell the owner a little about you. They will review your request and you will see the answer here.</p>
+        <h2 style={{ fontSize: 34 }}>{panelTitle}</h2>
+        <p className="mut" style={{ margin: '14px auto 0', maxWidth: 340 }}>{panelDescription}</p>
         {a.platformAdmin && <button className="btn" style={{ marginTop: 20 }} onClick={() => setPreview(p => !p)}>{preview ? 'Exit form preview' : 'Preview request form'}</button>}
       </div>
       <div className="glass fm"><div>{body}</div></div>
