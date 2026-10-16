@@ -127,7 +127,7 @@ function Inner() {
       let v = 0
       if (o.m === 'ideas') v = data.ideas.filter(i => i.cid === c.id).length
       else if (o.m === 'backs') data.ideas.forEach(i => { if (i.cid === c.id) v += a.votesOf(i.id) })
-      else if (o.m === 'members') v = Object.keys(data.members).filter(u => data.members[u]?.[c.id]).length
+      else if (o.m === 'members') v = scopedMetricsReady ? (scopedMembers[c.id] || []).length : Object.keys(data.members).filter(u => data.members[u]?.[c.id]).length
       else v = data.promotions.filter(p => data.ideas.find(i => i.id === p.ideaId)?.cid === c.id).length
       return { n: c.name, v }
     })

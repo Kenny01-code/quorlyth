@@ -17,7 +17,7 @@ export function Dashboard() {
 function Inner() {
   const a = useApp()
   const nav = useNavigate()
-  const { data: rawData, owner, me } = a
+  const { data: rawData, owner, platformOwner, me } = a
   const ownedCommunities = rawData.communities.filter(c => a.ownsCommunity(c.id))
   const communityOwner = !owner && ownedCommunities.length > 0
   const ownedCommunityIds = new Set(ownedCommunities.map(c => c.id))
@@ -39,12 +39,7 @@ function Inner() {
   const setC1 = (firstCommunity: string) => setSetupDraft(d => ({ ...d, firstCommunity }))
   const s = data.settings
 
-  if (!data.ownerId && !owner) return <>
-    <Head kicker="Dashboard" title="Your space is being set up." />
-    <Empty icon="status" title="Waiting for the owner" text="The owner account needs to sign in before this space is ready." />
-  </>
-
-  if (owner && !s) {
+  if (platformOwner && !s) {
     return (
       <>
         <Head kicker="Dashboard" title={`Welcome, ${me!.name.split(' ')[0]}.`} />
@@ -58,7 +53,15 @@ function Inner() {
       </>
     )
   }
-  if (!owner && !s) return <><Head kicker="Dashboard" title="Welcome." /><Empty icon="status" title="This space is being set up" text="The owner has not finished setup yet." /></>
+  if (!s && !platformOwner && !owner && ownedCommunities.length === 0) return <>
+    <Head kicker="Dashboard" title={`Welcome, ${me!.name.split(' ')[0]}.`} />
+    <Empty icon="status" title="Your account is active" text="The platform workspace is still being set up. You can already browse communities and view your personal analytics.">
+      <div className="acts" style={{ justifyContent: 'center', marginTop: 12 }}>
+        <button className="btn" onClick={() => nav('/communities')}>Browse communities</button>
+        <button className="btn p" onClick={() => nav('/analytics')}><Icon name="insight" size={15} />Open analytics</button>
+      </div>
+    </Empty>
+  </>
   const pending = data.ideas.filter(i => a.statusOf(i.id) === 'review').length
   const ranked = data.ideas.filter(i => data.reviews[i.id]?.score != null && a.statusOf(i.id) === 'review').sort((x, y) => data.reviews[y.id].score! - data.reviews[x.id].score!).slice(0, 3)
   const recent = [...data.ideas].sort((x, y) => y.at - x.at).slice(0, 5)

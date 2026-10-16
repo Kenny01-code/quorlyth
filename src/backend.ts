@@ -19,6 +19,7 @@ export interface Auth {
 export interface Backend {
   store: DocStore; auth: Auth
   isPlatformAdmin(): Promise<boolean>
+  isPlatformOwner?(): Promise<boolean>
   reviewCommunityJoinRequest(cid: string, userId: string, status: 'approved' | 'declined'): Promise<void>
 }
 
@@ -151,6 +152,11 @@ export async function createBackend(): Promise<Backend> {
         if (error) throw error
         return data === true
       },
+      async isPlatformOwner() {
+        const { data, error } = await sb.rpc('current_user_is_platform_owner')
+        if (error) throw error
+        return data === true
+      },
       async reviewCommunityJoinRequest(cid, userId, status) {
         const { error } = await sb.rpc('review_community_join_request', { p_cid: cid, p_user_id: userId, p_status: status })
         if (error) throw error
@@ -166,9 +172,15 @@ export async function createBackend(): Promise<Backend> {
     await store.delete('config/owner')
     localStorage.setItem(OWNER_CLAIM_MIGRATION, '1')
   }
+  const auth = localAuth()
   return {
-    store, auth: localAuth(),
+    store, auth,
     async isPlatformAdmin() { return false },
+    async isPlatformOwner() {
+      const current = await auth.current()
+      const claim = await store.get('config/owner')
+      return !!current && claim?.id === current.id
+    },
     async reviewCommunityJoinRequest(cid, userId, status) {
       const path = 'communityJoinRequests/' + cid + '__' + userId
       const request = await store.get(path)

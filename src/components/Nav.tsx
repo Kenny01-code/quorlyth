@@ -12,7 +12,7 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/signin', label: 'Sign in', icon: 'private', guest: true },
   { path: '/dashboard', label: 'Dashboard', icon: 'home' },
   { path: '/access', label: 'Request access', icon: 'invite' },
-  { path: '/analytics', label: 'Analytics', icon: 'insight', communityOwner: true },
+  { path: '/analytics', label: 'Analytics', icon: 'insight' },
   { path: '/communities', label: 'Communities', icon: 'community' },
   { path: '/messages', label: 'Messages', icon: 'message' },
   { path: '/queue', label: 'Review queue', icon: 'queue', owner: true },
@@ -28,7 +28,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   const nav = useNavigate()
   const loc = useLocation()
   const app = useApp()
-  const { me, owner } = app
+  const { me, owner, platformOwner } = app
   const communityOwner = !!me && app.data.communities.some(c => app.ownsCommunity(c.id))
   const workspaceManager = owner || communityOwner
   const main = useRef<HTMLDivElement>(null)
@@ -86,7 +86,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
           {ITEMS.filter(i => {
-            if (i.platformOwnerOnly) return !!owner && !demo
+            if (i.platformOwnerOnly) return !!platformOwner && !demo
             if (demo) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             if (me) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             return ['/', '/demo', '/signin'].includes(i.path)
