@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import '../styles/analytics.css'
 import { useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
@@ -39,25 +39,83 @@ function Inner() {
   const [rg, setRg] = useState(30)
   const [open, setOpen] = useState<ChartKey | null>(null)
 
+  const communityIdsKey = useMemo(() => data.communities.map(community => community.id).sort().join('|'), [data.communities])
+  const [scopedMembers, setScopedMembers] = useState<Record<string, string[]>>({})
+  const [scopedContributors, setScopedContributors] = useState<Record<string, { userId: string; ideas: number; backings: number }[]>>({})
+  const [scopedMetricsReady, setScopedMetricsReady] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    const store = a.backend?.store
+    if (!store || !a.me || !communityIdsKey) {
+      setScopedMembers({})
+      setScopedContributors({})
+      setScopedMetricsReady(true)
+      return () => { active = false }
+    }
+
+    const ids = communityIdsKey.split('|')
+    setScopedMetricsReady(false)
+    void Promise.all(ids.map(async cid => {
+      try {
+        const [members, contributors] = await Promise.all([
+          store.listCommunityMembers(cid),
+          store.listCommunityContributors(cid),
+        ])
+        return { cid, members, contributors, error: false }
+      } catch (error) {
+        console.error('Could not load scoped analytics for community:', cid, error)
+        return { cid, members: [] as string[], contributors: [] as { userId: string; ideas: number; backings: number }[], error: true }
+      }
+    })).then(results => {
+      if (!active) return
+      setScopedMembers(Object.fromEntries(results.map(result => [result.cid, result.members])))
+      setScopedContributors(Object.fromEntries(results.map(result => [result.cid, result.contributors])))
+      setScopedMetricsReady(results.every(result => !result.error))
+    })
+    return () => { active = false }
+  }, [a.backend, a.me?.id, communityIdsKey])
+
+
   const X = useMemo(() => {
     const sc: Record<string, number> = { review: 0, selected: 0, held: 0, declined: 0, promoted: 0 }
     const auth: Record<string, number> = {}, back: Record<string, number> = {}
     let tv = 0
-    data.ideas.forEach(i => {
-      sc[a.statusOf(i.id)]++
-      if (!isCommunityOwnerContribution(i, ownersByCommunity)) {
-        auth[i.authorId] = (auth[i.authorId] || 0) + 1
-        back[i.authorId] = (back[i.authorId] || 0) + a.votesOf(i.id)
+
+    if (scopedMetricsReady) {
+      for (const cid of data.communities.map(community => community.id)) {
+        for (const contributor of scopedContributors[cid] || []) {
+          auth[contributor.userId] = (auth[contributor.userId] || 0) + contributor.ideas
+          back[contributor.userId] = (back[contributor.userId] || 0) + contributor.backings
+        }
       }
-      tv += a.votesOf(i.id)
+      const memberIds = new Set(Object.values(scopedMembers).flat())
+      memberIds.forEach(userId => { if (userId) void userId })
+    } else {
+      data.ideas.forEach(idea => {
+        if (!isCommunityOwnerContribution(idea, ownersByCommunity)) {
+          auth[idea.authorId] = (auth[idea.authorId] || 0) + 1
+          back[idea.authorId] = (back[idea.authorId] || 0) + a.votesOf(idea.id)
+        }
+      })
+    }
+
+    data.ideas.forEach(idea => {
+      sc[a.statusOf(idea.id)]++
+      tv += a.votesOf(idea.id)
     })
-    const communityIds = new Set(data.communities.map(c => c.id))
+
     const memberIds = new Set<string>()
-    Object.entries(data.members).forEach(([uid, memberships]) => {
-      if (Object.entries(memberships || {}).some(([cid, joined]) => joined && communityIds.has(cid))) memberIds.add(uid)
-    })
+    if (scopedMetricsReady) {
+      Object.values(scopedMembers).flat().forEach(uid => { if (uid) memberIds.add(uid) })
+    } else {
+      const communityIds = new Set(data.communities.map(community => community.id))
+      Object.entries(data.members).forEach(([uid, memberships]) => {
+        if (Object.entries(memberships || {}).some(([cid, joined]) => joined && communityIds.has(cid))) memberIds.add(uid)
+      })
+    }
     return { sc, auth, back, tv, mem: memberIds.size }
-  }, [data, a.statusOf, a.votesOf, ownersByCommunity])
+  }, [data, a.statusOf, a.votesOf, ownersByCommunity, scopedMembers, scopedContributors, scopedMetricsReady])
 
   const daily = (n: number): Daily => {
     const d = 864e5, t0 = new Date().setHours(0, 0, 0, 0), v: number[] = [], dt: number[] = []
