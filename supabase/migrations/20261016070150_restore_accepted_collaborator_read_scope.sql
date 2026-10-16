@@ -1,5 +1,5 @@
 -- Preserve explicitly accepted collaborator access even if community visibility or
--- membership changes later. These are scoped to the exact accepted idea.
+-- membership changes later. These reads remain scoped to the exact accepted idea.
 CREATE OR REPLACE FUNCTION private.can_read_doc(p_path text, p_data jsonb)
  RETURNS boolean
  LANGUAGE plpgsql
@@ -126,8 +126,7 @@ begin
   end if;
   return false;
 end;
-$function$
-
+$function$;
 
 comment on function private.can_read_doc(text,jsonb) is
   'Caller-scoped document reader covering public records, private vaults, community access, accepted collaboration workspaces, and chat membership.';
