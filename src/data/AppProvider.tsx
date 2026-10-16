@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Backend, createBackend } from '../backend'
-import { Comment, Community, CommunityJoinRequest, Decision, Idea, Me, Milestone, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus } from '../lib/types'
+import { Comment, Community, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus } from '../lib/types'
 import { slug } from '../lib/util'
 import { createDemoBackend, DEMO_ME } from './demo'
 
@@ -35,10 +35,10 @@ export interface App {
   publish: (ideaId: string, text: string, credits: string[]) => Promise<boolean>
   applyToCollaborate: (ideaId: string, message: string) => Promise<boolean>
   decideVolunteer: (applicationId: string, status: VolunteerStatus) => Promise<boolean>
-  createProject: (ideaId: string, summary: string) => Promise<boolean>
-  updateProject: (projectId: string, patch: Partial<Pick<Project, 'summary' | 'status'>>) => Promise<boolean>
-  addMilestone: (projectId: string, title: string, description: string) => Promise<boolean>
-  updateMilestone: (milestoneId: string, patch: Partial<Pick<Milestone, 'title' | 'description' | 'status'>>) => Promise<boolean>
+  createProject: (ideaId: string, summary: string, dueAt?: number | null) => Promise<boolean>
+  updateProject: (projectId: string, patch: Partial<Pick<Project, 'summary' | 'status' | 'dueAt'>>) => Promise<boolean>
+  addMilestone: (projectId: string, title: string, description: string, details?: MilestoneDetails) => Promise<boolean>
+  updateMilestone: (milestoneId: string, patch: MilestonePatch) => Promise<boolean>
   saveSettings: (p: Partial<SpaceSettings>) => Promise<boolean>
   saveProfile: (p: Partial<Profile>) => Promise<boolean>
   requestCommunityJoin: (cid: string, message?: string) => Promise<boolean>
@@ -582,13 +582,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           } : {}),
         }))
       }, status === 'accepted' ? 'Contributor accepted and workspace opened' : 'Application declined'),
-      createProject: (ideaId, summary) => w(async () => {
+      createProject: (ideaId, summary, dueAt) => w(async () => {
         if (!me) throw new Error('Sign in before creating a collaboration workspace.')
         const projectIdea = data.ideas.find(item => item.id === ideaId)
         if (!projectIdea) throw new Error('The idea for this workspace is no longer available.')
         if (!canManageCommunity(projectIdea.cid)) throw new Error('Only the community owner or a platform administrator can initialize a collaboration workspace.')
         const cleanSummary = summary.trim()
         if (!cleanSummary) throw new Error('Add a short project summary first.')
+        if (dueAt != null && !Number.isFinite(dueAt)) throw new Error('Choose a valid project due date.')
+        const cleanDueAt = dueAt ?? null
         const existing = data.projects[ideaId] || await st!.get('projects/' + ideaId)
         if (existing) throw new Error('A workspace already exists for this idea. Refresh and open the existing collaboration instead.')
 
@@ -603,9 +605,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           await up('reviews/' + ideaId, { status: nextStatus, at })
         }
 
-        const project: Project = { id: ideaId, ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at }
+        const project: Project = { id: ideaId, ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at, dueAt: cleanDueAt }
         try {
-          await st!.create('projects/' + ideaId, { ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at })
+          await st!.create('projects/' + ideaId, { ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at, dueAt: cleanDueAt })
         } catch (createError) {
           // If another manager created the workspace concurrently, use the persisted
           // record rather than reporting a false failure after the race has resolved.
@@ -623,6 +625,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 createdBy: typeof racedProject.createdBy === 'string' && racedProject.createdBy ? racedProject.createdBy : me.id,
                 at: Number(racedProject.at) > 0 ? Number(racedProject.at) : at,
                 updatedAt: Number(racedProject.updatedAt) > 0 ? Number(racedProject.updatedAt) : at,
+                dueAt: Number(racedProject.dueAt) > 0 ? Number(racedProject.dueAt) : null,
               },
             },
             reviews: { ...d.reviews, [ideaId]: { ...d.reviews[ideaId], status: nextStatus, at } },
@@ -642,26 +645,61 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await up('projects/' + projectId, safePatch)
         setData(d => ({ ...d, projects: { ...d.projects, [projectId]: { ...d.projects[projectId], ...safePatch } } }))
       }, 'Project updated'),
-      addMilestone: (projectId, title, description) => w(async () => {
+      addMilestone: (projectId, title, description, details = {}) => w(async () => {
         const cleanTitle = title.trim()
         if (!cleanTitle) throw new Error('Milestones need a title.')
         const project = data.projects[projectId]
         if (!project) throw new Error('Create the project before adding milestones.')
         if (!canCollaborateOnIdea(project.ideaId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can add milestones.')
         if (project.status !== 'active') throw new Error('Reopen the project before adding milestones.')
+        if (details.priority && !['low', 'normal', 'high', 'critical'].includes(details.priority)) throw new Error('Choose a valid milestone priority.')
+        if (details.dueAt != null && !Number.isFinite(details.dueAt)) throw new Error('Choose a valid milestone due date.')
+        const projectIdea = data.ideas.find(item => item.id === project.ideaId)
+        const community = projectIdea ? data.communities.find(item => item.id === projectIdea.cid) : undefined
+        const allowedAssignees = new Set([
+          projectIdea?.authorId, community?.ownerId, community?.createdBy,
+          ...data.volunteers.filter(item => item.ideaId === project.ideaId && item.status === 'accepted').map(item => item.applicantId),
+        ].filter((uid): uid is string => !!uid))
+        if (details.assigneeId && !allowedAssignees.has(details.assigneeId)) throw new Error('Milestones can only be assigned to people in this collaboration team.')
         const id = slug()
         const at = Date.now()
-        const milestone: Milestone = { id, projectId, title: cleanTitle, description: description.trim(), status: 'todo', createdBy: me!.id, at, updatedAt: at }
-        await st!.set('milestones/' + id, { projectId, title: cleanTitle, description: description.trim(), status: 'todo', createdBy: me!.id, at, updatedAt: at })
+        const extra = {
+          priority: details.priority || 'normal' as const,
+          assigneeId: details.assigneeId || null,
+          dueAt: details.dueAt ?? null,
+          acceptanceCriteria: (details.acceptanceCriteria || '').trim().slice(0, 800),
+          blocked: !!details.blocked,
+          blockedNote: (details.blockedNote || '').trim().slice(0, 500),
+        }
+        const milestone: Milestone = { id, projectId, title: cleanTitle, description: description.trim().slice(0, 2000), status: 'todo', createdBy: me!.id, at, updatedAt: at, ...extra }
+        await st!.set('milestones/' + id, { projectId, title: cleanTitle, description: description.trim().slice(0, 2000), status: 'todo', createdBy: me!.id, at, updatedAt: at, ...extra })
         setData(d => ({ ...d, milestones: [...d.milestones.filter(item => item.id !== id), milestone] }))
       }, 'Milestone added'),
       updateMilestone: (milestoneId, patch) => w(async () => {
         const current = data.milestones.find(item => item.id === milestoneId)
         if (!current) throw new Error('Milestone not found. Refresh the page and try again.')
         if (!canCollaborateOnIdea(current.projectId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can update milestones.')
+        if (patch.priority && !['low', 'normal', 'high', 'critical'].includes(patch.priority)) throw new Error('Choose a valid milestone priority.')
+        if (patch.dueAt != null && !Number.isFinite(patch.dueAt)) throw new Error('Choose a valid milestone due date.')
+        const project = data.projects[current.projectId]
+        const projectIdea = data.ideas.find(item => item.id === (project?.ideaId || current.projectId))
+        const community = projectIdea ? data.communities.find(item => item.id === projectIdea.cid) : undefined
+        const allowedAssignees = new Set([
+          projectIdea?.authorId, community?.ownerId, community?.createdBy,
+          ...data.volunteers.filter(item => item.ideaId === current.projectId && item.status === 'accepted').map(item => item.applicantId),
+        ].filter((uid): uid is string => !!uid))
+        if (patch.assigneeId && !allowedAssignees.has(patch.assigneeId)) throw new Error('Milestones can only be assigned to people in this collaboration team.')
+        const safePatch: MilestonePatch = {
+          ...patch,
+          ...(patch.title !== undefined ? { title: patch.title.trim().slice(0, 120) } : {}),
+          ...(patch.description !== undefined ? { description: patch.description.trim().slice(0, 2000) } : {}),
+          ...(patch.acceptanceCriteria !== undefined ? { acceptanceCriteria: patch.acceptanceCriteria.trim().slice(0, 800) } : {}),
+          ...(patch.blockedNote !== undefined ? { blockedNote: patch.blockedNote.trim().slice(0, 500) } : {}),
+        }
+        if (safePatch.title !== undefined && !safePatch.title) throw new Error('Milestones need a title.')
         const updatedAt = Date.now()
-        await up('milestones/' + milestoneId, { ...patch, updatedAt })
-        setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...patch, updatedAt } : item) }))
+        await up('milestones/' + milestoneId, { ...safePatch, updatedAt })
+        setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...safePatch, updatedAt } : item) }))
       }, 'Milestone updated'),
       saveSettings: p => w(() => up('settings/space', p), 'Saved'),
       saveProfile: async p => {
