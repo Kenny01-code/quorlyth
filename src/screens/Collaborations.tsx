@@ -1,11 +1,25 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
-import { Av, Empty, Head } from '../components/ui'
+import { Av, Head } from '../components/ui'
+import { MilestoneBoard } from '../components/MilestoneBoard'
+import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp, useComments } from '../data/AppProvider'
-import { Icon } from '../lib/Icon'
-import { Milestone } from '../lib/types'
 import { when } from '../lib/util'
+
+
+const dateInput = (timestamp?: number | null) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
+}
+const dateEnd = (value: string) => {
+  if (!value) return null
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day, 23, 59, 59, 999)
+  return Number.isFinite(date.getTime()) ? date.getTime() : null
+}
+const dateLabel = (timestamp?: number | null) => timestamp ? new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''
 
 export function Collaborations() {
   return <Gate><CollaborationList /></Gate>
@@ -48,7 +62,7 @@ function CollaborationList() {
     <div className="glass pad" style={{ marginBottom: 18 }}>
       <div className="head" style={{ marginBottom: 16 }}>
         <div><h3 style={{ fontSize: 20 }}>How to get started</h3><p className="mut" style={{ marginTop: 4 }}>Follow the path that matches your role.</p></div>
-        <span className="chip"><Icon name="collab" size={14} />Collaboration guide</span>
+        <span className="chip"><QuorlythGlyph name="workspace" size={14} />Collaboration guide</span>
       </div>
       <div className="grid g2">
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
@@ -56,7 +70,7 @@ function CollaborationList() {
           <div style={{ minWidth: 0 }}>
             <h3>For members: apply to help</h3>
             <p className="mut" style={{ marginTop: 5 }}>Browse communities, open an idea, join its community if needed, and select “Apply to collaborate.” Your request and its status will appear below.</p>
-            <button className="btn" style={{ marginTop: 10 }} onClick={() => nav('/communities')}><Icon name="community" size={15} />Browse communities and ideas</button>
+            <button className="btn" style={{ marginTop: 10 }} onClick={() => nav('/communities')}><QuorlythGlyph name="community" size={15} />Browse communities and ideas</button>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
@@ -64,7 +78,7 @@ function CollaborationList() {
           <div style={{ minWidth: 0 }}>
             <h3>For community managers: accept a teammate</h3>
             <p className="mut" style={{ marginTop: 5 }}>Open the Review queue, choose an idea, find “Collaboration applications,” and accept a pending applicant. Acceptance creates the shared project workspace automatically.</p>
-            {canReviewAny && <button className="btn p" style={{ marginTop: 10 }} onClick={() => nav('/queue')}><Icon name="queue" size={15} />Review applications{incoming.length ? ' (' + incoming.length + ')' : ''}</button>}
+            {canReviewAny && <button className="btn p" style={{ marginTop: 10 }} onClick={() => nav('/queue')}><QuorlythGlyph name="review" size={15} />Review applications{incoming.length ? ' (' + incoming.length + ')' : ''}</button>}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
@@ -78,7 +92,7 @@ function CollaborationList() {
           <span className="score" style={{ width: 38, height: 38, fontSize: 14 }}>04</span>
           <div style={{ minWidth: 0 }}>
             <h3>Keep decisions together</h3>
-            <p className="mut" style={{ marginTop: 5 }}>Use Team discussion for updates, questions, and decisions. Community managers can edit the project brief from Project settings.</p>
+            <p className="mut" style={{ marginTop: 5 }}>Use Idea discussion for updates, questions, and decisions. Community managers can edit the project brief from Project settings.</p>
           </div>
         </div>
       </div>
@@ -105,7 +119,7 @@ function CollaborationList() {
                 {applications.length > 3 && <span className="chip">+{applications.length - 3} more</span>}
               </div>
             </div>
-            <button className="btn p" onClick={() => nav('/queue?idea=' + encodeURIComponent(ideaId))}><Icon name="approve" size={15} />Review</button>
+            <button className="btn p" onClick={() => nav('/queue?idea=' + encodeURIComponent(ideaId))}><QuorlythGlyph name="complete" size={15} />Review</button>
           </div>
         })}
       </div>
@@ -134,8 +148,8 @@ function CollaborationList() {
               {application.status === 'declined' && <p className="mut" style={{ marginTop: 5, fontSize: 12 }}>You can review the idea and reapply if the opportunity is still open.</p>}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <button className="btn" onClick={() => nav('/idea/' + idea.id)}><Icon name="idea" size={15} />View idea</button>
-              {application.status === 'accepted' && <button className="btn p" onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={15} />Open workspace</button>}
+              <button className="btn" onClick={() => nav('/idea/' + idea.id)}><QuorlythGlyph name="idea" size={15} />View idea</button>
+              {application.status === 'accepted' && <button className="btn p" onClick={() => nav('/collaboration/' + idea.id)}><QuorlythGlyph name="workspace" size={15} />Open workspace</button>}
             </div>
           </div>
         })}
@@ -148,7 +162,7 @@ function CollaborationList() {
         <span className="chip">{items.length} spaces</span>
       </div>
       {!items.length ? <div className="glass cent">
-        <Icon name="collab" size={30} />
+        <QuorlythGlyph name="workspace" size={30} />
         <h3>No active collaboration spaces yet</h3>
         <p className="mut" style={{ maxWidth: 520 }}>
           {canReviewAny
@@ -156,9 +170,9 @@ function CollaborationList() {
             : 'Your workspace appears after a community manager accepts one of your collaboration applications. Start by finding an idea you would genuinely like to help build.'}
         </p>
         <div className="acts" style={{ justifyContent: 'center', marginTop: 8 }}>
-          <button className="btn p" onClick={() => nav('/communities')}><Icon name="community" size={15} />Find ideas</button>
-          {canReviewAny && <button className="btn" onClick={() => nav('/queue')}><Icon name="queue" size={15} />Open review queue</button>}
-          <button className="btn" onClick={() => nav('/me')}><Icon name="user-round" size={15} />My ideas</button>
+          <button className="btn p" onClick={() => nav('/communities')}><QuorlythGlyph name="community" size={15} />Find ideas</button>
+          {canReviewAny && <button className="btn" onClick={() => nav('/queue')}><QuorlythGlyph name="review" size={15} />Open review queue</button>}
+          <button className="btn" onClick={() => nav('/me')}><QuorlythGlyph name="profile" size={15} />My ideas</button>
         </div>
       </div> : <div style={{ display: 'grid', gap: 14, maxWidth: 1000 }}>
         {items.map(idea => {
@@ -174,11 +188,11 @@ function CollaborationList() {
                 <h3 style={{ fontSize: 20, marginTop: 5, overflowWrap: 'anywhere' }}>{idea.title}</h3>
                 <p className="mut" style={{ marginTop: 7 }}>{project?.summary || (!project ? 'This accepted collaboration needs its workspace initialized. Open it to finish setup.' : 'No project brief has been added yet.')}</p>
               </div>
-              <span className="chip"><Icon name="collab" size={14} />Open workspace</span>
+              <span className="chip"><QuorlythGlyph name="workspace" size={14} />Open workspace</span>
             </div>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 14 }}>
-              <span className="dim"><Icon name="users" size={14} /> {acceptedCount} accepted contributor{acceptedCount === 1 ? '' : 's'}</span>
-              <span className="dim"><Icon name="approve" size={14} /> {done}/{milestones.length} milestones complete</span>
+              <span className="dim"><QuorlythGlyph name="team" size={14} /> {acceptedCount} accepted contributor{acceptedCount === 1 ? '' : 's'}</span>
+              <span className="dim"><QuorlythGlyph name="complete" size={14} /> {done}/{milestones.length} milestones complete</span>
               <span className="dim">{project ? 'Updated ' + (when(project.updatedAt || project.at) || 'recently') : 'Workspace not initialized'}</span>
             </div>
           </button>
@@ -196,13 +210,13 @@ function Workspace() {
   const a = useApp()
   const nav = useNavigate()
   const comments = useComments(id || null)
-  const [newTitle, setNewTitle] = useState('')
-  const [newDescription, setNewDescription] = useState('')
   const [reply, setReply] = useState('')
   const [workspaceSummary, setWorkspaceSummary] = useState('Collaboration workspace ready. Add a project plan and milestones to coordinate the work.')
+  const [projectDueDate, setProjectDueDate] = useState('')
   const [busy, setBusy] = useState(false)
   const idea = a.data.ideas.find(item => item.id === id)
   const project = a.data.projects[id]
+  useEffect(() => setProjectDueDate(dateInput(project?.dueAt)), [project?.dueAt])
   const community = idea ? a.data.communities.find(c => c.id === idea.cid) : undefined
   const canManage = !!idea && a.canManageCommunity(idea.cid)
   const acceptedApplications = a.data.volunteers.filter(v => v.ideaId === id && v.status === 'accepted')
@@ -212,24 +226,20 @@ function Workspace() {
   const milestones = a.data.milestones.filter(m => m.projectId === id).sort((x, y) => x.at - y.at)
   const completed = milestones.filter(m => m.status === 'done').length
   const progress = milestones.length ? Math.round(completed / milestones.length * 100) : 0
+  const workspaceTeamIds = [idea?.authorId, community?.ownerId, community?.createdBy, ...acceptedApplications.map(application => application.applicantId)].filter((uid): uid is string => !!uid)
 
-  if (!idea) return <Empty icon="collab" title="Collaboration not found" text="This idea may have been removed, or you may not have access to it."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/collaborations')}>Back to collaborations</button></Empty>
+  if (!idea) return <div className="glass cent ql-workspace-empty"><span className="ql-empty-mark"><QuorlythGlyph name="workspace" size={30} /></span><p className="ql-eyebrow">QUORLYTH WORKSPACE</p><h3>Collaboration not found</h3><p className="mut">This idea may have been removed, or you may not have access to it.</p><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} />Back to collaborations</button></div>
   if (!canAccess) {
     const ownApplication = a.data.volunteers.find(v => v.ideaId === id && v.applicantId === a.me?.id)
-    return <Empty icon="private" title="This workspace is private" text={ownApplication?.status === 'pending' ? 'Your application is still waiting for review. The workspace opens after acceptance.' : 'Only the community owner and accepted collaborators can enter this workspace.'}>
-      <div className="acts" style={{ justifyContent: 'center', marginTop: 12 }}>
-        <button className="btn" onClick={() => nav('/idea/' + idea.id)}>View idea</button>
-        <button className="btn" onClick={() => nav('/collaborations')}>My collaborations</button>
-      </div>
-    </Empty>
+    return <div className="glass cent ql-workspace-empty"><span className="ql-empty-mark"><QuorlythGlyph name="workspace" size={30} /></span><p className="ql-eyebrow">PRIVATE WORKSPACE</p><h3>This collaboration is not open to your account</h3><p className="mut">{ownApplication?.status === 'pending' ? 'Your application is still waiting for review. The workspace opens after acceptance.' : 'Only the community owner, idea creator and accepted collaborators can enter this workspace.'}</p><div className="acts" style={{ justifyContent: 'center', marginTop: 12 }}><button className="btn" onClick={() => nav('/idea/' + idea.id)}><QuorlythGlyph name="idea" size={14} />View idea</button><button className="btn" onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} />My collaborations</button></div></div>
   }
 
   if (!project) {
     return <div style={{ maxWidth: 820, display: 'grid', gap: 16 }}>
-      <div><button className="chip" onClick={() => nav('/collaborations')}><Icon name="arrow-left" size={14} />All collaborations</button></div>
+      <div><button className="chip" onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} />All collaborations</button></div>
       <Head kicker={community?.name || 'Collaboration workspace'} title={idea.title} />
       <section className="glass pad">
-        <span className="chip"><Icon name="collab" size={14} />Accepted collaboration</span>
+        <span className="chip"><QuorlythGlyph name="workspace" size={14} />Accepted collaboration</span>
         <h3 style={{ fontSize: 20, marginTop: 14 }}>{canManage ? 'Finish setting up this workspace' : 'Your workspace is being set up'}</h3>
         <p className="mut" style={{ marginTop: 8 }}>{canManage
           ? 'This collaboration was accepted, but its project record is missing. Create the project brief here to open the shared milestones and team discussion.'
@@ -238,32 +248,18 @@ function Workspace() {
           event.preventDefault()
           if (!workspaceSummary.trim()) return a.toast('Add a short project brief first.')
           setBusy(true)
-          await a.createProject(id, workspaceSummary.trim())
+          await a.createProject(id, workspaceSummary.trim(), dateEnd(projectDueDate))
           setBusy(false)
         }}>
           <label className="field"><span>Project brief</span><textarea value={workspaceSummary} onChange={e => setWorkspaceSummary(e.target.value)} maxLength={1200} required placeholder="Describe the goal, scope, and first outcome for this collaboration." /></label>
-          <button className="btn p" disabled={busy || !workspaceSummary.trim()}><Icon name="collab" size={15} />{busy ? 'Creating workspace…' : 'Initialize collaboration workspace'}</button>
+          <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
+          <button className="btn p" disabled={busy || !workspaceSummary.trim()}><QuorlythGlyph name="workspace" size={15} />{busy ? 'Creating workspace…' : 'Initialize collaboration workspace'}</button>
         </form> : <div className="acts" style={{ marginTop: 14 }}>
           <button className="btn" onClick={() => nav('/idea/' + idea.id)}>View original idea</button>
           <button className="btn" onClick={() => nav('/collaborations')}>Back to collaborations</button>
         </div>}
       </section>
     </div>
-  }
-
-  async function addMilestone(event: FormEvent) {
-    event.preventDefault()
-    if (!newTitle.trim()) return a.toast('Give the milestone a title.')
-    setBusy(true)
-    const ok = await a.addMilestone(id, newTitle.trim(), newDescription.trim())
-    if (ok) { setNewTitle(''); setNewDescription('') }
-    setBusy(false)
-  }
-
-  async function changeStatus(milestone: Milestone, status: Milestone['status']) {
-    setBusy(true)
-    await a.updateMilestone(milestone.id, { status })
-    setBusy(false)
   }
 
   async function postReply(event: FormEvent) {
@@ -277,10 +273,10 @@ function Workspace() {
 
   return <>
     <div className="head" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
-      <div><button className="chip" onClick={() => nav('/collaborations')}><Icon name="arrow-left" size={14} /> All collaborations</button></div>
+      <div><button className="chip" onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} /> All collaborations</button></div>
       <div className="acts" style={{ margin: 0 }}>
-        <button className="btn" onClick={() => nav('/idea/' + id)}><Icon name="idea" size={15} />Original idea</button>
-        {canManage && <button className="btn" onClick={() => nav('/projects?idea=' + encodeURIComponent(id))}><Icon name="edit" size={15} />Project settings</button>}
+        <button className="btn" onClick={() => nav('/idea/' + id)}><QuorlythGlyph name="idea" size={15} />Original idea</button>
+        {canManage && <button className="btn" onClick={() => nav('/projects?idea=' + encodeURIComponent(id))}><QuorlythGlyph name="plan" size={15} />Project settings</button>}
       </div>
     </div>
     <Head kicker={community?.name || 'Collaboration workspace'} title={idea.title} />
@@ -288,48 +284,18 @@ function Workspace() {
       <div style={{ display: 'grid', gap: 14, minWidth: 0 }}>
         <section className="glass pad">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span className="chip"><Icon name="collab" size={14} />Shared workspace</span>
+            <span className="chip"><QuorlythGlyph name="workspace" size={14} />Shared workspace</span>
             <span className="chip">{project?.status === 'completed' ? 'Completed' : 'Active'}</span>
           </div>
           <h3 style={{ fontSize: 18, marginTop: 16 }}>Project brief</h3>
           <p className="mut" style={{ marginTop: 8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{project?.summary || 'The project owner has not added a brief yet.'}</p>
-          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <span className="dim">Milestone progress</span><strong>{completed}/{milestones.length} · {progress}%</strong>
-          </div>
-          <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,.1)', overflow: 'hidden', marginTop: 9 }}>
-            <div style={{ width: progress + '%', height: '100%', background: 'rgba(255,255,255,.8)', transition: 'width .25s ease' }} />
+          {project?.dueAt ? <p className="ql-muted ql-project-deadline"><QuorlythGlyph name="calendar" size={14} />Target delivery · {dateLabel(project.dueAt)}</p> : null}
+          <div className="ql-workspace-progress">
+            <div className="ql-workspace-progress__header"><span>Work completed</span><strong>{completed}/{milestones.length} · {progress}%</strong></div>
+            <div className="ql-project-progress__track"><i style={{ width: progress + '%' }} /></div>
           </div>
         </section>
-        <section className="glass pad">
-          <div className="head" style={{ marginBottom: 14 }}>
-            <div><p className="dim">Shared plan</p><h3 style={{ fontSize: 20, marginTop: 4 }}>Milestones</h3></div>
-            <span className="chip">{milestones.length} total</span>
-          </div>
-          {!milestones.length && <p className="mut" style={{ marginBottom: 14 }}>No milestones yet. Add the first concrete step so everyone knows what happens next.</p>}
-          <div style={{ display: 'grid', gap: 10 }}>
-            {milestones.map(milestone => <article key={milestone.id} className="reason" style={{ margin: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <h4 style={{ fontSize: 16, fontWeight: 500, overflowWrap: 'anywhere' }}>{milestone.title}</h4>
-                  {milestone.description && <p className="mut" style={{ marginTop: 5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{milestone.description}</p>}
-                  <p className="dim" style={{ fontSize: 12, marginTop: 7 }}>Updated {when(milestone.updatedAt || milestone.at) || 'recently'}</p>
-                </div>
-                <span className="chip">{milestone.status === 'done' ? 'Done' : milestone.status === 'in_progress' ? 'In progress' : 'To do'}</span>
-              </div>
-              {project?.status === 'active' && <div className="acts" style={{ marginTop: 12 }}>
-                {milestone.status === 'todo' && <button className="btn" disabled={busy} onClick={() => void changeStatus(milestone, 'in_progress')}>Start</button>}
-                {milestone.status !== 'done' && <button className="btn p" disabled={busy} onClick={() => void changeStatus(milestone, 'done')}><Icon name="approve" size={14} />Mark done</button>}
-                {milestone.status === 'done' && <button className="btn" disabled={busy} onClick={() => void changeStatus(milestone, 'in_progress')}><Icon name="rotate" size={14} />Reopen</button>}
-              </div>}
-            </article>)}
-          </div>
-          {project?.status === 'active' && <form className="reason" style={{ marginTop: 14 }} onSubmit={addMilestone}>
-            <h4 style={{ fontSize: 16, marginBottom: 10 }}>Add a milestone</h4>
-            <label className="field"><span>Milestone</span><input value={newTitle} onChange={e => setNewTitle(e.target.value)} maxLength={120} required placeholder="e.g. Draft the first prototype" /></label>
-            <label className="field"><span>Details (optional)</span><textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} maxLength={500} placeholder="What does done look like?" /></label>
-            <button className="btn p" disabled={busy}><Icon name="plus" size={14} />{busy ? 'Saving…' : 'Add milestone'}</button>
-          </form>}
-        </section>
+        <MilestoneBoard idea={idea} projectId={id} projectStatus={project.status} milestones={milestones} teamMemberIds={workspaceTeamIds} canCollaborate={canAccess} />
       </div>
       <div style={{ display: 'grid', gap: 14, minWidth: 0 }}>
         <section className="glass pad">
@@ -349,7 +315,7 @@ function Workspace() {
         </section>
         <section className="glass pad">
           <h3 style={{ fontSize: 19 }}>Team discussion</h3>
-          <p className="mut" style={{ marginTop: 5 }}>Keep decisions and progress updates connected to the original idea.</p>
+          <p className="mut" style={{ marginTop: 5 }}>This thread is shared with the original idea discussion, so decisions and context stay connected.</p>
           <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
             {comments.length ? comments.map(comment => <div key={comment.id} className="msg" style={{ alignItems: 'flex-start' }}>
               <Av id={comment.authorId} size={30} />
@@ -361,7 +327,7 @@ function Workspace() {
           </div>
           <form onSubmit={postReply} style={{ marginTop: 14 }}>
             <label className="field"><span>Message the team</span><textarea value={reply} onChange={e => setReply(e.target.value)} maxLength={1000} required placeholder="Share an update, question, or decision…" /></label>
-            <button className="btn p" disabled={busy || !reply.trim()}><Icon name="send" size={14} />{busy ? 'Posting…' : 'Post update'}</button>
+            <button className="btn p" disabled={busy || !reply.trim()}><QuorlythGlyph name="send" size={14} />{busy ? 'Posting…' : 'Post update'}</button>
           </form>
         </section>
       </div>

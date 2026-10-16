@@ -32,8 +32,11 @@ export interface CommunityJoinRequest { id: string; cid: string; userId: string;
 export interface Decision { id: string; status: 'approved' | 'declined'; at: number }
 export type VolunteerStatus = 'pending' | 'accepted' | 'declined'
 export interface VolunteerApplication { id: string; ideaId: string; applicantId: string; message?: string; status: VolunteerStatus; at: number; reviewedAt?: number; reviewedBy?: string }
-export interface Project { id: string; ideaId: string; summary: string; status: 'active' | 'completed'; createdBy: string; at: number; updatedAt?: number }
-export interface Milestone { id: string; projectId: string; title: string; description?: string; status: 'todo' | 'in_progress' | 'done'; createdBy: string; at: number; updatedAt?: number }
+export interface Project { id: string; ideaId: string; summary: string; status: 'active' | 'completed'; createdBy: string; at: number; updatedAt?: number; dueAt?: number | null }
+export type MilestonePriority = 'low' | 'normal' | 'high' | 'critical'
+export interface Milestone { id: string; projectId: string; title: string; description?: string; status: 'todo' | 'in_progress' | 'done'; createdBy: string; at: number; updatedAt?: number; priority?: MilestonePriority; dueAt?: number | null; assigneeId?: string | null; acceptanceCriteria?: string; blocked?: boolean; blockedNote?: string }
+export type MilestoneDetails = Partial<Pick<Milestone, 'priority' | 'dueAt' | 'assigneeId' | 'acceptanceCriteria' | 'blocked' | 'blockedNote'>>
+export type MilestonePatch = Partial<Pick<Milestone, 'title' | 'description' | 'status' | 'priority' | 'dueAt' | 'assigneeId' | 'acceptanceCriteria' | 'blocked' | 'blockedNote'>>
 export interface SpaceSettings { name?: string; tag?: string; appr?: boolean; ann?: string; wo?: number; wf?: number; wr?: number }
 export interface ChatMsg { r: 'u' | 'a'; t: string; btns?: { a: string; id?: string; l: string }[] }
 export interface Chat { id: string; title: string; pj?: string; at: number; upd: number; pin?: boolean; color?: string; arch?: boolean; unread?: boolean; msgs: ChatMsg[] }

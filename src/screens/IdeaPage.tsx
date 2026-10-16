@@ -65,7 +65,25 @@ function Inner() {
     setMentionOpen(false)
     window.setTimeout(() => document.getElementById('idea-discussion-reply')?.focus(), 0)
   }
-  const matchingCommunityMembers = communityMemberIds
+  const communityIdeaIds = new Set(a.data.ideas.filter(item => item.cid === idea.cid).map(item => item.id))
+  const communityParticipantIds = [...new Set([
+    ...communityMemberIds,
+    ideaCommunity?.ownerId,
+    ideaCommunity?.createdBy,
+    idea.authorId,
+    ...Object.entries(a.data.members)
+      .filter(([, memberships]) => !!memberships?.[idea.cid])
+      .map(([userId]) => userId),
+    ...a.data.ideas.filter(item => item.cid === idea.cid).map(item => item.authorId),
+    ...comments.map(comment => comment.authorId),
+    ...a.data.volunteers
+      .filter(application => communityIdeaIds.has(application.ideaId) && application.status === 'accepted')
+      .map(application => application.applicantId),
+    ...Object.entries(a.data.votes)
+      .filter(([, votes]) => [...communityIdeaIds].some(communityIdeaId => !!votes?.[communityIdeaId]))
+      .map(([userId]) => userId),
+  ].filter((userId): userId is string => !!userId))]
+  const matchingCommunityMembers = communityParticipantIds
     .filter(uid => uid !== a.me?.id)
     .map(uid => ({ id: uid, name: a.nm(uid) }))
     .filter(person => person.name && person.name.toLowerCase().includes(mentionQuery.trim().toLowerCase()))

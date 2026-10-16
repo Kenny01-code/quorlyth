@@ -1936,3 +1936,130 @@ body > .qbot-drawer-portal.bot .cmx .danger:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .chart-heading-animated::before { animation: none; transform: translateX(115%); }
 }
+
+
+/* QUORLYTH EXECUTION SYSTEM — bespoke glyphs, milestones and collaboration workspace */
+.quorlyth-glyph { display:inline-block; flex:0 0 auto; vertical-align:middle; opacity:.92; }
+.ql-eyebrow { margin:0; font-size:9px; letter-spacing:.2em; line-height:1.45; text-transform:uppercase; color:rgba(255,255,255,.43); }
+.ql-muted { margin:0; color:rgba(255,255,255,.48); font-size:12px; line-height:1.55; }
+.ql-empty-mark,
+.ql-section-mark { display:grid; place-items:center; flex:0 0 auto; width:44px; height:44px; border:1px solid rgba(255,255,255,.15); border-radius:15px; color:rgba(255,255,255,.9); background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.018)); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+.ql-workspace-empty,
+.ql-project-empty { display:grid; justify-items:center; gap:11px; padding:clamp(26px,5vw,52px) 20px; text-align:center; }
+.ql-workspace-empty h3,
+.ql-project-empty h3 { margin:0; font-size:20px; font-weight:400; letter-spacing:-.025em; }
+.ql-workspace-empty > p:not(.ql-eyebrow),
+.ql-project-empty > p { max-width:500px; margin:0; }
+.ql-workspace-empty .ql-empty-mark,
+.ql-project-empty .ql-empty-mark { width:58px; height:58px; margin-bottom:3px; border-radius:19px; }
+.ql-project-deadline { display:flex; align-items:center; gap:7px; margin-top:11px; font-size:12px; }
+.ql-project-progress { margin:16px 0 18px; padding:17px 18px 14px; border:1px solid rgba(255,255,255,.1); border-radius:17px; background:linear-gradient(140deg,rgba(255,255,255,.045),rgba(255,255,255,.012)); }
+.ql-project-progress__header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.ql-project-progress__header h4 { margin-top:4px; font-size:14px; font-weight:450; }
+.ql-project-progress__header > strong { font-size:20px; font-weight:300; letter-spacing:-.05em; }
+.ql-project-progress__track { width:100%; height:4px; margin-top:12px; overflow:hidden; border-radius:999px; background:rgba(255,255,255,.09); }
+.ql-project-progress__track > i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,rgba(255,255,255,.36),rgba(255,255,255,.95)); box-shadow:0 0 14px rgba(255,255,255,.18); transition:width .35s ease; }
+.ql-project-updated { display:flex; align-items:center; gap:7px; margin-top:10px; }
+.ql-workspace-progress { margin-top:20px; }
+.ql-workspace-progress__header { display:flex; align-items:center; justify-content:space-between; gap:10px; color:rgba(255,255,255,.54); font-size:12px; }
+.ql-workspace-progress__header strong { color:rgba(255,255,255,.92); font-weight:450; }
+.ql-milestone-board { min-width:0; padding:0; }
+.ql-milestone-overview { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:19px; border:1px solid rgba(255,255,255,.115); border-radius:19px; background:radial-gradient(ellipse at 0 0,rgba(255,255,255,.075),transparent 62%),linear-gradient(135deg,rgba(255,255,255,.035),rgba(255,255,255,.012)); }
+.ql-milestone-overview__lead { display:flex; align-items:center; gap:13px; min-width:0; }
+.ql-milestone-overview__lead h3 { margin-top:2px; font-size:21px; line-height:1.2; font-weight:350; letter-spacing:-.04em; }
+.ql-milestone-overview__lead .ql-muted { margin-top:5px; }
+.ql-milestone-metrics { display:flex; gap:clamp(12px,2vw,25px); align-items:center; }
+.ql-milestone-metrics > div { display:grid; gap:5px; min-width:38px; text-align:right; }
+.ql-milestone-metrics span { color:rgba(255,255,255,.42); font-size:10px; white-space:nowrap; }
+.ql-milestone-metrics strong { font-size:20px; font-weight:300; letter-spacing:-.045em; }
+.ql-milestone-metrics strong.is-alert { color:#fff; text-shadow:0 0 12px rgba(255,255,255,.2); }
+.ql-milestone-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:14px 0 16px; min-width:0; }
+.ql-milestone-filters { display:flex; align-items:center; gap:5px; min-width:0; max-width:100%; padding:4px; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.23) rgba(255,255,255,.025); }
+.ql-filter { display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; gap:7px; min-height:33px; padding:7px 10px; border:1px solid transparent; border-radius:10px; color:rgba(255,255,255,.49); background:transparent; font:inherit; font-size:11px; cursor:pointer; white-space:nowrap; transition:background .2s,border-color .2s,color .2s; }
+.ql-filter:hover { color:rgba(255,255,255,.88); background:rgba(255,255,255,.045); }
+.ql-filter.is-active { color:#fff; border-color:rgba(255,255,255,.13); background:rgba(255,255,255,.085); box-shadow:inset 0 1px 0 rgba(255,255,255,.045); }
+.ql-filter > span { display:grid; place-items:center; min-width:17px; height:17px; padding:0 4px; border-radius:6px; background:rgba(255,255,255,.1); font-size:10px; }
+.ql-primary-action,
+.ql-quiet-action { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:35px; padding:8px 12px; border-radius:11px; font:inherit; font-size:11px; font-weight:500; cursor:pointer; white-space:nowrap; transition:background .18s,border-color .18s,transform .18s; }
+.ql-primary-action { flex:0 0 auto; border:1px solid rgba(255,255,255,.22); color:#080808; background:linear-gradient(140deg,#fff,#cfcfcf); box-shadow:0 5px 22px rgba(255,255,255,.055),inset 0 1px 0 rgba(255,255,255,.85); }
+.ql-primary-action:hover:not(:disabled) { background:#fff; transform:translateY(-1px); }
+.ql-primary-action:disabled,.ql-quiet-action:disabled { opacity:.38; cursor:not-allowed; }
+.ql-quiet-action { border:1px solid rgba(255,255,255,.105); color:rgba(255,255,255,.72); background:rgba(255,255,255,.025); }
+.ql-quiet-action:hover:not(:disabled) { border-color:rgba(255,255,255,.22); color:#fff; background:rgba(255,255,255,.07); }
+.ql-milestone-editor { display:grid; gap:13px; margin-bottom:17px; padding:17px; border:1px solid rgba(255,255,255,.15); border-radius:18px; background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018)); animation:ql-editor-enter .22s ease-out both; }
+.ql-milestone-editor__head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,.08); }
+.ql-milestone-editor__head h4 { margin-top:3px; font-size:18px; font-weight:350; letter-spacing:-.03em; }
+.ql-field { display:grid; gap:7px; min-width:0; color:rgba(255,255,255,.77); font-size:11px; }
+.ql-field > span { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.ql-field small { color:rgba(255,255,255,.38); font-size:10px; font-weight:400; }
+.ql-field input,.ql-field textarea,.ql-field select { box-sizing:border-box; display:block; width:100%; min-width:0; color:#f6f6f6; background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px 11px; outline:none; font:inherit; font-size:12px; line-height:1.5; }
+.ql-field select { color-scheme:dark; }
+.ql-field textarea { resize:vertical; min-height:58px; }
+.ql-field input:focus,.ql-field textarea:focus,.ql-field select:focus { border-color:rgba(255,255,255,.4); box-shadow:0 0 0 3px rgba(255,255,255,.045); }
+.ql-field-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.ql-blocker-editor { display:grid; gap:11px; padding:12px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(255,255,255,.018); }
+.ql-check-field { display:flex; align-items:flex-start; gap:10px; cursor:pointer; }
+.ql-check-field input { flex:0 0 auto; width:15px; height:15px; margin-top:2px; accent-color:#eee; }
+.ql-check-field span { display:grid; gap:4px; }
+.ql-check-field strong { font-size:12px; font-weight:500; }
+.ql-check-field small { color:rgba(255,255,255,.46); font-size:11px; line-height:1.45; }
+.ql-milestone-editor__footer { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,.08); }
+.ql-milestone-editor__footer > div { display:flex; gap:7px; align-items:center; }
+.ql-milestone-timeline { display:grid; gap:0; }
+.ql-milestone-card { display:grid; grid-template-columns:26px minmax(0,1fr); gap:12px; min-width:0; }
+.ql-milestone-marker { position:relative; display:flex; flex-direction:column; align-items:center; }
+.ql-milestone-marker > span { z-index:1; display:grid; place-items:center; width:27px; height:27px; border:1px solid rgba(255,255,255,.17); border-radius:9px; color:rgba(255,255,255,.88); background:#0a0a0a; box-shadow:0 0 0 4px #080808; }
+.ql-milestone-marker > i { position:absolute; top:28px; bottom:0; width:1px; background:linear-gradient(rgba(255,255,255,.17),rgba(255,255,255,.025)); }
+.ql-milestone-card__body { min-width:0; margin-bottom:13px; padding:15px; border:1px solid rgba(255,255,255,.095); border-radius:15px; background:linear-gradient(145deg,rgba(255,255,255,.033),rgba(255,255,255,.012)); transition:border-color .2s,background .2s; }
+.ql-milestone-card:hover .ql-milestone-card__body { border-color:rgba(255,255,255,.17); background:linear-gradient(145deg,rgba(255,255,255,.047),rgba(255,255,255,.016)); }
+.ql-milestone-card.is-blocked .ql-milestone-card__body { border-color:rgba(255,255,255,.22); }
+.ql-milestone-card.is-overdue:not(.is-blocked) .ql-milestone-card__body { border-color:rgba(255,255,255,.19); }
+.ql-milestone-card__top { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:9px; }
+.ql-milestone-card__title { min-width:0; }
+.ql-milestone-card__title h4 { margin-top:4px; font-size:15px; line-height:1.45; font-weight:480; letter-spacing:-.018em; overflow-wrap:anywhere; }
+.ql-status-chip,.ql-priority-chip,.ql-meta-chip,.ql-assignee-chip { display:inline-flex; align-items:center; gap:6px; max-width:100%; min-height:25px; padding:5px 8px; border:1px solid rgba(255,255,255,.1); border-radius:8px; color:rgba(255,255,255,.64); background:rgba(255,255,255,.028); font-size:10px; line-height:1.35; }
+.ql-status-chip { flex:0 0 auto; }
+.ql-status-chip.status-done { color:rgba(255,255,255,.92); border-color:rgba(255,255,255,.18); background:rgba(255,255,255,.07); }
+.ql-priority-chip.priority-critical,.ql-priority-chip.priority-high { color:rgba(255,255,255,.92); border-color:rgba(255,255,255,.2); background:rgba(255,255,255,.065); }
+.ql-milestone-description { margin-top:8px; color:rgba(255,255,255,.55); font-size:12px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ql-milestone-tags { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.ql-meta-chip.is-alert { border-color:rgba(255,255,255,.28); color:#fff; background:rgba(255,255,255,.075); }
+.ql-assignee-chip { min-width:0; padding:3px 8px 3px 4px; }
+.ql-assignee-chip > span { overflow-wrap:anywhere; }
+.ql-acceptance,.ql-blocker-note { display:flex; align-items:flex-start; gap:9px; margin-top:12px; padding:10px 11px; border:1px solid rgba(255,255,255,.085); border-radius:11px; background:rgba(255,255,255,.02); }
+.ql-acceptance > .quorlyth-glyph,.ql-blocker-note > .quorlyth-glyph { margin-top:2px; color:rgba(255,255,255,.65); }
+.ql-acceptance > div,.ql-blocker-note > div { min-width:0; }
+.ql-acceptance strong,.ql-blocker-note strong { font-size:11px; font-weight:500; color:rgba(255,255,255,.83); }
+.ql-acceptance p,.ql-blocker-note p { margin-top:4px; color:rgba(255,255,255,.51); font-size:11px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ql-blocker-note { border-color:rgba(255,255,255,.18); background:rgba(255,255,255,.045); }
+.ql-milestone-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:13px; padding-top:11px; border-top:1px solid rgba(255,255,255,.065); }
+.ql-milestone-actions .ql-primary-action,.ql-milestone-actions .ql-quiet-action { min-height:31px; padding:6px 9px; font-size:10px; }
+.ql-milestone-empty { display:grid; justify-items:center; gap:9px; padding:30px 17px; border:1px dashed rgba(255,255,255,.15); border-radius:15px; text-align:center; background:rgba(255,255,255,.013); }
+.ql-milestone-empty > span { display:grid; place-items:center; width:44px; height:44px; border-radius:14px; border:1px solid rgba(255,255,255,.13); background:rgba(255,255,255,.03); }
+.ql-milestone-empty h4 { font-size:15px; font-weight:450; }
+.ql-milestone-empty p { max-width:420px; color:rgba(255,255,255,.48); font-size:11px; line-height:1.6; }
+.ql-board-closed { display:flex; align-items:center; gap:7px; padding:11px 0 0; }
+@keyframes ql-editor-enter { from { opacity:0; transform:translateY(-4px) } to { opacity:1; transform:translateY(0) } }
+@media(max-width:700px) {
+  .ql-milestone-overview { align-items:flex-start; flex-direction:column; gap:15px; padding:15px; }
+  .ql-milestone-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; gap:8px; padding-top:11px; border-top:1px solid rgba(255,255,255,.08); }
+  .ql-milestone-metrics > div { text-align:left; }
+  .ql-milestone-toolbar { align-items:stretch; flex-direction:column; }
+  .ql-milestone-toolbar .ql-primary-action { align-self:flex-start; }
+  .ql-milestone-filters { max-width:calc(100vw - 34px); }
+  .ql-field-grid { grid-template-columns:minmax(0,1fr); gap:11px; }
+  .ql-milestone-editor { padding:12px; }
+  .ql-milestone-editor__footer { align-items:flex-start; flex-direction:column; }
+  .ql-milestone-editor__footer > div { width:100%; }
+  .ql-milestone-editor__footer > div button { flex:1; }
+  .ql-milestone-card { grid-template-columns:22px minmax(0,1fr); gap:8px; }
+  .ql-milestone-marker > span { width:23px; height:23px; border-radius:8px; }
+  .ql-milestone-marker > i { top:24px; }
+  .ql-milestone-card__body { padding:12px; }
+  .ql-milestone-card__top { align-items:flex-start; }
+  .ql-milestone-card__top > .ql-status-chip { font-size:9px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .ql-primary-action,.ql-quiet-action,.ql-filter,.ql-milestone-card__body,.ql-project-progress__track > i { transition:none; }
+  .ql-milestone-editor { animation:none; }
+}
