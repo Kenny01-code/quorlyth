@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
-import { Av, Empty, Head } from '../components/ui'
+import { Av, Head } from '../components/ui'
 import { MilestoneBoard } from '../components/MilestoneBoard'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
@@ -123,7 +123,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
           </div>
           <MilestoneBoard idea={idea} projectId={project.id} projectStatus={project.status} milestones={milestones} teamMemberIds={teamMemberIds} canCollaborate={canCollaborate} />
           {canManage && <div className="acts" style={{ marginTop: 14 }}>
-            <button type="button" className="btn" disabled={busy === 'project-status'} onClick={() => void toggleProjectStatus()}><Icon name={project.status === 'completed' ? 'rotate' : 'approve'} size={15} />{project.status === 'completed' ? 'Reopen project' : 'Mark project complete'}</button>
+            <button type="button" className="btn" disabled={busy === 'project-status'} onClick={() => void toggleProjectStatus()}><QuorlythGlyph name={project.status === 'completed' ? 'progress' : 'complete'} size={15} />{project.status === 'completed' ? 'Reopen project' : 'Mark project complete'}</button>
           </div>}
         </>
       )}
