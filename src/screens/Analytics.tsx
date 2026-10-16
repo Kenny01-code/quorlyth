@@ -212,7 +212,7 @@ function Inner() {
       {open && (
         <div id="csd" onClick={e => e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('csd-b') ? setOpen(null) : null}>
           <div className="csd-b" />
-          <div className="csd-p glass" role="dialog" aria-modal="true" aria-label={"Chart settings for " + titles[open]}>
+          <div className="csd-p glass" role="dialog" aria-modal="true" aria-label={"Chart settings for " + TITLES[open]}>
             <div className="csd-h"><div><p className="dim">Chart settings</p><h3 style={{ fontSize: 22, fontWeight: 300 }}>{TITLES[open]}</h3></div><button className="chip" onClick={() => setOpen(null)}>Done</button></div>
             <div className="csd-pv"><p className="dim" style={{ marginBottom: 8 }}>Live preview</p>{body(open)}</div>
             <div className="csd-c">
@@ -475,7 +475,7 @@ function MemberAnalyticsView() {
       {open && (
         <div id="csd" onClick={e => e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('csd-b') ? setOpen(null) : null}>
           <div className="csd-b" />
-          <div className="csd-p glass" role="dialog" aria-label="Chart settings">
+          <div className="csd-p glass" role="dialog" aria-modal="true" aria-label={"Chart settings for " + titles[open]}>
             <div className="csd-h"><div><p className="dim">Chart settings</p><h3 style={{ fontSize: 22, fontWeight: 300 }}>{titles[open]}</h3></div><button className="chip" onClick={() => setOpen(null)}>Done</button></div>
             <div className="csd-pv"><p className="dim" style={{ marginBottom: 8 }}>Live preview</p>{body(open)}</div>
             <div className="csd-c">
