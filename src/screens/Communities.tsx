@@ -38,7 +38,37 @@ function List() {
   const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone', joinApproval: false }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const creatorId = (community: Community) => community.ownerId || community.createdBy || (a.owner ? a.me?.id || '' : '')
-  const members = (id: string) => { const community = data.communities.find(x => x.id === id); const creator = community ? creatorId(community) : ''; return Object.keys(data.members).filter(u => data.members[u]?.[id] && u !== creator).length }
+  const [scopedMemberIds, setScopedMemberIds] = useState<Record<string, string[]>>({})
+  useEffect(() => {
+    let active = true
+    const store = a.backend?.store
+    const managedIds = data.communities.filter(community => a.canManageCommunity(community.id)).map(community => community.id)
+    if (!store || !a.me || managedIds.length === 0) {
+      setScopedMemberIds({})
+      return () => { active = false }
+    }
+    void Promise.all(managedIds.map(async cid => {
+      try {
+        return { cid, ids: await store.listCommunityMembers(cid) }
+      } catch (error) {
+        console.warn('Could not load scoped member count for community:', cid, error)
+        return null
+      }
+    })).then(results => {
+      if (!active) return
+      setScopedMemberIds(Object.fromEntries(results.filter((result): result is { cid: string; ids: string[] } => !!result).map(result => [result.cid, result.ids])))
+    })
+    return () => { active = false }
+  }, [a.backend, a.me?.id, a.platformAdmin, data.communities])
+
+  const members = (id: string) => {
+    const community = data.communities.find(x => x.id === id)
+    const creator = community ? creatorId(community) : ''
+    if (Object.prototype.hasOwnProperty.call(scopedMemberIds, id)) {
+      return scopedMemberIds[id].filter(userId => userId !== creator).length
+    }
+    return Object.keys(data.members).filter(userId => data.members[userId]?.[id] && userId !== creator).length
+  }
   const visible = data.communities.filter(c => c.vis !== 'unlisted' || a.canManageCommunity(c.id) || a.joined(c.id))
   const shown = visible.filter(c => filter === 'owned' ? a.ownsCommunity(c.id) : filter === 'joined' ? a.joined(c.id) && !a.ownsCommunity(c.id) : !a.ownsCommunity(c.id) && !a.joined(c.id) && c.vis !== 'unlisted')
   return (
