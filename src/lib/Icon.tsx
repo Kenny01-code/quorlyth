@@ -1,15 +1,91 @@
-import { ICONS } from './icons'
+import { QuorlythGlyph, QuorlythGlyphName } from '../components/QuorlythGlyph'
+
+/**
+ * Legacy feature names remain supported, but every rendered symbol now comes
+ * from Quorlyth's own glyph family instead of an external/generic icon set.
+ */
+const GLYPH_FOR_ICON: Record<string, QuorlythGlyphName> = {
+  'message': 'message',
+  'share': 'share',
+  'lock': 'lock',
+  'arrow-up': 'arrow-up',
+  'arrow-up-right': 'arrow-up-right',
+  'arrow-left': 'back',
+  'arrow': 'arrow',
+  'check': 'check',
+  'x': 'close',
+  'minimize': 'minimize',
+  'users': 'team',
+  'community': 'community',
+  'idea': 'idea',
+  'collab': 'workspace',
+  'surface': 'surface',
+  'spark': 'brand',
+  'rank': 'progress',
+  'select': 'complete',
+  'promote': 'open',
+  'audience': 'team',
+  'member': 'person',
+  'contribute': 'add',
+  'approve': 'complete',
+  'hold': 'hold',
+  'more': 'menu',
+  'decline': 'close',
+  'queue': 'review',
+  'insight': 'progress',
+  'home': 'brand',
+  'discuss': 'message',
+  'support': 'contribute',
+  'private': 'lock',
+  'status': 'due',
+  'publish': 'send',
+  'invite': 'invite',
+  'search': 'search',
+  'settings': 'settings',
+  'mail': 'mail',
+  'eye': 'eye',
+  'alert': 'alert',
+  'bell': 'bell',
+  'save': 'save',
+  'edit': 'edit',
+  'camera': 'camera',
+  'tag': 'tag',
+  'rotate': 'rotate',
+  'keys': 'keys',
+  'db': 'database',
+  'link': 'link',
+  'pin': 'pin',
+  'eye2': 'eye',
+  'phone': 'phone',
+  'phone-off': 'phone-off',
+  'video': 'video',
+  'mic-off': 'mic-off',
+  'camera-off': 'camera-off',
+  'mic': 'mic',
+  'voice': 'voice',
+  'send': 'send',
+  'wave': 'wave',
+  'expand': 'expand',
+  'shrink': 'shrink',
+  'menu': 'menu',
+  'plus': 'add',
+  'folder': 'folder',
+  'book': 'book',
+  'star': 'star',
+  'trash': 'trash',
+  'panel': 'panel',
+  'copy': 'copy',
+  'redo': 'redo',
+  'sliders': 'sliders',
+  'stage': 'stage',
+  'live': 'live',
+  'stop': 'stop',
+  'palette': 'palette',
+}
 
 export function Icon({ name, size = 20 }: { name: string; size?: number }) {
-  return (
-    <svg
-      className="ic"
-      style={{ ['--s' as any]: size + 'px' }}
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: ICONS[name] || ICONS.spark }}
-    />
-  )
+  const glyph = GLYPH_FOR_ICON[name] || 'brand'
+  return <QuorlythGlyph name={glyph} size={size} className="ic" />
 }
 
 export function GoogleG({ size = 18 }: { size?: number }) {
