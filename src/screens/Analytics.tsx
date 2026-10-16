@@ -175,7 +175,7 @@ function Inner() {
     d.setDrawColor(200, 200, 200); d.setLineWidth(0.2); for (let g = 0; g <= 4; g++) { const gy = y + (chh * g) / 4; d.line(cx, gy, cx + cw, gy); d.setFontSize(7); d.setTextColor(120, 120, 120); d.text(String(Math.round(mx * (1 - g / 4))), cx - 2, gy + 1, { align: 'right' }) }
     d.setDrawColor(0, 0, 0); d.setLineWidth(0.5); for (let i = 1; i < n; i++) d.line(cx + ((i - 1) / (n - 1)) * cw, y + chh - (dd.v[i - 1] / mx) * chh, cx + (i / (n - 1)) * cw, y + chh - (dd.v[i] / mx) * chh)
     d.setFontSize(7); d.setTextColor(120, 120, 120); ;[0, Math.floor((n - 1) / 2), n - 1].forEach(i => d.text(fd(dd.d[i]), cx + (i / (n - 1 || 1)) * cw, y + chh + 6, { align: i === 0 ? 'left' : i === n - 1 ? 'right' : 'center' }))
-    y += chh + 14; H1('Ideas by community')
+    y += chh + 14; H1(cs.bar.m === 'backs' ? 'Backings by community' : cs.bar.m === 'members' ? 'Members by community' : cs.bar.m === 'pub' ? 'Posts prepared to share by community' : 'Ideas by community')
     const rows = barRows(), bm = Math.max(1, ...rows.map(r => r.v))
     rows.forEach(r => { ck(9); d.setFontSize(9); d.setTextColor(0, 0, 0); d.text(T(r.n, 24), M, y + 4); d.setFillColor(0, 0, 0); d.rect(M + 50, y, Math.max((r.v / bm) * 100, 0.8), 5, 'F'); d.text(String(r.v), M + 50 + Math.max((r.v / bm) * 100, 0.8) + 3, y + 4); y += 9 })
     y += 6; H1('Idea status breakdown')
