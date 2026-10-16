@@ -69,10 +69,37 @@ begin
       end if;
     end if;
     return new;
-  end if;
 
   -- A reaction is relevant to the author of the message being reacted to.
-  elsif new.path ~ '^chatMessageReactions/[^/]+$'
+  elsif new.path ~ '^chatMessageReactions/[^/]+
+    and (tg_op = 'INSERT' or old.data->>'reaction' is distinct from new.data->>'reaction') then
+    v_reaction := nullif(trim(new.data->>'reaction'), '');
+    if v_reaction is null then return new; end if;
+    v_message_id := new.data->>'messageId';
+    select m.data into v_message from public.docs m where m.path = 'messages/' || v_message_id;
+    if v_message is null then return new; end if;
+    v_actor := new.data->>'userId';
+    select coalesce(p.data->>'name', p.data->>'authName', 'A member')
+      into v_actor_name from public.docs p where p.path = 'profiles/' || v_actor;
+    v_actor_name := coalesce(v_actor_name, 'A member');
+    perform private.emit_quorlyth_notification(
+      v_message->>'senderId', 'message-reaction:' || new.path || ':' || txid_current(),
+      'message', 'message', v_actor_name || ' reacted to your message ' || v_reaction,
+      split_part(new.path, '/', 2), coalesce(new.data->>'conversationId', v_message->>'conversationId'), v_at
+    );
+  end if;
+
+  return new;
+end;
+$function$;
+
+revoke all on function private.notify_quorlyth_call_reaction() from public, anon, authenticated, service_role;
+
+drop trigger if exists docs_notify_quorlyth_call_reaction on public.docs;
+create trigger docs_notify_quorlyth_call_reaction
+after insert or update on public.docs
+for each row execute function private.notify_quorlyth_call_reaction();
+
     and (tg_op = 'INSERT' or old.data->>'reaction' is distinct from new.data->>'reaction') then
     v_reaction := nullif(trim(new.data->>'reaction'), '');
     if v_reaction is null then return new; end if;
