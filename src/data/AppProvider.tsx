@@ -460,7 +460,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       join: (cid, on) => w(() => up('members/' + me!.id, { c: { [cid]: on } }), on ? 'You joined' : 'You left'),
       postIdea: i => w(() => st!.create('ideas/' + slug(), { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me!.id, tags: i.tags || [], at: Date.now() }), 'Idea shared'),
       postIdeaDetailed,
-      vote: id => w(() => up('votes/' + me!.id, { ideas: { [id]: !data.votes[me!.id]?.[id] } })),
+      vote: id => {
+        const idea = data.ideas.find(item => item.id === id)
+        if (!me) { toast('Sign in before backing an idea.'); return Promise.resolve(false) }
+        if (!idea) { toast('This idea is no longer available.'); return Promise.resolve(false) }
+        const community = data.communities.find(item => item.id === idea.cid)
+        if (!community) { toast('The idea community is still loading. Try again.'); return Promise.resolve(false) }
+        if (community.arch) { toast('Archived communities are read-only; backing is disabled.'); return Promise.resolve(false) }
+        return w(() => up('votes/' + me.id, { ideas: { [id]: !data.votes[me.id]?.[id] } }))
+      },
       addComment: (id, text, parentId, mentionedUserIds = []) => w(async () => {
         if (!me) throw new Error('Sign in before replying to a discussion.')
         const idea = data.ideas.find(item => item.id === id)
