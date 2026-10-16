@@ -18,10 +18,13 @@ function CollaborationList() {
   const items = a.data.ideas.filter(idea => {
     const accepted = a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === myId && v.status === 'accepted')
     const hasAcceptedTeam = a.data.volunteers.some(v => v.ideaId === idea.id && v.status === 'accepted')
+    const isIdeaAuthor = idea.authorId === myId
     const projectExists = !!a.data.projects[idea.id]
-    // Keep accepted collaborations visible even if an older approval never
-    // created its project record; the owner can finish setup from the workspace.
-    return accepted || (a.canManageCommunity(idea.cid) && (projectExists || hasAcceptedTeam))
+    // Accepted collaborators, idea creators, and community managers need to be
+    // able to find a workspace even if an older approval left setup incomplete.
+    return accepted
+      || (isIdeaAuthor && (projectExists || hasAcceptedTeam))
+      || (a.canManageCommunity(idea.cid) && (projectExists || hasAcceptedTeam))
   }).sort((x, y) => (a.data.projects[y.id]?.updatedAt || a.data.projects[y.id]?.at || 0) - (a.data.projects[x.id]?.updatedAt || a.data.projects[x.id]?.at || 0))
 
   return <>
@@ -76,7 +79,8 @@ function Workspace() {
   const canManage = !!idea && a.canManageCommunity(idea.cid)
   const acceptedApplications = a.data.volunteers.filter(v => v.ideaId === id && v.status === 'accepted')
   const isAccepted = !!a.me && acceptedApplications.some(v => v.applicantId === a.me?.id)
-  const canAccess = canManage || isAccepted
+  const isIdeaAuthor = !!a.me && idea?.authorId === a.me.id
+  const canAccess = canManage || isIdeaAuthor || isAccepted
   const milestones = a.data.milestones.filter(m => m.projectId === id).sort((x, y) => x.at - y.at)
   const completed = milestones.filter(m => m.status === 'done').length
   const progress = milestones.length ? Math.round(completed / milestones.length * 100) : 0
@@ -101,7 +105,7 @@ function Workspace() {
         <h3 style={{ fontSize: 20, marginTop: 14 }}>{canManage ? 'Finish setting up this workspace' : 'Your workspace is being set up'}</h3>
         <p className="mut" style={{ marginTop: 8 }}>{canManage
           ? 'This collaboration was accepted, but its project record is missing. Create the project brief here to open the shared milestones and team discussion.'
-          : 'Your application is accepted, so you do not need to apply again. The project workspace has not been initialized yet. The community owner can open this same page and finish setup.'}</p>
+          : 'The workspace is not initialized yet. The community manager can open this page and finish setup; you do not need to apply again if your application was already accepted.'}</p>
         {canManage ? <form className="reason" style={{ marginTop: 16 }} onSubmit={async event => {
           event.preventDefault()
           if (!workspaceSummary.trim()) return a.toast('Add a short project brief first.')
@@ -213,7 +217,7 @@ function Workspace() {
               <button className="chip" onClick={() => nav('/me/' + app.applicantId)}>Profile</button>
             </div>)}
           </div>
-          <p className="dim" style={{ marginTop: 14, fontSize: 12 }}>Only accepted collaborators and the community owner can access this space.</p>
+          <p className="dim" style={{ marginTop: 14, fontSize: 12 }}>The idea creator, community manager, and accepted collaborators can access this space.</p>
         </section>
         <section className="glass pad">
           <h3 style={{ fontSize: 19 }}>Team discussion</h3>
