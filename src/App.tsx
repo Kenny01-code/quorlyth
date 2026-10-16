@@ -69,6 +69,7 @@ export default function App() {
   const ownDecision = a.me && a.data.decisions[a.me.id]
   const accessSent = !!(!a.owner && ownRequest && (!ownDecision || ownDecision.at < ownRequest.at))
   const known = useRef<Set<string> | null>(null)
+  const knownMessages = useRef<Set<string> | null>(null)
   const g = useRef(0)
 
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
@@ -98,7 +99,7 @@ export default function App() {
   useEffect(() => {
     if (!a.ready) return
     if (known.current === null) {
-      const t = setTimeout(() => (known.current = new Set(notifs.map(n => n.key)), 3000)
+      const t = setTimeout(() => { known.current = new Set(notifs.map(n => n.key)) }, 3000)
       return () => clearTimeout(t)
     }
     const fresh = notifs.filter(n => n.unread && !known.current!.has(n.key))
@@ -129,7 +130,12 @@ export default function App() {
     }, e => console.warn('Could not load muted chat preferences', e))
     const offMessages = store.subscribe('messages', docs => {
       const all = docs.map(d => ({ id: d.id, ...d.data })).filter(m => typeof m.conversationId === 'string' && typeof m.senderId === 'string' && typeof m.text === 'string')
-      const incoming = all.filter(m => m.senderId !== uid && conversations.some(c => c.id === m.conversationId) && !mutedConversationIds.has(m.conversationId))
+      if (knownMessages.current === null) {
+        knownMessages.current = new Set(all.map(m => m.id))
+        return
+      }
+      const incoming = all.filter(m => m.senderId !== uid && !knownMessages.current!.has(m.id) && conversations.some(c => c.id === m.conversationId) && !mutedConversationIds.has(m.conversationId))
+      for (const message of all) knownMessages.current.add(message.id)
       if (!incoming.length) return
       const latest = incoming[incoming.length - 1]
       const convo = conversations.find(c => c.id === latest.conversationId)
