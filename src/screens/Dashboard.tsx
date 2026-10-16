@@ -97,7 +97,7 @@ function Inner() {
         {stats.map(([l, v]) => <div key={l} className="glass pad"><p className="dim">{l}</p><Num n={v} /></div>)}
       </div>
       <div className="grid g32">
-      <div className="glass pad"><div className="head" style={{ marginBottom: 10 }}><div><h3>Ideas over time</h3><p className="dim">Last 30 days</p></div>{(owner || communityOwner) && <button className="chip" onClick={() => nav('/analytics')}>Open analytics</button>}</div>
+      <div className="glass pad"><div className="head" style={{ marginBottom: 10 }}><div className="chart-heading-animated"><h3>Ideas over time</h3><p className="dim">Last 30 days</p></div>{(owner || communityOwner) && <button className="chip" onClick={() => nav('/analytics')}>Open analytics</button>}</div>
         {data.ideas.length ? <div className="chs"><AreaChart dd={dd} o={{ sm: true, pts: false, lab: false, avg: false, ma: false, grid: true }} /></div> : <Empty icon="insight" title="No ideas yet" text="Ideas will appear here as members share them." />}</div>
       <div className="glass pad">
         <h3 style={{ marginBottom: 8 }}>{ranked.length ? 'Top picks from QuorlythBot' : 'Latest ideas'}</h3>

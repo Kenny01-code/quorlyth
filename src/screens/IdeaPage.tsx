@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
@@ -28,7 +28,23 @@ function Inner() {
   const [applying, setApplying] = useState(false)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
+  const [mentionOpen, setMentionOpen] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionStart, setMentionStart] = useState(0)
+  const [communityMemberIds, setCommunityMemberIds] = useState<string[]>([])
+  const [mentionLoading, setMentionLoading] = useState(false)
   const idea = a.data.ideas.find(i => i.id === id)
+  useEffect(() => {
+    if (!mentionOpen || !idea || !a.backend) return
+    let active = true
+    setCommunityMemberIds([])
+    setMentionLoading(true)
+    a.backend.store.listCommunityMembers(idea.cid)
+      .then(ids => { if (active) setCommunityMemberIds(ids) })
+      .catch(error => { if (active) { setCommunityMemberIds([]); console.warn('Could not load community members for mentions:', error) } })
+      .finally(() => { if (active) setMentionLoading(false) })
+    return () => { active = false }
+  }, [mentionOpen, idea?.cid, a.backend])
   if (!idea) return <Empty icon="idea" title="This idea is not available" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back to communities</button></Empty>
   const ideaCommunity = a.data.communities.find(c => c.id === idea.cid)
   const archivedCommunity = !!ideaCommunity?.arch
@@ -44,13 +60,38 @@ function Inner() {
     .map(([uid]) => uid)
   const cname = ideaCommunity?.name || 'Community'
   const row = (l: string, v?: number) => v == null ? null : <div style={{ marginTop: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{l}</span><span>{v}</span></div><Bar value={v} /></div>
-  const startReply = (commentId?: string, personId?: string) => {
+  const startReply = (commentId?: string) => {
     setReplyTo(commentId || null)
-    if (personId) {
-      const mention = '@' + a.nm(personId).replace(/^@/, '')
-      setText((current: string) => current.trim() ? current.trimEnd() + ' ' + mention + ' ' : mention + ' ')
-      setMentionedUserIds(current => [...new Set([...current, personId])])
+    setMentionOpen(false)
+    window.setTimeout(() => document.getElementById('idea-discussion-reply')?.focus(), 0)
+  }
+  const matchingCommunityMembers = communityMemberIds
+    .filter(uid => uid !== a.me?.id)
+    .map(uid => ({ id: uid, name: a.nm(uid) }))
+    .filter(person => person.name && person.name.toLowerCase().includes(mentionQuery.trim().toLowerCase()))
+    .sort((first, second) => first.name.localeCompare(second.name))
+    .slice(0, 8)
+  const updateReplyText = (value: string, cursorPosition: number) => {
+    setText(value)
+    setMentionedUserIds(current => current.filter(uid => value.includes('@' + a.nm(uid).replace(/^@/, ''))))
+    const before = value.slice(0, cursorPosition)
+    const match = before.match(/(^|\s)@([^\s@]*)$/)
+    if (!match) {
+      setMentionOpen(false)
+      setMentionQuery('')
+      return
     }
+    setMentionStart(before.length - match[2].length - 1)
+    setMentionQuery(match[2])
+    setMentionOpen(true)
+  }
+  const chooseMention = (userId: string) => {
+    const name = a.nm(userId).replace(/^@/, '').trim()
+    const replacement = '@' + name + ' '
+    setText(current => current.slice(0, mentionStart) + replacement + current.slice(mentionStart + mentionQuery.length + 1))
+    setMentionedUserIds(current => [...new Set([...current, userId])])
+    setMentionOpen(false)
+    setMentionQuery('')
     window.setTimeout(() => document.getElementById('idea-discussion-reply')?.focus(), 0)
   }
   const toggleBacking = async () => {
@@ -74,7 +115,6 @@ function Inner() {
           {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 12, marginTop: 5 }}>Tagged: {comment.mentionedUserIds.map(uid => a.nm(uid)).join(', ')}</p> : null}
           <div className="acts" style={{ marginTop: 7, gap: 8 }}>
             <button className="chip" type="button" onClick={() => startReply(comment.id)}><Icon name="reply" size={13} />Reply</button>
-            <button className="chip" type="button" onClick={() => startReply(comment.id, comment.authorId)}><Icon name="at-sign" size={13} />Reply & tag {a.nm(comment.authorId)}</button>
           </div>
         </div>
       </div>
@@ -114,10 +154,17 @@ function Inner() {
           {r?.score != null && <div className="reason" style={{ marginTop: 26 }}><span className="dim">AI review {r.score}</span><p>{r.reason}</p></div>}
           <h3 style={{ margin: '26px 0 4px' }}>Discussion</h3>
           {comments.length ? topLevelComments.map(comment => renderComment(comment)) : <p className="mut" style={{ padding: '14px 0' }}>No replies yet. Start the conversation.</p>}
-          {replyTo && <div className="chip" style={{ marginTop: 14, display: 'inline-flex', gap: 8 }}>Replying to a specific discussion <button type="button" className="lk" onClick={() => setReplyTo(null)}>Cancel</button></div>}
-          <label className="field" style={{ marginTop: 14 }}><span>{replyTo ? 'Your reply to this discussion' : communityOwner ? 'Reply to this idea as the community owner' : 'Add to the idea'}</span><textarea id="idea-discussion-reply" value={text} maxLength={1000} onChange={e => setText(e.target.value)} rows={3} placeholder={replyTo ? 'Write a thoughtful reply… Use the tag button on any discussion to mention its author.' : 'Share your thoughts…'} /></label>
-          <p className="dim">Use “Reply & tag” under any discussion to reply directly to that person and mention them. Unfinished replies are saved as drafts on this device.</p>
-          <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={postReply}><Icon name={communityOwner ? 'send' : 'collab'} />{replyTo ? 'Post threaded reply' : communityOwner ? 'Reply as owner' : 'Post reply'}</button><button className="chip" onClick={() => { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]) }}>Discard draft</button></div>
+          {replyTo && <div className="chip" style={{ marginTop: 14, display: 'inline-flex', gap: 8 }}>Replying to {a.nm(comments.find(comment => comment.id === replyTo)?.authorId || '')} <button type="button" className="lk" onClick={() => setReplyTo(null)}>Cancel</button></div>}
+          <div className="discussion-reply-compose">
+            <label className="field"><span>Reply</span><textarea id="idea-discussion-reply" value={text} maxLength={1000} onChange={e => updateReplyText(e.target.value, e.currentTarget.selectionStart ?? e.target.value.length)} rows={3} placeholder="Write a reply… Type @ to mention someone in this community." /></label>
+            {mentionOpen && <div className="discussion-mention-menu" role="listbox" aria-label="Community member mentions">
+              {mentionLoading ? <p className="dim discussion-mention-status">Loading community members…</p>
+                : matchingCommunityMembers.length ? matchingCommunityMembers.map(person => <button key={person.id} type="button" role="option" aria-selected="false" className="discussion-mention-option" onMouseDown={event => event.preventDefault()} onClick={() => chooseMention(person.id)}><Av id={person.id} size={28} /><span><strong>{person.name}</strong><small>Member of {cname}</small></span><Icon name="at-sign" size={14} /></button>)
+                : <p className="dim discussion-mention-status">No matching members in this community.</p>}
+            </div>}
+          </div>
+          <p className="dim">Type @ while writing to mention members of this idea’s community. Unfinished replies are saved as drafts on this device.</p>
+          <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={postReply}><Icon name="send" size={15} />Reply</button><button className="chip" onClick={() => { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]); setMentionOpen(false); setMentionQuery('') }}>Discard draft</button></div>
         </div>
         <div className="glass pad">
           <button disabled={!ideaCommunity || archivedCommunity || voting} className={voted ? 'btn' : 'btn p'} style={{ width: '100%', justifyContent: 'center' }} onClick={() => { void toggleBacking() }}><Icon name="support" />{!ideaCommunity ? 'Loading community…' : archivedCommunity ? 'Archived · read-only' : voting ? 'Saving…' : voted ? 'Backed' : 'Back this idea'}</button>

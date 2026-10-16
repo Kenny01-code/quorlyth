@@ -157,7 +157,7 @@ function Inner() {
   }
   const card = (g: ChartKey, sub: string) => (
     <div className="glass pad">
-      <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES[g]}</h3><p className="dim">{sub}</p></div><button className="chip" onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button></div>
+      <div className="head" style={{ marginBottom: 6 }}><div className={g === 'area' ? 'chart-heading-animated' : undefined}><h3>{TITLES[g]}</h3><p className="dim">{sub}</p></div><button className="chip" onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button></div>
       {body(g)}
     </div>
   )
@@ -366,7 +366,7 @@ function MemberAnalyticsView() {
   const card = (g: ChartKey, sub: string) => (
     <div className="glass pad">
       <div className="head" style={{ marginBottom: 6 }}>
-        <div><h3>{titles[g]}</h3><p className="dim">{sub}</p></div>
+        <div className={g === 'area' ? 'chart-heading-animated' : undefined}><h3>{titles[g]}</h3><p className="dim">{sub}</p></div>
         <button className="chip" aria-label={"Chart settings for " + titles[g]} onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button>
       </div>
       {body(g)}
