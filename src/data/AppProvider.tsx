@@ -495,8 +495,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const storedReview = await st!.get('reviews/' + idea.id)
           const currentStatus = storedReview?.status || currentReview?.status
           nextReviewStatus = currentStatus === 'promoted' ? 'promoted' : 'selected'
-          if (currentStatus !== 'selected' && currentStatus !== 'promoted') {
-            await up('reviews/' + idea.id, { status: 'selected', at: reviewedAt })
+          if (!storedReview || (currentStatus !== 'selected' && currentStatus !== 'promoted')) {
+            await up('reviews/' + idea.id, { status: nextReviewStatus, at: reviewedAt })
           }
 
           // A realtime subscription can lag behind a successful insert, so do not
@@ -579,8 +579,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // The database only permits project creation for selected/promoted ideas.
         // Persist that prerequisite first, while preserving a promoted idea's status.
-        if (currentStatus !== 'selected' && currentStatus !== 'promoted') {
-          await up('reviews/' + ideaId, { status: 'selected', at })
+        if (!storedReview || (currentStatus !== 'selected' && currentStatus !== 'promoted')) {
+          await up('reviews/' + ideaId, { status: nextStatus, at })
         }
 
         const project: Project = { id: ideaId, ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at }
