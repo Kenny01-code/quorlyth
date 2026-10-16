@@ -327,7 +327,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (c.createdBy) return c.createdBy === me.id
       return platformOwner
     })
-    const canManageCommunity = (cid: string) => !!me && (platformAdmin || ownsCommunity(cid))
+    const canManageCommunity = (cid: string) => !!me && (platformOwner || platformAdmin || ownsCommunity(cid))
     const canCollaborateOnIdea = (ideaId: string) => {
       const idea = data.ideas.find(item => item.id === ideaId)
       return !!me && !!idea && (canManageCommunity(idea.cid) || idea.authorId === me.id || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted'))
@@ -385,7 +385,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createCommunity: c => createCommunityDetailed(c).then(r => r.ok),
       createCommunityDetailed,
       saveCommunity: (id, p) => w(async () => {
-        if (!canManageCommunity(id)) throw new Error('Only this community’s owner or a platform administrator can manage it.')
+        if (!canManageCommunity(id)) throw new Error('Only this community’s owner or a platform owner/administrator can manage it.')
+        const currentCommunity = data.communities.find(community => community.id === id)
+        if (!currentCommunity) throw new Error('Community not found. Refresh the page and try again.')
+
+        // Turning approval off means join requests should no longer leave people
+        // waiting. Approve the existing queue first; if an approval fails, keep
+        // the setting unchanged so the manager can retry safely.
+        if (p.joinApproval === false && currentCommunity.joinApproval === true) {
+          if (!backend) throw new Error('The backend is not ready.')
+          const pendingRequests = data.joinRequests.filter(request => request.cid === id && request.status === 'pending')
+          for (const request of pendingRequests) {
+            await backend.reviewCommunityJoinRequest(id, request.userId, 'approved')
+          }
+          if (pendingRequests.length) {
+            const pendingUsers = new Set(pendingRequests.map(request => request.userId))
+            const reviewedAt = Date.now()
+            setData(d => ({
+              ...d,
+              joinRequests: d.joinRequests.map(request =>
+                request.cid === id && pendingUsers.has(request.userId) && request.status === 'pending'
+                  ? { ...request, status: 'approved', reviewedAt, reviewedBy: me!.id }
+                  : request
+              ),
+              members: pendingRequests.reduce((members, request) => ({
+                ...members,
+                [request.userId]: { ...(members[request.userId] || {}), [id]: true },
+              }), d.members),
+            }))
+          }
+        }
+
         await up('communities/' + id, p)
       }, 'Saved'),
       deleteCommunity: id => w(async () => {
