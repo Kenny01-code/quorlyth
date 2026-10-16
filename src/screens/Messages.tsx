@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Av, Empty, Head } from '../components/ui'
@@ -36,6 +36,17 @@ function readableChatError(error: unknown): string {
 }
 
 const makeId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2)
+
+const dateDividerLabel = (timestamp: number) => {
+  const date = new Date(timestamp)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const days = Math.round((today.getTime() - day.getTime()) / 86400000)
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  return date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' as const } : {}) })
+}
 
 export function Messages() {
   const a = useApp()
@@ -428,7 +439,7 @@ export function Messages() {
               <button type="button" className="chat-conversation-menu-trigger" aria-label={'Options for ' + titleOf(c)} title="Conversation options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(c.id, r.right, r.top) }}><Icon name="more" size={17} /></button>
             </div>
           })}{!visibleConversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>{conversationFilter === 'archived' ? 'No archived conversations.' : 'Your inbox is a blank canvas.'}</b><p>{conversationFilter === 'archived' ? 'Chats you archive will live here until you restore them.' : 'Start a private conversation or bring your collaborators together.'}</p>{conversationFilter !== 'archived' && <button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button>}</div>}</div>
-          <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Private conversations <span className="dim">· standard encryption in transit</span></div>
+          <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Conversation privacy <span className="dim">· visible to its members</span></div>
         </div>
          </aside>
         <div className={cn('glass chat-thread', active && 'has-active')}>
@@ -436,20 +447,22 @@ export function Messages() {
             <header className="chat-thread-head"><button className="chat-back-mobile" onClick={() => nav('/messages')} aria-label="Back to inbox"><Icon name="arrow-left" size={18} /></button>
               {active.type === 'group' ? <span className="chat-group-avatar"><Icon name="users" size={20} /></span> : <button className="chat-avatar-link thread-avatar-link" title="View public profile" aria-label="View public profile" onClick={() => nav(profileLink(active.members.find(id => id !== meId) || ''))}><Av id={active.members.find(id => id !== meId) || ''} size={44} />{isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="admin-orbit" title="Platform owner" aria-label="Platform owner">✦</span>}</button>}
               <div className="chat-thread-identity"><h3>{titleOf(active)}{active.type === 'direct' && isPlatformAdmin(active.members.find(id => id !== meId) || '') && <span className="owner-badge">✦ PLATFORM OWNER</span>}</h3><p>{active.type === 'group' ? active.members.length + ' members · Group conversation' : 'Private conversation'}</p></div>
-              <span className="chat-private-label"><Icon name="lock" size={13} /> PRIVATE</span>
+              <span className="chat-private-label"><Icon name={active.type === 'group' ? 'users' : 'lock'} size={13} />{active.type === 'group' ? 'GROUP SPACE' : 'PRIVATE'}</span>
               <button type="button" className="chat-thread-menu-trigger chat-icon-btn" aria-label="Conversation options" title="Conversation options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(active.id, r.right, r.top) }}><Icon name="more" size={18} /></button>
             </header>
             <div className="chat-thread-body" ref={threadBody} onScroll={e => { const pane = e.currentTarget; shouldStickToBottom.current = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 150 }}>
-              <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="spark" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
+              <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="message" size={18} /></span><p>{active.type === 'group' ? 'A shared space for good people and bigger ideas.' : 'Good ideas often start with a conversation.'}</p><small>Messages are visible to conversation members.</small></div>
               {activeMessages.filter(m => !messageHides.some(h => h.messageId === m.id && h.userId === meId)).map((m, i, renderedMessages) => {
                 const mine = m.senderId === meId
                 const prev = renderedMessages[i - 1]
+                const isNewDay = !prev || new Date(prev.at).toDateString() !== new Date(m.at).toDateString()
+                const grouped = !!prev && prev.senderId === m.senderId && !isNewDay && m.at - prev.at < 5 * 60 * 1000
                 const showAuthor = active.type === 'group' && !mine && (!prev || prev.senderId !== m.senderId)
                 const deleted = isDeletedMessage(m.id)
                 const reply = m.replyTo ? activeMessages.find(message => message.id === m.replyTo) : undefined
                 const reactions = messageReactions.filter(r => r.messageId === m.id && r.reaction)
                 const reactionTypes = [...new Set(reactions.map(r => r.reaction))]
-                return <div id={'chat-message-' + m.id} key={m.id} className={cn('chat-message-row', mine && 'mine', showAuthor && 'with-author', deleted && 'is-deleted')} onContextMenu={e => { e.preventDefault(); e.stopPropagation(); openMessageMenu(m.id, e.clientX, e.clientY) }}>
+                return <Fragment key={m.id}>{isNewDay && <div className="chat-date-divider"><span>{dateDividerLabel(m.at)}</span></div>}<div id={'chat-message-' + m.id} className={cn('chat-message-row', grouped && 'is-grouped', mine && 'mine', showAuthor && 'with-author', deleted && 'is-deleted')} onContextMenu={e => { e.preventDefault(); e.stopPropagation(); openMessageMenu(m.id, e.clientX, e.clientY) }}>
                   {showAuthor && <div className="chat-message-author"><button className="chat-author-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"}><span>{a.nm(m.senderId)}</span>{isPlatformAdmin(m.senderId) && <span className="owner-badge" title="Platform owner">✦ OWNER</span>}</button></div>}
                   <div className="chat-message-line">
                     <button className="chat-avatar-link message-avatar-link" onClick={() => nav(profileLink(m.senderId))} title={'View ' + a.nm(m.senderId) + "'s public profile"} aria-label={'View ' + a.nm(m.senderId) + ' public profile'}><Av id={m.senderId} size={30} />{isPlatformAdmin(m.senderId) && <span className="admin-orbit" title="Platform owner">✦</span>}</button>
@@ -461,14 +474,14 @@ export function Messages() {
                     <button type="button" className="chat-message-menu-trigger chat-icon-btn" aria-label="Message options" title="Message options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openMessageMenu(m.id, r.right, r.top) }}><Icon name="more" size={16} /></button>
                   </div>
                   {reactionTypes.length > 0 && !deleted && <div className="chat-message-reactions">{reactionTypes.map(emoji => <button type="button" key={emoji} className={cn('chat-reaction-pill', reactions.some(r => r.userId === meId && r.reaction === emoji) && 'mine')} onClick={() => void actOnMessage('react', m, emoji)}>{emoji}<span>{reactions.filter(r => r.reaction === emoji).length}</span></button>)}</div>}
-                </div>
+                </div></Fragment>
               })}
               <div ref={bottom} />
             </div>
             <form className="chat-composer" onSubmit={sendMessage}>
               {replyToMessageId && <div className="chat-reply-composer"><div><b>Replying to {a.nm(activeMessages.find(m => m.id === replyToMessageId)?.senderId || meId)}</b><small>{messageText(activeMessages.find(m => m.id === replyToMessageId) || ({ id: '', conversationId: active.id, senderId: meId, text: '', at: 0 } as Message)).slice(0, 130)}</small></div><button type="button" aria-label="Cancel reply" onClick={() => setReplyToMessageId(null)}><Icon name="x" size={15} /></button></div>}
               <div className="chat-compose-glass"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label={sending ? 'Sending message' : 'Send message'} title={sending ? 'Sending message' : 'Send message'}><span className="chat-send-content">{sending ? <span className="chat-spinner" aria-hidden="true" /> : <Icon name="arrow-up" size={17} />}<span className="chat-send-label">{sending ? 'Sending' : 'Send'}</span></span></button></div></div></form>
-          </> : conversationId ? (conversationsLoaded || openingTimedOut) ? <div className="chat-no-thread chat-conversation-unavailable" role="status"><span className="chat-empty-icon"><Icon name="message" size={24} /></span><p className="chat-eyebrow">CONVERSATION</p><h3>{conversationsLoaded ? 'This conversation is unavailable' : 'Still trying to connect'}</h3><p className="mut">{conversationsLoaded ? 'It may have been removed, or your account may not have access to it.' : 'The messaging service has not responded yet. Check your connection, then try again.'}</p><div className="chat-no-actions"><button className="btn p" onClick={() => nav('/messages')}><Icon name="arrow-left" size={16} />Back to messages</button><button className="btn" onClick={() => window.location.reload()}><Icon name="rotate" size={16} />Try again</button></div></div> : <div className="chat-no-thread" role="status"><span className="chat-spinner" aria-hidden="true" /><p className="dim">Opening your conversation…</p></div> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'spark'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
+          </> : conversationId ? (conversationsLoaded || openingTimedOut) ? <div className="chat-no-thread chat-conversation-unavailable" role="status"><span className="chat-empty-icon"><Icon name="message" size={24} /></span><p className="chat-eyebrow">CONVERSATION</p><h3>{conversationsLoaded ? 'This conversation is unavailable' : 'Still trying to connect'}</h3><p className="mut">{conversationsLoaded ? 'It may have been removed, or your account may not have access to it.' : 'The messaging service has not responded yet. Check your connection, then try again.'}</p><div className="chat-no-actions"><button className="btn p" onClick={() => nav('/messages')}><Icon name="arrow-left" size={16} />Back to messages</button><button className="btn" onClick={() => window.location.reload()}><Icon name="rotate" size={16} />Try again</button></div></div> : <div className="chat-no-thread" role="status"><span className="chat-spinner" aria-hidden="true" /><p className="dim">Opening your conversation…</p></div> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'community'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
             <>Every great thing<br />starts somewhere.</>,
             <>One message can<br />start something real.</>,
             <>Good ideas deserve<br />to find their people.</>,
