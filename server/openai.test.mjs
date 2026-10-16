@@ -336,3 +336,30 @@ test('idea review without YouTube key still uses AI and returns an explicit fall
   assert.equal(payload.youtubeSignalsByIdea['idea-no-key'].status, 'not_configured')
   assert.match(payload.youtubeSignalsByIdea['idea-no-key'].message, /AI scoring continued/i)
 })
+
+test('rejects oversized chat bodies before calling an AI provider', async () => {
+  let fetchCalls = 0
+  globalThis.fetch = async () => {
+    fetchCalls += 1
+    return new Response('data: [DONE]\\n\\n', { status: 200 })
+  }
+  const res = response()
+  await chat({ body: { messages: [{ role: 'user', content: 'x'.repeat(300_000) }] } }, res)
+
+  assert.equal(res.statusCode, 413)
+  assert.match(JSON.parse(res.output).error, /request body is too large/i)
+  assert.equal(fetchCalls, 0)
+})
+
+test('returns a 400 for malformed JSON instead of silently treating it as an empty request', async () => {
+  const req = {
+    async *[Symbol.asyncIterator]() {
+      yield Buffer.from('{not-json', 'utf8')
+    },
+  }
+  const res = response()
+  await chat(req, res)
+
+  assert.equal(res.statusCode, 400)
+  assert.match(JSON.parse(res.output).error, /valid JSON/i)
+})

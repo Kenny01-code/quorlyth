@@ -44,11 +44,102 @@ function needText() {
 function needOpenAI(feature) {
   if (!KEY()) { const e = new Error(`${feature} needs OPENAI_API_KEY. Gemini is configured for chat, but does not provide this OpenAI voice endpoint.`); e.status = 503; throw e }
 }
+const MAX_REQUEST_BODY_BYTES = 256 * 1024
+const MAX_CHAT_MESSAGES = 40
+const MAX_CHAT_CONTENT_BYTES = 120 * 1024
+const MAX_CHAT_SYSTEM_BYTES = 12 * 1024
+const MAX_JSON_PROMPT_BYTES = 48 * 1024
+
+function requestError(status, message) {
+  const error = new Error(message)
+  error.status = status
+  return error
+}
+
 async function readBody(req) {
-  if (req.body && typeof req.body === 'object') return req.body
-  const chunks = []
-  for await (const c of req) chunks.push(c)
-  try { return JSON.parse(Buffer.concat(chunks).toString() || '{}') } catch { return {} }
+  let raw = ''
+  if (req.body && typeof req.body === 'object') {
+    let encoded
+    try { encoded = JSON.stringify(req.body) } catch {
+      throw requestError(400, 'Request body must be valid JSON.')
+    }
+    if (Buffer.byteLength(encoded || '', 'utf8') > MAX_REQUEST_BODY_BYTES) {
+      throw requestError(413, 'Request body is too large. Shorten the prompt or conversation and try again.')
+    }
+    return req.body
+  }
+
+  if (typeof req.body === 'string') {
+    raw = req.body
+    if (Buffer.byteLength(raw, 'utf8') > MAX_REQUEST_BODY_BYTES) {
+      throw requestError(413, 'Request body is too large. Shorten the prompt or conversation and try again.')
+    }
+  } else {
+    const chunks = []
+    let bytes = 0
+    for await (const chunk of req) {
+      const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+      bytes += part.length
+      if (bytes > MAX_REQUEST_BODY_BYTES) {
+        throw requestError(413, 'Request body is too large. Shorten the prompt or conversation and try again.')
+      }
+      chunks.push(part)
+    }
+    raw = Buffer.concat(chunks).toString('utf8')
+  }
+
+  if (!raw.trim()) return {}
+  try { return JSON.parse(raw) } catch {
+    throw requestError(400, 'Request body must be valid JSON.')
+  }
+}
+
+function normalizeChatBody(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw requestError(400, 'A JSON chat request is required.')
+  }
+  if (!Array.isArray(value.messages) || value.messages.length === 0) {
+    throw requestError(400, 'Add a message before starting a chat.')
+  }
+
+  const messages = value.messages.slice(-MAX_CHAT_MESSAGES).map(message => {
+    if (!message || typeof message !== 'object' || !['user', 'assistant'].includes(message.role) || typeof message.content !== 'string') {
+      throw requestError(400, 'Each chat message must have a valid role and text content.')
+    }
+    return { role: message.role, content: message.content }
+  })
+  const contentBytes = messages.reduce((total, message) => total + Buffer.byteLength(message.content, 'utf8'), 0)
+  if (contentBytes > MAX_CHAT_CONTENT_BYTES) {
+    throw requestError(413, 'This conversation is too long to send in one request. Shorten the recent messages and retry.')
+  }
+
+  const system = typeof value.system === 'string' ? value.system : ''
+  if (Buffer.byteLength(system, 'utf8') > MAX_CHAT_SYSTEM_BYTES) {
+    throw requestError(413, 'The chat instructions are too large for one request.')
+  }
+  return { messages, system, tier: value.tier === 'quick' ? 'quick' : 'smart' }
+}
+
+function normalizeJsonBody(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw requestError(400, 'A JSON AI request is required.')
+  }
+  const prompt = typeof value.prompt === 'string' ? value.prompt : ''
+  if (!prompt.trim()) throw requestError(400, 'Add a prompt before requesting an AI result.')
+  if (Buffer.byteLength(prompt, 'utf8') > MAX_JSON_PROMPT_BYTES) {
+    throw requestError(413, 'The AI prompt is too large. Shorten it and try again.')
+  }
+  const system = typeof value.system === 'string' ? value.system : undefined
+  if (system && Buffer.byteLength(system, 'utf8') > MAX_CHAT_SYSTEM_BYTES) {
+    throw requestError(413, 'The AI instructions are too large for one request.')
+  }
+  return {
+    prompt,
+    ...(system !== undefined ? { system } : {}),
+    tier: value.tier === 'quick' ? 'quick' : 'smart',
+    ...(Array.isArray(value.youtubeIdeas) ? { youtubeIdeas: value.youtubeIdeas.slice(0, 10) } : {}),
+    ...(value.forceYoutubeRefresh === true ? { forceYoutubeRefresh: true } : {}),
+  }
 }
 function send(res, status, obj) {
   res.statusCode = status
@@ -262,6 +353,67 @@ async function sendProviderFailure(res, failure) {
   })
 }
 
+function streamIdleTimeoutMs() {
+  const configured = Number(process.env.AI_STREAM_IDLE_TIMEOUT_MS)
+  return Number.isFinite(configured) && configured >= 5000
+    ? Math.min(configured, 90000)
+    : 45000
+}
+
+async function forEachChunkWithIdleTimeout(body, onChunk) {
+  const reader = body.getReader()
+  const timeoutMs = streamIdleTimeoutMs()
+  let timer
+  try {
+    while (true) {
+      let result
+      try {
+        result = await Promise.race([
+          reader.read(),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => {
+              const error = new Error('The AI provider stopped sending response data.')
+              error.code = 'AI_STREAM_IDLE_TIMEOUT'
+              reject(error)
+            }, timeoutMs)
+          }),
+        ])
+      } finally {
+        if (timer) clearTimeout(timer)
+        timer = undefined
+      }
+      if (result.done) return
+      onChunk(result.value)
+    }
+  } catch (error) {
+    if (timer) clearTimeout(timer)
+    try {
+      await Promise.race([
+        reader.cancel(error),
+        new Promise(resolve => setTimeout(resolve, 250)),
+      ])
+    } catch {}
+    throw error
+  } finally {
+    if (timer) clearTimeout(timer)
+    try { reader.releaseLock() } catch {}
+  }
+}
+
+function sendStreamFailure(res, error, fallbackMessage) {
+  const timedOut = error?.code === 'AI_STREAM_IDLE_TIMEOUT'
+  const message = timedOut
+    ? 'The AI response stalled before it finished. Please retry.'
+    : fallbackMessage
+  if (!res.headersSent) {
+    return send(res, timedOut ? 504 : 502, { error: message, retryable: true })
+  }
+  try {
+    res.write('data: ' + JSON.stringify({ error: message, retryable: true }) + '\n\n')
+  } catch {}
+  res.end()
+}
+
 async function streamGeminiResponse(r, res) {
   res.statusCode = 200
   res.setHeader('Content-Type', 'text/event-stream')
@@ -279,18 +431,17 @@ async function streamGeminiResponse(r, res) {
     } catch {}
   }
   try {
-    for await (const chunk of r.body) {
+    await forEachChunkWithIdleTimeout(r.body, chunk => {
       buf += dec.decode(chunk, { stream: true })
       const lines = buf.split('\n')
       buf = lines.pop() || ''
       lines.forEach(emit)
-    }
+    })
     if (buf) emit(buf)
     res.write('data: {"done":true}\n\n')
     res.end()
-  } catch {
-    if (!res.headersSent) return send(res, 502, { error: 'The AI response was interrupted before it began.' })
-    res.end()
+  } catch (error) {
+    return sendStreamFailure(res, error, 'The AI response was interrupted before it finished. Please retry.')
   }
 }
 
@@ -301,34 +452,35 @@ async function streamOpenAICompatibleResponse(r, res) {
   res.setHeader('X-Accel-Buffering', 'no')
   const dec = new TextDecoder()
   let buf = ''
+  const emit = line => {
+    const l = line.trim()
+    if (!l.startsWith('data:')) return
+    const data = l.slice(5).trim()
+    if (data === '[DONE]') return
+    try {
+      const piece = JSON.parse(data).choices?.[0]?.delta?.content
+      if (piece) res.write('data: ' + JSON.stringify({ t: piece }) + '\n\n')
+    } catch {}
+  }
   try {
-    for await (const chunk of r.body) {
+    await forEachChunkWithIdleTimeout(r.body, chunk => {
       buf += dec.decode(chunk, { stream: true })
       const lines = buf.split('\n')
       buf = lines.pop() || ''
-      for (const line of lines) {
-        const l = line.trim()
-        if (!l.startsWith('data:')) continue
-        const data = l.slice(5).trim()
-        if (data === '[DONE]') continue
-        try {
-          const piece = JSON.parse(data).choices?.[0]?.delta?.content
-          if (piece) res.write('data: ' + JSON.stringify({ t: piece }) + '\n\n')
-        } catch {}
-      }
-    }
+      lines.forEach(emit)
+    })
+    if (buf) emit(buf)
     res.write('data: {"done":true}\n\n')
     res.end()
-  } catch {
-    if (!res.headersSent) return send(res, 502, { error: 'The AI response was interrupted before it began.' })
-    res.end()
+  } catch (error) {
+    return sendStreamFailure(res, error, 'The AI response was interrupted before it finished. Please retry.')
   }
 }
 
 /** Streams a chat reply. Provider failures are handled before the response starts. */
 export async function chat(req, res) {
   try {
-    const body = await readBody(req)
+    const body = normalizeChatBody(await readBody(req))
     const providers = needText()
     const failure = await chooseProvider(providers, provider => requestProviderChat(provider, body), true)
     if (!failure?.response?.ok || !failure.response.body) return await sendProviderFailure(res, failure)
@@ -350,7 +502,7 @@ function parseProviderJson(provider, payload) {
 /** Returns structured JSON for a prompt, failing over on availability and parse errors. */
 export async function json(req, res) {
   try {
-    const body = await readBody(req)
+    const body = normalizeJsonBody(await readBody(req))
     const providers = needText()
     let providerBody = body
     let youtubeSignalsByIdea = null

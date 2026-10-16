@@ -39,13 +39,14 @@ export async function streamChat(messages: { role: 'user' | 'assistant'; content
   if (!r.ok || !r.body) throw new Error(await readError(r))
   const reader = r.body.getReader()
   const dec = new TextDecoder()
-  let buf = '', full = '', completed = false
+  let buf = '', full = '', completed = false, streamError = ''
   const consume = (block: string) => {
     const line = block.split(/\r?\n/).find(x => x.startsWith('data:'))
     if (!line) return
     try {
       const j = JSON.parse(line.slice(5).trim())
-      if (j.t) { full += j.t; o.onText?.(full, j.t) }
+      if (typeof j.error === 'string' && j.error.trim()) streamError = j.error
+      if (j.t && !streamError) { full += j.t; o.onText?.(full, j.t) }
       if (j.done) completed = true
     } catch {}
   }
@@ -58,6 +59,7 @@ export async function streamChat(messages: { role: 'user' | 'assistant'; content
     parts.forEach(consume)
   }
   if (buf.trim()) consume(buf)
+  if (streamError) throw new Error(streamError)
   if (!completed) throw new Error('The reply was interrupted before it finished. Please try again.')
   return full
 }

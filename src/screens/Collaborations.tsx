@@ -15,6 +15,18 @@ function CollaborationList() {
   const a = useApp()
   const nav = useNavigate()
   const myId = a.me?.id
+  const manageableCommunityIds = new Set(a.data.communities.filter(c => a.canManageCommunity(c.id)).map(c => c.id))
+  const manageableIdeaIds = new Set(a.data.ideas.filter(idea => manageableCommunityIds.has(idea.cid)).map(idea => idea.id))
+  const canReviewAny = manageableCommunityIds.size > 0
+
+  const incoming = a.data.volunteers
+    .filter(application => application.status === 'pending' && manageableIdeaIds.has(application.ideaId))
+    .sort((x, y) => y.at - x.at)
+  const incomingIdeaIds = [...new Set(incoming.map(application => application.ideaId))]
+  const myApplications = a.data.volunteers
+    .filter(application => application.applicantId === myId)
+    .sort((x, y) => y.at - x.at)
+
   const items = a.data.ideas.filter(idea => {
     const accepted = a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === myId && v.status === 'accepted')
     const hasAcceptedTeam = a.data.volunteers.some(v => v.ideaId === idea.id && v.status === 'accepted')
@@ -29,36 +41,152 @@ function CollaborationList() {
 
   return <>
     <Head kicker="Collaboration" title="Work together, in one place." />
-    <p className="mut" style={{ maxWidth: 760, marginBottom: 20 }}>Your accepted collaborations live here. Open a workspace to follow the project plan, coordinate milestones, and keep the discussion with the idea.</p>
-    {!items.length ? <Empty icon="collab" title="No collaboration spaces yet" text="When an owner accepts your application, the workspace will appear here. If you manage a community, accept an application from the review queue to open a workspace.">
-      <button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Explore communities</button>
-    </Empty> : <div style={{ display: 'grid', gap: 14, maxWidth: 1000 }}>
-      {items.map(idea => {
-        const project = a.data.projects[idea.id]
-        const milestones = a.data.milestones.filter(m => m.projectId === idea.id)
-        const done = milestones.filter(m => m.status === 'done').length
-        const community = a.data.communities.find(c => c.id === idea.cid)
-        const acceptedCount = a.data.volunteers.filter(v => v.ideaId === idea.id && v.status === 'accepted').length
-        return <button key={idea.id} type="button" className="glass pad" onClick={() => nav('/collaboration/' + idea.id)} style={{ display: 'block', textAlign: 'left', width: '100%', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <p className="dim">{community?.name || 'Community'} · {!project ? 'Workspace setup needed' : project.status === 'completed' ? 'Completed' : 'Active project'}</p>
-              <h3 style={{ fontSize: 20, marginTop: 5, overflowWrap: 'anywhere' }}>{idea.title}</h3>
-              <p className="mut" style={{ marginTop: 7 }}>{project?.summary || (!project ? 'This accepted collaboration needs its workspace initialized. Open it to finish setup.' : 'No project brief has been added yet.')}</p>
+    <p className="mut" style={{ maxWidth: 760, marginBottom: 20 }}>
+      This is the shared-work area—not the place where applications start. Apply from an idea, get accepted by its community manager, then use the workspace to plan tasks, update milestones, and discuss progress.
+    </p>
+
+    <div className="glass pad" style={{ marginBottom: 18 }}>
+      <div className="head" style={{ marginBottom: 16 }}>
+        <div><h3 style={{ fontSize: 20 }}>How to get started</h3><p className="mut" style={{ marginTop: 4 }}>Follow the path that matches your role.</p></div>
+        <span className="chip"><Icon name="collab" size={14} />Collaboration guide</span>
+      </div>
+      <div className="grid g2">
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+          <span className="score" style={{ width: 38, height: 38, fontSize: 14 }}>01</span>
+          <div style={{ minWidth: 0 }}>
+            <h3>For members: apply to help</h3>
+            <p className="mut" style={{ marginTop: 5 }}>Browse communities, open an idea, join its community if needed, and select “Apply to collaborate.” Your request and its status will appear below.</p>
+            <button className="btn" style={{ marginTop: 10 }} onClick={() => nav('/communities')}><Icon name="community" size={15} />Browse communities and ideas</button>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+          <span className="score" style={{ width: 38, height: 38, fontSize: 14 }}>02</span>
+          <div style={{ minWidth: 0 }}>
+            <h3>For community managers: accept a teammate</h3>
+            <p className="mut" style={{ marginTop: 5 }}>Open the Review queue, choose an idea, find “Collaboration applications,” and accept a pending applicant. Acceptance creates the shared project workspace automatically.</p>
+            {canReviewAny && <button className="btn p" style={{ marginTop: 10 }} onClick={() => nav('/queue')}><Icon name="queue" size={15} />Review applications{incoming.length ? ' (' + incoming.length + ')' : ''}</button>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+          <span className="score" style={{ width: 38, height: 38, fontSize: 14 }}>03</span>
+          <div style={{ minWidth: 0 }}>
+            <h3>Plan the work</h3>
+            <p className="mut" style={{ marginTop: 5 }}>Open an active collaboration, read the project brief, add milestones with clear outcomes, and mark steps as in progress or done.</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0 }}>
+          <span className="score" style={{ width: 38, height: 38, fontSize: 14 }}>04</span>
+          <div style={{ minWidth: 0 }}>
+            <h3>Keep decisions together</h3>
+            <p className="mut" style={{ marginTop: 5 }}>Use Team discussion for updates, questions, and decisions. Community managers can edit the project brief from Project settings.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {incomingIdeaIds.length > 0 && <div className="glass pad" style={{ marginBottom: 18 }}>
+      <div className="head" style={{ marginBottom: 10 }}>
+        <div><h3 style={{ fontSize: 20 }}>Applications waiting for your review</h3><p className="mut" style={{ marginTop: 4 }}>These are for ideas in communities you manage.</p></div>
+        <span className="chip">{incoming.length} pending</span>
+      </div>
+      <div style={{ display: 'grid', gap: 10 }}>
+        {incomingIdeaIds.map(ideaId => {
+          const idea = a.data.ideas.find(item => item.id === ideaId)
+          if (!idea) return null
+          const community = a.data.communities.find(item => item.id === idea.cid)
+          const applications = incoming.filter(item => item.ideaId === ideaId)
+          return <div key={ideaId} className="reason" style={{ margin: 0, gridTemplateColumns: 'minmax(0,1fr) auto', alignItems: 'center' }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="dim">{community?.name || 'Community'}</p>
+              <h3 style={{ marginTop: 4, overflowWrap: 'anywhere' }}>{idea.title}</h3>
+              <p className="mut" style={{ marginTop: 4 }}>{applications.length} applicant{applications.length === 1 ? '' : 's'} waiting for a decision</p>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
+                {applications.slice(0, 3).map(application => <span className="chip" key={application.id}><Av id={application.applicantId} size={20} />{a.nm(application.applicantId)}</span>)}
+                {applications.length > 3 && <span className="chip">+{applications.length - 3} more</span>}
+              </div>
             </div>
-            <span className="chip"><Icon name="collab" size={14} />Open workspace</span>
+            <button className="btn p" onClick={() => nav('/queue?idea=' + encodeURIComponent(ideaId))}><Icon name="approve" size={15} />Review</button>
           </div>
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 14 }}>
-            <span className="dim"><Icon name="users" size={14} /> {acceptedCount} accepted contributor{acceptedCount === 1 ? '' : 's'}</span>
-            <span className="dim"><Icon name="approve" size={14} /> {done}/{milestones.length} milestones complete</span>
-            <span className="dim">{project ? 'Updated ' + (when(project.updatedAt || project.at) || 'recently') : 'Workspace not initialized'}</span>
-          </div>
-        </button>
-      })}
+        })}
+      </div>
     </div>}
+
+    <div className="glass pad" style={{ marginBottom: 18 }}>
+      <div className="head" style={{ marginBottom: 12 }}>
+        <div><h3 style={{ fontSize: 20 }}>Your applications</h3><p className="mut" style={{ marginTop: 4 }}>Track requests you have sent to join someone else's idea.</p></div>
+        <span className="chip">{myApplications.length}</span>
+      </div>
+      {!myApplications.length ? <p className="mut">No applications sent yet. Browse ideas in your communities, open one you want to help with, and select “Apply to collaborate.”</p> : <div style={{ display: 'grid', gap: 10 }}>
+        {myApplications.map(application => {
+          const idea = a.data.ideas.find(item => item.id === application.ideaId)
+          if (!idea) return null
+          const community = a.data.communities.find(item => item.id === idea.cid)
+          const statusLabel = application.status === 'pending' ? 'Awaiting review' : application.status === 'accepted' ? 'Accepted' : 'Declined'
+          return <div key={application.id} className="reason" style={{ margin: 0, gridTemplateColumns: 'minmax(0,1fr) auto', alignItems: 'center' }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="dim">{community?.name || 'Community'}</p>
+              <h3 style={{ marginTop: 4, overflowWrap: 'anywhere' }}>{idea.title}</h3>
+              {application.message && <p className="mut" style={{ marginTop: 4, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{application.message}</p>}
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
+                <span className={'chip' + (application.status === 'accepted' ? ' on' : '')}>{statusLabel}</span>
+                <span className="dim">Submitted {when(application.at) || 'recently'}</span>
+              </div>
+              {application.status === 'declined' && <p className="mut" style={{ marginTop: 5, fontSize: 12 }}>You can review the idea and reapply if the opportunity is still open.</p>}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => nav('/idea/' + idea.id)}><Icon name="idea" size={15} />View idea</button>
+              {application.status === 'accepted' && <button className="btn p" onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={15} />Open workspace</button>}
+            </div>
+          </div>
+        })}
+      </div>}
+    </div>
+
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div className="head" style={{ marginBottom: 2 }}>
+        <div><h3 style={{ fontSize: 22 }}>Active collaboration spaces</h3><p className="mut" style={{ marginTop: 4 }}>Your accepted projects and the shared workspaces connected to them.</p></div>
+        <span className="chip">{items.length} spaces</span>
+      </div>
+      {!items.length ? <div className="glass cent">
+        <Icon name="collab" size={30} />
+        <h3>No active collaboration spaces yet</h3>
+        <p className="mut" style={{ maxWidth: 520 }}>
+          {canReviewAny
+            ? 'Accept a pending application in the Review queue to create a workspace for an idea in a community you manage. You can also apply to help with ideas in other communities.'
+            : 'Your workspace appears after a community manager accepts one of your collaboration applications. Start by finding an idea you would genuinely like to help build.'}
+        </p>
+        <div className="acts" style={{ justifyContent: 'center', marginTop: 8 }}>
+          <button className="btn p" onClick={() => nav('/communities')}><Icon name="community" size={15} />Find ideas</button>
+          {canReviewAny && <button className="btn" onClick={() => nav('/queue')}><Icon name="queue" size={15} />Open review queue</button>}
+          <button className="btn" onClick={() => nav('/me')}><Icon name="user-round" size={15} />My ideas</button>
+        </div>
+      </div> : <div style={{ display: 'grid', gap: 14, maxWidth: 1000 }}>
+        {items.map(idea => {
+          const project = a.data.projects[idea.id]
+          const milestones = a.data.milestones.filter(m => m.projectId === idea.id)
+          const done = milestones.filter(m => m.status === 'done').length
+          const community = a.data.communities.find(c => c.id === idea.cid)
+          const acceptedCount = a.data.volunteers.filter(v => v.ideaId === idea.id && v.status === 'accepted').length
+          return <button key={idea.id} type="button" className="glass pad" onClick={() => nav('/collaboration/' + idea.id)} style={{ display: 'block', textAlign: 'left', width: '100%', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p className="dim">{community?.name || 'Community'} · {!project ? 'Workspace setup needed' : project.status === 'completed' ? 'Completed' : 'Active project'}</p>
+                <h3 style={{ fontSize: 20, marginTop: 5, overflowWrap: 'anywhere' }}>{idea.title}</h3>
+                <p className="mut" style={{ marginTop: 7 }}>{project?.summary || (!project ? 'This accepted collaboration needs its workspace initialized. Open it to finish setup.' : 'No project brief has been added yet.')}</p>
+              </div>
+              <span className="chip"><Icon name="collab" size={14} />Open workspace</span>
+            </div>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 14 }}>
+              <span className="dim"><Icon name="users" size={14} /> {acceptedCount} accepted contributor{acceptedCount === 1 ? '' : 's'}</span>
+              <span className="dim"><Icon name="approve" size={14} /> {done}/{milestones.length} milestones complete</span>
+              <span className="dim">{project ? 'Updated ' + (when(project.updatedAt || project.at) || 'recently') : 'Workspace not initialized'}</span>
+            </div>
+          </button>
+        })}
+      </div>}
+    </div>
   </>
 }
-
 export function CollaborationWorkspace() {
   return <Gate><Workspace /></Gate>
 }
