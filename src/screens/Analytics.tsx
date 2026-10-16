@@ -20,7 +20,10 @@ function Inner() {
   const a = useApp()
   const nav = useNavigate()
   const { data: rawData } = a
-  const ownedCommunities = useMemo(() => rawData.communities.filter(c => a.ownsCommunity(c.id)), [rawData.communities, a.ownsCommunity])
+  const ownedCommunities = useMemo(
+    () => rawData.communities.filter(community => !!a.me?.id && community.ownerId === a.me.id),
+    [rawData.communities, a.me?.id],
+  )
   const data = useMemo(() => {
     if (a.owner) return rawData
     const communityIds = new Set(ownedCommunities.map(c => c.id))
@@ -209,7 +212,7 @@ function Inner() {
       {open && (
         <div id="csd" onClick={e => e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('csd-b') ? setOpen(null) : null}>
           <div className="csd-b" />
-          <div className="csd-p glass" role="dialog" aria-label="Chart settings">
+          <div className="csd-p glass" role="dialog" aria-modal="true" aria-label={"Chart settings for " + titles[open]}>
             <div className="csd-h"><div><p className="dim">Chart settings</p><h3 style={{ fontSize: 22, fontWeight: 300 }}>{TITLES[open]}</h3></div><button className="chip" onClick={() => setOpen(null)}>Done</button></div>
             <div className="csd-pv"><p className="dim" style={{ marginBottom: 8 }}>Live preview</p>{body(open)}</div>
             <div className="csd-c">
@@ -225,6 +228,19 @@ function Inner() {
   )
 }
 
+
+/** Personal chart empty states avoid rendering flat, uninformative charts for zero-data periods. */
+function PersonalChartEmpty({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="member-chart-empty" role="status">
+      <span className="member-chart-empty__icon"><Icon name="insight" size={18} /></span>
+      <div>
+        <h4>{title}</h4>
+        <p>{detail}</p>
+      </div>
+    </div>
+  )
+}
 
 /** Member analytics shares the same layout and chart components as owner analytics, with member-scoped data. */
 function MemberAnalyticsView() {
@@ -308,40 +324,50 @@ function MemberAnalyticsView() {
   }
 
   function body(g: ChartKey) {
-    if (g === 'area') return <div className="chs"><AreaChart dd={activity} o={cs.area} /></div>
+    if (g === 'area') {
+      return ideasInRange > 0
+        ? <div className="chs"><AreaChart dd={activity} o={cs.area} /></div>
+        : <PersonalChartEmpty title={myIdeas.length ? 'No ideas in this period' : 'Your activity starts here'} detail={myIdeas.length ? 'No ideas were submitted in the selected date range. Choose 30 or 90 days to see earlier activity.' : 'Once you share an idea, your day-by-day activity will appear here.'} />
+    }
     if (g === 'bar') {
       const rows = barRows()
-      return rows.length
-        ? <div className="chs"><BarChart rows={rows} o={{ ...cs.bar, m: effectiveBarMeasure } as any} /></div>
-        : <p className="mut" style={{ marginTop: 18 }}>Join a community to see your ideas here.</p>
+      if (!activityCommunities.length) return <PersonalChartEmpty title="No communities to compare yet" detail="Join a community, or share an idea in one, to see your personal activity by community." />
+      if (!rows.some(row => row.v > 0)) return <PersonalChartEmpty title="Nothing to compare yet" detail={effectiveBarMeasure === 'backs' ? 'Backings received on your ideas will appear here.' : 'Your idea submissions will appear here as you contribute.'} />
+      return <div className="chs"><BarChart rows={rows} o={{ ...cs.bar, m: effectiveBarMeasure } as any} /></div>
     }
-    if (g === 'don') return <Donut items={statuses} total={myIdeas.length} o={cs.don} />
-    if (g === 'heat') return <Heat ideas={myIdeas} val={cs.heat.val} />
-    if (g === 'fun') return <Funnel rows={funnelRows} o={cs.fun} />
-    if (!topIdeas.length) return <p className="mut" style={{ padding: '18px 0' }}>Your ideas will appear here when you contribute.</p>
+    if (g === 'don') return myIdeas.length
+      ? <Donut items={statuses} total={myIdeas.length} o={cs.don} />
+      : <PersonalChartEmpty title="No idea statuses yet" detail="This chart breaks down the current review status of ideas you have submitted." />
+    if (g === 'heat') return myIdeas.length
+      ? <div className="member-heat-scroll"><Heat ideas={myIdeas} val={cs.heat.val} /></div>
+      : <PersonalChartEmpty title="No contribution pattern yet" detail="After you share ideas, this chart will show the days and times when you contribute." />
+    if (g === 'fun') return myIdeas.length
+      ? <Funnel rows={funnelRows} o={cs.fun} />
+      : <PersonalChartEmpty title="Your idea journey starts here" detail="Share an idea to track how it moves from submission to selection and ready-to-share." />
+    if (!topIdeas.length) return <PersonalChartEmpty title="No ideas to rank yet" detail="Your latest and most-backed ideas will appear here after you contribute." />
     const maxBackings = Math.max(1, ...topIdeas.map(idea => a.votesOf(idea.id)))
-    return <>{topIdeas.map((idea, index) => {
+    return <div className="member-analytics__idea-list">{topIdeas.map((idea, index) => {
       const backings = a.votesOf(idea.id)
       const communityName = a.data.communities.find(community => community.id === idea.cid)?.name || 'Community'
       return (
-        <button key={idea.id} className="row rowbtn" onClick={() => nav('/idea/' + idea.id)}>
-          <div className="score" style={{ width: 42, height: 42, fontSize: 14 }}>{effectiveTopSort === 'backs' ? backings : index + 1}</div>
+        <button key={idea.id} className="row rowbtn member-analytics__idea-row" onClick={() => nav('/idea/' + idea.id)}>
+          <div className="score" style={{ width: 42, height: 42, fontSize: 14, flexShrink: 0 }}>{effectiveTopSort === 'backs' ? backings : index + 1}</div>
           <div className="t">
             <h3 style={{ fontSize: 15 }}>{idea.title}</h3>
             <p className="dim">{communityName} · {new Date(idea.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
             {effectiveTopSort === 'backs' && <div className="bar"><i style={{ width: (backings / maxBackings) * 100 + '%' }} /></div>}
           </div>
-          <span className="dim">{backings} {backings === 1 ? 'backing' : 'backings'}</span>
+          <span className="dim member-analytics__idea-backing">{backings} {backings === 1 ? 'backing' : 'backings'}</span>
         </button>
       )
-    })}</>
+    })}</div>
   }
 
   const card = (g: ChartKey, sub: string) => (
     <div className="glass pad">
       <div className="head" style={{ marginBottom: 6 }}>
         <div><h3>{titles[g]}</h3><p className="dim">{sub}</p></div>
-        <button className="chip" onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button>
+        <button className="chip" aria-label={"Chart settings for " + titles[g]} onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button>
       </div>
       {body(g)}
     </div>
@@ -419,20 +445,33 @@ function MemberAnalyticsView() {
   }
 
   return (
-    <>
-      <Head kicker="Analytics" title="Your activity in numbers." right={<>{[7, 30, 90].map(days => <span key={days}><Chip on={rg === days} onClick={() => setRg(days)}>{days} days</Chip>{' '}</span>)}<button className="btn" style={{ padding: '9px 20px', marginLeft: 8 }} onClick={csv}><Icon name="publish" size={16} />CSV</button>{' '}<button className="btn p" style={{ padding: '9px 20px' }} onClick={pdf}><Icon name="publish" size={16} />Export PDF</button></>} />
-      <div className="grid g4" style={{ marginBottom: 18 }}>
-        {([
-          ['Ideas in range', ideasInRange],
-          ['Communities joined', joinedCommunities.length],
-          ['Backings received', backingsReceived],
-          ['Ideas selected', selectedIdeas],
-        ] as [string, number][]).map(([label, value]) => <div key={label} className="glass pad"><p className="dim">{label}</p><p className="num" style={{ fontSize: 42 }}>{value}</p></div>)}
+    <div className="member-analytics">
+      <Head kicker="Personal analytics" title="Your activity in numbers." right={<>{[7, 30, 90].map(days => <span key={days}><Chip on={rg === days} onClick={() => setRg(days)}>{days} days</Chip>{' '}</span>)}<button className="btn" style={{ padding: '9px 20px', marginLeft: 8 }} onClick={csv}><Icon name="publish" size={16} />CSV</button>{' '}<button className="btn p" style={{ padding: '9px 20px' }} onClick={pdf}><Icon name="publish" size={16} />Export PDF</button></>} />
+      <div className="member-analytics__scope glass">
+        <span className="chip"><Icon name="user-round" size={13} />Personal view</span>
+        <div>
+          <p className="member-analytics__scope-title">Your activity. Your ideas. Your progress.</p>
+          <p className="member-analytics__scope-copy">These charts use your own submissions and the backings on those ideas. They do not rank other members or show community-owner performance.</p>
+        </div>
       </div>
-      <div className="grid g32" style={{ marginBottom: 18 }}>{card('area', 'Last ' + rg + ' days')}{card('don', 'By status of your ideas')}</div>
-      <div style={{ marginBottom: 18 }}>{card('bar', effectiveBarMeasure === 'backs' ? 'Backings received on your ideas' : 'Ideas submitted by you')}</div>
-      <div className="grid g2" style={{ marginBottom: 18 }}>{card('heat', 'By day and time, your ideas only')}{card('fun', 'From submission to share-ready')}</div>
-      {card('top', effectiveTopSort === 'backs' ? 'Sorted by backings received' : 'Most recent first')}
+      <div className="grid g4 member-analytics__stats" style={{ marginBottom: 18 }}>
+        {([
+          ['Ideas in range', ideasInRange, 'Ideas you submitted in the selected period'],
+          ['Communities joined', joinedCommunities.length, 'Communities you currently belong to'],
+          ['Backings received', backingsReceived, 'Total support for your ideas'],
+          ['Selected or share-ready', selectedIdeas, 'Your ideas selected by a community owner'],
+        ] as [string, number, string][]).map(([label, value, detail]) => (
+          <div key={label} className="glass pad member-analytics__metric">
+            <p className="dim">{label}</p>
+            <p className="num" style={{ fontSize: 42 }}>{value}</p>
+            <p className="member-analytics__metric-detail">{detail}</p>
+          </div>
+        ))}
+      </div>
+      <div className="grid g32 member-analytics__paired" style={{ marginBottom: 18 }}>{card('area', 'Your submissions · last ' + rg + ' days')}{card('don', 'Status of your own ideas')}</div>
+      <div style={{ marginBottom: 18 }}>{card('bar', effectiveBarMeasure === 'backs' ? 'Backings on your ideas, by community' : 'Your idea submissions, by community')}</div>
+      <div className="grid g2 member-analytics__paired" style={{ marginBottom: 18 }}>{card('heat', 'Timing of your own submissions')}{card('fun', 'Your progress from submission to share-ready')}</div>
+      {card('top', effectiveTopSort === 'backs' ? 'Your ideas · most backed first' : 'Your ideas · newest first')}
       {open && (
         <div id="csd" onClick={e => e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('csd-b') ? setOpen(null) : null}>
           <div className="csd-b" />
@@ -451,7 +490,7 @@ function MemberAnalyticsView() {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }
 
