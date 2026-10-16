@@ -11,16 +11,72 @@ export const DEFAULTS = {
 export type ChartSettings = typeof DEFAULTS
 export type ChartKey = keyof ChartSettings
 
+function isOneOf<T extends string | number>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(value as T) ? value as T : fallback
+}
+
+function booleanSetting(value: unknown, fallback: boolean) {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function normalizeChartSettings(value: unknown, scope: 'owner' | 'member'): ChartSettings {
+  const raw = value && typeof value === 'object' ? value as Record<string, any> : {}
+  const area = raw.area && typeof raw.area === 'object' ? raw.area : {}
+  const bar = raw.bar && typeof raw.bar === 'object' ? raw.bar : {}
+  const heat = raw.heat && typeof raw.heat === 'object' ? raw.heat : {}
+  const don = raw.don && typeof raw.don === 'object' ? raw.don : {}
+  const fun = raw.fun && typeof raw.fun === 'object' ? raw.fun : {}
+  const top = raw.top && typeof raw.top === 'object' ? raw.top : {}
+  return {
+    area: {
+      sm: booleanSetting(area.sm, DEFAULTS.area.sm),
+      pts: booleanSetting(area.pts, DEFAULTS.area.pts),
+      lab: booleanSetting(area.lab, DEFAULTS.area.lab),
+      avg: booleanSetting(area.avg, DEFAULTS.area.avg),
+      ma: booleanSetting(area.ma, DEFAULTS.area.ma),
+      grid: booleanSetting(area.grid, DEFAULTS.area.grid),
+    },
+    bar: {
+      m: isOneOf(bar.m, scope === 'member' ? ['ideas', 'backs'] as const : ['ideas', 'backs', 'members', 'pub'] as const, DEFAULTS.bar.m),
+      o: isOneOf(bar.o, ['v', 'h'] as const, DEFAULTS.bar.o),
+      s: isOneOf(bar.s, ['value', 'name', 'none'] as const, DEFAULTS.bar.s),
+      n: isOneOf(bar.n, [0, 5, 7, 10] as const, DEFAULTS.bar.n),
+      lab: booleanSetting(bar.lab, DEFAULTS.bar.lab),
+      grid: booleanSetting(bar.grid, DEFAULTS.bar.grid),
+      avg: booleanSetting(bar.avg, DEFAULTS.bar.avg),
+      pct: booleanSetting(bar.pct, DEFAULTS.bar.pct),
+    },
+    heat: { val: booleanSetting(heat.val, DEFAULTS.heat.val) },
+    don: {
+      pct: booleanSetting(don.pct, DEFAULTS.don.pct),
+      tot: booleanSetting(don.tot, DEFAULTS.don.tot),
+    },
+    fun: {
+      pct: booleanSetting(fun.pct, DEFAULTS.fun.pct),
+      rel: booleanSetting(fun.rel, DEFAULTS.fun.rel),
+    },
+    top: {
+      m: isOneOf(top.m, scope === 'member' ? ['ideas', 'backs'] as const : ['ideas', 'backs'] as const, DEFAULTS.top.m),
+      n: isOneOf(top.n, [5, 10, 20] as const, DEFAULTS.top.n),
+    },
+  }
+}
+
 export function useChartSettings(scope: 'owner' | 'member' = 'owner') {
   const storageKey = scope === 'member' ? 'qcs:member:v1' : 'qcs'
   const [cs, setCs] = useState<ChartSettings>(() => {
-    try { const s = JSON.parse(localStorage.getItem(storageKey) || '{}'); return Object.fromEntries(Object.keys(DEFAULTS).map(k => [k, { ...(DEFAULTS as any)[k], ...(s[k] || {}) }])) as ChartSettings } catch { return DEFAULTS }
+    try { return normalizeChartSettings(JSON.parse(localStorage.getItem(storageKey) || '{}'), scope) }
+    catch { return normalizeChartSettings({}, scope) }
   })
-  const save = (n: ChartSettings) => { setCs(n); try { localStorage.setItem(storageKey, JSON.stringify(n)) } catch {} }
+  const save = (next: ChartSettings) => {
+    const normalized = normalizeChartSettings(next, scope)
+    setCs(normalized)
+    try { localStorage.setItem(storageKey, JSON.stringify(normalized)) } catch {}
+  }
   return {
     cs,
     set: (g: ChartKey, k: string, v: any) => save({ ...cs, [g]: { ...(cs[g] as any), [k]: v } }),
-    reset: (g: ChartKey) => save({ ...cs, [g]: DEFAULTS[g] }),
+    reset: (g: ChartKey) => save({ ...cs, [g]: { ...DEFAULTS[g] } as any }),
   }
 }
 
