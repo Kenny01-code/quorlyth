@@ -27,11 +27,11 @@ export function createLocalStore(): DocStore {
       const community = docs['communities/' + cid] || {}
       const ownerId = community.ownerId || community.createdBy || docs['config/owner']?.id || ''
       const ideas = Object.entries(docs)
-        .filter(([path, data]) => new RegExp('^ideas/[^/]+ && data?.cid === cid && typeof data?.authorId === 'string' && data.authorId !== ownerId)
+        .filter(([path, data]) => new RegExp('^ideas/[^/]+$').test(path) && data?.cid === cid && typeof data?.authorId === 'string' && data.authorId !== ownerId)
         .map(([path, data]) => ({ id: path.slice('ideas/'.length), userId: data.authorId as string }))
       const totals = new Map<string, { userId: string; ideas: number; backings: number }>()
       const voteMaps = Object.entries(docs)
-        .filter(([path]) => new RegExp('^votes/[^/]+)
+        .filter(([path]) => new RegExp('^votes/[^/]+$').test(path))
         .map(([, data]) => data?.ideas || {})
       for (const idea of ideas) {
         const row = totals.get(idea.userId) || { userId: idea.userId, ideas: 0, backings: 0 }
