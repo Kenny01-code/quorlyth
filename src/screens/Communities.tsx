@@ -89,7 +89,7 @@ function List() {
                   <h3 style={{ fontSize: 20, fontWeight: 300 }}>{c.name}</h3>
                   <p className="mut">{c.purpose}</p>
                   <div className="community-creator-identity"><Av id={creatorId(c) || c.ownerId || c.createdBy || ''} size={34} /><div className="community-creator-copy"><p className="dim" style={{ fontSize: 10 }}>CREATED BY</p><div className="community-creator-name"><button className="lk" onClick={() => creatorId(c) && nav('/me/' + creatorId(c))}>{creatorId(c) ? (a.nm(creatorId(c)) === 'Member' ? 'Community creator' : a.nm(creatorId(c))) : 'Community creator'}</button>{creatorId(c) && creatorId(c) !== data.ownerId && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}</div></div></div>
-                  <p className="dim" style={{ marginTop: 'auto' }}>{m} member{m === 1 ? '' : 's'}, {n} idea{n === 1 ? '' : 's'}</p>
+                  <p className="dim" style={{ marginTop: 'auto' }}>{a.canManageCommunity(c.id) ? `${m} member${m === 1 ? '' : 's'}, ` : ''}{n} idea{n === 1 ? '' : 's'}</p>
                   <div className="acts" style={{ margin: 0 }}>
                     <button className="btn p" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id)}>Open</button>
                     {a.canManageCommunity(c.id) && <button className="btn" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id + '?tab=join-requests')}><Icon name="member" size={16} />Join requests ({data.joinRequests.filter(r => r.cid === c.id && r.status === 'pending').length})</button>}
@@ -207,8 +207,10 @@ function Detail({ cid }: { cid: string }) {
           <p className="mut" style={{ marginTop: 8, maxWidth: 620 }}>{c.purpose}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}><Av id={communityCreatorId} size={36} /><div><p className="dim" style={{ fontSize: 10, letterSpacing: '.08em' }}>CREATED BY</p><button className="lk" onClick={() => communityCreatorId && nav('/me/' + communityCreatorId)}>{communityCreatorId && a.nm(communityCreatorId) !== 'Member' ? a.nm(communityCreatorId) : 'Community creator'}</button></div></div>
-            <span style={{ display: 'flex', marginLeft: 8 }}>{mem.filter(u => u !== communityCreatorId).slice(0, 5).map(u => <Av key={u} id={u} size={28} />)}</span>
-            <span className="dim">{mem.length} member{mem.length === 1 ? '' : 's'}</span>
+            {own && <>
+              <span style={{ display: 'flex', marginLeft: 8 }}>{mem.filter(u => u !== communityCreatorId).slice(0, 5).map(u => <Av key={u} id={u} size={28} />)}</span>
+              <span className="dim">{mem.length} member{mem.length === 1 ? '' : 's'}</span>
+            </>}
             {!own && <button className={cn('btn', !joined && 'p')} style={{ marginLeft: 'auto' }} disabled={!joined && !!c.joinApproval && myJoinRequest?.status === 'pending'} onClick={() => {
               if (preview) return a.toast('This is a preview. Nothing is saved.')
               if (joined) return void a.join(cid, false)
@@ -253,7 +255,7 @@ function Detail({ cid }: { cid: string }) {
             <div className="glass pad"><h3>Guidelines</h3><p className="mut" style={{ marginTop: 10, whiteSpace: 'pre-wrap' }}>{c.rules || 'Be kind, build on each other, and keep ideas specific.'}</p></div>
           </div>
           <div className="glass pad" style={{ marginTop: 18 }}><div className="stat3">
-            <div><p className="dim">Members</p><p className="num">{mem.length}</p></div>
+            {own && <div><p className="dim">Members</p><p className="num">{mem.length}</p></div>}
             <div><p className="dim">Ideas</p><p className="num">{data.ideas.filter(i => i.cid === cid).length}</p></div>
             <div><p className="dim">Created</p><p className="num" style={{ fontSize: 22, marginTop: 14 }}>{c.at ? new Date(c.at).toLocaleDateString() : ''}</p></div>
           </div></div>

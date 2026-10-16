@@ -199,19 +199,25 @@ function Inner() {
   const nav = useNavigate()
   const [params] = useSearchParams()
   const requestedIdeaId = params.get('idea') || ''
+  const canReview = a.owner || a.data.communities.some(community => a.ownsCommunity(community.id))
+  const canSeeIdeaProject = (idea: Idea) => a.owner
+    || a.canManageCommunity(idea.cid)
+    || idea.authorId === a.me?.id
+    || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')
   const ideas = a.data.ideas
     .filter(idea => !!a.data.projects[idea.id] || ['selected', 'promoted'].includes(a.statusOf(idea.id)))
+    .filter(canSeeIdeaProject)
     .filter(idea => !requestedIdeaId || idea.id === requestedIdeaId)
     .sort((x, y) => (a.data.projects[y.id]?.updatedAt || a.data.projects[y.id]?.at || y.at) - (a.data.projects[x.id]?.updatedAt || a.data.projects[x.id]?.at || x.at))
 
   return (
     <>
-      <Head kicker="Projects" title="Make progress visible." right={<button type="button" className="btn" onClick={() => nav('/queue')}><Icon name="queue" size={16} />Review queue</button>} />
+      <Head kicker="Projects" title="Make progress visible." right={canReview ? <button type="button" className="btn" onClick={() => nav('/queue')}><Icon name="queue" size={16} />Review queue</button> : undefined} />
       <p className="mut" style={{ maxWidth: 760, marginBottom: 18 }}>Turn selected ideas into real work. Community managers control the project brief and overall status; idea creators and accepted collaborators can add milestones and update shared progress.</p>
-      {!ideas.length ? <Empty icon="insight" title="No selected ideas or projects yet" text="Select an idea in the review queue to start a tracked project.">
-        <button type="button" className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/queue')}>Open review queue</button>
+      {!ideas.length ? <Empty icon="insight" title={canReview ? 'No selected ideas or projects yet' : 'No project spaces available yet'} text={canReview ? 'Select an idea in a community you manage to start a tracked project.' : 'Project spaces appear here when one of your ideas is selected or a community accepts your collaboration application.'}>
+        {canReview && <button type="button" className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/queue')}>Open review queue</button>}
       </Empty> : <div style={{ display: 'grid', gap: 16, maxWidth: 900 }}>
-        {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.canManageCommunity(idea.cid)} canCollaborate={a.canManageCommunity(idea.cid) || idea.authorId === a.me?.id || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')} />)}
+        {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.owner || a.canManageCommunity(idea.cid)} canCollaborate={a.owner || a.canManageCommunity(idea.cid) || idea.authorId === a.me?.id || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')} />)}
       </div>}
     </>
   )

@@ -39,6 +39,8 @@ function Inner() {
   const setC1 = (firstCommunity: string) => setSetupDraft(d => ({ ...d, firstCommunity }))
   const s = data.settings
 
+  if (!owner && !communityOwner) return <MemberDashboard />
+
   if (platformOwner && !s) {
     return (
       <>
@@ -53,15 +55,7 @@ function Inner() {
       </>
     )
   }
-  if (!s && !platformOwner && !owner && ownedCommunities.length === 0) return <>
-    <Head kicker="Dashboard" title={`Welcome, ${me!.name.split(' ')[0]}.`} />
-    <Empty icon="status" title="Your account is active" text="The platform workspace is still being set up. You can already browse communities and view your personal analytics.">
-      <div className="acts" style={{ justifyContent: 'center', marginTop: 12 }}>
-        <button className="btn" onClick={() => nav('/communities')}>Browse communities</button>
-        <button className="btn p" onClick={() => nav('/analytics')}><Icon name="insight" size={15} />Open analytics</button>
-      </div>
-    </Empty>
-  </>
+
   const pending = data.ideas.filter(i => a.statusOf(i.id) === 'review').length
   const ranked = data.ideas.filter(i => data.reviews[i.id]?.score != null && a.statusOf(i.id) === 'review').sort((x, y) => data.reviews[y.id].score! - data.reviews[x.id].score!).slice(0, 3)
   const recent = [...data.ideas].sort((x, y) => y.at - x.at).slice(0, 5)
@@ -106,6 +100,80 @@ function Inner() {
       </div>
       {owner && <Briefing />}
       {owner && <ShareCard title="Your space link" url={location.origin} sub="Share this with the people you want in your space." />}
+    </>
+  )
+}
+
+
+function MemberDashboard() {
+  const a = useApp()
+  const nav = useNavigate()
+  const memberId = a.me?.id || ''
+  const myIdeas = a.data.ideas
+    .filter(idea => idea.authorId === memberId)
+    .sort((first, second) => second.at - first.at)
+  const joinedCommunities = a.data.communities.filter(community => a.joined(community.id))
+  const backingCount = myIdeas.reduce((sum, idea) => sum + a.votesOf(idea.id), 0)
+  const selectedCount = myIdeas.filter(idea => ['selected', 'promoted'].includes(a.statusOf(idea.id))).length
+  const stats: [string, number][] = [
+    ['Communities joined', joinedCommunities.length],
+    ['Ideas shared by you', myIdeas.length],
+    ['Backings received', backingCount],
+    ['Ideas selected', selectedCount],
+  ]
+  const dd = (() => {
+    const day = 864e5
+    const today = new Date().setHours(0, 0, 0, 0)
+    const v: number[] = []
+    const d: number[] = []
+    for (let offset = 29; offset >= 0; offset--) {
+      const start = today - offset * day
+      d.push(start)
+      v.push(myIdeas.filter(idea => idea.at >= start && idea.at < start + day).length)
+    }
+    return { v, d }
+  })()
+  const recentIdeas = myIdeas.slice(0, 5)
+
+  return (
+    <>
+      <Head kicker="Your activity" title={`Welcome, ${a.me?.name.split(' ')[0] || 'there'}.`} right={<button className="btn p" onClick={() => nav('/communities')}><Icon name="community" size={16} />Explore communities</button>} />
+      <div className="grid g4" style={{ marginBottom: 18 }}>
+        {stats.map(([label, value]) => <div key={label} className="glass pad"><p className="dim">{label}</p><Num n={value} /></div>)}
+      </div>
+      <div className="grid g32">
+        <div className="glass pad">
+          <div className="head" style={{ marginBottom: 10 }}>
+            <div><h3>Your ideas over time</h3><p className="dim">Last 30 days</p></div>
+            <button className="chip" onClick={() => nav('/analytics')}>Open my activity</button>
+          </div>
+          {myIdeas.length ? <div className="chs"><AreaChart dd={dd} o={{ sm: true, pts: false, lab: false, avg: false, ma: false, grid: true }} /></div> : <Empty icon="idea" title="Your idea activity starts here" text="Share an idea in a community and track your progress here." />}
+        </div>
+        <div className="glass pad">
+          <h3 style={{ marginBottom: 8 }}>Your latest ideas</h3>
+          {recentIdeas.length ? recentIdeas.map(idea => (
+            <button key={idea.id} className="row rowbtn" onClick={() => nav('/idea/' + idea.id)}>
+              <Av id={idea.authorId} size={34} />
+              <div className="t"><h3 style={{ fontSize: 15 }}>{idea.title}</h3><p className="dim">{a.data.communities.find(community => community.id === idea.cid)?.name || 'Community'}, {when(idea.at)}</p></div>
+            </button>
+          )) : <Empty icon="idea" title="Nothing shared yet" text="Your first idea can start a useful conversation."><button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Find a community</button></Empty>}
+        </div>
+      </div>
+      <div className="glass pad" style={{ marginTop: 18 }}>
+        <div className="head" style={{ marginBottom: 10 }}>
+          <div><h3>Communities you’ve joined</h3><p className="dim">Your participation, not platform-wide totals</p></div>
+          <button className="chip" onClick={() => nav('/communities')}>Browse communities</button>
+        </div>
+        {joinedCommunities.length ? <div style={{ display: 'grid', gap: 4 }}>
+          {joinedCommunities.slice(0, 8).map(community => {
+            const contributed = myIdeas.filter(idea => idea.cid === community.id).length
+            return <button key={community.id} className="row rowbtn" onClick={() => nav('/communities/' + community.id)}>
+              <Icon name="community" size={19} />
+              <div className="t"><h3 style={{ fontSize: 15 }}>{community.name}</h3><p className="dim">You’ve shared {contributed} {contributed === 1 ? 'idea' : 'ideas'} here</p></div>
+            </button>
+          })}
+        </div> : <Empty icon="community" title="You haven’t joined a community yet" text="Explore public communities or start a new community of your own."><button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Explore communities</button></Empty>}
+      </div>
     </>
   )
 }
