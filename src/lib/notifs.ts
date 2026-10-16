@@ -81,7 +81,7 @@ export function useNotifs(a: App, st: UserState): Notif[] {
       .slice(0, 100)
       .map(n => ({ ...n, unread: n.at > seen && !rd[n.key] }))
   }, [a.data, a.me?.id, a.owner, a.platformAdmin, a.nm, a.joined, a.canManageCommunity, st, memberId, stored])
-
+}
 
 let ac: AudioContext | null = null
 export function unlockAudio() { try { ac = ac || new (window.AudioContext || (window as any).webkitAudioContext)(); if (ac.state === 'suspended') ac.resume() } catch {} }
