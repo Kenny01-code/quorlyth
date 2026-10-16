@@ -75,7 +75,7 @@ function Inner() {
     setText(value)
     setMentionedUserIds(current => current.filter(uid => value.includes('@' + a.nm(uid).replace(/^@/, ''))))
     const before = value.slice(0, cursorPosition)
-    const match = before.match(/(^|\\s)@([^\\s@]*)$/)
+    const match = before.match(/(^|\s)@([^\s@]*)$/)
     if (!match) {
       setMentionOpen(false)
       setMentionQuery('')
