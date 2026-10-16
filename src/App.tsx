@@ -58,6 +58,8 @@ export default function App() {
   const [intro, setIntro] = useState(() => !sessionStorage.getItem('qintro'))
   const [replay, setReplay] = useState(0)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
+  const [desktopPermission, setDesktopPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
   const unread = notifs.filter(n => n.unread).length
@@ -81,21 +83,33 @@ export default function App() {
     }
   }, [a.me?.id, loc.pathname, nav])
 
-  // a chime and a toast when something new arrives
+  // Reset the live-event baseline when accounts change so notifications never leak
+  // across a sign-out/sign-in transition on the same browser tab.
+  const knownUser = useRef<string | null>(null)
+  useEffect(() => {
+    const uid = a.me?.id || null
+    if (knownUser.current !== uid) {
+      knownUser.current = uid
+      known.current = null
+    }
+  }, [a.me?.id])
+
+  // One chime per event batch, a toast in-app, and one browser alert per event while
+  // the page is backgrounded. Every item remains in the persistent notification panel.
   useEffect(() => {
     if (!a.ready) return
-    if (known.current === null) { const t = setTimeout(() => (known.current = new Set(notifs.map(n => n.key))), 3000); return () => clearTimeout(t) }
+    if (known.current === null) {
+      const t = setTimeout(() => { known.current = new Set(notifs.map(n => n.key)) }, 3000)
+      return () => clearTimeout(t)
+    }
     const fresh = notifs.filter(n => n.unread && !known.current!.has(n.key))
     if (fresh.length) {
       if (sound) chime()
-      a.toast(fresh[0].text)
+      a.toast(fresh.length === 1 ? fresh[0].text : `${fresh.length} new Quorlyth notifications`)
       if (document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        try {
-          new Notification(fresh[0].text, {
-            body: fresh[0].kind === 'join' ? 'Open Quorlyth to review this community join request.' : 'Open Quorlyth to view the update.',
-            tag: fresh[0].key,
-          })
-        } catch {}
+        fresh.forEach(n => {
+          try { new Notification('Quorlyth', { body: n.text, tag: n.key }) } catch {}
+        })
       }
       fresh.forEach(n => known.current!.add(n.key))
     }
@@ -105,7 +119,7 @@ export default function App() {
   useEffect(() => {
     const store = a.backend?.store
     const uid = a.me?.id
-    if (!store || !uid || a.demo) { knownMessages.current = null; return }
+    if (!store || !uid || a.demo || a.backend?.auth.mode === 'supabase') return
     let conversations: any[] = []
     let mutedConversationIds = new Set<string>()
     const offConversations = store.subscribe('conversations', docs => {
@@ -121,7 +135,7 @@ export default function App() {
         return
       }
       const incoming = all.filter(m => m.senderId !== uid && !knownMessages.current!.has(m.id) && conversations.some(c => c.id === m.conversationId) && !mutedConversationIds.has(m.conversationId))
-      for (const m of all) knownMessages.current.add(m.id)
+      for (const message of all) knownMessages.current.add(message.id)
       if (!incoming.length) return
       const latest = incoming[incoming.length - 1]
       const convo = conversations.find(c => c.id === latest.conversationId)
@@ -159,6 +173,25 @@ export default function App() {
     addEventListener('scroll', sc, { passive: true })
     return () => { if (raf) cancelAnimationFrame(raf); removeEventListener('scroll', sc) }
   }, [])
+
+  const enableDesktopAlerts = async () => {
+    if (typeof Notification === 'undefined') {
+      setDesktopPermission('unsupported')
+      a.toast('Desktop notifications are not supported in this browser.')
+      return
+    }
+    try {
+      const permission = await Notification.requestPermission()
+      setDesktopPermission(permission)
+      a.toast(permission === 'granted'
+        ? 'Desktop alerts enabled while Quorlyth is open in the background.'
+        : permission === 'denied'
+          ? 'Desktop alerts are blocked by your browser. Change the site notification permission in browser settings.'
+          : 'Desktop alerts were not enabled.')
+    } catch {
+      a.toast('Could not enable desktop alerts. Check your browser permissions.')
+    }
+  }
 
   if (!a.ready) return <main aria-label="Loading Quorlyth" />
   if (a.startupError) return (
@@ -207,7 +240,7 @@ export default function App() {
           </Suspense>
         </section>
       </main>
-      {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); if (n) chime() }} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
+      {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
       <Suspense fallback={null}><QuorlythBot /></Suspense>

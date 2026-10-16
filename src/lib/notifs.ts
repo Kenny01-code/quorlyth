@@ -1,14 +1,34 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { App } from '../data/AppProvider'
 import { UserState } from './userState'
 
-export interface Notif { key: string; at: number; icon: string; text: string; kind: 'idea' | 'promo' | 'access' | 'settings' | 'join' | 'collaboration' | 'collab-request'; id?: string; target?: string; unread: boolean }
+export type NotifKind = 'idea' | 'promo' | 'access' | 'settings' | 'join' | 'collaboration' | 'collab-request' | 'comment' | 'vote' | 'community' | 'project' | 'milestone' | 'message' | 'announcement' | 'call'
+export interface Notif { key: string; at: number; icon: string; text: string; kind: NotifKind; id?: string; target?: string; unread: boolean }
+type StoredNotif = Omit<Notif, 'key' | 'unread'> & { key?: string }
 
 const keyOf = (k: string, id: string | undefined, at: number) => `${k}_${id || 'x'}_${at}`.replace(/[^\w]/g, '_')
 
 export function useNotifs(a: App, st: UserState): Notif[] {
+  const memberId = a.me?.id
+  const [stored, setStored] = useState<StoredNotif[]>([])
+
+  // These durable events live under the recipient's private user-vault path. Supabase
+  // persists them across devices and Realtime updates the panel without polling.
+  useEffect(() => {
+    const store = a.backend?.store
+    if (!store || !memberId) {
+      setStored([])
+      return
+    }
+    return store.subscribe(
+      `data/users/${memberId}/notifications`,
+      docs => setStored(docs.map(doc => ({ id: doc.id, ...doc.data }) as StoredNotif)),
+      error => console.warn('Could not load Quorlyth notifications:', error),
+    )
+  }, [a.backend, memberId])
+
   return useMemo(() => {
-    const m = a.me?.id
+    const m = memberId
     if (!m) return []
     const seen = st.seen || 0, rd = st.read || {}
     const out: Omit<Notif, 'key' | 'unread'>[] = []
@@ -21,18 +41,11 @@ export function useNotifs(a: App, st: UserState): Notif[] {
     d.promotions.forEach(p => { if ((p.credits || []).includes(m) && p.by !== m) out.push({ at: p.at, icon: 'publish', text: 'You were credited in a post prepared to share', kind: 'promo', id: p.id }) })
     const dc = d.decisions[m]
     if (dc?.at) out.push({ at: dc.at, icon: dc.status === 'approved' ? 'approve' : 'alert', text: `Your access request was ${dc.status}`, kind: 'access' })
-    if (a.owner) d.requests.forEach(r => { const x = d.decisions[r.id]; if (r.at && (!x || x.at < r.at)) out.push({ at: r.at, icon: 'invite', text: `${a.nm(r.id)} requested access`, kind: 'settings', id: r.id }) })
+    if (a.platformAdmin) d.requests.forEach(r => { const x = d.decisions[r.id]; if (r.at && (!x || x.at < r.at)) out.push({ at: r.at, icon: 'invite', text: `${a.nm(r.id)} requested access`, kind: 'settings', id: r.id }) })
     d.joinRequests.forEach(r => {
       if (r.status !== 'pending' || (!a.owner && !a.canManageCommunity(r.cid))) return
       const community = d.communities.find(c => c.id === r.cid)
-      out.push({
-        at: r.at,
-        icon: 'member',
-        text: `${a.nm(r.userId)} requested to join ${community?.name || 'your community'}`,
-        kind: 'join',
-        id: r.cid + '__' + r.userId,
-        target: r.cid,
-      })
+      out.push({ at: r.at, icon: 'member', text: `${a.nm(r.userId)} requested to join ${community?.name || 'your community'}`, kind: 'join', id: r.cid + '__' + r.userId, target: r.cid })
     })
     d.volunteers.forEach(application => {
       const idea = d.ideas.find(item => item.id === application.ideaId)
@@ -44,8 +57,30 @@ export function useNotifs(a: App, st: UserState): Notif[] {
         out.push({ at: application.reviewedAt, icon: application.status === 'accepted' ? 'approve' : 'decline', text: 'Your collaboration application for "' + idea.title + '" was ' + application.status, kind: 'collaboration', id: idea.id, target: idea.id })
       }
     })
-    return out.sort((x, y) => y.at - x.at).slice(0, 25).map(n => { const key = keyOf(n.kind, n.id, n.at); return { ...n, key, unread: n.at > seen && !rd[key] } })
-  }, [a.data, a.me?.id, a.owner, st])
+
+    // Prefer the persistent server event when its stable key matches a legacy-derived
+    // item. This avoids showing the same idea/status/request twice during migration.
+    const merged = new Map<string, Omit<Notif, 'unread'>>()
+    out.forEach(item => {
+      const key = keyOf(item.kind, item.id, item.at)
+      merged.set(key, { ...item, key })
+    })
+    stored.forEach(item => {
+      if (!item || !item.kind || !Number.isFinite(Number(item.at)) || !item.text) return
+      const kind = item.kind as NotifKind
+      const at = Number(item.at)
+      const key = item.key || keyOf(kind, item.id, at)
+      merged.set(key, {
+        key, at, icon: item.icon || 'bell', text: String(item.text), kind,
+        ...(item.id ? { id: item.id } : {}),
+        ...(item.target ? { target: item.target } : {}),
+      })
+    })
+    return [...merged.values()]
+      .sort((x, y) => y.at - x.at)
+      .slice(0, 100)
+      .map(n => ({ ...n, unread: n.at > seen && !rd[n.key] }))
+  }, [a.data, a.me?.id, a.owner, a.platformAdmin, a.nm, a.joined, a.canManageCommunity, st, memberId, stored])
 }
 
 let ac: AudioContext | null = null
