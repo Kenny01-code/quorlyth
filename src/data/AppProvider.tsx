@@ -12,7 +12,7 @@ interface Data {
 const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], settings: null, ownerId: null }
 
 export interface App {
-  ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformAdmin: boolean; demo: boolean; data: Data
+  ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data
   enterDemo: () => void; exitDemo: () => Promise<void>; signOut: () => Promise<void>
   toast: (m: string) => void; toastMsg: string
   nm: (id: string) => string; avatar: (id: string) => string
@@ -228,7 +228,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Keep legacy workspace ownership separate from platform-admin privileges:
   // admins get global tools, but are not treated as the creator of unowned legacy communities.
   const legacyOwner = demo || (!!me && data.ownerId === me.id)
-  const owner = legacyOwner || platformAdmin
+  const platformOwner = legacyOwner
+  // `owner` remains the broad workspace-manager capability for existing surfaces;
+  // platform-owner-only permissions must check `platformOwner` explicitly.
+  const owner = platformOwner || platformAdmin
 
   const enterDemo = useCallback(() => {
     sessionStorage.setItem('quorlyth:demo', '1')
@@ -339,7 +342,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 }
     return {
-      ready, startupError, backend, me, owner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, toast, toastMsg,
+      ready, startupError, backend, me, owner, platformOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, toast, toastMsg,
       nm: id => data.profiles[id]?.name || data.profiles[id]?.authName || (me && id === me.id ? me.name : 'Member'),
       avatar: id => data.profiles[id]?.photo || data.profiles[id]?.authAvatarUrl || (me && id === me.id ? me.avatarUrl || '' : ''),
       votesOf,
