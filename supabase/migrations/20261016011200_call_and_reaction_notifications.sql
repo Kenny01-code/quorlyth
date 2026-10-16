@@ -71,7 +71,8 @@ begin
     return new;
 
   -- A reaction is relevant to the author of the message being reacted to.
-  elsif new.path ~ '^chatMessageReactions/[^/]+    and (tg_op = 'INSERT' or old.data->>'reaction' is distinct from new.data->>'reaction') then
+  elsif new.path ~ '^chatMessageReactions/[^/]+$'
+    and (tg_op = 'INSERT' or old.data->>'reaction' is distinct from new.data->>'reaction') then
     v_reaction := nullif(trim(new.data->>'reaction'), '');
     if v_reaction is null then return new; end if;
     v_message_id := new.data->>'messageId';
