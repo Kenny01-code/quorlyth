@@ -69,6 +69,7 @@ export default function App() {
   const ownDecision = a.me && a.data.decisions[a.me.id]
   const accessSent = !!(!a.owner && ownRequest && (!ownDecision || ownDecision.at < ownRequest.at))
   const known = useRef<Set<string> | null>(null)
+  const notificationSessionStartedAt = useRef(0)
   const knownMessages = useRef<Set<string> | null>(null)
   const g = useRef(0)
 
@@ -91,6 +92,10 @@ export default function App() {
     if (knownUser.current !== uid) {
       knownUser.current = uid
       known.current = null
+      // Notifications can arrive in a batch after a reconnect or initial load.
+      // Record the start of this signed-in session so old durable events are
+      // still visible as unread, but aren't presented as if they just happened.
+      notificationSessionStartedAt.current = uid ? Date.now() : 0
     }
   }, [a.me?.id])
 
@@ -102,7 +107,15 @@ export default function App() {
       const t = setTimeout(() => { known.current = new Set(notifs.map(n => n.key)) }, 3000)
       return () => clearTimeout(t)
     }
-    const fresh = notifs.filter(n => n.unread && !known.current!.has(n.key))
+    const now = Date.now()
+    const maxToastAgeMs = 2 * 60 * 1000
+    const fresh = notifs.filter(n =>
+      n.unread
+      && !known.current!.has(n.key)
+      && n.at >= notificationSessionStartedAt.current
+      && now - n.at <= maxToastAgeMs
+      && n.at <= now + 30_000
+    )
     if (fresh.length) {
       if (sound) chime()
       a.toast(fresh.length === 1 ? fresh[0].text : `${fresh.length} new Quorlyth notifications`)
