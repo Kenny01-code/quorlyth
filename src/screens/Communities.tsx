@@ -92,6 +92,7 @@ function List() {
                   <p className="dim" style={{ marginTop: 'auto' }}>{m} member{m === 1 ? '' : 's'}, {n} idea{n === 1 ? '' : 's'}</p>
                   <div className="acts" style={{ margin: 0 }}>
                     <button className="btn p" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id)}>Open</button>
+                    {a.canManageCommunity(c.id) && <button className="btn" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id + '?tab=join-requests')}><Icon name="member" size={16} />Join requests ({data.joinRequests.filter(r => r.cid === c.id && r.status === 'pending').length})</button>}
                     {a.canManageCommunity(c.id) && <button className="btn" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id + '?preview=member')}><Icon name="eye2" size={16} />View community</button>}
                   </div>
                 </div>
@@ -217,7 +218,7 @@ function Detail({ cid }: { cid: string }) {
           </div>
         </div>
       </div>
-      <div className="ctabs">{tabs.map((t, i) => <Chip key={t} on={tab === i} onClick={() => setTab(i)}>{t}</Chip>)}</div>
+      <div className="ctabs">{tabs.map((t, i) => <Chip key={t} on={tab === i} onClick={() => setTab(i)}>{t}{t === 'Join requests' && data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length > 0 ? ' (' + data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length + ')' : ''}</Chip>)}</div>
       {shareOpen && <ShareCard title={"Share " + c.name} url={window.location.origin + "/communities/" + c.id} sub="Copy the community link or let people scan the QR code. Unlisted communities still require access." />}
 
       {tab === 0 && (
@@ -327,12 +328,27 @@ function Detail({ cid }: { cid: string }) {
 
 function JoinRequests({ cid }: { cid: string }) {
   const a = useApp()
+  const [workingUserId, setWorkingUserId] = useState<string | null>(null)
   const requests = a.data.joinRequests.filter(r => r.cid === cid).sort((x, y) => y.at - x.at)
+  const pendingCount = requests.filter(request => request.status === 'pending').length
+
+  async function review(userId: string, status: 'approved' | 'declined') {
+    if (workingUserId) return
+    setWorkingUserId(userId)
+    try {
+      // The server RPC atomically changes the request and grants membership on approval.
+      // Keep the request visible and let the provider report a permission/network error.
+      await a.reviewCommunityJoinRequest(cid, userId, status)
+    } finally {
+      setWorkingUserId(null)
+    }
+  }
+
   return <div className="glass pad">
-    <div className="profile-section-heading"><div><p className="dim">COMMUNITY MANAGEMENT</p><h3 style={{ marginBottom: 4 }}>Join requests</h3><p className="mut">Review requests for this community only. Platform access is managed separately.</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
+    <div className="profile-section-heading"><div><p className="dim">COMMUNITY MANAGEMENT</p><h3 style={{ marginBottom: 4 }}>Join requests</h3><p className="mut">Review requests for this community only. Platform access is managed separately. {pendingCount ? pendingCount + ' awaiting review.' : 'No requests are waiting for review.'}</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
     {requests.length ? requests.map(r => <div key={r.id} className="set" style={{ alignItems: 'flex-start' }}>
       <div style={{ display: 'flex', gap: 12, minWidth: 0 }}><Av id={r.userId} size={38} /><div><h3 style={{ fontSize: 15 }}>{a.nm(r.userId)}</h3><p className="dim">{when(r.at)}</p>{r.message && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.message}</p>}</div></div>
-      <div className="acts" style={{ margin: 0, flexShrink: 0 }}>{r.status === 'pending' ? <><button className="btn p" style={{ padding: '9px 18px' }} onClick={() => void a.reviewCommunityJoinRequest(cid, r.userId, 'approved')}>Approve</button><button className="btn" style={{ padding: '9px 18px' }} onClick={() => void a.reviewCommunityJoinRequest(cid, r.userId, 'declined')}>Decline</button></> : <span className="chip">{r.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
+      <div className="acts" style={{ margin: 0, flexShrink: 0 }}>{r.status === 'pending' ? <><button className="btn p" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(r.userId, 'approved')}>{workingUserId === r.userId ? 'Saving…' : 'Approve'}</button><button className="btn" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(r.userId, 'declined')}>{workingUserId === r.userId ? 'Saving…' : 'Decline'}</button></> : <span className="chip">{r.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
     </div>) : <p className="mut" style={{ padding: '20px 0' }}>No join requests for this community yet.</p>}
   </div>
 }
