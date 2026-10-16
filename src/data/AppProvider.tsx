@@ -453,25 +453,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const idea = status === 'accepted' ? applicationIdea : undefined
         const currentReview = idea ? data.reviews[idea.id] || data.outcomes[idea.id] : undefined
         const nextReviewStatus = currentReview?.status === 'promoted' ? 'promoted' as const : 'selected' as const
-        const needsProject = !!idea && !data.projects[idea.id]
+        const needsProjectInLocalState = !!idea && !data.projects[idea.id]
         const workspaceSummary = 'Collaboration workspace ready. Add a project plan and milestones to coordinate the work.'
+        let initializedProject: Project | undefined
 
-        // Approval should initialize the shared workspace before the application is
-        // marked accepted. Contributors should never be accepted into a missing project.
+        // Resolve the persisted project before accepting the applicant. A realtime
+        // subscription can lag behind a successful insert, so do not treat a stale
+        // local project map as authoritative for initialization.
+        if (idea) {
+          let storedProject = await st!.get('projects/' + idea.id)
+          if (!storedProject) {
+            try {
+              await st!.create('projects/' + idea.id, {
+                ideaId: idea.id,
+                summary: workspaceSummary,
+                status: 'active',
+                createdBy: me!.id,
+                at: reviewedAt,
+                updatedAt: reviewedAt,
+              })
+              storedProject = {
+                ideaId: idea.id,
+                summary: workspaceSummary,
+                status: 'active',
+                createdBy: me!.id,
+                at: reviewedAt,
+                updatedAt: reviewedAt,
+              }
+            } catch (createError) {
+              // A concurrent accept/create may have won the insert race. Reuse the
+              // now-persisted project if it exists; otherwise surface the real error.
+              storedProject = await st!.get('projects/' + idea.id)
+              if (!storedProject) throw createError
+            }
+          }
+
+          const projectAt = Number(storedProject.at) > 0 ? Number(storedProject.at) : reviewedAt
+          initializedProject = {
+            id: idea.id,
+            ideaId: idea.id,
+            summary: typeof storedProject.summary === 'string' && storedProject.summary.trim() ? storedProject.summary : workspaceSummary,
+            status: storedProject.status === 'completed' ? 'completed' : 'active',
+            createdBy: typeof storedProject.createdBy === 'string' && storedProject.createdBy ? storedProject.createdBy : me!.id,
+            at: projectAt,
+            updatedAt: Number(storedProject.updatedAt) > 0 ? Number(storedProject.updatedAt) : projectAt,
+          }
+        }
+
+        // Keep the application pending until both the project and the idea status
+        // are ready. If a write fails, the manager can retry without making a
+        // duplicate project or leaving a falsely accepted application.
         if (idea && currentReview?.status !== 'selected' && currentReview?.status !== 'promoted') {
           await up('reviews/' + idea.id, { status: 'selected', at: reviewedAt })
         }
-        if (idea && needsProject) {
-          await st!.create('projects/' + idea.id, {
-            ideaId: idea.id,
-            summary: workspaceSummary,
-            status: 'active',
-            createdBy: me!.id,
-            at: reviewedAt,
-            updatedAt: reviewedAt,
-          })
-        }
-
         await up('volunteers/' + applicationId, { status, reviewedAt, reviewedBy: me!.id })
         setData(d => ({
           ...d,
@@ -481,29 +515,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
               ...d.reviews,
               [idea.id]: { ...d.reviews[idea.id], id: idea.id, status: nextReviewStatus, at: reviewedAt },
             },
-            ...(needsProject ? {
+            ...(needsProjectInLocalState && initializedProject ? {
               projects: {
                 ...d.projects,
-                [idea.id]: {
-                  id: idea.id,
-                  ideaId: idea.id,
-                  summary: workspaceSummary,
-                  status: 'active' as const,
-                  createdBy: me!.id,
-                  at: reviewedAt,
-                  updatedAt: reviewedAt,
-                },
+                [idea.id]: initializedProject,
               },
             } : {}),
           } : {}),
         }))
       }, status === 'accepted' ? 'Contributor accepted and workspace opened' : 'Application declined'),
       createProject: (ideaId, summary) => w(async () => {
+        if (!me) throw new Error('Sign in before creating a collaboration workspace.')
+        const projectIdea = data.ideas.find(item => item.id === ideaId)
+        if (!projectIdea) throw new Error('The idea for this workspace is no longer available.')
+        if (!canManageCommunity(projectIdea.cid)) throw new Error('Only the community owner or a platform administrator can initialize a collaboration workspace.')
         const cleanSummary = summary.trim()
         if (!cleanSummary) throw new Error('Add a short project summary first.')
+        const existing = data.projects[ideaId] || await st!.get('projects/' + ideaId)
+        if (existing) throw new Error('A workspace already exists for this idea. Refresh and open the existing collaboration instead.')
         const at = Date.now()
-        const project: Project = { id: ideaId, ideaId, summary: cleanSummary, status: 'active', createdBy: me!.id, at, updatedAt: at }
-        await st!.set('projects/' + ideaId, { ideaId, summary: cleanSummary, status: 'active', createdBy: me!.id, at, updatedAt: at })
+        const project: Project = { id: ideaId, ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at }
+        await st!.create('projects/' + ideaId, { ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at })
         await up('reviews/' + ideaId, { status: 'selected', at })
         setData(d => ({ ...d, projects: { ...d.projects, [ideaId]: project }, reviews: { ...d.reviews, [ideaId]: { ...d.reviews[ideaId], status: 'selected', at } } }))
       }, 'Project created'),
