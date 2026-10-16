@@ -161,6 +161,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!backend) { setData(EMPTY); return }
+
+    // Drop account-scoped snapshots immediately when auth/backend changes. The
+    // replacement subscriptions may take a moment to complete their first SELECT;
+    // retaining the previous account's data during that gap can leak stale private
+    // requests, memberships, collaboration applications, and read states.
+    setData(d => ({
+      ...d,
+      reviews: {}, outcomes: {}, votes: {}, members: {}, requests: [],
+      joinRequests: [], decisions: {}, promotions: [], volunteers: [],
+      projects: {}, milestones: [], settings: null,
+    }))
+
     const s = backend.store
     const set = (k: keyof Data, v: any) => setData(d => ({ ...d, [k]: v }))
     let readErrorShown = false
