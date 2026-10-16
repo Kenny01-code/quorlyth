@@ -101,17 +101,26 @@ function Detail({ cid }: { cid: string }) {
   const [preview, setPreview] = useState<Preview>(() => (new URLSearchParams(location.search).get('preview') as Preview) || null)
   const [sort, setSort] = useState(0)
   const [memberIds, setMemberIds] = useState<string[]>([])
+  const [loadingMemberIds, setLoadingMemberIds] = useState(true)
   useEffect(() => {
     let active = true
-    if (!a.me || !a.backend) { setMemberIds([]); return }
+    const mayViewMembers = !!a.me && (a.canManageCommunity(cid) || a.joined(cid))
+    if (!a.backend || !mayViewMembers) {
+      setMemberIds([])
+      setLoadingMemberIds(false)
+      return () => { active = false }
+    }
+    setLoadingMemberIds(true)
     void a.backend.store.listCommunityMembers(cid).then(ids => {
       if (active) setMemberIds(ids)
     }).catch(error => {
       console.error('Could not load community members:', error)
       if (active) a.toast('Could not load community members. Refresh and try again.')
+    }).finally(() => {
+      if (active) setLoadingMemberIds(false)
     })
     return () => { active = false }
-  }, [a.backend, a.me?.id, a.data.members, cid, tab])
+  }, [a.backend, a.me?.id, a.data.members, a.data.communities, a.platformAdmin, cid, tab])
   const [tag, setTag] = useState('')
   const emptyIdea = { title: '', body: '', tags: '' }
   const [f, setF, clearIdeaDraft] = useDraftState(`q-draft:${a.me?.id}:idea:${cid}`, emptyIdea)
@@ -222,13 +231,13 @@ function Detail({ cid }: { cid: string }) {
 
       {tab === 2 && (
         <div className="glass pad community-member-panel"><div className="profile-section-heading"><div><p className="dim">YOUR COMMUNITY</p><h3 style={{ marginBottom: 4 }}>Members</h3><p className="mut">Recognize the people helping this community move forward.</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
-          {mem.length && (own || joined) ? mem.map(u => {
+          {loadingMemberIds ? <p className="mut" style={{ padding: '18px 0' }}>Loading community members…</p> : own || joined ? (mem.length ? mem.map(u => {
             const badge = c.memberBadges?.[u] || ''
             return <div key={u} className="row community-member-row" style={{ cursor: 'default' }}><Av id={u} size={42} />
               <div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3><p className="dim">{data.profiles[u]?.head || 'Member'}</p>{badge && <span className="community-member-badge"><span aria-hidden="true">✧</span>{badge}</span>}</div>
               {own && <div className="community-member-actions"><label className="field community-badge-select"><span>Assign community badge</span><select aria-label={'Assign a badge to ' + a.nm(u)} value={badge} onChange={async e => { const next = { ...(c.memberBadges || {}) }; if (e.target.value) next[u] = e.target.value; else delete next[u]; await a.saveCommunity(cid, { memberBadges: next }) }}><option value="">No badge</option><option value="Founding Member">Founding Member</option><option value="Top Contributor">Top Contributor</option><option value="Idea Architect">Idea Architect</option><option value="Community MVP">Community MVP</option><option value="Trusted Member">Trusted Member</option></select></label><Chip onClick={async () => { try { await a.backend!.store.update('members/' + u, { c: { [cid]: false } }); setMemberIds(await a.backend!.store.listCommunityMembers(cid)); a.toast('Member removed from this community') } catch (e) { a.toast('Could not remove member: ' + (e instanceof Error ? e.message : String(e))) } }}>Remove</Chip></div>}
             </div>
-          }) : <p className="mut" style={{ padding: '18px 0' }}>{mem.length ? 'Join this community to see who is in it.' : 'No members yet.'}</p>}
+          }) : <p className="mut" style={{ padding: '18px 0' }}>No members yet.</p> : <p className="mut" style={{ padding: '18px 0' }}>Join this community to see who is in it.</p>}
         </div>
       )}
 
