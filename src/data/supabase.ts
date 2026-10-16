@@ -35,7 +35,12 @@ export async function createSupabaseStore(url: string, key: string) {
         }
       })
       .subscribe((status, error) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (status === 'SUBSCRIBED') {
+          // Reconcile every live collection after initial connection and after any
+          // Realtime reconnect, so a missed event during a network gap cannot leave
+          // the UI stale until an unrelated future write.
+          for (const listener of realtimeListeners.values()) listener.refresh()
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           for (const listener of realtimeListeners.values()) listener.onRealtimeError(status, error)
         }
       })
