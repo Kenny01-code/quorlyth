@@ -1276,3 +1276,216 @@ main:has(.chat-page) > .on {
     backdrop-filter: none !important;
   }
 }
+
+
+/* Quorlyth navigation: individual, tactile motion for every destination.
+   The shared glass sheen stays monochrome; each icon has its own movement signature. */
+#nav .navmain .nav-item {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid transparent;
+  transform: translateZ(0);
+  transition:
+    color .28s ease,
+    border-color .35s ease,
+    background-color .35s ease,
+    transform .4s cubic-bezier(.18,.72,.25,1),
+    box-shadow .4s cubic-bezier(.18,.72,.25,1);
+}
+#nav .navmain .nav-item::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(255,255,255,.15), transparent 56%),
+    linear-gradient(135deg, rgba(255,255,255,.095), rgba(255,255,255,.015) 65%);
+  opacity: 0;
+  transform: scale(.91);
+  transition: opacity .38s ease, transform .48s cubic-bezier(.18,.72,.25,1);
+  pointer-events: none;
+}
+#nav .navmain .nav-item::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: -35%;
+  bottom: -35%;
+  left: -65%;
+  width: 36%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.22), transparent);
+  transform: translateX(-170%) skewX(-18deg);
+  opacity: 0;
+  pointer-events: none;
+}
+#nav .navmain .nav-item > svg,
+#nav .navmain .nav-item > span,
+#nav .navmain .nav-item > b {
+  position: relative;
+  z-index: 1;
+}
+#nav .navmain .nav-item > svg {
+  transform-origin: 50% 50%;
+  transition: transform .34s cubic-bezier(.18,.72,.25,1), filter .34s ease;
+}
+#nav .navmain .nav-item:is(:hover, :focus-visible) {
+  color: #fff;
+  border-color: rgba(255,255,255,.11);
+  background: rgba(255,255,255,.025);
+  box-shadow: 0 8px 28px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.08);
+}
+#nav .navmain .nav-item:is(:hover, :focus-visible)::before {
+  opacity: 1;
+  transform: scale(1);
+}
+#nav .navmain .nav-item:is(:hover, :focus-visible)::after {
+  opacity: 1;
+  animation: qNavGlassSweep .78s cubic-bezier(.2,.7,.2,1) both;
+}
+#nav .navmain .nav-item:active {
+  transform: scale(.955);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.25);
+}
+#nav .navmain .nav-item.on {
+  border-color: rgba(255,255,255,.9);
+  box-shadow: 0 0 26px rgba(255,255,255,.18), inset 0 1px 0 rgba(255,255,255,.75);
+}
+#nav .navmain .nav-item.on::before,
+#nav .navmain .nav-item.on::after {
+  display: none;
+}
+#nav .navmain .nav-item-home:is(:hover, :focus-visible) > svg { animation: qNavHome .72s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-demo:is(:hover, :focus-visible) > svg { animation: qNavSpark .76s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-signin:is(:hover, :focus-visible) > svg { animation: qNavUnlock .62s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-dashboard:is(:hover, :focus-visible) > svg { animation: qNavRise .68s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-access:is(:hover, :focus-visible) > svg { animation: qNavInvite .78s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-analytics:is(:hover, :focus-visible) > svg { animation: qNavBars .66s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-communities:is(:hover, :focus-visible) > svg { animation: qNavOrbit .78s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-messages:is(:hover, :focus-visible) > svg { animation: qNavMessage .68s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-queue:is(:hover, :focus-visible) > svg { animation: qNavTick .65s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-projects:is(:hover, :focus-visible) > svg { animation: qNavProject .7s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-collaborations:is(:hover, :focus-visible) > svg { animation: qNavBridge .75s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-promote:is(:hover, :focus-visible) > svg { animation: qNavLaunch .7s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-settings:is(:hover, :focus-visible) > svg { animation: qNavGear .86s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-me:is(:hover, :focus-visible) > svg { animation: qNavPortrait .72s cubic-bezier(.2,.7,.2,1); }
+#nav .navmain .nav-item-database:is(:hover, :focus-visible) > svg { animation: qNavData .78s cubic-bezier(.2,.7,.2,1); }
+
+@keyframes qNavGlassSweep {
+  0% { transform: translateX(-170%) skewX(-18deg); }
+  100% { transform: translateX(520%) skewX(-18deg); }
+}
+@keyframes qNavHome {
+  0%,100% { transform: translateY(0) rotate(0); }
+  42% { transform: translateY(-2px) rotate(-9deg); }
+  72% { transform: translateY(1px) rotate(4deg); }
+}
+@keyframes qNavSpark {
+  0%,100% { transform: scale(1) rotate(0); }
+  35% { transform: scale(1.19) rotate(14deg); filter: drop-shadow(0 0 5px rgba(255,255,255,.5)); }
+  68% { transform: scale(.94) rotate(-8deg); }
+}
+@keyframes qNavUnlock {
+  0%,100% { transform: translateY(0) rotate(0); }
+  36% { transform: translateY(-3px) rotate(-8deg); }
+  68% { transform: translateY(1px) rotate(5deg); }
+}
+@keyframes qNavRise {
+  0%,100% { transform: translateY(0) scale(1); }
+  44% { transform: translateY(-4px) scale(1.06); }
+  72% { transform: translateY(1px) scale(.98); }
+}
+@keyframes qNavInvite {
+  0%,100% { transform: translateX(0) rotate(0); }
+  38% { transform: translateX(2px) rotate(9deg); }
+  72% { transform: translateX(-1px) rotate(-4deg); }
+}
+@keyframes qNavBars {
+  0%,100% { transform: scaleY(1) translateY(0); }
+  28% { transform: scaleY(.78) translateY(2px); }
+  56% { transform: scaleY(1.18) translateY(-1px); }
+  78% { transform: scaleY(.95) translateY(1px); }
+}
+@keyframes qNavOrbit {
+  0%,100% { transform: rotate(0) scale(1); }
+  42% { transform: rotate(-11deg) scale(1.1); }
+  75% { transform: rotate(7deg) scale(.98); }
+}
+@keyframes qNavMessage {
+  0%,100% { transform: translateX(0) rotate(0); }
+  33% { transform: translateX(-2px) rotate(-6deg); }
+  66% { transform: translateX(2px) rotate(5deg); }
+}
+@keyframes qNavTick {
+  0%,100% { transform: rotate(0) scale(1); }
+  38% { transform: rotate(-12deg) scale(1.08); }
+  63% { transform: rotate(7deg) scale(.96); }
+}
+@keyframes qNavProject {
+  0%,100% { transform: perspective(70px) rotateY(0) translateY(0); }
+  45% { transform: perspective(70px) rotateY(24deg) translateY(-2px); }
+  72% { transform: perspective(70px) rotateY(-9deg); }
+}
+@keyframes qNavBridge {
+  0%,100% { transform: translateX(0) scale(1); }
+  32% { transform: translateX(-2px) scale(.96); }
+  68% { transform: translateX(2px) scale(1.08); }
+}
+@keyframes qNavLaunch {
+  0%,100% { transform: translate(0,0) rotate(0); }
+  45% { transform: translate(3px,-3px) rotate(7deg); }
+  76% { transform: translate(-1px,1px) rotate(-2deg); }
+}
+@keyframes qNavGear {
+  0%,100% { transform: rotate(0) scale(1); }
+  70% { transform: rotate(72deg) scale(1.08); }
+}
+@keyframes qNavPortrait {
+  0%,100% { transform: perspective(60px) rotateY(0) rotate(0); }
+  42% { transform: perspective(60px) rotateY(-18deg) rotate(-4deg); }
+  74% { transform: perspective(60px) rotateY(8deg) rotate(2deg); }
+}
+@keyframes qNavData {
+  0%,100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
+  45% { transform: scale(1.12); filter: drop-shadow(0 0 5px rgba(255,255,255,.38)); }
+  72% { transform: scale(.96); }
+}
+
+/* Full contributor lists stay quiet and scannable while preserving the liquid-glass style. */
+.community-contributors-panel .community-contributor-row {
+  min-width: 0;
+  gap: 12px;
+  padding: 12px 2px;
+  border-bottom: 1px solid rgba(255,255,255,.075);
+  transition: background-color .3s ease, transform .3s ease, border-color .3s ease;
+}
+.community-contributors-panel .community-contributor-row:last-of-type { border-bottom-color: transparent; }
+.community-contributors-panel .community-contributor-row:hover {
+  transform: translateX(3px);
+  border-bottom-color: rgba(255,255,255,.17);
+}
+.community-contributors-panel .community-contributor-row .t { min-width: 0; }
+.community-contributors-panel .community-contributor-score {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 5px 9px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.8);
+  font-size: 11px;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  #nav .navmain .nav-item,
+  #nav .navmain .nav-item::before,
+  #nav .navmain .nav-item::after,
+  #nav .navmain .nav-item > svg,
+  .community-contributors-panel .community-contributor-row {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
