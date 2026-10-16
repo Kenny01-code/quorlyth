@@ -10,21 +10,30 @@ const keyOf = (k: string, id: string | undefined, at: number) => `${k}_${id || '
 
 export function useNotifs(a: App, st: UserState): Notif[] {
   const memberId = a.me?.id
-  const [stored, setStored] = useState<StoredNotif[]>([])
+  const [storedState, setStoredState] = useState<{ memberId: string | null; docs: StoredNotif[] }>({ memberId: null, docs: [] })
+  // Never render the previous account's notification snapshot during the render
+  // between an account change and its subscription effect.
+  const stored = storedState.memberId === (memberId || null) ? storedState.docs : []
 
   // These durable events live under the recipient's private user-vault path. Supabase
   // persists them across devices and Realtime updates the panel without polling.
   useEffect(() => {
     const store = a.backend?.store
-    if (!store || !memberId) {
-      setStored([])
+    const uid = memberId || null
+    if (!store || !uid) {
+      setStoredState({ memberId: uid, docs: [] })
       return
     }
-    return store.subscribe(
-      `data/users/${memberId}/notifications`,
-      docs => setStored(docs.map(doc => ({ id: doc.id, ...doc.data }) as StoredNotif)),
+    let active = true
+    setStoredState({ memberId: uid, docs: [] })
+    const unsubscribe = store.subscribe(
+      `data/users/${uid}/notifications`,
+      docs => {
+        if (active) setStoredState({ memberId: uid, docs: docs.map(doc => ({ id: doc.id, ...doc.data }) as StoredNotif) })
+      },
       error => console.warn('Could not load Quorlyth notifications:', error),
     )
+    return () => { active = false; unsubscribe() }
   }, [a.backend, memberId])
 
   return useMemo(() => {
@@ -54,7 +63,7 @@ export function useNotifs(a: App, st: UserState): Notif[] {
         out.push({ at: application.at, icon: 'collab', text: a.nm(application.applicantId) + ' applied to collaborate on "' + idea.title + '"', kind: 'collab-request', id: application.id, target: idea.id })
       }
       if (application.applicantId === m && application.status !== 'pending' && application.reviewedAt) {
-        out.push({ at: application.reviewedAt, icon: application.status === 'accepted' ? 'approve' : 'decline', text: 'Your collaboration application for "' + idea.title + '" was ' + application.status, kind: 'collaboration', id: idea.id, target: idea.id })
+        out.push({ at: application.reviewedAt, icon: application.status === 'accepted' ? 'approve' : 'decline', text: 'Your collaboration application for "' + idea.title + '" was ' + application.status, kind: 'collaboration', id: application.id, target: idea.id })
       }
     })
 

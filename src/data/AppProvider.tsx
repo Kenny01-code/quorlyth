@@ -161,6 +161,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!backend) { setData(EMPTY); return }
+
+    // Drop account-scoped snapshots immediately when auth/backend changes. The
+    // replacement subscriptions may take a moment to complete their first SELECT;
+    // retaining the previous account's data during that gap can leak stale private
+    // requests, memberships, collaboration applications, and read states.
+    setData(d => ({
+      ...d,
+      reviews: {}, outcomes: {}, votes: {}, members: {}, requests: [],
+      joinRequests: [], decisions: {}, promotions: [], volunteers: [],
+      projects: {}, milestones: [], settings: null,
+    }))
+
     const s = backend.store
     const set = (k: keyof Data, v: any) => setData(d => ({ ...d, [k]: v }))
     let readErrorShown = false
@@ -482,15 +494,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const reviewedAt = Date.now()
         const idea = status === 'accepted' ? applicationIdea : undefined
         const currentReview = idea ? data.reviews[idea.id] || data.outcomes[idea.id] : undefined
-        const nextReviewStatus = currentReview?.status === 'promoted' ? 'promoted' as const : 'selected' as const
+        let nextReviewStatus: 'selected' | 'promoted' = currentReview?.status === 'promoted' ? 'promoted' : 'selected'
         const needsProjectInLocalState = !!idea && !data.projects[idea.id]
         const workspaceSummary = 'Collaboration workspace ready. Add a project plan and milestones to coordinate the work.'
         let initializedProject: Project | undefined
 
-        // Resolve the persisted project before accepting the applicant. A realtime
-        // subscription can lag behind a successful insert, so do not treat a stale
-        // local project map as authoritative for initialization.
         if (idea) {
+          // Read the authoritative review record and mark the idea selected before
+          // inserting its workspace. RLS intentionally allows a new workspace only
+          // after the idea has been selected or promoted; doing this in the reverse
+          // order silently made first-time collaboration acceptance fail.
+          const storedReview = await st!.get('reviews/' + idea.id)
+          const currentStatus = storedReview?.status || currentReview?.status
+          nextReviewStatus = currentStatus === 'promoted' ? 'promoted' : 'selected'
+          if (!storedReview || (currentStatus !== 'selected' && currentStatus !== 'promoted')) {
+            await up('reviews/' + idea.id, { status: nextReviewStatus, at: reviewedAt })
+          }
+
+          // A realtime subscription can lag behind a successful insert, so do not
+          // treat local project state as the source of truth during initialization.
           let storedProject = await st!.get('projects/' + idea.id)
           if (!storedProject) {
             try {
@@ -512,7 +534,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
               }
             } catch (createError) {
               // A concurrent accept/create may have won the insert race. Reuse the
-              // now-persisted project if it exists; otherwise surface the real error.
+              // now-persisted workspace if it exists; otherwise leave the application
+              // pending and surface the actual failure so the manager can retry.
               storedProject = await st!.get('projects/' + idea.id)
               if (!storedProject) throw createError
             }
@@ -533,9 +556,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // Keep the application pending until both the project and the idea status
         // are ready. If a write fails, the manager can retry without making a
         // duplicate project or leaving a falsely accepted application.
-        if (idea && currentReview?.status !== 'selected' && currentReview?.status !== 'promoted') {
-          await up('reviews/' + idea.id, { status: 'selected', at: reviewedAt })
-        }
         await up('volunteers/' + applicationId, { status, reviewedAt, reviewedBy: me!.id })
         setData(d => ({
           ...d,
@@ -563,11 +583,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!cleanSummary) throw new Error('Add a short project summary first.')
         const existing = data.projects[ideaId] || await st!.get('projects/' + ideaId)
         if (existing) throw new Error('A workspace already exists for this idea. Refresh and open the existing collaboration instead.')
+
+        const storedReview = await st!.get('reviews/' + ideaId)
+        const currentStatus = storedReview?.status || data.reviews[ideaId]?.status || data.outcomes[ideaId]?.status
+        const nextStatus: 'selected' | 'promoted' = currentStatus === 'promoted' ? 'promoted' : 'selected'
         const at = Date.now()
+
+        // The database only permits project creation for selected/promoted ideas.
+        // Persist that prerequisite first, while preserving a promoted idea's status.
+        if (!storedReview || (currentStatus !== 'selected' && currentStatus !== 'promoted')) {
+          await up('reviews/' + ideaId, { status: nextStatus, at })
+        }
+
         const project: Project = { id: ideaId, ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at }
-        await st!.create('projects/' + ideaId, { ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at })
-        await up('reviews/' + ideaId, { status: 'selected', at })
-        setData(d => ({ ...d, projects: { ...d.projects, [ideaId]: project }, reviews: { ...d.reviews, [ideaId]: { ...d.reviews[ideaId], status: 'selected', at } } }))
+        try {
+          await st!.create('projects/' + ideaId, { ideaId, summary: cleanSummary, status: 'active', createdBy: me.id, at, updatedAt: at })
+        } catch (createError) {
+          // If another manager created the workspace concurrently, use the persisted
+          // record rather than reporting a false failure after the race has resolved.
+          const racedProject = await st!.get('projects/' + ideaId)
+          if (!racedProject) throw createError
+          setData(d => ({
+            ...d,
+            projects: {
+              ...d.projects,
+              [ideaId]: {
+                id: ideaId,
+                ideaId,
+                summary: typeof racedProject.summary === 'string' && racedProject.summary.trim() ? racedProject.summary : cleanSummary,
+                status: racedProject.status === 'completed' ? 'completed' : 'active',
+                createdBy: typeof racedProject.createdBy === 'string' && racedProject.createdBy ? racedProject.createdBy : me.id,
+                at: Number(racedProject.at) > 0 ? Number(racedProject.at) : at,
+                updatedAt: Number(racedProject.updatedAt) > 0 ? Number(racedProject.updatedAt) : at,
+              },
+            },
+            reviews: { ...d.reviews, [ideaId]: { ...d.reviews[ideaId], status: nextStatus, at } },
+          }))
+          return
+        }
+
+        setData(d => ({ ...d, projects: { ...d.projects, [ideaId]: project }, reviews: { ...d.reviews, [ideaId]: { ...d.reviews[ideaId], status: nextStatus, at } } }))
       }, 'Project created'),
       updateProject: (projectId, patch) => w(async () => {
         const current = data.projects[projectId]

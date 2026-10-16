@@ -35,7 +35,12 @@ export async function createSupabaseStore(url: string, key: string) {
         }
       })
       .subscribe((status, error) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (status === 'SUBSCRIBED') {
+          // Reconcile every live collection after initial connection and after any
+          // Realtime reconnect, so a missed event during a network gap cannot leave
+          // the UI stale until an unrelated future write.
+          for (const listener of realtimeListeners.values()) listener.refresh()
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           for (const listener of realtimeListeners.values()) listener.onRealtimeError(status, error)
         }
       })
@@ -103,6 +108,8 @@ export async function createSupabaseStore(url: string, key: string) {
       let lastErrorMessage = ''
       let retryAttempt = 0
       let retryTimer: ReturnType<typeof setTimeout> | undefined
+      let refreshTimer: ReturnType<typeof setTimeout> | undefined
+      let loadSequence = 0
       let stopped = false
       const retryDelays = [1500, 3000, 7000, 15000, 30000]
 
@@ -129,6 +136,10 @@ export async function createSupabaseStore(url: string, key: string) {
 
       const load = async () => {
         if (stopped) return
+        // Realtime events can trigger overlapping reads. Only the newest read is
+        // allowed to publish its snapshot, otherwise a slow older SELECT can roll
+        // the UI back after a newer update has already arrived.
+        const sequence = ++loadSequence
         try {
           // Exclude deeper descendants on the server rather than downloading all
           // nested comments/children and discarding them in the browser.
@@ -136,6 +147,7 @@ export async function createSupabaseStore(url: string, key: string) {
             .select('path,data')
             .like('path', collection + '/%')
             .not('path', 'like', collection + '/%/%')
+          if (stopped || sequence !== loadSequence) return
           if (error) {
             reportError(error)
             scheduleRetry()
@@ -151,15 +163,25 @@ export async function createSupabaseStore(url: string, key: string) {
             .map(r => ({ id: r.path.slice(collection.length + 1), data: r.data }))
           cb(docs)
         } catch (error) {
+          if (stopped || sequence !== loadSequence) return
           reportError(error)
           scheduleRetry()
         }
       }
 
+      const queueRefresh = () => {
+        if (stopped) return
+        if (refreshTimer) clearTimeout(refreshTimer)
+        refreshTimer = setTimeout(() => {
+          refreshTimer = undefined
+          void load()
+        }, 35)
+      }
+
       const token = Symbol(collection)
       realtimeListeners.set(token, {
         collection,
-        refresh: () => { void load() },
+        refresh: queueRefresh,
         onRealtimeError: (status, error) => {
           reportError(error || new Error(`Realtime subscription status: ${status}`))
           scheduleRetry()
@@ -170,7 +192,9 @@ export async function createSupabaseStore(url: string, key: string) {
 
       return () => {
         stopped = true
+        loadSequence += 1
         if (retryTimer) clearTimeout(retryTimer)
+        if (refreshTimer) clearTimeout(refreshTimer)
         realtimeListeners.delete(token)
         if (realtimeListeners.size === 0 && sharedDocsChannel) {
           const channel = sharedDocsChannel
