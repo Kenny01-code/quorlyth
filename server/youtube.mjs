@@ -271,6 +271,12 @@ export async function fetchYouTubeSignalsForIdeas(ideas, options = {}) {
     }
     const cacheKey = query.toLowerCase()
     let cached = cache.get(cacheKey)
+    // An explicit user refresh opts out of the six-hour result cache. The normal
+    // review path still uses the cache, sharing in-flight requests to conserve quota.
+    if (options.forceRefresh === true) {
+      cache.delete(cacheKey)
+      cached = undefined
+    }
     if (cached && cached.expiresAt > now) {
       byIdea[ideaId] = { ...cached.value, ideaId }
       return
