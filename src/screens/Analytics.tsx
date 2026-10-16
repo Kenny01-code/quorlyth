@@ -139,7 +139,10 @@ function Inner() {
   const src = cs.top.m === 'backs' ? X.back : X.auth
   const topIds = Object.keys(src).sort((x, y) => src[y] - src[x]).slice(0, cs.top.n)
 
-  if (!a.owner && ownedCommunities.length === 0) return <MemberAnalyticsView />
+  // Only verified platform roles or actual community ownership should expose
+  // owner analytics. Regular members always receive their personal dashboard.
+  const hasGlobalAnalyticsAccess = a.platformOwner || a.platformAdmin
+  if (!hasGlobalAnalyticsAccess && ownedCommunities.length === 0) return <MemberAnalyticsView />
 
   function body(g: ChartKey) {
     if (g === 'area') return <div className="chs"><AreaChart dd={dd} o={cs.area} /></div>
