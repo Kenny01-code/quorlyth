@@ -6,7 +6,7 @@ import { useApp } from '../data/AppProvider'
 import { cn } from '../lib/util'
 import { Av } from './ui'
 
-const ITEMS: { path: string; label: string; icon: string; owner?: boolean; communityOwner?: boolean; platformOwnerOnly?: boolean; guest?: boolean }[] = [
+const ITEMS: { path: string; label: string; icon: string; owner?: boolean; communityOwner?: boolean; platformOwnerOnly?: boolean; platformAdminOnly?: boolean; guest?: boolean }[] = [
   { path: '/', label: 'Home', icon: 'audience' },
   { path: '/demo', label: 'Try demo', icon: 'spark', guest: true },
   { path: '/signin', label: 'Sign in', icon: 'private', guest: true },
@@ -19,7 +19,7 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/projects', label: 'Projects', icon: 'insight' },
   { path: '/collaborations', label: 'Collaborations', icon: 'collab' },
   { path: '/promote', label: 'Promote', icon: 'promote', owner: true },
-  { path: '/settings', label: 'Settings', icon: 'settings', owner: true },
+  { path: '/settings', label: 'Settings', icon: 'settings', platformAdminOnly: true },
   { path: '/me', label: 'My space', icon: 'member' },
   { path: '/database', label: 'Database', icon: 'db', owner: true, platformOwnerOnly: true },
 ]
@@ -28,9 +28,15 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   const nav = useNavigate()
   const loc = useLocation()
   const app = useApp()
-  const { me, owner, platformOwner } = app
+  const { me, owner, platformOwner, platformAdmin } = app
   const communityOwner = !!me && app.data.communities.some(c => app.ownsCommunity(c.id))
   const workspaceManager = owner || communityOwner
+  const hasAccessibleProject = !!me && app.data.ideas.some(idea => {
+    const relevant = app.ownsCommunity(idea.cid)
+      || idea.authorId === me.id
+      || app.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === me.id && v.status === 'accepted')
+    return relevant && (!!app.data.projects[idea.id] || ['selected', 'promoted'].includes(app.statusOf(idea.id))
+  })
   const main = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const thumb = useRef<HTMLElement>(null)
@@ -86,17 +92,23 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
           {ITEMS.filter(i => {
+            if (i.platformAdminOnly) return !!platformAdmin && !demo
             if (i.platformOwnerOnly) return !!platformOwner && !demo
+            if (i.path === '/projects' && !workspaceManager && !hasAccessibleProject) return false
+            if (i.path === '/access' && me && app.data.decisions[me.id]?.status === 'approved' && !accessSent) return false
             if (demo) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             if (me) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             return ['/', '/demo', '/signin'].includes(i.path)
-          }).map(i => (
-            <button key={i.path} className={cn('nav-item', 'nav-item-' + (i.path.slice(1).replace(/[^a-z0-9]+/g, '-') || 'home'), active(i.path) && 'on')} onClick={() => i.path === '/demo' ? onDemo() : nav(i.path === '/settings' && unreadRequests ? '/settings?tab=requests' : i.path)} title={i.label} aria-label={i.path === '/settings' && pendingRequests ? `${i.label}, ${pendingRequests} pending access requests` : i.path === '/access' && accessSent ? `${i.label}, request sent` : i.label} style={{ position: 'relative' }}>
-              <Icon name={i.icon} size={18} /><span>{i.label}</span>
+          }).map(i => {
+            const label = i.path === '/analytics' && me && !workspaceManager ? 'My activity' : i.label
+            return (
+            <button key={i.path} className={cn('nav-item', 'nav-item-' + (i.path.slice(1).replace(/[^a-z0-9]+/g, '-') || 'home'), active(i.path) && 'on')} onClick={() => i.path === '/demo' ? onDemo() : nav(i.path === '/settings' && unreadRequests ? '/settings?tab=requests' : i.path)} title={label} aria-label={i.path === '/settings' && pendingRequests ? `${label}, ${pendingRequests} pending access requests` : i.path === '/access' && accessSent ? `${label}, request sent` : label} style={{ position: 'relative' }}>
+              <Icon name={i.icon} size={18} /><span>{label}</span>
               {i.path === '/settings' && pendingRequests > 0 && <b className={cn('nav-count', unreadRequests > 0 && 'pulse')}>{pendingRequests > 9 ? '9+' : pendingRequests}</b>}
               {i.path === '/access' && accessSent && <b className="nav-count sent">Sent</b>}
             </button>
-          ))}
+            )
+          })}
         </div>
         <div className="nsl"><i ref={thumb} /></div>
       </div>
