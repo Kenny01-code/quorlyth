@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { App } from '../data/AppProvider'
 import { UserState } from './userState'
 
-export type NotifKind = 'idea' | 'promo' | 'access' | 'settings' | 'join' | 'collaboration' | 'collab-request' | 'comment' | 'vote' | 'community' | 'project' | 'milestone' | 'message' | 'announcement'
+export type NotifKind = 'idea' | 'promo' | 'access' | 'settings' | 'join' | 'collaboration' | 'collab-request' | 'comment' | 'vote' | 'community' | 'project' | 'milestone' | 'message' | 'announcement' | 'call'
 export interface Notif { key: string; at: number; icon: string; text: string; kind: NotifKind; id?: string; target?: string; unread: boolean }
 type StoredNotif = Omit<Notif, 'key' | 'unread'> & { key?: string }
 
