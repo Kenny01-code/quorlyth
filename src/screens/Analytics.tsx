@@ -223,12 +223,13 @@ function Inner() {
 }
 
 
-/** Member analytics uses only the signed-in member's own ideas and participation. */
+/** Member analytics shares the same layout and chart components as owner analytics, with member-scoped data. */
 function MemberAnalyticsView() {
   const a = useApp()
   const nav = useNavigate()
-  const [range, setRange] = useState(30)
-  const { cs } = useChartSettings()
+  const { cs, set, reset } = useChartSettings()
+  const [rg, setRg] = useState(30)
+  const [open, setOpen] = useState<ChartKey | null>(null)
   const memberId = a.me?.id || ''
   const joinedCommunities = useMemo(
     () => a.data.communities.filter(community => a.joined(community.id)),
@@ -243,70 +244,203 @@ function MemberAnalyticsView() {
     const today = new Date().setHours(0, 0, 0, 0)
     const dates: number[] = []
     const values: number[] = []
-    for (let offset = range - 1; offset >= 0; offset -= 1) {
+    for (let offset = rg - 1; offset >= 0; offset -= 1) {
       const timestamp = today - offset * day
       dates.push(timestamp)
       values.push(myIdeas.filter(idea => idea.at >= timestamp && idea.at < timestamp + day).length)
     }
     return { d: dates, v: values }
-  }, [range, myIdeas])
-  const statuses = useMemo(() => {
-    const count = (status: string) => myIdeas.filter(idea => a.statusOf(idea.id) === status).length
-    return [
-      ['In review', count('review'), '#bcbcbc'],
-      ['Selected', count('selected'), '#eeeeee'],
-      ['Held', count('held'), '#777777'],
-      ['Declined', count('declined'), '#4f4f4f'],
-      ['Ready to share', count('promoted'), '#ffffff'],
-    ] as [string, number, string][]
-  }, [myIdeas, a.statusOf])
+  }, [rg, myIdeas])
+
+  const countStatus = (status: string) => myIdeas.filter(idea => a.statusOf(idea.id) === status).length
+  const statuses: [string, number, string][] = [
+    ['In review', countStatus('review'), '#ffffff'],
+    ['Selected', countStatus('selected'), '#d0d0d0'],
+    ['Held', countStatus('held'), '#777777'],
+    ['Declined', countStatus('declined'), '#4f4f4f'],
+    ['Ready to share', countStatus('promoted'), '#999999'],
+  ]
   const backingsReceived = myIdeas.reduce((sum, idea) => sum + a.votesOf(idea.id), 0)
   const selectedIdeas = myIdeas.filter(idea => ['selected', 'promoted'].includes(a.statusOf(idea.id))).length
-  const recentIdeas = [...myIdeas].sort((first, second) => (second.at || 0) - (first.at || 0)).slice(0, 5)
-  const contributionsByCommunity = joinedCommunities.map(community => ({
-    community,
-    ideas: myIdeas.filter(idea => idea.cid === community.id),
-  })).sort((first, second) => second.ideas.length - first.ideas.length || first.community.name.localeCompare(second.community.name))
+  const readyIdeas = countStatus('promoted')
+  const ideasInRange = activity.v.reduce((sum, value) => sum + value, 0)
+  const effectiveBarMeasure = cs.bar.m === 'backs' ? 'backs' : 'ideas'
+
+  function barRows() {
+    let rows = joinedCommunities.map(community => {
+      const communityIdeas = myIdeas.filter(idea => idea.cid === community.id)
+      const value = effectiveBarMeasure === 'backs'
+        ? communityIdeas.reduce((sum, idea) => sum + a.votesOf(idea.id), 0)
+        : communityIdeas.length
+      return { n: community.name, v: value }
+    })
+    if (cs.bar.s === 'value') rows = rows.sort((first, second) => second.v - first.v)
+    else if (cs.bar.s === 'name') rows = rows.sort((first, second) => first.n.localeCompare(second.n))
+    return cs.bar.n ? rows.slice(0, cs.bar.n) : rows
+  }
+
+  const funnelRows: [string, number][] = [
+    ['Ideas shared', myIdeas.length],
+    ['Selected or ready to share', selectedIdeas],
+    ['Ready to share', readyIdeas],
+  ]
+  const topIdeas = [...myIdeas]
+    .sort((first, second) => cs.top.m === 'backs'
+      ? a.votesOf(second.id) - a.votesOf(first.id) || second.at - first.at
+      : second.at - first.at)
+    .slice(0, cs.top.n)
+
+  const titles: Record<ChartKey, string> = {
+    area: 'Ideas over time',
+    bar: effectiveBarMeasure === 'backs' ? 'Backings by community' : 'Ideas by community',
+    don: 'Your idea statuses',
+    heat: 'When you contribute',
+    fun: 'Your idea journey',
+    top: cs.top.m === 'backs' ? 'Your most backed ideas' : 'Your latest ideas',
+  }
+
+  function body(g: ChartKey) {
+    if (g === 'area') return <div className="chs"><AreaChart dd={activity} o={cs.area} /></div>
+    if (g === 'bar') {
+      const rows = barRows()
+      return rows.length
+        ? <div className="chs"><BarChart rows={rows} o={{ ...cs.bar, m: effectiveBarMeasure } as any} /></div>
+        : <p className="mut" style={{ marginTop: 18 }}>Join a community to see your ideas here.</p>
+    }
+    if (g === 'don') return <Donut items={statuses} total={myIdeas.length} o={cs.don} />
+    if (g === 'heat') return <Heat ideas={myIdeas} val={cs.heat.val} />
+    if (g === 'fun') return <Funnel rows={funnelRows} o={cs.fun} />
+    if (!topIdeas.length) return <p className="mut" style={{ padding: '18px 0' }}>Your ideas will appear here when you contribute.</p>
+    const maxBackings = Math.max(1, ...topIdeas.map(idea => a.votesOf(idea.id)))
+    return <>{topIdeas.map((idea, index) => {
+      const backings = a.votesOf(idea.id)
+      const communityName = a.data.communities.find(community => community.id === idea.cid)?.name || 'Community'
+      return (
+        <button key={idea.id} className="row rowbtn" onClick={() => nav('/idea/' + idea.id)}>
+          <div className="score" style={{ width: 42, height: 42, fontSize: 14 }}>{cs.top.m === 'backs' ? backings : index + 1}</div>
+          <div className="t">
+            <h3 style={{ fontSize: 15 }}>{idea.title}</h3>
+            <p className="dim">{communityName} · {new Date(idea.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+            {cs.top.m === 'backs' && <div className="bar"><i style={{ width: (backings / maxBackings) * 100 + '%' }} /></div>}
+          </div>
+          <span className="dim">{backings} {backings === 1 ? 'backing' : 'backings'}</span>
+        </button>
+      )
+    })}</>
+  }
+
+  const card = (g: ChartKey, sub: string) => (
+    <div className="glass pad">
+      <div className="head" style={{ marginBottom: 6 }}>
+        <div><h3>{titles[g]}</h3><p className="dim">{sub}</p></div>
+        <button className="chip" onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button>
+      </div>
+      {body(g)}
+    </div>
+  )
+
+  function csv() {
+    const q = (value: any) => '"' + String(value ?? '').replace(/"/g, '""') + '"'
+    const rows = myIdeas.map(idea => [
+      q(idea.title),
+      q(a.data.communities.find(community => community.id === idea.cid)?.name),
+      q(a.nm(idea.authorId)),
+      a.votesOf(idea.id),
+      STATUS_LABEL[a.statusOf(idea.id)],
+      a.data.reviews[idea.id]?.score ?? '',
+      new Date(idea.at).toISOString(),
+    ].join(','))
+    download('quorlyth-my-analytics.csv', 'text/csv', 'title,community,author,backings,status,score,created\n' + rows.join('\n'))
+  }
+
+  function pdf() {
+    const d = new jsPDF({ unit: 'mm', format: 'a4' })
+    const W = 210, M = 16
+    let y = 54
+    d.setFillColor(0, 0, 0)
+    d.rect(0, 0, W, 40, 'F')
+    d.setTextColor(255, 255, 255)
+    d.setFont('helvetica', 'bold')
+    d.setFontSize(22)
+    d.text('QUORLYTH', M, 22)
+    d.setFont('helvetica', 'normal')
+    d.setFontSize(10)
+    d.text('My analytics report', M, 30)
+    d.text(new Date().toLocaleDateString() + '   Last ' + rg + ' days', W - M, 30, { align: 'right' })
+    const metrics: [string, number][] = [
+      ['Ideas in range', ideasInRange],
+      ['Communities joined', joinedCommunities.length],
+      ['Backings received', backingsReceived],
+      ['Ideas selected', selectedIdeas],
+    ]
+    metrics.forEach(([label, value], index) => {
+      const x = M + index * 45.5
+      d.setDrawColor(0, 0, 0)
+      d.setLineWidth(0.3)
+      d.roundedRect(x, y, 42, 24, 3, 3)
+      d.setFontSize(7)
+      d.setTextColor(110, 110, 110)
+      d.text(label, x + 3, y + 8)
+      d.setFontSize(17)
+      d.setTextColor(0, 0, 0)
+      d.text(String(value), x + 3, y + 19)
+    })
+    y += 36
+    d.setFont('helvetica', 'bold')
+    d.setFontSize(13)
+    d.text('Your ideas', M, y)
+    d.setDrawColor(0, 0, 0)
+    d.line(M, y + 2, W - M, y + 2)
+    y += 10
+    d.setFont('helvetica', 'normal')
+    d.setFontSize(8)
+    const exportIdeas = [...myIdeas].sort((first, second) => second.at - first.at).slice(0, 40)
+    exportIdeas.forEach((idea, index) => {
+      if (y > 278) {
+        d.addPage()
+        y = 20
+      }
+      const communityName = a.data.communities.find(community => community.id === idea.cid)?.name || 'Community'
+      const title = String(idea.title || '').replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '').slice(0, 54)
+      d.text(String(index + 1) + '. ' + title, M, y)
+      d.text(communityName.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '').slice(0, 22), M + 112, y)
+      d.text(String(a.votesOf(idea.id)) + ' backings', W - M, y, { align: 'right' })
+      y += 7
+    })
+    d.save('quorlyth-my-analytics.pdf')
+  }
 
   return (
-    <section className="member-analytics-page">
-      <Head kicker="MEMBER ANALYTICS" title="Your progress, at a glance." right={<div className="member-analytics-range" aria-label="Choose activity range">{[7, 30, 90].map(days => <Chip key={days} on={range === days} onClick={() => setRange(days)}>{days} days</Chip>)}</div>} />
-      <div className="member-analytics-stats">
-        <article className="glass pad member-analytics-stat"><span className="member-analytics-stat-icon"><Icon name="users" size={17} /></span><p>Communities joined</p><strong>{joinedCommunities.length}</strong><small>Your current memberships</small></article>
-        <article className="glass pad member-analytics-stat"><span className="member-analytics-stat-icon"><Icon name="idea" size={17} /></span><p>Ideas contributed</p><strong>{myIdeas.length}</strong><small>Ideas submitted by you</small></article>
-        <article className="glass pad member-analytics-stat"><span className="member-analytics-stat-icon"><Icon name="spark" size={17} /></span><p>Backings received</p><strong>{backingsReceived}</strong><small>Support on your ideas</small></article>
-        <article className="glass pad member-analytics-stat"><span className="member-analytics-stat-icon"><Icon name="check" size={17} /></span><p>Ideas selected</p><strong>{selectedIdeas}</strong><small>Selected or ready to share</small></article>
+    <>
+      <Head kicker="Analytics" title="Your activity in numbers." right={<>{[7, 30, 90].map(days => <span key={days}><Chip on={rg === days} onClick={() => setRg(days)}>{days} days</Chip>{' '}</span>)}<button className="btn" style={{ padding: '9px 20px', marginLeft: 8 }} onClick={csv}><Icon name="publish" size={16} />CSV</button>{' '}<button className="btn p" style={{ padding: '9px 20px' }} onClick={pdf}><Icon name="publish" size={16} />Export PDF</button></>} />
+      <div className="grid g4" style={{ marginBottom: 18 }}>
+        {([
+          ['Ideas in range', ideasInRange],
+          ['Communities joined', joinedCommunities.length],
+          ['Backings received', backingsReceived],
+          ['Ideas selected', selectedIdeas],
+        ] as [string, number][]).map(([label, value]) => <div key={label} className="glass pad"><p className="dim">{label}</p><p className="num" style={{ fontSize: 42 }}>{value}</p></div>)}
       </div>
-      <div className="member-analytics-chart-grid">
-        <article className="glass pad member-analytics-card">
-          <div className="member-analytics-card-head"><div><p className="dim">YOUR CONTRIBUTIONS</p><h3>Ideas over time</h3></div><span>{activity.v.reduce((sum, value) => sum + value, 0)} submitted</span></div>
-          <div className="member-analytics-chart-frame">{activity.v.some(value => value > 0) ? <AreaChart dd={activity} o={cs.area} /> : <div className="member-analytics-empty-chart"><Icon name="insight" size={23} /><b>No submissions in this range</b><span>Your own idea activity will appear here when you contribute.</span></div>}</div>
-        </article>
-        <article className="glass pad member-analytics-card">
-          <div className="member-analytics-card-head"><div><p className="dim">YOUR IDEAS</p><h3>Review status</h3></div><span>{myIdeas.length} total</span></div>
-          {myIdeas.length ? <div className="member-analytics-donut"><Donut items={statuses} total={myIdeas.length} o={cs.don} /></div> : <div className="member-analytics-empty-chart"><Icon name="insight" size={23} /><b>Your status breakdown starts here</b><span>Share an idea to see how it moves through review.</span></div>}
-        </article>
-      </div>
-      <div className="member-analytics-lists">
-        <article className="glass pad member-analytics-card">
-          <div className="member-analytics-card-head"><div><p className="dim">PARTICIPATION</p><h3>Where you contribute</h3></div><span>{joinedCommunities.length} communities</span></div>
-          {contributionsByCommunity.length ? <div className="member-analytics-community-list">{contributionsByCommunity.slice(0, 6).map(({ community, ideas }) => <div className="member-analytics-community-row" key={community.id}><span className="member-analytics-community-mark"><Icon name="users" size={15} /></span><div className="member-analytics-community-copy"><b>{community.name}</b><small>{ideas.length ? ideas.length + ' of your ideas' : 'No ideas submitted here yet'}</small></div><strong>{ideas.length}</strong></div>)}</div> : <div className="member-analytics-inline-empty"><b>You have not joined a community yet.</b><span>Explore communities to start following ideas and meeting collaborators.</span><button className="btn" onClick={() => nav('/communities')}>Explore communities <Icon name="arrow" size={15} /></button></div>}
-        </article>
-        <article className="glass pad member-analytics-card">
-          <div className="member-analytics-card-head"><div><p className="dim">RECENT ACTIVITY</p><h3>Your latest ideas</h3></div><span>Last 5</span></div>
-          {recentIdeas.length ? <div className="member-analytics-recent-list">{recentIdeas.map(idea => <div className="member-analytics-recent-row" key={idea.id}><span className="member-analytics-recent-mark"><Icon name="idea" size={15} /></span><div className="member-analytics-recent-copy"><b>{idea.title}</b><small>{a.data.communities.find(community => community.id === idea.cid)?.name || 'Community'} · {new Date(idea.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</small></div><span className="member-analytics-status">{STATUS_LABEL[a.statusOf(idea.id)] || 'In review'}</span></div>)}</div> : <div className="member-analytics-inline-empty"><b>Your first idea is still ahead of you.</b><span>Contribute something useful to a community and track its progress here.</span><button className="btn" onClick={() => nav('/communities')}>Find a community <Icon name="arrow" size={15} /></button></div>}
-        </article>
-      </div>
-      <section className="member-analytics-locked" aria-labelledby="member-analytics-locked-title">
-        <div className="member-analytics-locked-heading"><span className="member-analytics-lock-icon"><Icon name="lock" size={18} /></span><div><p className="dim">COMMUNITY OWNER INSIGHTS</p><h3 id="member-analytics-locked-title">Unlock analytics for your own community</h3><p>These wider community visuals become available when you create or manage a community. Your member view stays focused on your own activity.</p></div></div>
-        <div className="member-analytics-locked-grid">
-          <div className="member-analytics-locked-card"><div className="member-analytics-mini-bars"><i /><i /><i /><i /><i /></div><b>Community growth</b><span>Membership and participation trends</span><em><Icon name="lock" size={12} /> Owner access</em></div>
-          <div className="member-analytics-locked-card"><div className="member-analytics-mini-funnel"><i /><i /><i /></div><b>Review funnel</b><span>Ideas, selections and promotion readiness</span><em><Icon name="lock" size={12} /> Owner access</em></div>
-          <div className="member-analytics-locked-card"><div className="member-analytics-mini-people"><i /><i /><i /><i /></div><b>Contributor insights</b><span>Activity across your community members</span><em><Icon name="lock" size={12} /> Owner access</em></div>
+      <div className="grid g32" style={{ marginBottom: 18 }}>{card('area', 'Last ' + rg + ' days')}{card('don', 'By status of your ideas')}</div>
+      <div style={{ marginBottom: 18 }}>{card('bar', effectiveBarMeasure === 'backs' ? 'Backings received on your ideas' : 'Ideas submitted by you')}</div>
+      <div className="grid g2" style={{ marginBottom: 18 }}>{card('heat', 'By day and time, your ideas only')}{card('fun', 'From submission to share-ready')}</div>
+      {card('top', cs.top.m === 'backs' ? 'Sorted by backings received' : 'Most recently submitted')}
+      {open && (
+        <div id="csd" onClick={e => e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('csd-b') ? setOpen(null) : null}>
+          <div className="csd-b" />
+          <div className="csd-p glass" role="dialog" aria-label="Chart settings">
+            <div className="csd-h"><div><p className="dim">Chart settings</p><h3 style={{ fontSize: 22, fontWeight: 300 }}>{titles[open]}</h3></div><button className="chip" onClick={() => setOpen(null)}>Done</button></div>
+            <div className="csd-pv"><p className="dim" style={{ marginBottom: 8 }}>Live preview</p>{body(open)}</div>
+            <div className="csd-c">
+              {(open === 'bar' ? ITEMS.bar.map(it => it[0] === 'c' && it[1] === 'm' ? ['c', 'm', 'Measure', [['ideas', 'Ideas'], ['backs', 'Backings']]] as (typeof ITEMS.bar)[number] : it) : ITEMS[open]).map(it => it[0] === 't'
+                ? <div key={it[1]} className="csr"><span className="mut">{it[2]}</span><button className={cn('tg', (cs[open] as any)[it[1]] && 'on')} role="switch" aria-checked={!!(cs[open] as any)[it[1]]} aria-label={it[2]} onClick={() => set(open, it[1], !(cs[open] as any)[it[1]])}><i /></button></div>
+                : <div key={it[1]} className="csr"><span className="mut">{it[2]}</span><div className="acts" style={{ margin: 0, gap: 6 }}>{it[3].map(([value, label]) => <Chip key={String(value)} on={String(open === 'bar' && it[1] === 'm' && !['ideas', 'backs'].includes(String((cs[open] as any)[it[1]])) ? 'ideas' : (cs[open] as any)[it[1]]) === String(value)} onClick={() => set(open, it[1], value)}>{label}</Chip>)}</div></div>)}
+            </div>
+            <div className="acts"><button className="btn" onClick={() => reset(open)}><Icon name="rotate" size={16} />Reset</button><button className="btn p" onClick={() => setOpen(null)}>Done</button></div>
+          </div>
         </div>
-        <div className="member-analytics-locked-footer"><span>Build a space of your own to unlock the full analytics workspace.</span><button className="btn p" onClick={() => nav('/communities')}>Create a community <Icon name="plus" size={15} /></button></div>
-      </section>
-    </section>
+      )}
+    </>
   )
 }
 
