@@ -1,17 +1,25 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
-import { Av, Bar, Empty, Head } from '../components/ui'
+import { Av, Empty, Head } from '../components/ui'
+import { MilestoneBoard } from '../components/MilestoneBoard'
+import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, Project } from '../lib/types'
-import { Icon } from '../lib/Icon'
 import { when } from '../lib/util'
 
-const MILESTONE_LABEL: Record<Milestone['status'], string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  done: 'Done',
+const dateInput = (timestamp?: number | null) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0')
 }
+const dateEnd = (value: string) => {
+  if (!value) return null
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day, 23, 59, 59, 999)
+  return Number.isFinite(date.getTime()) ? date.getTime() : null
+}
+const dateLabel = (timestamp?: number | null) => timestamp ? new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''
 
 function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
   idea: Idea
@@ -23,22 +31,21 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
   const a = useApp()
   const nav = useNavigate()
   const [summary, setSummary] = useState(project?.summary || '')
+  const [projectDueDate, setProjectDueDate] = useState(dateInput(project?.dueAt))
   const [editSummary, setEditSummary] = useState(false)
-  const [newTitle, setNewTitle] = useState('')
-  const [newDescription, setNewDescription] = useState('')
-  const [milestoneDraft, setMilestoneDraft] = useState<{ id: string; title: string; description: string } | null>(null)
   const [busy, setBusy] = useState('')
   const completed = milestones.filter(m => m.status === 'done').length
   const progress = milestones.length ? Math.round(completed / milestones.length * 100) : 0
   const community = a.data.communities.find(c => c.id === idea.cid)
+  const teamMemberIds = [idea.authorId, community?.ownerId, community?.createdBy, ...a.data.volunteers.filter(item => item.ideaId === idea.id && item.status === 'accepted').map(item => item.applicantId)].filter((uid): uid is string => !!uid)
 
-  useEffect(() => setSummary(project?.summary || ''), [project?.summary])
+  useEffect(() => { setSummary(project?.summary || ''); setProjectDueDate(dateInput(project?.dueAt)) }, [project?.summary, project?.dueAt])
 
   async function createProject(event: FormEvent) {
     event.preventDefault()
     if (!summary.trim()) return a.toast('Add a short project summary first.')
     setBusy('project')
-    await a.createProject(idea.id, summary.trim())
+    await a.createProject(idea.id, summary.trim(), dateEnd(projectDueDate))
     setBusy('')
   }
 
@@ -46,38 +53,8 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
     event.preventDefault()
     if (!project || !summary.trim()) return a.toast('A project summary cannot be empty.')
     setBusy('summary')
-    const ok = await a.updateProject(project.id, { summary: summary.trim() })
+    const ok = await a.updateProject(project.id, { summary: summary.trim(), dueAt: dateEnd(projectDueDate) })
     if (ok) setEditSummary(false)
-    setBusy('')
-  }
-
-  async function addMilestone(event: FormEvent) {
-    event.preventDefault()
-    if (!project || !newTitle.trim()) return a.toast('Give the milestone a title.')
-    setBusy('add-milestone')
-    const ok = await a.addMilestone(project.id, newTitle.trim(), newDescription.trim())
-    if (ok) {
-      setNewTitle('')
-      setNewDescription('')
-    }
-    setBusy('')
-  }
-
-  async function saveMilestone(event: FormEvent) {
-    event.preventDefault()
-    if (!milestoneDraft || !milestoneDraft.title.trim()) return a.toast('Milestones need a title.')
-    setBusy('milestone-' + milestoneDraft.id)
-    const ok = await a.updateMilestone(milestoneDraft.id, {
-      title: milestoneDraft.title.trim(),
-      description: milestoneDraft.description.trim(),
-    })
-    if (ok) setMilestoneDraft(null)
-    setBusy('')
-  }
-
-  async function setMilestoneStatus(milestone: Milestone, status: Milestone['status']) {
-    setBusy('milestone-' + milestone.id)
-    await a.updateMilestone(milestone.id, { status })
     setBusy('')
   }
 
@@ -103,8 +80,8 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
         <button type="button" className="chip" onClick={() => nav('/me/' + idea.authorId)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <Av id={idea.authorId} size={28} />Idea by {a.nm(idea.authorId)}
         </button>
-        <button type="button" className="chip" onClick={() => nav('/idea/' + idea.id)}><Icon name="idea" size={14} />Open idea</button>
-        {project && canCollaborate && <button type="button" className="chip" onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={14} />Collaboration space</button>}
+        <button type="button" className="chip" onClick={() => nav('/idea/' + idea.id)}><QuorlythGlyph name="idea" size={14} />Open idea</button>
+        {project && canCollaborate && <button type="button" className="chip" onClick={() => nav('/collaboration/' + idea.id)}><QuorlythGlyph name="workspace" size={14} />Collaboration space</button>}
       </div>
 
       {!project ? (
@@ -114,8 +91,9 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
               <span>Project plan</span>
               <textarea value={summary} onChange={e => setSummary(e.target.value)} maxLength={1200} required placeholder="What are you going to deliver, and how will the contributors help?" />
             </label>
+            <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
             <p className="dim" style={{ marginTop: -6, marginBottom: 12 }}>Create a tracked project from this selected idea. You can then add milestones and share progress with community members.</p>
-            <button className="btn p" disabled={busy === 'project'}><Icon name="contribute" size={16} />{busy === 'project' ? 'Creating project…' : 'Create project'}</button>
+            <button className="btn p" disabled={busy === 'project'}><QuorlythGlyph name="plan" size={16} />{busy === 'project' ? 'Creating project…' : 'Create project'}</button>
           </form>
         ) : <p className="mut">This idea has been selected. The community creator has not created a project plan yet.</p>
       ) : (
@@ -123,64 +101,27 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
           {editSummary && canManage ? (
             <form onSubmit={saveSummary}>
               <label className="field"><span>Project summary</span><textarea value={summary} onChange={e => setSummary(e.target.value)} required maxLength={1200} /></label>
+              <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
               <div className="acts"><button className="btn p" disabled={busy === 'summary'}>{busy === 'summary' ? 'Saving…' : 'Save summary'}</button><button type="button" className="btn" onClick={() => { setSummary(project.summary); setEditSummary(false) }}>Cancel</button></div>
             </form>
           ) : (
             <div className="reason" style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                 <span className="dim">Project plan</span>
-                {canManage && <button type="button" className="chip" onClick={() => setEditSummary(true)}><Icon name="edit" size={13} />Edit</button>}
+                {canManage && <button type="button" className="chip" onClick={() => setEditSummary(true)}><QuorlythGlyph name="plan" size={13} />Edit</button>}
               </div>
               <p style={{ marginTop: 8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{project.summary || 'No project summary has been added yet.'}</p>
+              {project.dueAt ? <p className="ql-muted ql-project-deadline"><QuorlythGlyph name="calendar" size={14} />Target delivery · {dateLabel(project.dueAt)}</p> : null}
             </div>
           )}
 
-          <div className="reason" style={{ marginBottom: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <span className="dim">Milestone progress</span>
-              <span>{completed} of {milestones.length} complete · {progress}%</span>
-            </div>
-            <div style={{ marginTop: 10 }}><Bar value={progress} /></div>
-            {milestones.length > 0 && <p className="dim" style={{ marginTop: 8, fontSize: 12 }}>Last project update {when(Math.max(project.updatedAt || project.at, ...milestones.map(m => m.updatedAt || m.at))) || 'not recorded'}</p>}
+          <div className="ql-project-progress">
+            <div className="ql-project-progress__header"><div><p className="ql-eyebrow">Delivery health</p><h4>{completed} of {milestones.length} outcomes complete</h4></div><strong>{progress}%</strong></div>
+            <div className="ql-project-progress__track"><i style={{ width: progress + '%' }} /></div>
+            {project.dueAt ? <p className="ql-muted ql-project-deadline"><QuorlythGlyph name="calendar" size={14} />Target delivery · {dateLabel(project.dueAt)}</p> : null}
+            {milestones.length > 0 && <p className="ql-muted ql-project-updated"><QuorlythGlyph name="timeline" size={13} />Last activity · {when(Math.max(project.updatedAt || project.at, ...milestones.map(m => m.updatedAt || m.at))) || 'not recorded'}</p>}
           </div>
-
-          {milestones.length ? <div style={{ display: 'grid', gap: 12 }}>
-            {milestones.map(milestone => <div key={milestone.id} className="reason" style={{ marginTop: 0 }}>
-              {milestoneDraft?.id === milestone.id ? (
-                <form onSubmit={saveMilestone}>
-                  <label className="field"><span>Milestone title</span><input value={milestoneDraft.title} maxLength={120} required onChange={e => setMilestoneDraft({ ...milestoneDraft, title: e.target.value })} /></label>
-                  <label className="field"><span>Details</span><textarea value={milestoneDraft.description} maxLength={500} onChange={e => setMilestoneDraft({ ...milestoneDraft, description: e.target.value })} /></label>
-                  <div className="acts"><button className="btn p" disabled={busy === 'milestone-' + milestone.id}>{busy === 'milestone-' + milestone.id ? 'Saving…' : 'Save milestone'}</button><button type="button" className="btn" onClick={() => setMilestoneDraft(null)}>Cancel</button></div>
-                </form>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <h4 style={{ fontSize: 16, fontWeight: 500, overflowWrap: 'anywhere' }}>{milestone.title}</h4>
-                      {milestone.description && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{milestone.description}</p>}
-                      <p className="dim" style={{ marginTop: 8, fontSize: 12 }}>Updated {when(milestone.updatedAt || milestone.at) || 'recently'}</p>
-                    </div>
-                    <span className="chip">{MILESTONE_LABEL[milestone.status]}</span>
-                  </div>
-                  {canCollaborate && <div className="acts" style={{ marginTop: 12 }}>
-                    <button type="button" className="btn" onClick={() => setMilestoneDraft({ id: milestone.id, title: milestone.title, description: milestone.description || '' })}><Icon name="edit" size={14} />Edit</button>
-                    {milestone.status === 'todo' && <button type="button" className="btn" disabled={busy === 'milestone-' + milestone.id} onClick={() => void setMilestoneStatus(milestone, 'in_progress')}>Start</button>}
-                    {milestone.status !== 'done' && <button type="button" className="btn p" disabled={busy === 'milestone-' + milestone.id} onClick={() => void setMilestoneStatus(milestone, 'done')}><Icon name="approve" size={14} />Mark done</button>}
-                    {milestone.status === 'done' && <button type="button" className="btn" disabled={busy === 'milestone-' + milestone.id} onClick={() => void setMilestoneStatus(milestone, 'in_progress')}>Reopen</button>}
-                  </div>}
-                </>
-              )}
-            </div>)}
-          </div> : <p className="mut" style={{ marginBottom: 16 }}>No milestones yet. Add the first step so contributors can see what happens next.</p>}
-
-          {canCollaborate && project.status !== 'completed' && (
-            <form onSubmit={addMilestone} className="reason" style={{ marginTop: 16 }}>
-              <h4 style={{ fontSize: 16, marginBottom: 4 }}>Add a milestone</h4>
-              <label className="field"><span>Milestone title</span><input value={newTitle} onChange={e => setNewTitle(e.target.value)} maxLength={120} required placeholder="e.g. Confirm the creative brief" /></label>
-              <label className="field"><span>Details (optional)</span><textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} maxLength={500} placeholder="Describe the next deliverable" /></label>
-              <button className="btn p" disabled={busy === 'add-milestone'}><Icon name="plus" size={15} />{busy === 'add-milestone' ? 'Adding…' : 'Add milestone'}</button>
-            </form>
-          )}
+          <MilestoneBoard idea={idea} projectId={project.id} projectStatus={project.status} milestones={milestones} teamMemberIds={teamMemberIds} canCollaborate={canCollaborate} />
           {canManage && <div className="acts" style={{ marginTop: 14 }}>
             <button type="button" className="btn" disabled={busy === 'project-status'} onClick={() => void toggleProjectStatus()}><Icon name={project.status === 'completed' ? 'rotate' : 'approve'} size={15} />{project.status === 'completed' ? 'Reopen project' : 'Mark project complete'}</button>
           </div>}
@@ -212,11 +153,9 @@ function Inner() {
 
   return (
     <>
-      <Head kicker="Projects" title="Make progress visible." right={canReview ? <button type="button" className="btn" onClick={() => nav('/queue')}><Icon name="queue" size={16} />Review queue</button> : undefined} />
+      <Head kicker="Projects" title="Make progress visible." right={canReview ? <button type="button" className="btn" onClick={() => nav('/queue')}><QuorlythGlyph name="review" size={16} />Review queue</button> : undefined} />
       <p className="mut" style={{ maxWidth: 760, marginBottom: 18 }}>Turn selected ideas into real work. Community managers control the project brief and overall status; idea creators and accepted collaborators can add milestones and update shared progress.</p>
-      {!ideas.length ? <Empty icon="insight" title={canReview ? 'No selected ideas or projects yet' : 'No project spaces available yet'} text={canReview ? 'Select an idea in a community you manage to start a tracked project.' : 'Project spaces appear here when one of your ideas is selected or a community accepts your collaboration application.'}>
-        {canReview && <button type="button" className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/queue')}>Open review queue</button>}
-      </Empty> : <div style={{ display: 'grid', gap: 16, maxWidth: 900 }}>
+      {!ideas.length ? <div className="glass cent ql-project-empty"><span className="ql-empty-mark"><QuorlythGlyph name="workspace" size={30} /></span><h3>{canReview ? 'No selected ideas or projects yet' : 'No project spaces available yet'}</h3><p className="mut">{canReview ? 'Select an idea in a community you manage to start a tracked project.' : 'Project spaces appear here when one of your ideas is selected or a community accepts your collaboration application.'}</p>{canReview && <button type="button" className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/queue')}><QuorlythGlyph name="review" size={15} />Open review queue</button>}</div> : <div style={{ display: 'grid', gap: 16, maxWidth: 900 }}>
         {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.owner || a.canManageCommunity(idea.cid)} canCollaborate={a.owner || a.canManageCommunity(idea.cid) || idea.authorId === a.me?.id || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')} />)}
       </div>}
     </>
