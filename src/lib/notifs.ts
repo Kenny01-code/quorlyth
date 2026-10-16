@@ -54,7 +54,7 @@ export function useNotifs(a: App, st: UserState): Notif[] {
         out.push({ at: application.at, icon: 'collab', text: a.nm(application.applicantId) + ' applied to collaborate on "' + idea.title + '"', kind: 'collab-request', id: application.id, target: idea.id })
       }
       if (application.applicantId === m && application.status !== 'pending' && application.reviewedAt) {
-        out.push({ at: application.reviewedAt, icon: application.status === 'accepted' ? 'approve' : 'decline', text: 'Your collaboration application for "' + idea.title + '" was ' + application.status, kind: 'collaboration', id: idea.id, target: idea.id })
+        out.push({ at: application.reviewedAt, icon: application.status === 'accepted' ? 'approve' : 'decline', text: 'Your collaboration application for "' + idea.title + '" was ' + application.status, kind: 'collaboration', id: application.id, target: idea.id })
       }
     })
 
