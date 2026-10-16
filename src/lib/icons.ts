@@ -9,6 +9,7 @@ export const ICONS: Record<string, string> = {
   "arrow": "<path d=\"M4 12h16M13 5l7 7-7 7\"/>",
   "check": "<path d=\"M5 12.5l4.5 4.5L19 7\"/>",
   "x": "<path d=\"M6 6l12 12M18 6L6 18\"/>",
+  "minimize": "<path d=\"M5 12h14\"/>",
   "users": "<path d=\"M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20\"/><circle cx=\"9.5\" cy=\"7\" r=\"3.5\"/><path d=\"M17 11a3.5 3.5 0 0 0 0-7M17 14.5h.5a4 4 0 0 1 4 4V20\"/>",
 
   "community": "<circle cx=\"9\" cy=\"12\" r=\"6\"/><circle cx=\"15\" cy=\"12\" r=\"6\"/>",
