@@ -233,7 +233,7 @@ function Detail({ cid }: { cid: string }) {
       )}
 
       {tab === 3 && own && <JoinRequests cid={cid} />}
-      {tab === 4 && own && <Insights cid={cid} creatorId={communityCreatorId} />}
+      {tab === 4 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
       {tab === 5 && own && <CommunitySettings c={c} />}
     </>
   )
@@ -251,22 +251,50 @@ function JoinRequests({ cid }: { cid: string }) {
   </div>
 }
 
-function Insights({ cid, creatorId }: { cid: string; creatorId: string }) {
+function Insights({ cid, creatorId, memberIds }: { cid: string; creatorId: string; memberIds: string[] }) {
   const a = useApp()
   const nav = useNavigate()
+  const [contributors, setContributors] = useState<{ userId: string; ideas: number; backings: number }[]>([])
+  const [loadingContributors, setLoadingContributors] = useState(true)
   const ideas = a.data.ideas.filter(i => i.cid === cid)
-  const au: Record<string, number> = {}
-  let bk = 0
-  ideas.forEach(i => { if (i.authorId !== creatorId) au[i.authorId] = (au[i.authorId] || 0) + 1; bk += a.votesOf(i.id) })
-  const top = Object.keys(au).sort((x, y) => au[y] - au[x]).slice(0, 5)
+  const totalBackings = ideas.reduce((sum, idea) => sum + a.votesOf(idea.id), 0)
+  const visibleMemberCount = memberIds.filter(userId => userId !== creatorId).length
+
+  useEffect(() => {
+    let active = true
+    const store = a.backend?.store
+    if (!store || !a.me) {
+      setContributors([])
+      setLoadingContributors(false)
+      return () => { active = false }
+    }
+    setLoadingContributors(true)
+    void store.listCommunityContributors(cid)
+      .then(rows => { if (active) setContributors(rows) })
+      .catch(error => {
+        console.error('Could not load community contributors:', error)
+        if (active) a.toast('Could not load contributor activity. Refresh and try again.')
+      })
+      .finally(() => { if (active) setLoadingContributors(false) })
+    return () => { active = false }
+  }, [a.backend, a.me?.id, a.toast, cid])
+
   return (
     <>
       <div className="grid g4" style={{ marginBottom: 18 }}>
-        {([['Members', Object.keys(a.data.members).filter(u => a.data.members[u]?.[cid]).length], ['Ideas', ideas.length], ['Backings', bk], ['In review', ideas.filter(i => a.statusOf(i.id) === 'review').length]] as [string, number][]).map(([l, v]) => <div key={l} className="glass pad"><p className="dim">{l}</p><p className="num" style={{ fontSize: 40 }}>{v}</p></div>)}
+        {([['Members', visibleMemberCount], ['Ideas', ideas.length], ['Backings', totalBackings], ['In review', ideas.filter(i => a.statusOf(i.id) === 'review').length]] as [string, number][]).map(([label, value]) => <div key={label} className="glass pad"><p className="dim">{label}</p><p className="num" style={{ fontSize: 40 }}>{value}</p></div>)}
       </div>
-      <div className="glass pad"><h3 style={{ marginBottom: 8 }}>Top contributors</h3>
-        {top.length ? top.map(u => <div key={u} className="row" style={{ cursor: 'default' }}><Av id={u} size={30} /><div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3></div><span>{au[u]}</span></div>) : <p className="mut">No contributions yet.</p>}
-        <div className="acts"><button className="btn p" onClick={() => nav('/queue?c=' + cid)}><Icon name="queue" />Review this community</button></div></div>
+      <div className="glass pad community-contributors-panel">
+        <div className="profile-section-heading"><div><p className="dim">COMMUNITY ACTIVITY</p><h3 style={{ marginBottom: 4 }}>Top contributors</h3><p className="mut">Everyone who has shared an idea here, ranked by ideas and backings.</p></div><span className="profile-section-mark"><Icon name="insight" size={19} /></span></div>
+        {loadingContributors ? <p className="mut" style={{ padding: '18px 0' }}>Loading contributor activity…</p> : contributors.length ? contributors.map(person => (
+          <div key={person.userId} className="row community-contributor-row" style={{ cursor: 'default' }}>
+            <Av id={person.userId} size={38} />
+            <div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(person.userId)}</h3><p className="dim">{person.ideas} idea{person.ideas === 1 ? '' : 's'} shared</p></div>
+            <span className="community-contributor-score">{person.backings} backing{person.backings === 1 ? '' : 's'}</span>
+          </div>
+        )) : <p className="mut" style={{ padding: '18px 0' }}>No member contributions yet. When someone shares an idea, they will appear here.</p>}
+        <div className="acts"><button className="btn p" onClick={() => nav('/queue?c=' + cid)}><Icon name="queue" />Review this community</button></div>
+      </div>
     </>
   )
 }
