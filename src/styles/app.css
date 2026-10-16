@@ -18,7 +18,7 @@ nav button:hover{color:var(--w)}
 nav button.on{color:var(--k);background:var(--w);box-shadow:0 0 30px rgba(255,255,255,.35)}
 :focus-visible{outline:1px solid var(--w);outline-offset:2px}
 main{max-width:1180px;margin:0 auto;padding:56px 20px 120px;position:relative}
-section{display:none}section.on{display:block;animation:in .7s cubic-bezier(.2,.7,.2,1)}
+#main>section.on{display:block;animation:in .7s cubic-bezier(.2,.7,.2,1)}
 @keyframes in{from{opacity:0;filter:blur(8px)}to{opacity:1;filter:none}}
 h1{font-weight:200;font-size:clamp(40px,8vw,92px);line-height:1;letter-spacing:-.045em}
 h2{font-weight:200;font-size:clamp(28px,4vw,44px);letter-spacing:-.03em;line-height:1.1}
