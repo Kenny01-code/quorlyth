@@ -71,6 +71,7 @@ export function QuorlythBot() {
   const liveRecognition = useRef<any>(null)
   const audio = useRef<{ stop(): void } | null>(null)
   const [open, setOpen] = useState(false)
+  const [minimized, setMinimized] = useState(false)
   const [launcherHidden, setLauncherHidden] = useState(false)
   const [showLauncherRestore, setShowLauncherRestore] = useState(false)
   const launcherHoldTimer = useRef<number | null>(null)
@@ -204,6 +205,11 @@ export function QuorlythBot() {
 
   function openPanel() {
     setOpen(true)
+    if (minimized) {
+      // Restore the existing window and transcript without replaying the welcome greeting.
+      setMinimized(false)
+      return
+    }
     const first = !localStorage.getItem('qseen')
     localStorage.setItem('qseen', '1')
     const name = a.me?.name.split(' ')[0]
@@ -1042,8 +1048,9 @@ export function QuorlythBot() {
                 <div className="bha">
                   <button className="bib" aria-label="Robot size" title="Robot size" onClick={() => setStage(stage === 'std' ? 'big' : stage === 'big' ? 'off' : 'std')}><Icon name="stage" size={18} /></button>
                   <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>
+                  <button className="bib" aria-label="Minimize QuorlythBot" title="Minimize to launcher" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
                   <button className="bib" aria-label="Resize" title="Expand" onClick={() => { const next = mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact'; setSize(null); setPosition(null); setMode(next) }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
-                  <button className="bib" aria-label="Close" onClick={() => { stopLive(); audio.current?.stop(); setOpen(false) }}><Icon name="decline" size={18} /></button>
+                  <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); audio.current?.stop(); setOpen(false) }}><Icon name="decline" size={18} /></button>
                 </div>
               </header>
               <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
