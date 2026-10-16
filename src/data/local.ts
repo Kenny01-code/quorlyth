@@ -22,6 +22,25 @@ export function createLocalStore(): DocStore {
         .filter(([path, data]) => /^members\/[^/]+$/.test(path) && data?.c?.[cid] === true)
         .map(([path]) => path.slice('members/'.length))
     },
+    async listCommunityContributors(cid) {
+      const docs = read()
+      const community = docs['communities/' + cid] || {}
+      const ownerId = community.ownerId || community.createdBy || docs['config/owner']?.id || ''
+      const ideas = Object.entries(docs)
+        .filter(([path, data]) => /^ideas\\/[^/]+$/.test(path) && data?.cid === cid && typeof data?.authorId === 'string' && data.authorId !== ownerId)
+        .map(([path, data]) => ({ id: path.slice('ideas/'.length), userId: data.authorId as string }))
+      const totals = new Map<string, { userId: string; ideas: number; backings: number }>()
+      const voteMaps = Object.entries(docs)
+        .filter(([path]) => /^votes\\/[^/]+$/.test(path))
+        .map(([, data]) => data?.ideas || {})
+      for (const idea of ideas) {
+        const row = totals.get(idea.userId) || { userId: idea.userId, ideas: 0, backings: 0 }
+        row.ideas += 1
+        for (const voteMap of voteMaps) if (voteMap[idea.id] === true) row.backings += 1
+        totals.set(idea.userId, row)
+      }
+      return [...totals.values()].sort((a, b) => b.ideas - a.ideas || b.backings - a.backings || a.userId.localeCompare(b.userId))
+    },
     async create(path, data) {
       const m = read()
       if (Object.prototype.hasOwnProperty.call(m, path)) throw new Error('already_exists')
