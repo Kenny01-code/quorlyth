@@ -245,9 +245,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, demo])
 
   const st = backend?.store
-  // The private platform_roles table is authoritative. The config claim is retained
-  // as a compatibility fallback for legacy records while the role table is canonical.
-  const platformOwner = demo || platformOwnerRole || (!!me && data.ownerId === me.id)
+  // Platform-owner access comes from the backend role resolver. In Supabase this
+  // checks the private platform_roles table; local mode validates its own owner claim.
+  // Do not promote a user from the publicly subscribed config/ownerId field: a stale
+  // config value must never override an explicit negative platform-role check.
+  const platformOwner = demo || platformOwnerRole
   const legacyOwner = platformOwner
   // `owner` remains the broad workspace-manager capability for existing surfaces;
   // platform-owner-only permissions must check `platformOwner` explicitly.
