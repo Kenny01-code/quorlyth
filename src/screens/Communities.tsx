@@ -231,18 +231,60 @@ function Detail({ cid }: { cid: string }) {
 
       {tab === 2 && (
         <div className="glass pad community-member-panel"><div className="profile-section-heading"><div><p className="dim">YOUR COMMUNITY</p><h3 style={{ marginBottom: 4 }}>Members</h3><p className="mut">Recognize the people helping this community move forward.</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
-          {loadingMemberIds
-            ? <p className="mut" style={{ padding: '18px 0' }}>Loading community members…</p>
-            : !own && !joined
-              ? <p className="mut" style={{ padding: '18px 0' }}>Join this community to see who is in it.</p>
-              : mem.length
-                ? mem.length ? mem.map(u => {
-            const badge = c.memberBadges?.[u] || ''
-            return <div key={u} className="row community-member-row" style={{ cursor: 'default' }}><Av id={u} size={42} />
-              <div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3><p className="dim">{data.profiles[u]?.head || 'Member'}</p>{badge && <span className="community-member-badge"><span aria-hidden="true">✧</span>{badge}</span>}</div>
-              {own && <div className="community-member-actions"><label className="field community-badge-select"><span>Assign community badge</span><select aria-label={'Assign a badge to ' + a.nm(u)} value={badge} onChange={async e => { const next = { ...(c.memberBadges || {}) }; if (e.target.value) next[u] = e.target.value; else delete next[u]; await a.saveCommunity(cid, { memberBadges: next }) }}><option value="">No badge</option><option value="Founding Member">Founding Member</option><option value="Top Contributor">Top Contributor</option><option value="Idea Architect">Idea Architect</option><option value="Community MVP">Community MVP</option><option value="Trusted Member">Trusted Member</option></select></label><Chip onClick={async () => { try { await a.backend!.store.update('members/' + u, { c: { [cid]: false } }); setMemberIds(await a.backend!.store.listCommunityMembers(cid)); a.toast('Member removed from this community') } catch (e) { a.toast('Could not remove member: ' + (e instanceof Error ? e.message : String(e))) } }}>Remove</Chip></div>}
-            </div>
-                : <p className="mut" style={{ padding: '18px 0' }}>No members yet.</p>}
+          {loadingMemberIds ? (
+            <p className="mut" style={{ padding: '18px 0' }}>Loading community members…</p>
+          ) : !own && !joined ? (
+            <p className="mut" style={{ padding: '18px 0' }}>Join this community to see who is in it.</p>
+          ) : mem.length === 0 ? (
+            <p className="mut" style={{ padding: '18px 0' }}>No members yet.</p>
+          ) : (
+            mem.map(u => {
+              const badge = c.memberBadges?.[u] || ''
+              return (
+                <div key={u} className="row community-member-row" style={{ cursor: 'default' }}>
+                  <Av id={u} size={42} />
+                  <div className="t">
+                    <h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3>
+                    <p className="dim">{data.profiles[u]?.head || 'Member'}</p>
+                    {badge && <span className="community-member-badge"><span aria-hidden="true">✧</span>{badge}</span>}
+                  </div>
+                  {own && (
+                    <div className="community-member-actions">
+                      <label className="field community-badge-select">
+                        <span>Assign community badge</span>
+                        <select
+                          aria-label={'Assign a badge to ' + a.nm(u)}
+                          value={badge}
+                          onChange={async e => {
+                            const next = { ...(c.memberBadges || {}) }
+                            if (e.target.value) next[u] = e.target.value
+                            else delete next[u]
+                            await a.saveCommunity(cid, { memberBadges: next })
+                          }}
+                        >
+                          <option value="">No badge</option>
+                          <option value="Founding Member">Founding Member</option>
+                          <option value="Top Contributor">Top Contributor</option>
+                          <option value="Idea Architect">Idea Architect</option>
+                          <option value="Community MVP">Community MVP</option>
+                          <option value="Trusted Member">Trusted Member</option>
+                        </select>
+                      </label>
+                      <Chip onClick={async () => {
+                        try {
+                          await a.backend!.store.update('members/' + u, { c: { [cid]: false } })
+                          setMemberIds(await a.backend!.store.listCommunityMembers(cid))
+                          a.toast('Member removed from this community')
+                        } catch (e) {
+                          a.toast('Could not remove member: ' + (e instanceof Error ? e.message : String(e)))
+                        }
+                      }}>Remove</Chip>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
         </div>
       )}
 
