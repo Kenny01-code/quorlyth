@@ -1,4 +1,5 @@
 import { DocStore, Doc, isDirectChild, deepMerge } from './docstore'
+import { nextRetryAttempt, retryDelayForAttempt } from './retry-policy.js'
 
 /**
  * Supabase implementation. One table, `docs(path text primary key, data jsonb)`.
@@ -111,7 +112,6 @@ export async function createSupabaseStore(url: string, key: string) {
       let refreshTimer: ReturnType<typeof setTimeout> | undefined
       let loadSequence = 0
       let stopped = false
-      const retryDelays = [1500, 3000, 7000, 15000, 30000]
 
       const reportError = (error: unknown) => {
         const detail = error as { message?: string; code?: string; cause?: unknown } | null
@@ -130,8 +130,8 @@ export async function createSupabaseStore(url: string, key: string) {
         // Keep recovering from transient Supabase/network failures for the entire
         // lifetime of the subscription. A finite retry list could leave a tab stale
         // forever after a prolonged outage, even after the network recovered.
-        const delay = retryDelays[Math.min(retryAttempt, retryDelays.length - 1)]
-        retryAttempt = Math.min(retryAttempt + 1, retryDelays.length - 1)
+        const delay = retryDelayForAttempt(retryAttempt)
+        retryAttempt = nextRetryAttempt(retryAttempt)
         retryTimer = setTimeout(() => {
           retryTimer = undefined
           void load()
