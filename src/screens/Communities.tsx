@@ -38,7 +38,37 @@ function List() {
   const emptyCommunity = { name: '', purpose: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone', joinApproval: false }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const creatorId = (community: Community) => community.ownerId || community.createdBy || (a.owner ? a.me?.id || '' : '')
-  const members = (id: string) => { const community = data.communities.find(x => x.id === id); const creator = community ? creatorId(community) : ''; return Object.keys(data.members).filter(u => data.members[u]?.[id] && u !== creator).length }
+  const [scopedMemberIds, setScopedMemberIds] = useState<Record<string, string[]>>({})
+  useEffect(() => {
+    let active = true
+    const store = a.backend?.store
+    const managedIds = data.communities.filter(community => a.canManageCommunity(community.id)).map(community => community.id)
+    if (!store || !a.me || managedIds.length === 0) {
+      setScopedMemberIds({})
+      return () => { active = false }
+    }
+    void Promise.all(managedIds.map(async cid => {
+      try {
+        return { cid, ids: await store.listCommunityMembers(cid) }
+      } catch (error) {
+        console.warn('Could not load scoped member count for community:', cid, error)
+        return null
+      }
+    })).then(results => {
+      if (!active) return
+      setScopedMemberIds(Object.fromEntries(results.filter((result): result is { cid: string; ids: string[] } => !!result).map(result => [result.cid, result.ids])))
+    })
+    return () => { active = false }
+  }, [a.backend, a.me?.id, a.platformAdmin, data.communities])
+
+  const members = (id: string) => {
+    const community = data.communities.find(x => x.id === id)
+    const creator = community ? creatorId(community) : ''
+    if (Object.prototype.hasOwnProperty.call(scopedMemberIds, id)) {
+      return scopedMemberIds[id].filter(userId => userId !== creator).length
+    }
+    return Object.keys(data.members).filter(userId => data.members[userId]?.[id] && userId !== creator).length
+  }
   const visible = data.communities.filter(c => c.vis !== 'unlisted' || a.canManageCommunity(c.id) || a.joined(c.id))
   const shown = visible.filter(c => filter === 'owned' ? a.ownsCommunity(c.id) : filter === 'joined' ? a.joined(c.id) && !a.ownsCommunity(c.id) : !a.ownsCommunity(c.id) && !a.joined(c.id) && c.vis !== 'unlisted')
   return (
@@ -101,17 +131,26 @@ function Detail({ cid }: { cid: string }) {
   const [preview, setPreview] = useState<Preview>(() => (new URLSearchParams(location.search).get('preview') as Preview) || null)
   const [sort, setSort] = useState(0)
   const [memberIds, setMemberIds] = useState<string[]>([])
+  const [loadingMemberIds, setLoadingMemberIds] = useState(true)
   useEffect(() => {
     let active = true
-    if (!a.me || !a.backend) { setMemberIds([]); return }
+    const mayViewMembers = !!a.me && (a.canManageCommunity(cid) || a.joined(cid))
+    if (!a.backend || !mayViewMembers) {
+      setMemberIds([])
+      setLoadingMemberIds(false)
+      return () => { active = false }
+    }
+    setLoadingMemberIds(true)
     void a.backend.store.listCommunityMembers(cid).then(ids => {
       if (active) setMemberIds(ids)
     }).catch(error => {
       console.error('Could not load community members:', error)
       if (active) a.toast('Could not load community members. Refresh and try again.')
+    }).finally(() => {
+      if (active) setLoadingMemberIds(false)
     })
     return () => { active = false }
-  }, [a.backend, a.me?.id, a.data.members, cid, tab])
+  }, [a.backend, a.me?.id, a.data.members, a.data.communities, a.platformAdmin, cid, tab])
   const [tag, setTag] = useState('')
   const emptyIdea = { title: '', body: '', tags: '' }
   const [f, setF, clearIdeaDraft] = useDraftState(`q-draft:${a.me?.id}:idea:${cid}`, emptyIdea)
@@ -222,18 +261,65 @@ function Detail({ cid }: { cid: string }) {
 
       {tab === 2 && (
         <div className="glass pad community-member-panel"><div className="profile-section-heading"><div><p className="dim">YOUR COMMUNITY</p><h3 style={{ marginBottom: 4 }}>Members</h3><p className="mut">Recognize the people helping this community move forward.</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
-          {mem.length && (own || joined) ? mem.map(u => {
-            const badge = c.memberBadges?.[u] || ''
-            return <div key={u} className="row community-member-row" style={{ cursor: 'default' }}><Av id={u} size={42} />
-              <div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3><p className="dim">{data.profiles[u]?.head || 'Member'}</p>{badge && <span className="community-member-badge"><span aria-hidden="true">✧</span>{badge}</span>}</div>
-              {own && <div className="community-member-actions"><label className="field community-badge-select"><span>Assign community badge</span><select aria-label={'Assign a badge to ' + a.nm(u)} value={badge} onChange={async e => { const next = { ...(c.memberBadges || {}) }; if (e.target.value) next[u] = e.target.value; else delete next[u]; await a.saveCommunity(cid, { memberBadges: next }) }}><option value="">No badge</option><option value="Founding Member">Founding Member</option><option value="Top Contributor">Top Contributor</option><option value="Idea Architect">Idea Architect</option><option value="Community MVP">Community MVP</option><option value="Trusted Member">Trusted Member</option></select></label><Chip onClick={async () => { try { await a.backend!.store.update('members/' + u, { c: { [cid]: false } }); setMemberIds(await a.backend!.store.listCommunityMembers(cid)); a.toast('Member removed from this community') } catch (e) { a.toast('Could not remove member: ' + (e instanceof Error ? e.message : String(e))) } }}>Remove</Chip></div>}
-            </div>
-          }) : <p className="mut" style={{ padding: '18px 0' }}>{mem.length ? 'Join this community to see who is in it.' : 'No members yet.'}</p>}
+          {loadingMemberIds ? (
+            <p className="mut" style={{ padding: '18px 0' }}>Loading community members…</p>
+          ) : !own && !joined ? (
+            <p className="mut" style={{ padding: '18px 0' }}>Join this community to see who is in it.</p>
+          ) : mem.length === 0 ? (
+            <p className="mut" style={{ padding: '18px 0' }}>No members yet.</p>
+          ) : (
+            mem.map(u => {
+              const badge = c.memberBadges?.[u] || ''
+              return (
+                <div key={u} className="row community-member-row" style={{ cursor: 'default' }}>
+                  <Av id={u} size={42} />
+                  <div className="t">
+                    <h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3>
+                    <p className="dim">{data.profiles[u]?.head || 'Member'}</p>
+                    {badge && <span className="community-member-badge"><span aria-hidden="true">✧</span>{badge}</span>}
+                  </div>
+                  {own && (
+                    <div className="community-member-actions">
+                      <label className="field community-badge-select">
+                        <span>Assign community badge</span>
+                        <select
+                          aria-label={'Assign a badge to ' + a.nm(u)}
+                          value={badge}
+                          onChange={async e => {
+                            const next = { ...(c.memberBadges || {}) }
+                            if (e.target.value) next[u] = e.target.value
+                            else delete next[u]
+                            await a.saveCommunity(cid, { memberBadges: next })
+                          }}
+                        >
+                          <option value="">No badge</option>
+                          <option value="Founding Member">Founding Member</option>
+                          <option value="Top Contributor">Top Contributor</option>
+                          <option value="Idea Architect">Idea Architect</option>
+                          <option value="Community MVP">Community MVP</option>
+                          <option value="Trusted Member">Trusted Member</option>
+                        </select>
+                      </label>
+                      <Chip onClick={async () => {
+                        try {
+                          await a.backend!.store.update('members/' + u, { c: { [cid]: false } })
+                          setMemberIds(await a.backend!.store.listCommunityMembers(cid))
+                          a.toast('Member removed from this community')
+                        } catch (e) {
+                          a.toast('Could not remove member: ' + (e instanceof Error ? e.message : String(e)))
+                        }
+                      }}>Remove</Chip>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
         </div>
       )}
 
       {tab === 3 && own && <JoinRequests cid={cid} />}
-      {tab === 4 && own && <Insights cid={cid} creatorId={communityCreatorId} />}
+      {tab === 4 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
       {tab === 5 && own && <CommunitySettings c={c} />}
     </>
   )
@@ -251,22 +337,50 @@ function JoinRequests({ cid }: { cid: string }) {
   </div>
 }
 
-function Insights({ cid, creatorId }: { cid: string; creatorId: string }) {
+function Insights({ cid, creatorId, memberIds }: { cid: string; creatorId: string; memberIds: string[] }) {
   const a = useApp()
   const nav = useNavigate()
+  const [contributors, setContributors] = useState<{ userId: string; ideas: number; backings: number }[]>([])
+  const [loadingContributors, setLoadingContributors] = useState(true)
   const ideas = a.data.ideas.filter(i => i.cid === cid)
-  const au: Record<string, number> = {}
-  let bk = 0
-  ideas.forEach(i => { if (i.authorId !== creatorId) au[i.authorId] = (au[i.authorId] || 0) + 1; bk += a.votesOf(i.id) })
-  const top = Object.keys(au).sort((x, y) => au[y] - au[x]).slice(0, 5)
+  const totalBackings = ideas.reduce((sum, idea) => sum + a.votesOf(idea.id), 0)
+  const visibleMemberCount = memberIds.filter(userId => userId !== creatorId).length
+
+  useEffect(() => {
+    let active = true
+    const store = a.backend?.store
+    if (!store || !a.me) {
+      setContributors([])
+      setLoadingContributors(false)
+      return () => { active = false }
+    }
+    setLoadingContributors(true)
+    void store.listCommunityContributors(cid)
+      .then(rows => { if (active) setContributors(rows) })
+      .catch(error => {
+        console.error('Could not load community contributors:', error)
+        if (active) a.toast('Could not load contributor activity. Refresh and try again.')
+      })
+      .finally(() => { if (active) setLoadingContributors(false) })
+    return () => { active = false }
+  }, [a.backend, a.me?.id, a.toast, cid])
+
   return (
     <>
       <div className="grid g4" style={{ marginBottom: 18 }}>
-        {([['Members', Object.keys(a.data.members).filter(u => a.data.members[u]?.[cid]).length], ['Ideas', ideas.length], ['Backings', bk], ['In review', ideas.filter(i => a.statusOf(i.id) === 'review').length]] as [string, number][]).map(([l, v]) => <div key={l} className="glass pad"><p className="dim">{l}</p><p className="num" style={{ fontSize: 40 }}>{v}</p></div>)}
+        {([['Members', visibleMemberCount], ['Ideas', ideas.length], ['Backings', totalBackings], ['In review', ideas.filter(i => a.statusOf(i.id) === 'review').length]] as [string, number][]).map(([label, value]) => <div key={label} className="glass pad"><p className="dim">{label}</p><p className="num" style={{ fontSize: 40 }}>{value}</p></div>)}
       </div>
-      <div className="glass pad"><h3 style={{ marginBottom: 8 }}>Top contributors</h3>
-        {top.length ? top.map(u => <div key={u} className="row" style={{ cursor: 'default' }}><Av id={u} size={30} /><div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3></div><span>{au[u]}</span></div>) : <p className="mut">No contributions yet.</p>}
-        <div className="acts"><button className="btn p" onClick={() => nav('/queue?c=' + cid)}><Icon name="queue" />Review this community</button></div></div>
+      <div className="glass pad community-contributors-panel">
+        <div className="profile-section-heading"><div><p className="dim">COMMUNITY ACTIVITY</p><h3 style={{ marginBottom: 4 }}>Top contributors</h3><p className="mut">Everyone who has shared an idea here, ranked by ideas and backings.</p></div><span className="profile-section-mark"><Icon name="insight" size={19} /></span></div>
+        {loadingContributors ? <p className="mut" style={{ padding: '18px 0' }}>Loading contributor activity…</p> : contributors.length ? contributors.map(person => (
+          <div key={person.userId} className="row community-contributor-row" style={{ cursor: 'default' }}>
+            <Av id={person.userId} size={38} />
+            <div className="t"><h3 style={{ fontSize: 15 }}>{a.nm(person.userId)}</h3><p className="dim">{person.ideas} idea{person.ideas === 1 ? '' : 's'} shared</p></div>
+            <span className="community-contributor-score">{person.backings} backing{person.backings === 1 ? '' : 's'}</span>
+          </div>
+        )) : <p className="mut" style={{ padding: '18px 0' }}>No member contributions yet. When someone shares an idea, they will appear here.</p>}
+        <div className="acts"><button className="btn p" onClick={() => nav('/queue?c=' + cid)}><Icon name="queue" />Review this community</button></div>
+      </div>
     </>
   )
 }

@@ -12,6 +12,8 @@ export interface DocStore {
   exportAll(): Promise<ExportDoc[]>
   /** Return only user IDs who belong to a community the current user may view. */
   listCommunityMembers(cid: string): Promise<string[]>
+  /** Return scoped contributor totals for a community the caller manages. */
+  listCommunityContributors(cid: string): Promise<{ userId: string; ideas: number; backings: number }[]>
   /** Create a brand-new record without ON CONFLICT UPDATE semantics. */
   create(path: string, data: any): Promise<void>
   set(path: string, data: any): Promise<void>

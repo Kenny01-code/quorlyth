@@ -15,6 +15,15 @@ export async function createSupabaseStore(url: string, key: string) {
       if (error) throw new Error(error.message || 'Could not load community members')
       return (data || []).map((row: { user_id: string }) => row.user_id)
     },
+    async listCommunityContributors(cid) {
+      const { data, error } = await sb.rpc('list_community_contributors', { p_cid: cid })
+      if (error) throw new Error(error.message || 'Could not load community contributors')
+      return (data || []).map((row: { user_id: string; ideas_count: number | string; backings_count: number | string }) => ({
+        userId: row.user_id,
+        ideas: Number(row.ideas_count) || 0,
+        backings: Number(row.backings_count) || 0,
+      }))
+    },
     async exportAll() {
       // Page the complete docs table; PostgreSQL row-level security limits this export
       // to records visible to the currently authenticated user.
