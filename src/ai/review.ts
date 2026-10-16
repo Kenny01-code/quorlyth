@@ -5,7 +5,7 @@ import { askJson } from './client'
 const clamp = (v: any) => Math.max(0, Math.min(100, Math.round(+v || 0)))
 
 /** Scores ideas for originality, feasibility and relevance and saves each review. Returns how many were reviewed. */
-export async function reviewIdeas(a: App, ideas: Idea[], opts: { community?: string; signal?: AbortSignal; onProgress?: (s: string) => void } = {}) {
+export async function reviewIdeas(a: App, ideas: Idea[], opts: { community?: string; signal?: AbortSignal; onProgress?: (s: string) => void; forceYoutubeRefresh?: boolean } = {}) {
   const d = a.data
   const w = { o: d.settings?.wo ?? 40, f: d.settings?.wf ?? 25, r: d.settings?.wr ?? 35 }
   if (a.demo) {
@@ -32,6 +32,7 @@ export async function reviewIdeas(a: App, ideas: Idea[], opts: { community?: str
       {
         signal: opts.signal,
         youtubeIdeas: b.map(i => ({ id: i.id, title: i.title, body: (i.body || '').slice(0, 600), tags: i.tags || [] })),
+        forceYoutubeRefresh: opts.forceYoutubeRefresh,
       },
     )
     if (opts.signal?.aborted) throw new DOMException('Review cancelled', 'AbortError')
