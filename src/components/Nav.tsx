@@ -35,7 +35,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
     const relevant = app.ownsCommunity(idea.cid)
       || idea.authorId === me.id
       || app.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === me.id && v.status === 'accepted')
-    return relevant && (!!app.data.projects[idea.id] || ['selected', 'promoted'].includes(app.statusOf(idea.id))
+    return relevant && (!!app.data.projects[idea.id] || ['selected', 'promoted'].includes(app.statusOf(idea.id)))
   })
   const main = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
