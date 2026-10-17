@@ -10,7 +10,7 @@ export type QuorlythGlyphName =
   | 'search' | 'mail' | 'eye' | 'alert' | 'bell' | 'save' | 'camera' | 'tag'
   | 'rotate' | 'keys' | 'database' | 'link' | 'pin' | 'phone' | 'phone-off'
   | 'video' | 'mic' | 'mic-off' | 'camera-off' | 'voice' | 'wave' | 'expand'
-  | 'shrink' | 'menu' | 'folder' | 'book' | 'star' | 'trash' | 'panel'
+  | 'shrink' | 'menu' | 'folder' | 'book' | 'star' | 'trash' | 'panel' | 'upload' | 'file' | 'paperclip'
   | 'copy' | 'redo' | 'sliders' | 'stage' | 'live' | 'stop' | 'palette' | 'pause'
 
 const SHAPES: Record<QuorlythGlyphName, ReactNode> = {
@@ -89,6 +89,9 @@ const SHAPES: Record<QuorlythGlyphName, ReactNode> = {
   stop: <><rect x="5.5" y="5.5" width="13" height="13" rx="2"/><path d="M9 9h6v6H9z"/></>,
   palette: <><path d="M12 3.5a8.5 8.5 0 1 0 0 17h1a2.2 2.2 0 0 0 0-4.4h-.7a1.7 1.7 0 0 1 0-3.4H16a4.5 4.5 0 0 0 4.5-4.5c0-2.6-3.6-4.7-8.5-4.7Z"/><circle cx="7.5" cy="10" r=".8" fill="currentColor"/><circle cx="10" cy="6.7" r=".8" fill="currentColor"/><circle cx="14.4" cy="7.2" r=".8" fill="currentColor"/><circle cx="16.2" cy="10.5" r=".8" fill="currentColor"/></>,
   pause: <><path d="M8 5.5v13M16 5.5v13"/><path d="M4 3.5h16v17H4z"/></>,
+  upload: <><path d="M12 15V3.8"/><path d="m7.7 8.2 4.3-4.4 4.3 4.4"/><path d="M4 15.5v3.2a1.8 1.8 0 0 0 1.8 1.8h12.4a1.8 1.8 0 0 0 1.8-1.8v-3.2"/></>,
+  file: <><path d="M7 3.5h7l4.5 4.6v11.1a1.3 1.3 0 0 1-1.3 1.3H7a1.5 1.5 0 0 1-1.5-1.5V5A1.5 1.5 0 0 1 7 3.5Z"/><path d="M14 3.8v4.6h4.3M8.5 12h7M8.5 15.5h7"/></>,
+  paperclip: <><path d="m9 12.5 6.4-6.4a3.1 3.1 0 0 1 4.4 4.4l-8.5 8.4a4.8 4.8 0 0 1-6.8-6.8l8.4-8.4"/></>,
 }
 
 export function QuorlythGlyph({ name, size = 20, className }: {
