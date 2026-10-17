@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { chat, json, realtimeSession } from './openai.mjs'
+import { chat, json, realtimeSession, speak } from './openai.mjs'
 
 const originalFetch = globalThis.fetch
 const originalGeminiKey = process.env.GEMINI_API_KEY
@@ -92,7 +92,8 @@ test('live voice mints a GA realtime client secret with the selected voice', asy
   const body = JSON.parse(request.options.body)
   assert.equal(body.session.type, 'realtime')
   assert.equal(body.session.model, 'gpt-realtime-2.1')
-  assert.equal(body.session.instructions, 'Be helpful')
+  assert.match(body.session.instructions, /^Be helpful/)
+  assert.match(body.session.instructions, /natural.*conversational/i)
   assert.equal(body.session.audio.output.voice, 'coral')
   assert.equal(JSON.parse(res.output).token, 'ephemeral-test-token')
   assert.equal(JSON.parse(res.output).model, 'gpt-realtime-2.1')
@@ -362,4 +363,30 @@ test('returns a 400 for malformed JSON instead of silently treating it as an emp
 
   assert.equal(res.statusCode, 400)
   assert.match(JSON.parse(res.output).error, /valid JSON/i)
+})
+
+test('natural voice endpoint applies the selected accent without exposing provider credentials', async () => {
+  process.env.OPENAI_API_KEY = 'server-only-test-key'
+  let requestUrl = ''
+  let requestOptions
+  globalThis.fetch = async (url, options = {}) => {
+    requestUrl = String(url)
+    requestOptions = options
+    return new Response(Buffer.from([1, 2, 3, 4]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Good morning. How are you doing today?', voice: 'coral', accent: 'nigerian' } }, res)
+
+  assert.equal(requestUrl, 'https://api.openai.com/v1/audio/speech')
+  assert.equal(requestOptions.headers.Authorization, 'Bearer server-only-test-key')
+  const payload = JSON.parse(requestOptions.body)
+  assert.equal(payload.voice, 'coral')
+  assert.equal(payload.input, 'Good morning. How are you doing today?')
+  assert.match(payload.instructions, /Nigerian English pronunciation/i)
+  assert.match(payload.instructions, /natural.*conversational/i)
+  assert.equal(payload.response_format, 'mp3')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['Content-Type'], 'audio/mpeg')
+  assert.ok(res.output.length > 0)
 })

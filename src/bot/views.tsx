@@ -5,7 +5,7 @@ import { useApp } from '../data/AppProvider'
 import { cn, slug, when } from '../lib/util'
 import { speakText } from '../ai/client'
 import { RobotApi } from './Robot'
-import { SKILLS, THEMES, VOICES } from './config'
+import { SKILLS, THEMES, VOICES, VOICE_ACCENTS } from './config'
 import { useBotData } from './useBotData'
 
 interface P {
@@ -54,7 +54,7 @@ export function BotViews(p: P) {
       const m = f[Math.floor(f.length / 2)], g = m < 165 ? 'm' : 'f', v = VOICES.find(x => x.g === g)!
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false)).catch(() => {})
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto' }).catch(() => {})
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
@@ -116,9 +116,13 @@ export function BotViews(p: P) {
 
   if (p.view === 'voice') {
     const cur = VOICES.find(v => v.id === s.vid) || VOICES[0]
-    const pick = (v: typeof VOICES[number]) => { bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin(); speakText('Hi, I am ' + v.n + '. ' + v.d + ', and ready when you are.', v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false)).catch(() => {}) }
+    const pick = (v: typeof VOICES[number]) => { bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin(); speakText('Hi, I am ' + v.n + '. ' + v.d + ', and ready when you are.', v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto' }).catch(() => a.toast('Voice preview is unavailable right now.')) }
     return (
       <><h3 className="bvt">Voice studio</h3><p className="mut" style={{ margin: '6px 0 4px' }}>Choose how QuorlythBot sounds and looks. Drag the robot above to turn it all the way round.</p>
+        <div className="glass pad qbot-accent-picker" style={{ padding: '6px 18px', margin: '12px 0 14px' }}>
+          <Chips label="Speech accent" desc="Auto-detect uses your browser language. You can choose a style any time." value={s.accent || 'auto'} onPick={value => bd.saveSettings({ accent: value as any })} list={VOICE_ACCENTS.map(accent => [accent.id, accent.name])} />
+          <p className="dim" style={{ fontSize: 11, lineHeight: 1.5, margin: '0 0 8px' }}>Voice accent is steered by the speech model. Browser fallback voices vary by device and may not offer every regional accent.</p>
+        </div>
         <div className="bvgrid">{VOICES.map(v => { const T = (THEMES as any)[v.theme]; return (
           <button key={v.id} className={cn('bvc', cur.id === v.id && 'on')} style={{ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any} aria-pressed={cur.id === v.id} onClick={() => pick(v)}>
             <span className="orb3d"><i /></span><b>{v.n}</b><span className="dim">{v.g === 'f' ? 'Female' : 'Male'}, {v.d}</span></button>) })}</div>
@@ -127,7 +131,7 @@ export function BotViews(p: P) {
             <div className="acts" style={{ margin: 0, gap: 6, justifyContent: 'flex-end' }}>{Object.keys(THEMES).map(k => { const T = (THEMES as any)[k]; return <Chip key={k} on={s.theme === k} onClick={() => { bd.saveSettings({ theme: k }); p.robot.current?.theme(k); p.robot.current?.spin() }}><i className="sw" style={{ background: `radial-gradient(circle at 30% 30%,${T.g1},${T.g2})` }} />{T.n}</Chip> })}</div></div>
           <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear it</b></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
-            <div className="acts" style={{ margin: 0 }}><button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false)).catch((e: Error) => a.toast(e.message || 'Voice playback is unavailable'))}><Icon name="voice" size={16} />Preview voice</button></div></div>
+            <div className="acts" style={{ margin: 0 }}><button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto' }).catch((e: Error) => a.toast(e.message || 'Voice playback is unavailable'))}><Icon name="voice" size={16} />Preview voice</button></div></div>
         </div>
         <div className="glass pad" style={{ padding: 18, marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}><span className="aiic"><Icon name="spark" size={20} /></span><h3 style={{ fontSize: 16 }}>Match my voice</h3></div>
@@ -137,7 +141,7 @@ export function BotViews(p: P) {
           <div className="acts"><button className="btn" disabled={vm.state === 'rec'} onClick={matchVoice}><Icon name="mic" size={16} />{vm.state === 'rec' ? 'Listening' : 'Start'}</button></div>
           <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>This tunes a studio voice to feel like yours. It is not a clone. Cloning a real voice needs a dedicated voice service and that person's consent.</p>
         </div>
-        <p className="dim" style={{ fontSize: 12 }}>Each preset has its own voice and speaking style. If studio speech is unavailable, QuorlythBot uses a matching voice from your browser. Voice cloning is not included.</p></>
+        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Accent guidance helps shape pronunciation and cadence, but exact regional delivery can vary. If studio speech is unavailable, QuorlythBot falls back to a voice your browser provides. Voice cloning is not included.</p></>
     )
   }
 
@@ -155,6 +159,6 @@ export function BotViews(p: P) {
           <button className="btn" onClick={() => { if (del !== 'all') return setDel('all'); bd.chats.forEach(c => bd.remove(c.id)); setDel(''); a.toast('Chats deleted') }}>{del === 'all' ? 'Confirm delete all' : 'Delete all chats'}</button></div></div>
       <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Shortcuts</h3>
         {[['Send', 'Enter'], ['New line', 'Shift Enter'], ['Skills', '/'], ['Close menus', 'Esc']].map(([k, v]) => <div key={k} className="kr"><span className="mut">{k}</span><kbd>{v}</kbd></div>)}
-        <div className="acts"><button className="btn" onClick={() => { bd.saveSettings({ tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', theme: 'onyx' }); p.robot.current?.theme('onyx'); a.toast('Customization reset') }}><Icon name="rotate" size={16} />Reset customization</button></div></div></>
+        <div className="acts"><button className="btn" onClick={() => { bd.saveSettings({ tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', accent: 'auto', theme: 'onyx' }); p.robot.current?.theme('onyx'); a.toast('Customization reset') }}><Icon name="rotate" size={16} />Reset customization</button></div></div></>
   )
 }

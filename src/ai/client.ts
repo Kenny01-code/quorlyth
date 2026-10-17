@@ -2,6 +2,8 @@ export interface BotContextRequest { route?: string; projectId?: string; tone?: 
 export interface StreamOpts { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal; onText?: (full: string, piece: string) => void; accessToken?: string; context?: BotContextRequest }
 
 const SPEECH_PRESETS: Record<string, { gender: 'female' | 'male'; rate: number; pitch: number; names: RegExp }> = {
+  marin: { gender: 'female', rate: 0.98, pitch: 1.04, names: /jenny|samantha|aria|ava|allison|siri.*female/i },
+  cedar: { gender: 'male', rate: 0.97, pitch: 0.96, names: /guy|david|mark|daniel|james|ryan|alex|fred|tom|siri.*male/i },
   coral: { gender: 'female', rate: 0.96, pitch: 1.08, names: /aria|jenny|zira|samantha|victoria|karen|susan|ava|allison|siri.*female/i },
   sage: { gender: 'female', rate: 0.9, pitch: 1.02, names: /samantha|karen|susan|serena|siri.*female/i },
   shimmer: { gender: 'female', rate: 1.05, pitch: 1.16, names: /jenny|zira|ava|siri.*female/i },
@@ -10,11 +12,42 @@ const SPEECH_PRESETS: Record<string, { gender: 'female' | 'male'; rate: number; 
   ballad: { gender: 'male', rate: 1.02, pitch: 1, names: /guy|james|david|fred|tom|siri.*male/i },
 }
 
-function browserVoice(voice: string) {
+export type VoiceAccent = 'auto' | 'nigerian' | 'american' | 'british' | 'international'
+export interface SpeechPlayback {
+  pause(): void
+  resume(): void
+  stop(): void
+}
+
+function detectAccent(preference: VoiceAccent = 'auto'): Exclude<VoiceAccent, 'auto'> {
+  if (preference !== 'auto') return preference
+  const locales = [navigator.language, ...(navigator.languages || [])].filter(Boolean).map(value => value.replace('_', '-').toLowerCase())
+  if (locales.some(value => value === 'en-ng' || value.startsWith('en-ng-'))) return 'nigerian'
+  if (locales.some(value => value === 'en-gb' || value.startsWith('en-gb-') || value === 'en-ie' || value.startsWith('en-ie-'))) return 'british'
+  if (locales.some(value => value === 'en-us' || value.startsWith('en-us-') || value === 'en-ca' || value.startsWith('en-ca-'))) return 'american'
+  return 'international'
+}
+
+function accentLocale(accent: Exclude<VoiceAccent, 'auto'>) {
+  return ({ nigerian: 'en-NG', american: 'en-US', british: 'en-GB', international: 'en-001' } as const)[accent]
+}
+
+function browserVoice(voice: string, accent: Exclude<VoiceAccent, 'auto'>) {
   const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
   const choices = window.speechSynthesis.getVoices().filter(v => /^en(-|$)/i.test(v.lang))
-  return choices.find(v => preset.names.test(v.name)) || choices.find(v => /google us english/i.test(v.name) && preset.gender === 'female') || choices[0] || null
+  const locale = accentLocale(accent).toLowerCase()
+  const exact = choices.find(v => v.lang.toLowerCase() === locale)
+  if (exact) return exact
+  const regional = choices.find(v => accent === 'nigerian'
+    ? /nigeria|nigerian|en-ng/i.test(v.name + ' ' + v.lang)
+    : accent === 'british'
+      ? /united kingdom|british|english \(uk\)|en-gb/i.test(v.name + ' ' + v.lang)
+      : accent === 'american'
+        ? /united states|american|english \(us\)|en-us/i.test(v.name + ' ' + v.lang)
+        : /international|english \(world\)|en-001/i.test(v.name + ' ' + v.lang))
+  return regional || choices.find(v => preset.names.test(v.name)) || choices.find(v => /google us english/i.test(v.name)) || choices[0] || null
 }
+
 
 async function readError(r: Response) {
   const fallback = r.status === 401
@@ -125,13 +158,13 @@ export interface RealtimeTool { type: 'function'; name: string; description: str
  * The browser sends your microphone, the model answers with audio instantly, and you can interrupt it.
  */
 export async function startRealtime(opts: {
-  instructions: string; voice?: string; tools?: RealtimeTool[]; accessToken?: string; context?: BotContextRequest
+  instructions: string; voice?: string; accent?: VoiceAccent; tools?: RealtimeTool[]; accessToken?: string; context?: BotContextRequest
   onEvent: (e: RealtimeEvent) => void
   onTool?: (name: string, args: any) => Promise<any> | any
 }) {
   opts.onEvent({ type: 'state', state: 'connecting' })
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  const body: Record<string, unknown> = { voice: opts.voice || 'alloy', tools: opts.tools || [] }
+  const body: Record<string, unknown> = { voice: opts.voice || 'coral', accent: detectAccent(opts.accent || 'auto'), tools: opts.tools || [] }
   if (opts.accessToken) { headers.Authorization = 'Bearer ' + opts.accessToken; body.context = opts.context || {} }
   else body.instructions = opts.instructions
   const s = await fetch('/api/realtime-session', { method: 'POST', headers, body: JSON.stringify(body) })
@@ -208,27 +241,94 @@ export async function startRealtime(opts: {
 }
 
 /** Uses the selected studio voice, with a gender/style-matched browser voice as fallback. */
-export async function speakText(text: string, voice: string, onStart?: () => void, onEnd?: () => void) {
-  const r = await fetch('/api/speak', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice }) })
-  if (!r.ok) {
-    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) throw new Error('Voice is not available in this browser')
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text.slice(0, 900))
-    utterance.lang = 'en-US'
-    const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
-    utterance.rate = preset.rate
-    utterance.pitch = preset.pitch
-    utterance.voice = browserVoice(voice)
-    utterance.onstart = () => onStart?.()
-    utterance.onend = utterance.onerror = () => onEnd?.()
-    window.speechSynthesis.speak(utterance)
-    return { stop: () => { window.speechSynthesis.cancel(); onEnd?.() } }
+export async function speakText(
+  text: string,
+  voice: string,
+  onStart?: () => void,
+  onEnd?: () => void,
+  options: { accent?: VoiceAccent; signal?: AbortSignal } = {},
+): Promise<SpeechPlayback> {
+  const accent = detectAccent(options.accent || 'auto')
+  const signal = options.signal
+  const source = text.trim().slice(0, 1500)
+  if (!source) throw new Error('There is no text to speak.')
+
+  let response: Response | null = null
+  try {
+    response = await fetch('/api/speak', {
+      method: 'POST',
+      signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: source, voice, accent }),
+    })
+  } catch (error) {
+    if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
   }
-  const url = URL.createObjectURL(await r.blob())
-  const au = new Audio(url)
-  au.onplay = () => onStart?.()
-  const done = () => { URL.revokeObjectURL(url); onEnd?.() }
-  au.onended = done; au.onerror = done
-  await au.play()
-  return { stop: () => { au.pause(); done() } }
+
+  if (signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+
+  if (response?.ok) {
+    const blob = await response.blob()
+    if (signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    audio.preload = 'auto'
+    let cleaned = false
+    let started = false
+    const cleanup = () => {
+      if (cleaned) return
+      cleaned = true
+      URL.revokeObjectURL(url)
+    }
+    const done = () => {
+      if (cleaned) return
+      cleanup()
+      onEnd?.()
+    }
+    audio.onplay = () => { started = true; onStart?.() }
+    audio.onpause = () => { /* pause is a supported user action, not completion */ }
+    audio.onended = done
+    audio.onerror = () => { if (started) done() }
+    try {
+      await audio.play()
+      return {
+        pause: () => audio.pause(),
+        resume: () => { void audio.play().catch(() => onEnd?.()) },
+        stop: () => { audio.pause(); audio.currentTime = 0; done() },
+      }
+    } catch (error) {
+      audio.src = ''
+      if (started) done()
+      else cleanup()
+      if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
+      // Continue with the browser voice if remote playback is unavailable or blocked.
+    }
+  }
+
+  if (signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+  if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+    throw new Error('Natural voice playback is unavailable. Your text response is still available.')
+  }
+
+  window.speechSynthesis.cancel()
+  const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
+  const utterance = new SpeechSynthesisUtterance(source.slice(0, 900))
+  utterance.lang = accentLocale(accent)
+  utterance.rate = preset.rate
+  utterance.pitch = preset.pitch
+  utterance.voice = browserVoice(voice, accent)
+  let finished = false
+  const done = () => { if (finished) return; finished = true; onEnd?.() }
+  utterance.onstart = () => onStart?.()
+  utterance.onend = done
+  utterance.onerror = done
+  if (signal) {
+    signal.addEventListener('abort', () => { window.speechSynthesis.cancel(); done() }, { once: true })
+  }
+  window.speechSynthesis.speak(utterance)
+  return {
+    pause: () => window.speechSynthesis.pause(),
+    resume: () => window.speechSynthesis.resume(),
+    stop: () => { window.speechSynthesis.cancel(); done() },
+  }
 }
