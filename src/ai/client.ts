@@ -246,7 +246,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const signal = options.signal
@@ -307,12 +307,20 @@ export async function speakText(
       if (started) done()
       else cleanup()
       if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
-      // Make the downgrade visible instead of silently presenting a device voice as a Studio voice.
+      // Never silently replace the user's chosen Studio persona with a device-default voice.
+      if (options.allowBrowserFallback !== true) {
+        throw new Error('The selected QuorlythBot Studio voice could not play. Your written reply is still available; please retry in a moment.')
+      }
       notifyBrowserFallback()
     }
   }
 
   if (signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+  // Device speech is optional only when a caller explicitly opts into it.
+  // QuorlythBot Studio playback defaults to the actual selected server-side voice.
+  if (options.allowBrowserFallback !== true) {
+    throw new Error('The selected QuorlythBot Studio voice is temporarily unavailable. Your written reply is still available.')
+  }
   if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
     throw new Error('Natural voice playback is unavailable. Your text response is still available.')
   }
