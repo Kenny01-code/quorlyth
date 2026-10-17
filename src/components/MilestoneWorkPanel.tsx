@@ -1,4 +1,4 @@
-import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Av } from './ui'
 import { QuorlythGlyph } from './QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
@@ -174,7 +174,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
     setSubmitting(false)
   }
 
-  async function submitWork(event: ChangeEvent<HTMLFormElement> | React.FormEvent<HTMLFormElement>) {
+  async function submitWork(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canSubmit) return
     setSubmitting(true)
