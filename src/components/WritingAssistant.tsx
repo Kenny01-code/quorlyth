@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { askJson, streamChat } from '../ai/client'
 
 type Point = { x: number; y: number }
@@ -27,6 +27,7 @@ export function WritingAssistant() {
   const [preview, setPreview] = useState('')
   const [options, setOptions] = useState<string[]>([])
   const [error, setError] = useState('')
+  const generation = useRef<AbortController | null>(null)
 
   useEffect(() => {
     const position = (el: HTMLTextAreaElement | null) => {
@@ -71,6 +72,8 @@ export function WritingAssistant() {
     window.addEventListener('scroll', onMove, true)
     if (document.body) observer.observe(document.body, { childList: true, subtree: true })
     return () => {
+      generation.current?.abort()
+      generation.current = null
       document.removeEventListener('focusin', onFocusIn, true)
       window.removeEventListener('resize', onMove)
       window.removeEventListener('scroll', onMove, true)
@@ -91,6 +94,9 @@ export function WritingAssistant() {
 
   async function improve(nextMode: WritingMode) {
     if (!target?.isConnected) return
+    generation.current?.abort()
+    const controller = new AbortController()
+    generation.current = controller
     const source = target.value.trim()
     const field = describeField(target)
     if (!source && nextMode.kind !== 'suggestions') {
@@ -118,7 +124,7 @@ export function WritingAssistant() {
             'Keep each suggestion concise and ready to use.',
             'Return only JSON shaped as {"suggestions":["option one","option two","option three"]}.',
           ],
-        }), { tier: 'quick' })
+        }), { tier: 'quick', signal: controller.signal })
         const generated = Array.isArray(result?.suggestions)
           ? result.suggestions.map(value => String(value || '').trim()).filter(Boolean).slice(0, 3)
           : []
@@ -136,15 +142,19 @@ export function WritingAssistant() {
         [{ role: 'user', content: nextMode.instruction + '\n\n' + context + '\n\nText to improve:\n' + source }],
         {
           tier: 'quick',
+          signal: controller.signal,
           system: 'You are QuorlythBot, a fast and context-aware writing editor for Quorlyth. Return only the revised text. Use the field label, placeholder, and page section to make the result relevant. Preserve the author’s intent, names, facts, and commitments. Never add fabricated details, claims, citations, or explanations. Match the requested tone and keep the result ready to paste.',
           onText: full => setPreview(full),
         },
       )
       setPreview(result.trim())
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'QuorlythBot could not improve this text. Please try again.')
+      if (!controller.signal.aborted) setError(e instanceof Error ? e.message : 'QuorlythBot could not improve this text. Please try again.')
     } finally {
-      setLoading(false)
+      if (generation.current === controller) {
+        generation.current = null
+        setLoading(false)
+      }
     }
   }
 
@@ -170,7 +180,7 @@ export function WritingAssistant() {
   return (
     <>
       <div className="q-writing-assistant-anchor q-writing-assistant-ui" style={{ left: anchor.x, top: anchor.y }}>
-        <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else setOptions([]) }}>
+        <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else { generation.current?.abort(); setLoading(false); setOptions([]) } }}>
           <span className="q-writing-robot-head" aria-hidden="true"><span className="q-writing-robot-antenna" /><span className="q-writing-robot-eye eye-left" /><span className="q-writing-robot-eye eye-right" /><span className="q-writing-robot-mouth" /></span>
           <span className="q-writing-robot-glint" />
         </button>
