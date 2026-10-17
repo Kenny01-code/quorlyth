@@ -363,6 +363,8 @@ function Workspace() {
             </div>
             <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Suggested project</p><h4 style={{ fontSize: 17, marginTop: 4 }}>{aiPlan.project_title}</h4><p className="mut" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p></div>
             <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Why these signals</p><p className="mut" style={{ marginTop: 5 }}>{aiPlan.evidence_summary || 'Review the source discussion alongside the proposed milestones.'}</p></div>
+            {aiPlan.lead_collaborator && <p className="mut">Suggested lead collaborator: <strong>{a.nm(aiPlan.lead_collaborator)}</strong> <span className="dim">(confirm with the team before assigning)</span></p>}
+            {!!aiPlan.definition_of_done.length && <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Project definition of done</p><ul style={{ marginTop: 7, paddingLeft: 20 }}>{aiPlan.definition_of_done.map((item, index) => <li key={index} className="mut" style={{ marginTop: 5 }}>{item}</li>)}</ul></div>}
             <div style={{ display: 'grid', gap: 8 }}>
               <p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Draft milestones · {aiPlan.milestones.length}</p>
               {aiPlan.milestones.map((item, index) => <div key={item.title + index} className="glass pad" style={{ display: 'grid', gap: 5 }}>
