@@ -374,7 +374,7 @@ function Workspace() {
               </div>)}
             </div>
             {!!aiPlan.filtered_out.length && <details><summary className="mut" style={{ cursor: 'pointer' }}>View filtered items ({aiPlan.filtered_out.length})</summary><div style={{ display: 'grid', gap: 8, marginTop: 10 }}>{aiPlan.filtered_out.map((item, index) => <div key={item.item + index} className="glass pad"><strong>{item.item}</strong><p className="mut" style={{ marginTop: 4 }}>{item.reason}</p></div>)}</div></details>}
-            <div className="acts"><button className="btn p" disabled={applyingPlan || aiBusy} onClick={applyAIPlan}><QuorlythGlyph name="approve" size={14} />{applyingPlan ? 'Applying plan…' : 'Apply brief and milestones'}</button><button className="btn" disabled={applyingPlan} onClick={() => setAiPlan(null)}>Discard draft</button></div>
+            <div className="acts"><button className="btn p" disabled={applyingPlan || aiBusy} onClick={applyAIPlan}><QuorlythGlyph name="check" size={14} />{applyingPlan ? 'Applying plan…' : 'Apply brief and milestones'}</button><button className="btn" disabled={applyingPlan} onClick={() => setAiPlan(null)}>Discard draft</button></div>
             <p className="dim" style={{ fontSize: 11 }}>AI-generated estimates and plans are suggestions. Check the source evidence and confirm assignments before acting.</p>
           </div>}
         </section>}
