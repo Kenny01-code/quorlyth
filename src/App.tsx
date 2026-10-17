@@ -31,14 +31,15 @@ import { useApp } from './data/AppProvider'
 import { useUserState } from './lib/userState'
 import { chime, useNotifs } from './lib/notifs'
 
-function DemoRedirect() {
+function DemoRedirect({ onBeforeRedirect }: { onBeforeRedirect: () => void }) {
   const a = useApp()
   const nav = useNavigate()
   useEffect(() => {
     if (!a.demo) a.enterDemo()
+    onBeforeRedirect()
     nav('/dashboard', { replace: true })
-  }, [a.demo, a.enterDemo, nav])
-  return <QuorlythLoader variant="route" label="Opening demo" />
+  }, [a.demo, a.enterDemo, nav, onBeforeRedirect])
+  return null
 }
 
 function MissingRoute() {
@@ -57,9 +58,14 @@ export default function App() {
   const [palette, setPalette] = useState(false)
   const [keys, setKeys] = useState(false)
   const [bell, setBell] = useState(false)
-  // Keep the cinematic intro opt-in; it must never block a first visit like a loader.
+  // The cinematic intro is opt-in, and the signature loader is reserved for real page-to-page navigation.
   const [intro, setIntro] = useState(false)
   const [replay, setReplay] = useState(0)
+  const [navigationTransition, setNavigationTransition] = useState(false)
+  const [hasNavigated, setHasNavigated] = useState(false)
+  const previousPathname = useRef(loc.pathname)
+  const initialRouteSettled = useRef(false)
+  const skipNextPageTransition = useRef(false)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
   // Download the full bot experience only after the user opens its lightweight launcher.
   const [botMounted, setBotMounted] = useState(false)
@@ -126,11 +132,39 @@ export default function App() {
 
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
 
+  // Show the signature animation only after the app has settled on its initial route.
+  // A short transition covers fast page swaps; Suspense keeps the compact mark visible
+  // for longer lazy-page imports without forcing the destination to wait for animation.
+  useEffect(() => {
+    if (!a.ready || a.startupError) return
+
+    if (!initialRouteSettled.current) {
+      initialRouteSettled.current = true
+      previousPathname.current = loc.pathname
+      if (loc.pathname === '/demo') skipNextPageTransition.current = true
+      return
+    }
+
+    if (previousPathname.current === loc.pathname) return
+    previousPathname.current = loc.pathname
+
+    if (skipNextPageTransition.current) {
+      skipNextPageTransition.current = false
+      return
+    }
+
+    setHasNavigated(true)
+    setNavigationTransition(true)
+    const timer = window.setTimeout(() => setNavigationTransition(false), 460)
+    return () => window.clearTimeout(timer)
+  }, [a.ready, a.startupError, loc.pathname])
+
   useEffect(() => {
     if (!a.me || (loc.pathname === '/signin' && new URLSearchParams(loc.search).get('recovery') === '1')) return
     const dest = sessionStorage.getItem('qreturn')
     if (dest) {
       sessionStorage.removeItem('qreturn')
+      skipNextPageTransition.current = true
       nav(dest, { replace: true })
     }
   }, [a.me?.id, loc.pathname, nav])
@@ -260,7 +294,7 @@ export default function App() {
     }
   }
 
-  if (!a.ready) return <QuorlythLoader variant="screen" label="Preparing your workspace" />
+  if (!a.ready) return <main aria-label="Preparing Quorlyth" />
   if (a.startupError) return (
     <main className="app-error">
       <section className="glass pad" role="alert">
@@ -273,15 +307,16 @@ export default function App() {
   return (
     <>
       <div id="sp" />
+      {navigationTransition && <QuorlythLoader variant="screen" label="Opening page" />}
       {intro && <Intro replay={replay} onDone={() => { setIntro(false); sessionStorage.setItem('qintro', '1') }} />}
       <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main">
         <section className="on">
-          <Suspense fallback={<QuorlythLoader variant="route" label="Opening page" />}>
+          <Suspense fallback={hasNavigated ? <QuorlythLoader variant="route" label="Opening page" /> : null}>
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/demo" element={<DemoRedirect />} />
+              <Route path="/demo" element={<DemoRedirect onBeforeRedirect={() => { skipNextPageTransition.current = true }} />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/onboarding" element={<Onboarding />} />
