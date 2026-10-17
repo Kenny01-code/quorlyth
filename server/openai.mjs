@@ -685,7 +685,7 @@ export async function speak(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEY()}` },
       body: JSON.stringify({
-        model: process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts',
+        model: ['gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'].includes(process.env.OPENAI_TTS_MODEL) ? process.env.OPENAI_TTS_MODEL : 'gpt-4o-mini-tts',
         voice,
         input: text,
         instructions: speechStyleInstructions(accent),
