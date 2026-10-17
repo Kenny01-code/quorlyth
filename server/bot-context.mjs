@@ -161,7 +161,7 @@ function buildSystem({ user, records, userDocs, route, projectId, preferences, i
   const communitySummary = communities.slice(0, MAX_COMMUNITIES).map(c => {
     const count = ideas.filter(i => i.cid === c.id).length
     return JSON.stringify(text(c.name, 100)) + (count ? ' (' + count + ' visible ideas)' : '')
-  }).join('; ') || 'none returned by the user's current database permissions'
+  }).join('; ') || 'none returned by this account’s current database permissions'
   const activeSummary = activeCommunity
     ? 'Active community: ' + JSON.stringify(text(activeCommunity.name, 120)) + '; purpose: ' + JSON.stringify(text(activeCommunity.purpose || 'not specified', 260)) + '; posting rule: ' + text(activeCommunity.post || 'anyone', 30) + '; visible ideas: ' + (communityIdeas.length ? communityIdeas.map(describeIdea).join('\n') : 'No idea records were returned for this community.')
     : 'No specific community is selected on the current page.'
