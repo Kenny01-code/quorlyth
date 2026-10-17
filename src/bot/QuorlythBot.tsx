@@ -361,6 +361,15 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     setCur(next); return next
   }
 
+  function responseTierForRequest(text: string, preference: 'quick' | 'smart'): 'quick' | 'smart' {
+    if (preference === 'quick') return 'quick'
+    const normalized = text.trim()
+    const complexTask = /\b(plan|roadmap|research|compare|analysis|analy[sz]e|review|rank|score|audit|architecture|implement|debug|latest|current|today|tonight|live|weather|forecast|news|sources|citations|multiple|all ideas|entire|comprehensive|step[- ]by[- ]step)\b/i.test(normalized)
+      || normalized.length > 520
+      || normalized.split(/\s+/).length > 55
+    return complexTask ? 'smart' : 'quick'
+  }
+
   function taskPreview(text: string) {
     if (/\b(delete|remove|destroy)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Preparing a deletion confirmation'
     if (/\b(create|make|start|set up)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Creating your community'
@@ -445,7 +454,12 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     let renderTimer: number | null = null
     let latestClean = ''
     try {
-      const turns = c.msgs.filter(m => !(m as any).live).slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
+      // Short, recent context reduces token latency while retaining enough conversational continuity.
+      const recentTurns = c.msgs.filter(m => !(m as any).live).slice(-10)
+      const turns = recentTurns.map((m, index) => ({
+        role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.t.slice(-(index === recentTurns.length - 1 ? 4200 : 1400)),
+      }))
       const liveContext = await requestLiveContext(t)
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
@@ -454,7 +468,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       let first = true
       const full = await streamChat(turns, {
         ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
-        ...(accessToken ? { accessToken, context: botContext } : {}), tier: bs.model, signal: ctl.current.signal,
+        ...(accessToken ? { accessToken, context: botContext } : {}), tier: responseTierForRequest(t, bs.model), signal: ctl.current.signal,
         onText: f => {
           if (first) { first = false; setThinkingTask(''); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           latestClean = f.replace(/\[\[[\s\S]*$/, '').trim()
@@ -599,7 +613,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
           const answer = await streamChat(c.msgs.filter(m => !(m as any).live).slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t })), {
             ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a voice conversation. Speak naturally in short sentences. You can help with the app, but do not claim to execute an action unless the app has actually done it.' } : {}),
-            ...(accessToken ? { accessToken, context: voiceContext } : {}), tier: bs.model,
+            ...(accessToken ? { accessToken, context: voiceContext } : {}), tier: responseTierForRequest(c.msgs[c.msgs.length - 1]?.t || '', bs.model),
             onText: full => { if (first) first = false; setLive(l => l ? { ...l, state: 'speaking', bot: full } : l) },
           })
           c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }] }

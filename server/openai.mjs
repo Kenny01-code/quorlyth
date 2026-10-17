@@ -294,7 +294,7 @@ async function requestGeminiJson(body) {
   const requestBody = JSON.stringify({
     systemInstruction: { parts: [{ text: String(system) }] },
     contents: [{ role: 'user', parts: [{ text: String(prompt) }] }],
-    generationConfig: { responseMimeType: 'application/json', maxOutputTokens: tier === 'quick' ? 1024 : 2048 },
+    generationConfig: { responseMimeType: 'application/json', maxOutputTokens: tier === 'quick' ? 1536 : 2048 },
   })
   return fetchGeminiWithFallback(tier, model => fetchWithHeaderTimeout(geminiUrl(model), {
     method: 'POST',
@@ -312,7 +312,7 @@ function openAICompatibleRequest(provider, body, structured = false) {
     ? {
         model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
         response_format: { type: 'json_object' },
-        max_tokens: tier === 'quick' ? 1024 : 2048,
+        max_tokens: tier === 'quick' ? 1536 : 2048,
         messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
       }
     : {

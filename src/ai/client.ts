@@ -93,12 +93,15 @@ export async function askJson<T = any>(prompt: string, o: {
   youtubeIdeas?: Array<{ id: string; title: string; body?: string; tags?: string[] }>
   forceYoutubeRefresh?: boolean
 } = {}): Promise<T> {
+  // Fast-by-default for compact utility tasks, writing help, and small structured actions.
+  // Requests with richer evidence payloads stay on the smart tier unless the caller explicitly opts in to quick.
+  const tier = o.tier || (prompt.length <= 4200 && !o.youtubeIdeas ? 'quick' : 'smart')
   const r = await fetch('/api/json', {
     method: 'POST', signal: o.signal, headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
       system: o.system,
-      tier: o.tier === 'quick' ? 'quick' : 'smart',
+      tier,
       ...(o.youtubeIdeas ? { youtubeIdeas: o.youtubeIdeas } : {}),
       ...(o.forceYoutubeRefresh ? { forceYoutubeRefresh: true } : {}),
     }),

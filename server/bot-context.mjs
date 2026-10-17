@@ -258,24 +258,32 @@ export async function buildAuthenticatedBotContext({ authorization, context = {}
   userDocsUrl.searchParams.set('or', '(path.eq.' + userPrefix + 'botset,path.like.' + userPrefix + 'p_*)')
   userDocsUrl.searchParams.set('order', 'path.asc')
   userDocsUrl.searchParams.set('limit', '250')
-  let rowsResponse, userDocsResponse
+
+  // The session is verified before any app records are requested. After that,
+  // all independent reads and trusted role checks run together instead of in
+  // multiple sequential network round trips.
+  let rowsResponse, userDocsResponse, roleResults
   try {
-    ;[rowsResponse, userDocsResponse] = await Promise.all([
+    ;[rowsResponse, userDocsResponse, roleResults] = await Promise.all([
       request(docsUrl, { headers }),
       request(userDocsUrl, { headers }),
+      Promise.all([
+        rpcBoolean(base, anonKey, token, 'current_user_is_platform_owner'),
+        rpcBoolean(base, anonKey, token, 'current_user_is_platform_admin'),
+      ]),
     ])
   } catch {
     throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
   }
   if (!rowsResponse.ok || !userDocsResponse.ok) throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
+
   let rows, userRows
-  try { [rows, userRows] = await Promise.all([rowsResponse.json(), userDocsResponse.json()]) } catch { throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE') }
+  try { [rows, userRows] = await Promise.all([rowsResponse.json(), userDocsResponse.json()]) } catch {
+    throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
+  }
   if (!Array.isArray(rows) || !Array.isArray(userRows)) throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
 
-  const [isOwner, isAdmin] = await Promise.all([
-    rpcBoolean(base, anonKey, token, 'current_user_is_platform_owner'),
-    rpcBoolean(base, anonKey, token, 'current_user_is_platform_admin'),
-  ])
+  const [isOwner, isAdmin] = roleResults
   const records = directRecords(rows)
   const userDocs = new Map(userRows.map(row => [row.path.slice(userPrefix.length), row.data]))
   const preferencesRecord = userDocs.get('botset') || {}
