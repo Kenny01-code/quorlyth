@@ -333,6 +333,44 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     return `Browser language: ${lang}. Device time zone: ${zone}. Current local date and time: ${localTime}. Browser online: ${navigator.onLine ? 'yes' : 'no'}. Browser speech output: ${speech ? 'available' : 'unavailable'}. Browser speech recognition: ${recognition ? 'available' : 'unavailable'}. Precise device location has not been read; ask before requesting location permission and never pretend to know GPS coordinates.`
   }
 
+  useEffect(() => {
+    if (thinkingExitTimer.current !== null) {
+      window.clearTimeout(thinkingExitTimer.current)
+      thinkingExitTimer.current = null
+    }
+    if (busy) {
+      setThinkingPhase('thinking')
+      return
+    }
+    if (thinkingPhase === 'off') return
+    setThinkingPhase('leaving')
+    thinkingExitTimer.current = window.setTimeout(() => {
+      thinkingExitTimer.current = null
+      setThinkingPhase('off')
+    }, 190)
+    return () => {
+      if (thinkingExitTimer.current !== null) {
+        window.clearTimeout(thinkingExitTimer.current)
+        thinkingExitTimer.current = null
+      }
+    }
+  }, [busy])
+
+  useEffect(() => () => {
+    speechRequest.current?.abort()
+    audio.current?.stop()
+    if (thinkingExitTimer.current !== null) window.clearTimeout(thinkingExitTimer.current)
+  }, [])
+
+  function transitionThinkingOut() {
+    if (thinkingExitTimer.current !== null) window.clearTimeout(thinkingExitTimer.current)
+    setThinkingPhase('leaving')
+    thinkingExitTimer.current = window.setTimeout(() => {
+      thinkingExitTimer.current = null
+      setThinkingPhase('off')
+    }, 190)
+  }
+
   function stopVoice() {
     speechMessageKeyRef.current = ''
     speechRequest.current?.abort()
@@ -481,7 +519,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       }
       const action = planAction(t)
       if (action) {
-        audio.current?.stop(); setView('chat')
+        stopVoice(); setView('chat')
         if (action.type === 'deleteCommunity') {
           const draft = add(cur, { r: 'u', t })
           const prompt = `I found ${action.name}. It has ${action.ideaCount} linked idea${action.ideaCount === 1 ? '' : 's'}. Review the confirmation below before I delete the community.`
@@ -553,7 +591,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
         ...(accessToken ? { accessToken, context: botContext } : {}), tier: responseTierForRequest(t, bs.model), signal: ctl.current.signal,
         onText: f => {
-          if (first) { first = false; setThinkingTask(''); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
+          if (first) { first = false; setThinkingTask(''); transitionThinkingOut(); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           latestClean = f.replace(/\[\[[\s\S]*$/, '').trim()
           if (renderTimer === null) {
             renderTimer = window.setTimeout(() => {
@@ -572,7 +610,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       const clean = full.replace(/\[\[[\s\S]*?\]\]/g, '').trim() || 'I couldn’t put together a complete answer that time. Could you try asking again?'
       c = { ...c, msgs: [...c.msgs, { r: 'a', t: clean, btns }] }
       persist(c)
-      robot.current?.talk(false); say(clean)
+      robot.current?.talk(false); say(clean, c.id + ':' + (c.msgs.length - 1))
       setTimeout(() => setCaption(''), 1500)
     } catch (e: any) {
       if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
@@ -1197,7 +1235,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>
                   <button className="bib" aria-label="Minimize QuorlythBot" title="Minimize to launcher" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
                   <button className="bib" aria-label="Resize" title="Expand" onClick={() => { const next = mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact'; setSize(null); setPosition(null); setMode(next) }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
-                  <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); audio.current?.stop(); setOpen(false) }}><Icon name="decline" size={18} /></button>
+                  <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); stopVoice(); setOpen(false) }}><Icon name="decline" size={18} /></button>
                 </div>
               </header>
               <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
@@ -1220,17 +1258,32 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                       <div className="bgrid sm">{SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map(s => <button key={s.id} className="bsk" onClick={() => skill(s.id)}><span className="bski"><Icon name={s.icon} size={20} /></span><b>{s.n}</b></button>)}</div></div>
                   ) : (
                     <div className="ast-log" aria-live="polite">
-                      {msgs.map((m, i) => m.r === 'u' ? <div key={i} className="am mu">{m.t}</div> : (
-                        <div key={i} className="am ma"><div className="mt">{m.t}{(m as any).live && <span className="btyping" aria-label="QuorlythBot is typing"><i /><i /><i /></span>}</div>
-                          {m.btns?.length ? <div style={{ marginTop: 8 }}>{m.btns.map((b, k) => <button key={k} className="chip on" onClick={() => act(b)}>{b.l}</button>)}</div> : null}
-                          <div className="mact"><button aria-label="Copy" onClick={() => navigator.clipboard.writeText(m.t).then(() => a.toast('Copied'))}><Icon name="copy" size={14} /></button>
-                            <button aria-label="Save" onClick={() => { bd.put('l_' + slug(), { title: m.t.slice(0, 48), text: m.t, at: Date.now() }); a.toast('Saved to your library') }}><Icon name="star" size={14} /></button>
-                            {i === msgs.length - 1 && !busy && <button aria-label="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /></button>}</div>
-                        </div>
-                      ))}
-                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma qbot-thinking-panel" role="status" aria-live="polite" aria-label="QuorlythBot is preparing a reply">
+                      {msgs.map((m, i) => {
+                        if (m.r === 'u') return <div key={i} className="am mu">{m.t}</div>
+                        const speechKey = (cur?.id || 'active') + ':' + i
+                        const activeSpeech = speechMessageKey === speechKey && speechState !== 'idle'
+                        const speechIcon = activeSpeech
+                          ? speechState === 'paused' ? 'play' : speechState === 'loading' ? 'loader-circle' : 'pause'
+                          : 'play'
+                        const speechLabel = activeSpeech
+                          ? speechState === 'paused' ? 'Resume voice playback' : speechState === 'loading' ? 'Cancel voice preparation' : 'Pause voice playback'
+                          : 'Play reply aloud'
+                        return (
+                          <div key={i} className="am ma"><div className="mt">{m.t}{(m as any).live && <span className="btyping" aria-label="QuorlythBot is typing"><i /><i /><i /></span>}</div>
+                            {m.btns?.length ? <div style={{ marginTop: 8 }}>{m.btns.map((b, k) => <button key={k} className="chip on" onClick={() => act(b)}>{b.l}</button>)}</div> : null}
+                            <div className="mact">
+                              <button aria-label={speechLabel} title={speechLabel} aria-pressed={activeSpeech && speechState === 'playing'} onClick={() => toggleReplySpeech(speechKey, m.t)}><Icon name={speechIcon} size={14} /></button>
+                              {activeSpeech && <button aria-label="Stop voice playback" title="Stop voice playback" onClick={stopVoice}><Icon name="stop" size={14} /></button>}
+                              <button aria-label="Copy" title="Copy reply" onClick={() => navigator.clipboard.writeText(m.t).then(() => a.toast('Copied'))}><Icon name="copy" size={14} /></button>
+                              <button aria-label="Save" title="Save reply" onClick={() => { bd.put('l_' + slug(), { title: m.t.slice(0, 48), text: m.t, at: Date.now() }); a.toast('Saved to your library') }}><Icon name="star" size={14} /></button>
+                              {i === msgs.length - 1 && !busy && <button aria-label="Try again" title="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /></button>}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {thinkingPhase !== 'off' && <div className={cn('am', 'ma', 'qbot-thinking-panel', thinkingPhase === 'leaving' && 'is-leaving')} role="status" aria-live="polite" aria-label="QuorlythBot is thinking">
                           <span className="qbot-thinking-orbit" aria-hidden="true"><i /><i /><Icon name="message" size={16} /></span>
-                          <span className="qbot-thinking-copy"><strong>On it. Let me check the right context.</strong><small>{thinkingTask || 'Putting together a useful answer'}</small><span>Just a moment — I’ll be clear if anything is uncertain.</span></span>
+                          <span className="qbot-thinking-copy"><strong>Thinking…</strong><small>{thinkingTask || 'Putting together a useful answer'}</small></span>
                           <span className="qbot-thinking-signal" aria-hidden="true"><i /><i /><i /></span>
                         </div>}
                     </div>
