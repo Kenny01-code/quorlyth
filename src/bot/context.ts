@@ -32,7 +32,7 @@ export function buildContext(a: App, bs: BotSettings, route: string, project?: P
     const status = outcome(idea.id)
     const statusLabel = STATUS_LABEL[status as keyof typeof STATUS_LABEL] || String(status)
     const parts = [
-      '- ' + JSON.stringify(idea.title.slice(0, 140)),
+      '- ' + JSON.stringify(idea.title.slice(0, 140)) + ' [idea reference: ' + idea.id + ']',
       'community: ' + (d.communities.find(c => c.id === idea.cid)?.name || 'not in current context'),
       'status: ' + statusLabel,
     ]
