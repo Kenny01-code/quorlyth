@@ -139,7 +139,30 @@ export function Messages() {
   const isPlatformAdmin = (id: string) => id === a.data.ownerId || !!(a.data.profiles[id] as any)?.platformAdmin || (!!a.me && id === a.me.id && a.owner)
   const isCommunityCreator = (id: string) => id !== a.data.ownerId && !(a.me && id === a.me.id && a.owner) && a.data.communities.some(c => c.ownerId === id || c.createdBy === id)
   const profileLink = (id: string) => '/me/' + encodeURIComponent(id)
-  const activeMessages = useMemo(() => messages.filter(m => m.conversationId === active?.id), [messages, active?.id])
+  // Index the live message collection once per snapshot. The inbox used to scan the
+  // entire message array for every conversation (last message + unread count several
+  // times per render), which gets increasingly expensive as the user's chat history grows.
+  const messageIndex = useMemo(() => {
+    const byConversation = new Map<string, Message[]>()
+    const lastByConversation = new Map<string, Message>()
+    const readTimes = new Map<string, number>()
+    const unreadByConversation = new Map<string, number>()
+    for (const read of reads) readTimes.set(read.conversationId, Math.max(readTimes.get(read.conversationId) || 0, read.lastReadAt || 0))
+    for (const message of messages) {
+      const list = byConversation.get(message.conversationId)
+      if (list) list.push(message)
+      else byConversation.set(message.conversationId, [message])
+      lastByConversation.set(message.conversationId, message)
+      if (message.senderId !== meId && message.at > (readTimes.get(message.conversationId) || 0)) {
+        unreadByConversation.set(message.conversationId, (unreadByConversation.get(message.conversationId) || 0) + 1)
+      }
+    }
+    return { byConversation, lastByConversation, unreadByConversation }
+  }, [messages, reads, meId])
+  const activeMessages = useMemo(
+    () => active ? messageIndex.byConversation.get(active.id) || [] : [],
+    [messageIndex, active?.id],
+  )
   const people = useMemo(() => {
     const ids = new Set<string>([
       ...Object.keys(a.data.profiles),
@@ -151,10 +174,9 @@ export function Messages() {
     return [...ids].map(id => ({ id, name: a.nm(id) })).sort((x, y) => x.name.localeCompare(y.name))
   }, [a.data.profiles, a.data.members, a.data.communities, a.data.ideas, a.nm, meId])
   const visiblePeople = people.filter(p => p.name.toLowerCase().includes(peopleQuery.toLowerCase()) || p.id.toLowerCase().includes(peopleQuery.toLowerCase()))
-  const readAt = (id: string) => reads.find(r => r.conversationId === id)?.lastReadAt || 0
-  const unreadCount = (c: Conversation) => messages.filter(m => m.conversationId === c.id && m.senderId !== meId && m.at > readAt(c.id)).length
+  const unreadCount = (c: Conversation) => messageIndex.unreadByConversation.get(c.id) || 0
   const titleOf = (c: Conversation) => c.type === 'group' ? (c.title || 'Untitled group') : a.nm(c.members.find(id => id !== meId) || '')
-  const lastMessage = (c: Conversation) => messages.filter(m => m.conversationId === c.id).at(-1)
+  const lastMessage = (c: Conversation) => messageIndex.lastByConversation.get(c.id)
   const preferenceFor = (id: string) => chatPreferences.find(p => p.userId === meId && p.conversationId === id)
   const messageText = (m: Message) => messageEdits.find(e => e.messageId === m.id)?.text || m.text
   const isDeletedMessage = (id: string) => messageTombstones.some(t => t.messageId === id)
@@ -169,7 +191,7 @@ export function Messages() {
       return titleOf(c).toLowerCase().includes(query.toLowerCase()) || (lastMessage(c)?.text || '').toLowerCase().includes(query.toLowerCase())
     })
     .sort((x, y) => Number(!!preferenceFor(y.id)?.pinned) - Number(!!preferenceFor(x.id)?.pinned) || ((lastMessage(y)?.at || y.createdAt || 0) - (lastMessage(x)?.at || x.createdAt || 0))),
-    [conversations, chatPreferences, meId, conversationFilter, query, messages, reads, a.nm])
+    [conversations, chatPreferences, meId, conversationFilter, query, messageIndex, a.nm])
 
   async function saveChatPreference(conversationId: string, patch: Partial<ChatPreference>) {
     if (!store || !meId) return
