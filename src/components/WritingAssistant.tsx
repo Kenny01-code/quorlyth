@@ -106,7 +106,7 @@ export function WritingAssistant() {
     setError('')
     try {
       if (nextMode.kind === 'suggestions') {
-        const result = await askJson<{ suggestions?: string[] }>({
+        const result = await askJson<{ suggestions?: string[] }>(JSON.stringify({
           task: 'Create three useful, distinct draft options for a form field in a community collaboration app.',
           field,
           existingText: source,
@@ -118,7 +118,7 @@ export function WritingAssistant() {
             'Keep each suggestion concise and ready to use.',
             'Return only JSON shaped as {"suggestions":["option one","option two","option three"]}.',
           ],
-        }, { tier: 'quick' })
+        }), { tier: 'quick' })
         const generated = Array.isArray(result?.suggestions)
           ? result.suggestions.map(value => String(value || '').trim()).filter(Boolean).slice(0, 3)
           : []
