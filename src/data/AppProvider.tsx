@@ -769,6 +769,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const project = data.projects[submission.projectId]
         const idea = data.ideas.find(item => item.id === submission.ideaId)
         if (!project || !idea) throw new Error('The submission’s project could not be found.')
+        if (project.status !== 'active') throw new Error('Reopen the project before reviewing pending milestone work.')
         if (!canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can review submitted work.')
         if (submission.status !== 'submitted') throw new Error('This submission has already been reviewed.')
         const cleanNote = reviewNote.trim().slice(0, 1600)
