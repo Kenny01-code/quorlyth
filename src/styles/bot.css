@@ -1229,3 +1229,28 @@
     scroll-behavior: auto;
   }
 }
+
+
+/* Keep one reliable scroll owner for QuorlythBot's transcript. The inner message
+   list must grow with its content instead of competing with the outer viewport
+   for wheel input; direct wheel handling is a fallback for desktop mouse wheels. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain;
+  scroll-behavior: auto !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation > .ast-log {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: max-content !important;
+  overflow: visible !important;
+  overflow-y: visible !important;
+  overscroll-behavior: auto;
+  scrollbar-width: none;
+  scrollbar-gutter: auto;
+}

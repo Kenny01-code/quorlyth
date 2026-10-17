@@ -1384,7 +1384,23 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   </div>
                 </div>
               )}
-              <div className="qbot-conversation" ref={log} style={view === 'chat' ? undefined : { padding: '6px 4px' }}>
+              <div
+                className="qbot-conversation"
+                ref={log}
+                onWheel={event => {
+                  // The transcript has one scroll owner; handle mouse wheels directly
+                  // so trackpad and wheel input work even across message children.
+                  if (view !== 'chat' || event.ctrlKey || event.deltaY === 0) return
+                  const scroller = event.currentTarget
+                  const maxScroll = scroller.scrollHeight - scroller.clientHeight
+                  if (maxScroll <= 1) return
+                  const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? scroller.clientHeight : 1
+                  const previous = scroller.scrollTop
+                  scroller.scrollTop = Math.max(0, Math.min(maxScroll, previous + event.deltaY * unit))
+                  if (scroller.scrollTop !== previous) event.preventDefault()
+                }}
+                style={view === 'chat' ? undefined : { padding: '6px 4px' }}
+              >
                 {view === 'chat' ? (
                   !msgs.length ? (
                     <div className="bhero"><p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p><h3>{project ? project.name : 'How can I help?'}</h3><p className="mut">Ask anything about your space, or pick a skill.</p>
