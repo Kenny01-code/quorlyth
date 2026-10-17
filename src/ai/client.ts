@@ -240,7 +240,7 @@ export async function startRealtime(opts: {
   }
 }
 
-/** Uses the selected studio voice, with a gender/style-matched browser voice as fallback. */
+/** Uses the selected Studio persona through server-side TTS. Device voice fallback is opt-in only. */
 export async function speakText(
   text: string,
   voice: string,
