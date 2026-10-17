@@ -435,7 +435,8 @@ function MemberAnalyticsView() {
     download('quorlyth-my-analytics.csv', 'text/csv', 'title,community,author,backings,status,score,created\n' + rows.join('\n'))
   }
 
-  function pdf() {
+  async function pdf() {
+    const { jsPDF } = await import('jspdf')
     const d = new jsPDF({ unit: 'mm', format: 'a4' })
     const W = 210, M = 16
     let y = 54
