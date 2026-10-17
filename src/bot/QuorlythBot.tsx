@@ -36,6 +36,21 @@ function usePlaceholder(role: 'owner' | 'member' | 'visitor', active: boolean) {
   return active ? PHRASES[role][index % PHRASES[role].length] : 'Message QuorlythBot'
 }
 
+
+function friendlyBotError(error: unknown): string {
+  const value = error && typeof error === 'object' ? error as { name?: unknown; message?: unknown } : null
+  const name = typeof value?.name === 'string' ? value.name : ''
+  const message = typeof value?.message === 'string' ? value.message : typeof error === 'string' ? error : ''
+  if (name === 'AbortError') return 'I stopped that response. Send another message whenever you’re ready.'
+  if (/credit_balance_exhausted|insufficient_quota|no credits remaining/i.test(message)) return 'I’m temporarily unable to generate a reply because the AI service needs attention. Please try again later.'
+  if (/session could not be verified|session.*expired|sign-in session/i.test(message)) return 'Your Quorlyth session needs a refresh. Reload the page, then try your message again.'
+  if (/securely load the app context|context.*unavailable/i.test(message)) return 'I couldn’t securely load the latest Quorlyth context just now. Please try again in a moment.'
+  if (/failed to fetch|networkerror|network request failed|offline|load failed/i.test(message)) return 'I couldn’t reach QuorlythBot just now. Check your connection and try again.'
+  if (/timed out|stalled|interrupted before it finished/i.test(message)) return 'That reply didn’t finish coming through. Please try again and I’ll take another run at it.'
+  if (/temporarily unavailable|available ai services/i.test(message)) return 'I’m having trouble reaching the AI service right now. Please try again shortly.'
+  return 'I hit a temporary snag while preparing that answer. Your message is still here; please try again in a moment.'
+}
+
 type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
 type Live = null | { state: string; user: string; bot: string }
 type PendingAction =
