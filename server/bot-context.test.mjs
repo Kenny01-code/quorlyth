@@ -182,3 +182,43 @@ test('authenticated chat ignores a browser-built system prompt and uses RLS-scop
   assert.doesNotMatch(providerMessages[0].content, /secret@example\.com/)
   assert.doesNotMatch(res.output, /test-provider-secret|secret@example\.com|user-private-uuid/)
 })
+
+
+test('missing text providers return a calm retryable response without exposing environment instructions', async () => {
+  delete process.env.OPENAI_API_KEY
+  delete process.env.GEMINI_API_KEY
+  delete process.env.XAI_API_KEY
+  process.env.AI_PROVIDER = 'auto'
+  globalThis.fetch = async () => { throw new Error('No provider request should occur without a configured key') }
+  const res = {
+    statusCode: 0, headers: {}, output: '',
+    setHeader(key, value) { this.headers[key] = value },
+    write(value) { this.output += value },
+    end(value = '') { this.output += value },
+  }
+  await chat({ body: { messages: [{ role: 'user', content: 'Can you help?' }] } }, res)
+  const payload = JSON.parse(res.output)
+  assert.equal(res.statusCode, 503)
+  assert.equal(payload.retryable, true)
+  assert.match(payload.error, /temporarily unavailable/i)
+  assert.doesNotMatch(payload.error, /OPENAI_API_KEY|GEMINI_API_KEY|XAI_API_KEY/)
+})
+
+test('provider error payloads are not echoed into the chat response', async () => {
+  process.env.AI_PROVIDER = 'openai'
+  process.env.OPENAI_API_KEY = 'provider-test-secret'
+  delete process.env.GEMINI_API_KEY
+  delete process.env.XAI_API_KEY
+  globalThis.fetch = async () => json({ error: { message: 'PRIVATE_PROVIDER_STACK / fake-secret-value' } }, 400)
+  const res = {
+    statusCode: 0, headers: {}, output: '',
+    setHeader(key, value) { this.headers[key] = value },
+    write(value) { this.output += value },
+    end(value = '') { this.output += value },
+  }
+  await chat({ body: { messages: [{ role: 'user', content: 'Please answer this' }] } }, res)
+  const payload = JSON.parse(res.output)
+  assert.equal(res.statusCode, 400)
+  assert.match(payload.error, /could not complete this request/i)
+  assert.doesNotMatch(res.output, /PRIVATE_PROVIDER_STACK|fake-secret-value|provider-test-secret/)
+})
