@@ -347,6 +347,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     thinkingExitTimer.current = window.setTimeout(() => {
       thinkingExitTimer.current = null
       setThinkingPhase('off')
+      setThinkingTask('')
     }, 190)
     return () => {
       if (thinkingExitTimer.current !== null) {
@@ -368,6 +369,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     thinkingExitTimer.current = window.setTimeout(() => {
       thinkingExitTimer.current = null
       setThinkingPhase('off')
+      setThinkingTask('')
     }, 190)
   }
 
@@ -568,7 +570,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         persist(draft); setPendingAction(action); return
       }
     }
-    audio.current?.stop(); setView('chat')
+    stopVoice(); setView('chat')
     let c = add(cur, { r: 'u', t })
     setBusy(true); robot.current?.think(true); setStatus('Thinking'); setThinkingTask(taskPreview(t)); setCaption('')
     ctl.current = new AbortController()
@@ -591,7 +593,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
         ...(accessToken ? { accessToken, context: botContext } : {}), tier: responseTierForRequest(t, bs.model), signal: ctl.current.signal,
         onText: f => {
-          if (first) { first = false; setThinkingTask(''); transitionThinkingOut(); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
+          if (first) { first = false; transitionThinkingOut(); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           latestClean = f.replace(/\[\[[\s\S]*$/, '').trim()
           if (renderTimer === null) {
             renderTimer = window.setTimeout(() => {
@@ -763,6 +765,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         instructions: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a live spoken conversation, like a phone call. Reply in one to three short natural sentences, the way a warm person would speak. Use contractions. No lists or markdown. You can call the tools to take the person to a page or open an idea.',
         ...(accessToken ? { accessToken, context: voiceContext } : {}),
         voice: v.ai,
+        accent: bs.accent || 'auto',
         tools: [
           { type: 'function', name: 'navigate', description: 'Take the person to a page of the app.', parameters: { type: 'object', properties: { page: { type: 'string', enum: ['home', 'dashboard', 'communities', 'queue', 'promote', 'analytics', 'settings', 'profile'] } }, required: ['page'] } },
           { type: 'function', name: 'open_idea', description: 'Open an idea by its id.', parameters: { type: 'object', properties: { idea_id: { type: 'string' } }, required: ['idea_id'] } },
