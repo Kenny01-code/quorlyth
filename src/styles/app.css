@@ -2369,3 +2369,53 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .chs { scroll-behavior: auto; }
 }
+
+
+/* Promotion preview — show the source idea beside its share-ready version. */
+.promotion-library { min-width: 0; }
+.promotion-library-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.promotion-preview { min-width: 0; padding: clamp(15px, 2vw, 22px); border: 1px solid rgba(255,255,255,.13); background: linear-gradient(145deg, rgba(255,255,255,.065), rgba(255,255,255,.018)); box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 16px 42px -36px rgba(255,255,255,.24); overflow: hidden; }
+.promotion-preview-header, .promotion-post-heading, .promotion-preview-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.promotion-preview-header { justify-content: flex-start; }
+.promotion-preview-mark { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border-radius: 13px; border: 1px solid rgba(255,255,255,.15); background: linear-gradient(145deg, rgba(255,255,255,.13), rgba(255,255,255,.025)); color: #fff; }
+.promotion-preview-heading { min-width: 0; flex: 1; }
+.promotion-eyebrow, .promotion-section-label { color: rgba(255,255,255,.54); font-size: 10px; font-weight: 650; letter-spacing: .13em; line-height: 1.45; }
+.promotion-preview-heading h3 { margin-top: 2px; font-size: 17px; font-weight: 400; letter-spacing: -.025em; }
+.promotion-platform { flex: 0 0 auto; white-space: nowrap; }
+.promotion-source { margin-top: 17px; padding: 15px 16px; min-width: 0; border: 1px solid rgba(255,255,255,.09); border-radius: 15px; background: rgba(0,0,0,.26); }
+.promotion-source h4 { margin-top: 6px; font-size: 18px; font-weight: 430; letter-spacing: -.025em; line-height: 1.35; overflow-wrap: anywhere; }
+.promotion-source-body { margin-top: 8px; color: rgba(255,255,255,.67); white-space: pre-wrap; overflow-wrap: anywhere; }
+.promotion-source-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; color: rgba(255,255,255,.57); font-size: 12px; }
+.promotion-source-meta strong { color: rgba(255,255,255,.9); font-weight: 500; }
+.promotion-meta-dot { color: rgba(255,255,255,.36); }
+.promotion-post { min-width: 0; margin-top: 16px; }
+.promotion-post-heading .dim { font-size: 11px; white-space: nowrap; }
+.promotion-post-copy { margin-top: 8px; color: rgba(255,255,255,.87); font-size: 14px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; }
+.promotion-more-note { margin-top: 6px; color: rgba(255,255,255,.47); font-size: 11px; }
+.promotion-credits { margin-top: 16px; padding-top: 13px; border-top: 1px solid rgba(255,255,255,.08); }
+.promotion-credit-list { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 13px; margin-top: 9px; }
+.promotion-credit { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; color: rgba(255,255,255,.74); font-size: 12px; }
+.promotion-credit span { overflow-wrap: anywhere; }
+.promotion-preview-footer { flex-wrap: wrap; margin-top: 17px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.09); }
+.promotion-prepared-by { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.promotion-prepared-name { font-size: 12px; font-weight: 550; line-height: 1.4; }
+.promotion-prepared-caption { margin-top: 1px; font-size: 11px; line-height: 1.4; }
+.promotion-preview-actions { margin: 0; gap: 7px; }
+.promotion-preview-actions .btn { padding: 8px 11px; font-size: 12px; }
+.promotion-preview-compact { padding: 15px; }
+.promotion-preview-compact .promotion-source { margin-top: 13px; padding: 12px; }
+.promotion-preview-compact .promotion-source h4 { font-size: 16px; }
+.promotion-preview-compact .promotion-preview-heading h3 { font-size: 15px; }
+.promotion-preview-compact .promotion-post-copy { font-size: 13px; line-height: 1.65; }
+.promotion-preview-compact .promotion-preview-footer { align-items: flex-start; }
+@media (max-width: 860px) { .promotion-library-list { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 520px) {
+  .promotion-preview { padding: 13px; }
+  .promotion-preview-header { flex-wrap: wrap; gap: 8px; }
+  .promotion-preview-heading { flex-basis: calc(100% - 50px); }
+  .promotion-platform { margin-left: 46px; }
+  .promotion-source { padding: 12px; }
+  .promotion-preview-footer { align-items: stretch; }
+  .promotion-preview-actions { width: 100%; }
+  .promotion-preview-actions .btn { flex: 1 1 0; justify-content: center; white-space: nowrap; }
+}

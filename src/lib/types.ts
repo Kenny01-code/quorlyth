@@ -26,7 +26,7 @@ export interface YouTubeSocialSignals {
   videos: YouTubeVideoSignal[]
 }
 export interface Review { id: string; o?: number; f?: number; r?: number; score?: number; reason?: string; youtubeRationale?: string; youtubeSignals?: YouTubeSocialSignals; status?: Status; at?: number }
-export interface Promotion { id: string; ideaId: string; text: string; credits: string[]; by: string; at: number }
+export interface Promotion { id: string; ideaId: string; text: string; credits: string[]; by: string; at: number; platform?: 'instagram' | 'x' | 'tiktok' | 'linkedin' }
 export interface Profile { id: string; name?: string; head?: string; bio?: string; photo?: string; authName?: string; authAvatarUrl?: string; at?: number }
 export interface Request { id: string; platforms?: string[]; aud?: string; note?: string; at: number }
 export interface CommunityJoinRequest { id: string; cid: string; userId: string; message?: string; status: 'pending' | 'approved' | 'declined'; at: number; reviewedAt?: number; reviewedBy?: string }

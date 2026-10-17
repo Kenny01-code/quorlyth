@@ -4,6 +4,7 @@ import { Av } from './ui'
 import { useApp } from '../data/AppProvider'
 import { Idea, STATUS_LABEL } from '../lib/types'
 import { when } from '../lib/util'
+import { PromotionPreview } from './PromotionPreview'
 
 export function Tags({ tags }: { tags?: string[] }) {
   if (!tags?.length) return null
@@ -15,6 +16,7 @@ export function IdeaCard({ idea, extra }: { idea: Idea; extra?: React.ReactNode 
   const nav = useNavigate()
   const r = a.data.reviews[idea.id]
   const s = a.statusOf(idea.id)
+  const promotion = a.data.promotions.filter(item => item.ideaId === idea.id).sort((first, second) => second.at - first.at)[0]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
       <div className="glass idea lift" tabIndex={0} role="link" onClick={() => nav('/idea/' + idea.id)} onKeyDown={e => e.key === 'Enter' && nav('/idea/' + idea.id)}>
@@ -27,6 +29,7 @@ export function IdeaCard({ idea, extra }: { idea: Idea; extra?: React.ReactNode 
         <Tags tags={idea.tags} />
         <div className="f"><span><Icon name="support" size={16} />{a.votesOf(idea.id)}</span><span>{a.nm(idea.authorId).split(' ')[0]}, {when(idea.at)}</span></div>
       </div>
+      {promotion && <PromotionPreview idea={idea} promotion={promotion} compact />}
       {extra}
     </div>
   )

@@ -9,6 +9,7 @@ import { AreaChart } from '../components/Charts'
 import { ShareCard } from '../components/ShareCard'
 import { askJson } from '../ai/client'
 import { useDraftState } from '../lib/useDraftState'
+import { PromotionPreview } from '../components/PromotionPreview'
 
 export function Dashboard() {
   return <Gate><Inner /></Gate>
@@ -74,6 +75,8 @@ function Inner() {
   const pending = memberView ? 0 : data.ideas.filter(i => a.statusOf(i.id) === 'review').length
   const ranked = memberView ? [] : data.ideas.filter(i => data.reviews[i.id]?.score != null && a.statusOf(i.id) === 'review').sort((x, y) => data.reviews[y.id].score! - data.reviews[x.id].score!).slice(0, 3)
   const recent = [...dashboardIdeas].sort((x, y) => y.at - x.at).slice(0, 5)
+  const dashboardIdeaIds = new Set(dashboardIdeas.map(idea => idea.id))
+  const recentPromotions = data.promotions.filter(promotion => dashboardIdeaIds.has(promotion.ideaId)).sort((first, second) => second.at - first.at).slice(0, 3)
   const backed = memberView ? [] : [...data.ideas].map(idea => ({ idea, votes: a.votesOf(idea.id) }))
     .filter(x => x.votes > 0 && a.statusOf(x.idea.id) !== 'declined')
     .sort((x, y) => y.votes - x.votes || y.idea.at - x.idea.at).slice(0, 3)
@@ -112,6 +115,10 @@ function Inner() {
           )
         })}
       </div></div>
+      {recentPromotions.length > 0 && <section className="promotion-library" style={{ marginTop: 18 }}>
+        <div className="head"><div><p className="dim">COMMUNITY MOMENTUM</p><h3>Recently promoted</h3><p className="mut">See which community ideas are moving forward and the copy prepared to share.</p></div></div>
+        <div className="grid g2">{recentPromotions.map(promotion => { const sourceIdea = dashboardIdeas.find(idea => idea.id === promotion.ideaId); return sourceIdea ? <PromotionPreview key={promotion.id} idea={sourceIdea} promotion={promotion} compact /> : null })}</div>
+      </section>}
       {!memberView && <div className="glass pad" style={{ marginTop: 18 }}>
         <div className="head" style={{ marginBottom: 8 }}><div><h3>Most backed by members</h3><p className="dim">Community support, separate from AI review scores</p></div><button className="chip" onClick={() => nav('/communities')}>Explore communities</button></div>
         {backed.length ? backed.map(({ idea, votes }) => <button key={idea.id} className="row rowbtn" onClick={() => nav('/idea/' + idea.id)}>

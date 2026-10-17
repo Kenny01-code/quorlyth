@@ -32,7 +32,7 @@ export interface App {
   addComment: (ideaId: string, text: string, parentId?: string, mentionedUserIds?: string[]) => Promise<boolean>
   setStatus: (ideaId: string, status: Status, extra?: Partial<Review>) => Promise<boolean>
   saveReview: (ideaId: string, r: Partial<Review>) => Promise<boolean>
-  publish: (ideaId: string, text: string, credits: string[]) => Promise<boolean>
+  publish: (ideaId: string, text: string, credits: string[], platform?: 'instagram' | 'x' | 'tiktok' | 'linkedin') => Promise<boolean>
   applyToCollaborate: (ideaId: string, message: string) => Promise<boolean>
   decideVolunteer: (applicationId: string, status: VolunteerStatus) => Promise<boolean>
   createProject: (ideaId: string, summary: string, dueAt?: number | null) => Promise<boolean>
@@ -482,7 +482,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }, 'Reply posted'),
       setStatus: (id, status, extra) => w(() => up('reviews/' + id, { status, at: Date.now(), ...extra }), status === 'selected' ? 'Selected for promotion' : status === 'held' ? 'Held for later' : status === 'declined' ? 'Declined' : 'Done'),
       saveReview: (id, r) => w(() => up('reviews/' + id, { ...r, at: Date.now() })),
-      publish: (id, text, credits) => w(async () => { await st!.set('promotions/' + slug(), { ideaId: id, text, credits, by: me!.id, at: Date.now(), status: 'draft', published: false }); await up('reviews/' + id, { status: 'promoted', at: Date.now() }) }, 'Post prepared to share'),
+      publish: (id, text, credits, platform) => w(async () => { await st!.set('promotions/' + slug(), { ideaId: id, text, credits, by: me!.id, at: Date.now(), status: 'draft', published: false, ...(platform ? { platform } : {}) }); await up('reviews/' + id, { status: 'promoted', at: Date.now() }) }, 'Post prepared to share'),
       applyToCollaborate: (ideaId, message) => {
         if (!me) { toast('Sign in before applying to collaborate.'); return Promise.resolve(false) }
         const idea = data.ideas.find(item => item.id === ideaId)

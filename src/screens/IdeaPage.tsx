@@ -10,6 +10,7 @@ import { when } from '../lib/util'
 import { useUserState } from '../lib/userState'
 import { reviewIdeas } from '../ai/review'
 import { useDraftState } from '../lib/useDraftState'
+import { PromotionPreview } from '../components/PromotionPreview'
 
 export function IdeaPage() {
   return <Gate><Inner /></Gate>
@@ -50,6 +51,7 @@ function Inner() {
   const archivedCommunity = !!ideaCommunity?.arch
   const r = a.data.reviews[idea.id]
   const s = a.statusOf(idea.id)
+  const promotion = a.data.promotions.filter(item => item.ideaId === idea.id).sort((first, second) => second.at - first.at)[0]
   const voted = a.iVoted(idea.id)
   const communityOwner = a.canManageCommunity(idea.cid)
   const myApplication = a.data.volunteers.filter(v => v.ideaId === idea.id && v.applicantId === a.me?.id).sort((x, y) => y.at - x.at)[0]
@@ -143,6 +145,7 @@ function Inner() {
   return (
     <>
       <div className="head"><div><button className="chip" onClick={() => nav('/communities/' + idea.cid)}>Back to community</button></div></div>
+      {promotion && <PromotionPreview idea={idea} promotion={promotion} />}
       <div className="grid i2">
         <div className="glass pad">
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}><span className="chip">{STATUS_LABEL[s]}</span><span className="chip">{cname}</span></div>

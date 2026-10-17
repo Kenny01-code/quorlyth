@@ -4,6 +4,7 @@ import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
 import { EmojiPicker } from '../components/Emoji'
 import { Av, Chip, Empty, Head } from '../components/ui'
+import { PromotionPreview } from '../components/PromotionPreview'
 import { useApp, useComments } from '../data/AppProvider'
 import { askJson, streamChat } from '../ai/client'
 import { cleanTag, cn, when } from '../lib/util'
@@ -41,10 +42,17 @@ function Inner() {
   const visiblePromotions = data.promotions.filter(p => visibleIdeaIds.has(p.ideaId))
 
   const pubs = visiblePromotions.length ? (
-    <div className="glass pad" style={{ margin: '24px auto 0', maxWidth: 760 }}>
-      <h3 style={{ marginBottom: 8 }}>Ready to share</h3>
-      {visiblePromotions.map(p => <div key={p.id} className="row" style={{ cursor: 'default', alignItems: 'flex-start' }}><Icon name="publish" /><div className="t"><p style={{ whiteSpace: 'pre-wrap' }}>{p.text}</p><p className="dim" style={{ marginTop: 6 }}>{when(p.at)}</p></div></div>)}
-    </div>
+    <section className="promotion-library" style={{ margin: '24px auto 0', maxWidth: 980 }}>
+      <div className="head"><div><p className="dim">PROMOTION HISTORY</p><h3>Ready to share</h3></div><span className="chip">{visiblePromotions.length} saved</span></div>
+      <div className="promotion-library-list">
+        {visiblePromotions.map(p => {
+          const sourceIdea = visibleIdeas.find(item => item.id === p.ideaId)
+          return sourceIdea
+            ? <PromotionPreview key={p.id} idea={sourceIdea} promotion={p} compact />
+            : <div key={p.id} className="glass pad"><p className="dim">Original idea unavailable</p><p className="promotion-post-copy" style={{ marginTop: 8 }}>{p.text}</p><p className="dim" style={{ marginTop: 8 }}>{when(p.at)}</p></div>
+        })}
+      </div>
+    </section>
   ) : null
 
   if (pub !== null) {
@@ -160,7 +168,7 @@ function Inner() {
           ))}
         </div>
         <div className="reason" style={{ marginTop: 24 }}><span className="dim">Credited</span><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{credits.slice(0, 8).map(c => <Av key={c} id={c} size={28} />)}<span className="dim">{credits.slice(0, 4).map(a.nm).join(', ')}{credits.length > 4 ? ` and ${credits.length - 4} more` : ''}</span></div></div>
-        <div className="acts"><button className="btn p" onClick={async () => { if (!draft.trim()) return a.toast('Write the post first'); const post = draft.trim(); if (await a.publish(idea.id, post, credits)) { clearPostDraft(''); setPub(post) } }}><Icon name="publish" />Prepare to share</button><button className="btn" onClick={() => clearPostDraft('')}>Discard draft</button></div>
+        <div className="acts"><button className="btn p" onClick={async () => { if (!draft.trim()) return a.toast('Write the post first'); const post = draft.trim(); if (await a.publish(idea.id, post, credits, pm.plat as 'instagram' | 'x' | 'tiktok' | 'linkedin')) { clearPostDraft(''); setPub(post) } }}><Icon name="publish" />Prepare to share</button><button className="btn" onClick={() => clearPostDraft('')}>Discard draft</button></div>
       </div>
       {pubs}
     </>
