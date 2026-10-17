@@ -2289,3 +2289,32 @@ body > .qbot-drawer-portal.bot .cmx .danger:focus-visible {
 }
 @media(max-width:390px) { .chat-page .chat-top-actions .btn { border-radius:999px; } .chat-page .chat-thread-identity p { font-size:10px; } }
 @media(prefers-reduced-motion:reduce) { .chat-page .chat-icon-btn,.chat-page .chat-send,.chat-page .chat-person,.chat-page .chat-message-menu-trigger { transition:none; } }
+
+
+/* Keep the deferred QuorlythBot launcher visually identical while its chunk loads. */
+.astl.qbot-deferred-loading { pointer-events:none; }
+.astl.qbot-deferred-loading:after {
+  content:""; position:absolute; inset:-5px; border:1px solid rgba(255,255,255,.28);
+  border-radius:50%; pointer-events:none; animation:astp 1.6s ease-in-out infinite;
+}
+@media(prefers-reduced-motion:reduce) {
+  .astl.qbot-deferred-loading:after { animation:none; }
+}
+
+/* Native momentum scrolling for long nested views; don't animate each live update. */
+.chat-page .chat-conversation-list,
+.chat-page .chat-thread-body,
+.chat-page .chat-people-list,
+.chat-page .chat-context-menu,
+.chat-page .chat-message-context-menu,
+.chat-page .chat-panel-settings,
+.chat-page .chat-panel-profile,
+.chat-page .chat-create {
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+}
+.chat-page .chat-conversation-list,
+.chat-page .chat-thread-body,
+.chat-page .chat-people-list {
+  scrollbar-gutter:stable;
+}
