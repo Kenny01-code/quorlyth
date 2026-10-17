@@ -8,6 +8,7 @@ import { Shortcuts } from './components/Shortcuts'
 import { NotifPanel } from './components/NotifPanel'
 import { WritingAssistant } from './components/WritingAssistant'
 import { Logo } from './lib/Logo'
+import { QuorlythLoader } from './components/QuorlythLoader'
 const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.Landing })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
 const Dashboard = lazy(() => import('./screens/Dashboard').then(m => ({ default: m.Dashboard })))
@@ -37,7 +38,7 @@ function DemoRedirect() {
     if (!a.demo) a.enterDemo()
     nav('/dashboard', { replace: true })
   }, [a.demo, a.enterDemo, nav])
-  return <div className="route-loading" role="status" aria-label="Opening demo"><span className="ast-ld"><i /><i /><i /></span></div>
+  return <QuorlythLoader variant="route" label="Opening demo" />
 }
 
 function MissingRoute() {
@@ -56,7 +57,8 @@ export default function App() {
   const [palette, setPalette] = useState(false)
   const [keys, setKeys] = useState(false)
   const [bell, setBell] = useState(false)
-  const [intro, setIntro] = useState(() => !sessionStorage.getItem('qintro'))
+  // Keep the cinematic intro opt-in; it must never block a first visit like a loader.
+  const [intro, setIntro] = useState(false)
   const [replay, setReplay] = useState(0)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
   // Download the full bot experience only after the user opens its lightweight launcher.
@@ -258,7 +260,7 @@ export default function App() {
     }
   }
 
-  if (!a.ready) return <main aria-label="Loading Quorlyth" />
+  if (!a.ready) return <QuorlythLoader variant="screen" label="Preparing your workspace" />
   if (a.startupError) return (
     <main className="app-error">
       <section className="glass pad" role="alert">
@@ -276,7 +278,7 @@ export default function App() {
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main">
         <section className="on">
-          <Suspense fallback={<div className="route-loading" role="status" aria-label="Loading page"><span className="ast-ld"><i /><i /><i /></span></div>}>
+          <Suspense fallback={<QuorlythLoader variant="route" label="Opening page" />}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/demo" element={<DemoRedirect />} />
