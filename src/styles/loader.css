@@ -150,8 +150,6 @@
 }
 .q-loader__mark svg {
   display: block;
-  width: auto;
-  height: auto;
   overflow: visible;
   filter: drop-shadow(0 0 12px rgba(255,255,255,.22));
 }
