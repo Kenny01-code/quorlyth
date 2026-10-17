@@ -1113,7 +1113,11 @@ export function QuorlythBot() {
                             {i === msgs.length - 1 && !busy && <button aria-label="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /></button>}</div>
                         </div>
                       ))}
-                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma typing" role="status" aria-label="QuorlythBot is thinking"><span>QuorlythBot is thinking</span>{thinkingTask && <small className="qbot-task-status">{thinkingTask}</small>}<i /><i /><i /></div>}
+                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma qbot-thinking-panel" role="status" aria-live="polite" aria-label="QuorlythBot is preparing a reply">
+                          <span className="qbot-thinking-orbit" aria-hidden="true"><i /><i /><Icon name="message" size={16} /></span>
+                          <span className="qbot-thinking-copy"><strong>On it. Let me check the right context.</strong><small>{thinkingTask || 'Putting together a useful answer'}</small><span>Just a moment — I’ll be clear if anything is uncertain.</span></span>
+                          <span className="qbot-thinking-signal" aria-hidden="true"><i /><i /><i /></span>
+                        </div>}
                     </div>
                   )
                 ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
