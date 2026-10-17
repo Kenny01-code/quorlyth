@@ -483,3 +483,11 @@ test('a Nigerian accent never silently uses an American ElevenLabs voice', async
   assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'openai')
 })
 
+test('speech endpoint refuses to silently substitute a default Studio voice', async () => {
+  const res = response()
+  await speak({ body: { text: 'Hello from QuorlythBot' } }, res)
+
+  assert.equal(res.statusCode, 400)
+  assert.match(JSON.parse(res.output).error, /choose a voice.*Voice Studio/i)
+})
+

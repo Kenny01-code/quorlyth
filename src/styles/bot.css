@@ -1138,3 +1138,40 @@
   .bot .qbot-thinking-panel { transition:none!important; }
   .bot .qbot-thinking-panel.is-leaving { transform:none; }
 }
+
+/* QuorlythBot conversation performance: keep message growth from stealing scroll. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation {
+  overflow-anchor: none;
+  scroll-behavior: auto;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-log {
+  overflow-anchor: none;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .blive {
+  min-width: 0;
+  max-height: min(36dvh, 300px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.24) transparent;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .blc {
+  max-height: clamp(76px, 16dvh, 160px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .blive .dim {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .blive {
+    max-height: 28dvh;
+    gap: 10px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .blc {
+    font-size: 15px;
+    max-height: 13dvh;
+  }
+}
