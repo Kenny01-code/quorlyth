@@ -235,21 +235,38 @@ export async function buildAuthenticatedBotContext({ authorization, context = {}
   if (!base || !anonKey) throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
 
   const headers = { apikey: anonKey, Authorization: 'Bearer ' + token }
+  let authResponse
+  try {
+    authResponse = await request(new URL('/auth/v1/user', base), { headers })
+  } catch {
+    throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
+  }
+  if (!authResponse.ok) throw contextError(401, 'BOT_CONTEXT_SESSION_INVALID')
+  let user
+  try { user = await authResponse.json() } catch { throw contextError(401, 'BOT_CONTEXT_SESSION_INVALID') }
+  if (!user || typeof user.id !== 'string' || !user.id) throw contextError(401, 'BOT_CONTEXT_SESSION_INVALID')
+
   const collectionNames = ['communities', 'ideas', 'reviews', 'ideaOutcomes', 'votes', 'members', 'profiles', 'volunteers', 'projects', 'milestones', 'settings', 'decisions']
   const docsUrl = new URL('/rest/v1/docs', base)
   docsUrl.searchParams.set('select', 'path,data')
   docsUrl.searchParams.set('or', '(' + collectionNames.map(name => 'path.like.' + name + '/*').join(',') + ')')
   docsUrl.searchParams.set('order', 'path.asc')
   docsUrl.searchParams.set('limit', String(MAX_CONTEXT_ROWS))
+  const userPrefix = 'data/users/' + user.id + '/'
+  const userDocsUrl = new URL('/rest/v1/docs', base)
+  userDocsUrl.searchParams.set('select', 'path,data')
+  userDocsUrl.searchParams.set('or', '(path.eq.' + userPrefix + 'botset,path.like.' + userPrefix + 'p_*)')
+  userDocsUrl.searchParams.set('order', 'path.asc')
+  userDocsUrl.searchParams.set('limit', '250')
 
-  // These requests are independent. Run the session check, RLS-scoped shared
-  // context read and trusted role RPCs concurrently, then validate the session
-  // before using any results or querying account-specific paths.
-  let authResponse, rowsResponse, roleResults
+  // The session is verified before any app records are requested. After that,
+  // all independent reads and trusted role checks run together instead of in
+  // multiple sequential network round trips.
+  let rowsResponse, userDocsResponse, roleResults
   try {
-    ;[authResponse, rowsResponse, roleResults] = await Promise.all([
-      request(new URL('/auth/v1/user', base), { headers }),
+    ;[rowsResponse, userDocsResponse, roleResults] = await Promise.all([
       request(docsUrl, { headers }),
+      request(userDocsUrl, { headers }),
       Promise.all([
         rpcBoolean(base, anonKey, token, 'current_user_is_platform_owner'),
         rpcBoolean(base, anonKey, token, 'current_user_is_platform_admin'),
@@ -258,25 +275,7 @@ export async function buildAuthenticatedBotContext({ authorization, context = {}
   } catch {
     throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
   }
-  if (!authResponse.ok) throw contextError(401, 'BOT_CONTEXT_SESSION_INVALID')
-  let user
-  try { user = await authResponse.json() } catch { throw contextError(401, 'BOT_CONTEXT_SESSION_INVALID') }
-  if (!user || typeof user.id !== 'string' || !user.id) throw contextError(401, 'BOT_CONTEXT_SESSION_INVALID')
-  if (!rowsResponse.ok) throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
-
-  const userPrefix = 'data/users/' + user.id + '/'
-  const userDocsUrl = new URL('/rest/v1/docs', base)
-  userDocsUrl.searchParams.set('select', 'path,data')
-  userDocsUrl.searchParams.set('or', '(path.eq.' + userPrefix + 'botset,path.like.' + userPrefix + 'p_*)')
-  userDocsUrl.searchParams.set('order', 'path.asc')
-  userDocsUrl.searchParams.set('limit', '250')
-  let userDocsResponse
-  try {
-    userDocsResponse = await request(userDocsUrl, { headers })
-  } catch {
-    throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
-  }
-  if (!userDocsResponse.ok) throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
+  if (!rowsResponse.ok || !userDocsResponse.ok) throw contextError(503, 'BOT_CONTEXT_UNAVAILABLE')
 
   let rows, userRows
   try { [rows, userRows] = await Promise.all([rowsResponse.json(), userDocsResponse.json()]) } catch {
