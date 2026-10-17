@@ -194,7 +194,14 @@ export function QuorlythBot() {
     if (!scroller) return
     const last = cur ? cur.msgs[cur.msgs.length - 1] : undefined
     const distanceFromBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
-    if (last?.r === 'u' || distanceFromBottom < 160) scroller.scrollTop = scroller.scrollHeight
+    // Keep following the conversation only if the user is already at the bottom
+    // or just submitted a message. One frame per stream update prevents layout thrash.
+    if (last?.r !== 'u' && distanceFromBottom >= 160) return
+    const frame = window.requestAnimationFrame(() => {
+      if (!log.current) return
+      log.current.scrollTo({ top: log.current.scrollHeight, behavior: 'auto' })
+    })
+    return () => window.cancelAnimationFrame(frame)
   }, [cur?.msgs.length, latestMessageText, busy])
   useEffect(() => {
     const restoreWithShortcut = (event: KeyboardEvent) => {
