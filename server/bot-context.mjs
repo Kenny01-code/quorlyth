@@ -214,8 +214,8 @@ function buildSystem({ user, records, userDocs, route, projectId, preferences, i
     })
     prompt = compact.filter(Boolean).join('\n\n')
   }
-  while (Buffer.byteLength(prompt, 'utf8') > 11500 && prompt.length > 5000) {
-    prompt = prompt.slice(0, Math.floor(prompt.length * 0.9))
+  while (Buffer.byteLength(prompt, 'utf8') > 11500 && prompt.length > 0) {
+    prompt = prompt.slice(0, Math.floor(prompt.length * 0.8))
   }
   return prompt
 }
