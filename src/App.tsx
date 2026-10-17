@@ -80,6 +80,9 @@ export default function App() {
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
+  useEffect(() => {
+    if (us.st.preferences?.sound !== undefined) setSound(us.st.preferences.sound)
+  }, [a.me?.id, us.st.preferences?.sound])
   const unread = notifs.filter(n => n.unread).length
   const pendingRequests = a.platformAdmin ? a.data.requests.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at }).length : 0
   const unreadRequests = notifs.filter(n => n.kind === 'settings' && n.unread).length
@@ -206,9 +209,9 @@ export default function App() {
       && n.at <= now + 30_000
     )
     if (fresh.length) {
-      if (sound) chime()
+      if (sound && us.st.preferences?.sound !== false) chime()
       a.toast(fresh.length === 1 ? fresh[0].text : `${fresh.length} new Quorlyth notifications`)
-      if (document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      if (us.st.preferences?.desktopNotifications !== false && document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         fresh.forEach(n => {
           try { new Notification('Quorlyth', { body: n.text, tag: n.key }) } catch {}
         })
@@ -343,7 +346,7 @@ export default function App() {
           </Suspense>
         </section>
       </main>
-      {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
+      {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
       {!botMounted ? <>
