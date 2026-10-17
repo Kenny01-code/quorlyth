@@ -4,10 +4,10 @@ export { THEMES }
 export interface Voice { id: string; n: string; g: 'f' | 'm'; d: string; theme: string; ai: string }
 // Each persona maps to a natural OpenAI voice.
 export const VOICES: Voice[] = [
-  { id: 'aria', n: 'Aria', g: 'f', d: 'Warm and clear', theme: 'rose', ai: 'coral' },
+  { id: 'aria', n: 'Aria', g: 'f', d: 'Warm and clear', theme: 'rose', ai: 'marin' },
   { id: 'selene', n: 'Selene', g: 'f', d: 'Calm and elegant', theme: 'glacier', ai: 'sage' },
   { id: 'nova', n: 'Nova', g: 'f', d: 'Bright and lively', theme: 'amethyst', ai: 'shimmer' },
-  { id: 'atlas', n: 'Atlas', g: 'm', d: 'Deep and steady', theme: 'onyx', ai: 'ash' },
+  { id: 'atlas', n: 'Atlas', g: 'm', d: 'Deep and steady', theme: 'onyx', ai: 'cedar' },
   { id: 'orion', n: 'Orion', g: 'm', d: 'Smooth and confident', theme: 'champagne', ai: 'echo' },
   { id: 'leo', n: 'Leo', g: 'm', d: 'Friendly and relaxed', theme: 'emerald', ai: 'ballad' },
 ]
