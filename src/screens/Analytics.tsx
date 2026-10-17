@@ -20,15 +20,10 @@ function ChartViewport({ children, label }: { children: ReactNode; label: string
   const onWheel = (event: WheelEvent<HTMLDivElement>) => {
     const viewport = event.currentTarget
     const hasHorizontalOverflow = viewport.scrollWidth > viewport.clientWidth + 1
-    const hasVerticalOverflow = viewport.scrollHeight > viewport.clientHeight + 1
-    if (!hasHorizontalOverflow) return
-    if (event.shiftKey) {
-      viewport.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
-      event.preventDefault()
-    } else if (!hasVerticalOverflow && Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-      viewport.scrollLeft += event.deltaY
-      event.preventDefault()
-    }
+    // Keep ordinary wheel input scrolling the page vertically. Shift+wheel opts into chart scrolling.
+    if (!event.shiftKey || !hasHorizontalOverflow) return
+    viewport.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+    event.preventDefault()
   }
   return <div className="chs" role="region" aria-label={label} tabIndex={0} onWheel={onWheel}>{children}</div>
 }
