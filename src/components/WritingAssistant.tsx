@@ -47,6 +47,7 @@ export function WritingAssistant() {
       if (!node) return
       if (node.closest('.q-writing-assistant-ui')) return
       if (node instanceof HTMLTextAreaElement) {
+        setLoading(false)
         setTarget(node)
         setOpen(false)
         setPreview('')
@@ -54,6 +55,7 @@ export function WritingAssistant() {
         setError('')
         position(node)
       } else {
+        setLoading(false)
         setTarget(null)
         setOpen(false)
         setPreview('')
@@ -126,7 +128,7 @@ export function WritingAssistant() {
           ],
         }), { tier: 'quick', signal: controller.signal })
         const generated = Array.isArray(result?.suggestions)
-          ? result.suggestions.map(value => String(value || '').trim()).filter(Boolean).slice(0, 3)
+          ? result.suggestions.map(value => typeof value === 'string' ? value.trim() : '').filter(Boolean).slice(0, 3)
           : []
         if (!generated.length) throw new Error('QuorlythBot could not prepare suggestions for this field. Try again.')
         setOptions(generated)
@@ -186,7 +188,7 @@ export function WritingAssistant() {
         </button>
       </div>
       {open && <section className="q-writing-panel q-writing-assistant-ui" style={{ left: panel.x, top: panel.y }} aria-label="QuorlythBot writing assistant">
-        <header className="q-writing-panel-head"><span className="q-writing-panel-symbol"><span className="q-writing-robot-head tiny"><span className="q-writing-robot-antenna" /><span className="q-writing-robot-eye eye-left" /><span className="q-writing-robot-eye eye-right" /><span className="q-writing-robot-mouth" /></span></span><div><b>QuorlythBot</b><small>WRITING ASSISTANT · STAYS HERE</small></div><button type="button" aria-label="Close writing assistant" onClick={() => setOpen(false)}>×</button></header>
+        <header className="q-writing-panel-head"><span className="q-writing-panel-symbol"><span className="q-writing-robot-head tiny"><span className="q-writing-robot-antenna" /><span className="q-writing-robot-eye eye-left" /><span className="q-writing-robot-eye eye-right" /><span className="q-writing-robot-mouth" /></span></span><div><b>QuorlythBot</b><small>WRITING ASSISTANT · STAYS HERE</small></div><button type="button" aria-label="Close writing assistant" onClick={() => { generation.current?.abort(); setLoading(false); setOpen(false) }}>×</button></header>
         <div className="q-writing-modes">{MODES.map(item => <button type="button" key={item.id} className={mode.id === item.id ? 'on' : ''} disabled={loading} onClick={() => void improve(item)}>{item.label}</button>)}</div>
         {loading && <div className="q-writing-status"><span className="q-writing-pulse" />Refining your text…</div>}
         {error && <p className="q-writing-error" role="alert">{error}</p>}
