@@ -6,7 +6,7 @@ import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { Chat, ChatMsg } from '../lib/types'
 import { cn, slug, when } from '../lib/util'
-import { askJson, startRealtime, speakText, streamChat } from '../ai/client'
+import { askJson, speakText, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
 import { Robot, RobotApi } from './Robot'
 import { ChatMenu } from './ChatMenu'
@@ -82,9 +82,12 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
   const robot = useRef<RobotApi | null>(null)
   const log = useRef<HTMLDivElement>(null)
   const ctl = useRef<AbortController | null>(null)
-  const rt = useRef<Awaited<ReturnType<typeof startRealtime>> | null>(null)
+  const rt = useRef<{ stop: () => void } | null>(null)
   const liveFallback = useRef(false)
   const liveRecognition = useRef<any>(null)
+  const liveAbortRef = useRef<AbortController | null>(null)
+  const liveRestartTimer = useRef<number | null>(null)
+  const liveTurnBusy = useRef(false)
   const audio = useRef<SpeechPlayback | null>(null)
   const speechRequest = useRef<AbortController | null>(null)
   const speechMessageKeyRef = useRef('')
@@ -697,115 +700,232 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
   async function startLive() {
     if (live) return stopLive()
     if (!a.me) return a.toast('Sign in to talk live')
+
+    // Web Speech API handles microphone capture/transcription. All bot audio still
+    // goes through the selected Studio persona, so live talk cannot drift to a
+    // separate Realtime voice or a device-default speaker.
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) {
+      return a.toast('Live Talk needs Web Speech API recognition. Open Quorlyth in Chrome or Edge and allow microphone access.')
+    }
+
+    stopVoice()
+    liveFallback.current = true
+    liveTurnBusy.current = false
     setLive({ state: 'connecting', user: '', bot: '' })
-    liveFallback.current = false
     const v = VOICES.find(x => x.id === bs.vid) || VOICES[0]
     let c = cur
-    const browserLive = () => {
-      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-      if (!SR || !('speechSynthesis' in window)) {
-        liveFallback.current = false
-        setLive(null)
-        a.toast('Live voice needs microphone speech recognition and speech output. Try Chrome or Edge, or enable the OpenAI Realtime key.')
-        return
-      }
-      if (!liveFallback.current) return
+    const accentLocale = ({ nigerian: 'en-NG', american: 'en-US', british: 'en-GB', international: 'en-001' } as Record<string, string>)[bs.accent] || navigator.language || 'en-US'
+
+    let browserLive: () => void = () => {}
+    const scheduleNextListen = () => {
+      if (!liveFallback.current || liveTurnBusy.current || liveRestartTimer.current !== null) return
+      liveRestartTimer.current = window.setTimeout(() => {
+        liveRestartTimer.current = null
+        browserLive()
+      }, 320)
+    }
+
+    browserLive = () => {
+      if (!liveFallback.current || liveTurnBusy.current) return
       const recognition = new SR()
       liveRecognition.current = recognition
-      recognition.lang = navigator.language || 'en-US'
+      recognition.lang = accentLocale
       recognition.interimResults = true
       recognition.continuous = false
+      recognition.maxAlternatives = 1
       recognition.onstart = () => setLive(l => l ? { ...l, state: 'listening' } : l)
       recognition.onerror = (event: any) => {
-        liveRecognition.current = null
+        if (liveRecognition.current === recognition) liveRecognition.current = null
+        if (!liveFallback.current || liveTurnBusy.current) return
         if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          liveFallback.current = false; setLive(null); a.toast('Microphone permission was denied. Allow microphone access in your browser settings.')
-        } else if (liveFallback.current) {
+          liveFallback.current = false
+          setLive(null)
+          a.toast('Microphone permission was denied. Allow microphone access in your browser settings.')
+        } else {
           setLive(l => l ? { ...l, state: 'listening' } : l)
-          window.setTimeout(browserLive, 500)
+          scheduleNextListen()
         }
       }
+      recognition.onend = () => {
+        if (liveRecognition.current === recognition) liveRecognition.current = null
+        scheduleNextListen()
+      }
       recognition.onresult = async (event: any) => {
-        const spoken = String(event.results?.[0]?.[0]?.transcript || '').trim()
-        const result = event.results?.[event.resultIndex ?? 0]
-        if (result && !result.isFinal) {
-          setLive(l => l ? { ...l, state: 'listening', user: String(result[0]?.transcript || l.user) } : l)
-          return
+        let finalText = ''
+        let interimText = ''
+        const firstIndex = Number.isInteger(event.resultIndex) ? event.resultIndex : 0
+        for (let i = firstIndex; i < (event.results?.length || 0); i += 1) {
+          const result = event.results[i]
+          const phrase = String(result?.[0]?.transcript || '').trim()
+          if (!phrase) continue
+          if (result.isFinal) finalText += (finalText ? ' ' : '') + phrase
+          else interimText += (interimText ? ' ' : '') + phrase
+        }
+        if (interimText) setLive(l => l ? { ...l, state: 'listening', user: interimText } : l)
+        const spoken = finalText.trim()
+        if (!spoken || !liveFallback.current || liveTurnBusy.current) return
+
+        liveTurnBusy.current = true
+        if (liveRestartTimer.current !== null) {
+          window.clearTimeout(liveRestartTimer.current)
+          liveRestartTimer.current = null
         }
         liveRecognition.current = null
-        if (!spoken || !liveFallback.current) { if (liveFallback.current) browserLive(); return }
+        try { recognition.stop() } catch {}
         setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
         c = add(c, { r: 'u', t: spoken }, 'Live conversation')
+
+        const controller = new AbortController()
+        liveAbortRef.current = controller
+        let speechTail = ''
+        let speechQueue = Promise.resolve()
+        let speechFailed = false
+        let speechFailureToastShown = false
+
+        const enqueueSpeech = (raw: string) => {
+          const chunk = raw.trim().replace(/\s+/g, ' ')
+          if (!chunk) return
+          speechQueue = speechQueue.then(async () => {
+            if (!liveFallback.current || speechFailed || controller.signal.aborted) return
+            let finishPlayback: () => void = () => {}
+            let finished = false
+            let playback: SpeechPlayback | null = null
+            const ended = new Promise<void>(resolve => { finishPlayback = resolve })
+            const finish = () => {
+              if (finished) return
+              finished = true
+              if (audio.current === playback) audio.current = null
+              robot.current?.talk(false)
+              finishPlayback()
+            }
+            try {
+              playback = await speakText(
+                chunk,
+                v.ai,
+                () => {
+                  if (!liveFallback.current || controller.signal.aborted) return
+                  setLive(l => l ? { ...l, state: 'speaking' } : l)
+                  robot.current?.talk(true)
+                },
+                finish,
+                { accent: bs.accent || 'auto', signal: controller.signal },
+              )
+              if (!liveFallback.current || controller.signal.aborted) {
+                playback.stop()
+                finish()
+                return
+              }
+              audio.current = playback
+              await ended
+            } catch {
+              speechFailed = true
+              finish()
+              if (!speechFailureToastShown && liveFallback.current && !controller.signal.aborted) {
+                speechFailureToastShown = true
+                a.toast('The selected QuorlythBot Studio voice could not be played. Your written response is still available.')
+              }
+            }
+          })
+        }
+
+        const queueSpeechFromDelta = (piece: string) => {
+          speechTail += piece || ''
+          // Speak each completed sentence as soon as it streams in, rather than
+          // waiting for the entire model response before the first audio is heard.
+          while (true) {
+            const match = /[.!?](?:["'’”\)\]]*)\s+/.exec(speechTail)
+            if (!match) break
+            const end = match.index + match[0].trimEnd().length
+            enqueueSpeech(speechTail.slice(0, end))
+            speechTail = speechTail.slice(match.index + match[0].length)
+          }
+          // A long sentence without punctuation should not hold audio indefinitely.
+          if (speechTail.length > 220) {
+            const cut = Math.max(speechTail.lastIndexOf(' ', 180), speechTail.lastIndexOf(',', 180))
+            if (cut > 80) {
+              enqueueSpeech(speechTail.slice(0, cut))
+              speechTail = speechTail.slice(cut + 1)
+            }
+          }
+        }
+
         try {
-          let first = true
           const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
           const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
           if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
+          if (!liveFallback.current || controller.signal.aborted) return
           const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
           const answer = await streamChat(c.msgs.filter(m => !(m as any).live).slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t })), {
-            ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a voice conversation. Speak naturally in short sentences. You can help with the app, but do not claim to execute an action unless the app has actually done it.' } : {}),
-            ...(accessToken ? { accessToken, context: voiceContext } : {}), tier: responseTierForRequest(c.msgs[c.msgs.length - 1]?.t || '', bs.model),
-            onText: full => { if (first) first = false; setLive(l => l ? { ...l, state: 'speaking', bot: full } : l) },
+            signal: controller.signal,
+            ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a live spoken conversation. Reply in clear, natural short sentences, solve the user’s actual request, and do not use markdown or lists unless genuinely needed. Never claim to have completed an app action unless it actually happened.' } : {}),
+            ...(accessToken ? { accessToken, context: voiceContext } : {}),
+            tier: responseTierForRequest(spoken, bs.model),
+            onText: (full, piece) => {
+              if (!liveFallback.current || controller.signal.aborted) return
+              setLive(l => l ? { ...l, state: 'thinking', bot: full } : l)
+              queueSpeechFromDelta(piece)
+            },
           })
-          c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }] }
-          persist(c)
-          setLive(l => l ? { ...l, state: 'speaking', bot: answer } : l)
-          await new Promise<void>(resolve => {
-            speakText(answer.slice(0, 900), v.ai, () => robot.current?.talk(true), () => { robot.current?.talk(false); resolve() })
-              .catch(() => { try { const utterance = new SpeechSynthesisUtterance(answer.slice(0, 900)); utterance.lang = navigator.language || 'en-US'; utterance.onend = utterance.onerror = () => resolve(); window.speechSynthesis.speak(utterance) } catch { resolve() } })
-          })
+          if (!controller.signal.aborted) {
+            c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }] }
+            persist(c)
+            setLive(l => l ? { ...l, bot: answer } : l)
+            if (speechTail.trim()) enqueueSpeech(speechTail)
+            await speechQueue
+          }
         } catch (error: any) {
-          const message = friendlyBotError(error)
-          a.toast(message)
-          c = { ...c, msgs: [...c.msgs, { r: 'a', t: message }] }; persist(c)
+          const aborted = controller.signal.aborted || error?.name === 'AbortError'
+          if (!aborted && liveFallback.current) {
+            const message = friendlyBotError(error)
+            a.toast(message)
+            c = { ...c, msgs: [...c.msgs, { r: 'a', t: message }] }
+            persist(c)
+            setLive(l => l ? { ...l, state: 'thinking', bot: message } : l)
+          }
+        } finally {
+          if (liveAbortRef.current === controller) liveAbortRef.current = null
+          liveTurnBusy.current = false
+          if (liveFallback.current) scheduleNextListen()
         }
-        if (liveFallback.current) browserLive()
       }
-      try { recognition.start() } catch { liveRecognition.current = null; if (liveFallback.current) window.setTimeout(browserLive, 500) }
-    }
-    // Prefer the low-latency Realtime API; fall back to browser recognition only if it cannot connect.
-    try {
-      const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
-      const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
-      if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
-      const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
-      rt.current = await startRealtime({
-        instructions: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a live spoken conversation, like a phone call. Reply in one to three short natural sentences, the way a warm person would speak. Use contractions. No lists or markdown. You can call the tools to take the person to a page or open an idea.',
-        ...(accessToken ? { accessToken, context: voiceContext } : {}),
-        voice: v.ai,
-        accent: bs.accent || 'auto',
-        tools: [
-          { type: 'function', name: 'navigate', description: 'Take the person to a page of the app.', parameters: { type: 'object', properties: { page: { type: 'string', enum: ['home', 'dashboard', 'communities', 'queue', 'promote', 'analytics', 'settings', 'profile'] } }, required: ['page'] } },
-          { type: 'function', name: 'open_idea', description: 'Open an idea by its id.', parameters: { type: 'object', properties: { idea_id: { type: 'string' } }, required: ['idea_id'] } },
-        ],
-        onTool: (name, args) => {
-          if (name === 'navigate') { const m: any = { home: '/', dashboard: '/dashboard', communities: '/communities', queue: '/queue', promote: '/promote', analytics: '/analytics', settings: '/settings', profile: '/me' }; nav(m[args.page] || '/'); return { ok: true } }
-          if (name === 'open_idea') { if (!a.data.ideas.some(i => i.id === args.idea_id)) return { ok: false, error: 'Idea not found' }; nav('/idea/' + args.idea_id); return { ok: true } }
-          return { ok: false }
-        },
-        onEvent: e => {
-          if (e.type === 'state') { setLive(l => (e.state === 'closed' ? null : { ...(l || { user: '', bot: '' }), ...(e.state === 'listening' ? { user: '' } : {}), state: e.state })); robot.current?.listen(e.state === 'listening'); robot.current?.think(e.state === 'thinking'); robot.current?.talk(e.state === 'speaking') }
-          if (e.type === 'user_preview') setLive(l => l && { ...l, state: 'listening', user: e.text })
-          if (e.type === 'user') { c = add(c, { r: 'u', t: e.text }, 'Live conversation'); setLive(l => l && { ...l, state: 'thinking', user: e.text }) }
-          if (e.type === 'bot') { setLive(l => l && { ...l, bot: e.text }); setCaption(e.text.slice(-140)); if (e.done) { c = add(c, { r: 'a', t: e.text }); persist(c!); robot.current?.bump() } }
-          if (e.type === 'error') a.toast(e.message)
-        },
-      })
-    } catch (e: any) {
-      rt.current = null
-      if ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) {
-        liveFallback.current = true
-        setLive({ state: 'listening', user: '', bot: '' })
-        a.toast('Using browser voice with Gemini chat. Allow microphone access to speak.')
-        browserLive()
-      } else {
-        setLive(null)
-        a.toast(/NotAllowed|Permission/i.test(String(e?.name || '') + ' ' + String(e?.message || '')) ? 'The microphone is blocked. Allow it in your browser settings.' : friendlyBotError(e))
+      try {
+        recognition.start()
+      } catch {
+        if (liveRecognition.current === recognition) liveRecognition.current = null
+        scheduleNextListen()
       }
     }
+
+    a.toast('Live Talk is ready. Speaking will use your selected Voice Studio persona.')
+    browserLive()
   }
-  function stopLive() { liveFallback.current = false; try { liveRecognition.current?.stop() } catch {}; liveRecognition.current = null; rt.current?.stop(); rt.current = null; try { window.speechSynthesis?.cancel() } catch {}; setLive(null); setCaption('') }
-  useEffect(() => () => { rt.current?.stop() }, [])
+
+  function stopLive() {
+    liveFallback.current = false
+    liveAbortRef.current?.abort()
+    liveAbortRef.current = null
+    liveTurnBusy.current = false
+    if (liveRestartTimer.current !== null) {
+      window.clearTimeout(liveRestartTimer.current)
+      liveRestartTimer.current = null
+    }
+    try { liveRecognition.current?.stop() } catch {}
+    liveRecognition.current = null
+    rt.current?.stop()
+    rt.current = null
+    audio.current?.stop()
+    audio.current = null
+    try { window.speechSynthesis?.cancel() } catch {}
+    setLive(null)
+    setCaption('')
+    robot.current?.talk(false)
+  }
+  useEffect(() => () => {
+    liveAbortRef.current?.abort()
+    if (liveRestartTimer.current !== null) window.clearTimeout(liveRestartTimer.current)
+    rt.current?.stop()
+  }, [])
 
   // ----- dictation -----
   const recRef = useRef<any>(null)
