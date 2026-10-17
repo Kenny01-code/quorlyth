@@ -1,4 +1,5 @@
-export interface StreamOpts { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal; onText?: (full: string, piece: string) => void }
+export interface BotContextRequest { route?: string; projectId?: string; tone?: string; length?: string; emojis?: boolean; browserContext?: string; liveContext?: string }
+export interface StreamOpts { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal; onText?: (full: string, piece: string) => void; accessToken?: string; context?: BotContextRequest }
 
 const SPEECH_PRESETS: Record<string, { gender: 'female' | 'male'; rate: number; pitch: number; names: RegExp }> = {
   coral: { gender: 'female', rate: 0.96, pitch: 1.08, names: /aria|jenny|zira|samantha|victoria|karen|susan|ava|allison|siri.*female/i },
@@ -16,26 +17,47 @@ function browserVoice(voice: string) {
 }
 
 async function readError(r: Response) {
+  const fallback = r.status === 401
+    ? 'Your Quorlyth session could not be verified. Refresh the page and try again.'
+    : r.status === 429 || r.status >= 500
+      ? 'QuorlythBot is temporarily unavailable. Please try again shortly.'
+      : 'QuorlythBot could not process that request. Please check it and try again.'
   try {
-    const j = await r.json()
-    let error = j.error || r.statusText
-    if (typeof error === 'string') {
-      try { error = JSON.parse(error) } catch {}
-    }
-    const code = error?.code || error?.error?.code
+    const payload = await r.json()
+    const error = typeof payload?.error === 'string' ? payload.error : payload?.error?.message
+    const code = payload?.code || payload?.error?.code
     if (code === 'credit_balance_exhausted' || code === 'insufficient_quota') {
-      return 'QuorlythBot is temporarily unavailable because the OpenAI account has no API credits remaining. Add credits to the OpenAI project connected to this site, then try again.'
+      return 'QuorlythBot is temporarily unavailable because its AI service has no credits remaining. Please try again later.'
     }
-    return error?.message || (typeof error === 'string' ? error : r.statusText)
-  } catch { return r.statusText }
+    const safeClientMessages = [
+      'Add a message before starting a chat.',
+      'A JSON AI request is required.',
+      'Add a prompt before requesting an AI result.',
+      'The AI prompt is too large. Shorten it and try again.',
+      'Each chat message must have a valid role and text content.',
+      'This conversation is too long to send in one request. Shorten the recent messages and retry.',
+      'Request body must be valid JSON.',
+    ]
+    if (typeof error === 'string' && safeClientMessages.includes(error)) return error
+    return fallback
+  } catch {
+    return fallback
+  }
 }
 
 /** Streams a reply token by token. Resolves with the full text. */
 export async function streamChat(messages: { role: 'user' | 'assistant'; content: string }[], o: StreamOpts = {}) {
-  const r = await fetch('/api/chat', {
-    method: 'POST', signal: o.signal, headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, system: o.system, tier: o.tier === 'quick' ? 'quick' : 'smart' }),
-  })
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const body: Record<string, unknown> = { messages, tier: o.tier === 'quick' ? 'quick' : 'smart' }
+  if (o.accessToken) {
+    headers.Authorization = 'Bearer ' + o.accessToken
+    body.context = o.context || {}
+  } else if (o.system) {
+    // Demo and local mode keep using their local sample context. Authenticated
+    // Supabase chats never send browser-composed privileged context to the model.
+    body.system = o.system
+  }
+  const r = await fetch('/api/chat', { method: 'POST', signal: o.signal, headers, body: JSON.stringify(body) })
   if (!r.ok || !r.body) throw new Error(await readError(r))
   const reader = r.body.getReader()
   const dec = new TextDecoder()
@@ -100,15 +122,16 @@ export interface RealtimeTool { type: 'function'; name: string; description: str
  * The browser sends your microphone, the model answers with audio instantly, and you can interrupt it.
  */
 export async function startRealtime(opts: {
-  instructions: string; voice?: string; tools?: RealtimeTool[]
+  instructions: string; voice?: string; tools?: RealtimeTool[]; accessToken?: string; context?: BotContextRequest
   onEvent: (e: RealtimeEvent) => void
   onTool?: (name: string, args: any) => Promise<any> | any
 }) {
   opts.onEvent({ type: 'state', state: 'connecting' })
-  const s = await fetch('/api/realtime-session', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instructions: opts.instructions, voice: opts.voice || 'alloy', tools: opts.tools || [] }),
-  })
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const body: Record<string, unknown> = { voice: opts.voice || 'alloy', tools: opts.tools || [] }
+  if (opts.accessToken) { headers.Authorization = 'Bearer ' + opts.accessToken; body.context = opts.context || {} }
+  else body.instructions = opts.instructions
+  const s = await fetch('/api/realtime-session', { method: 'POST', headers, body: JSON.stringify(body) })
   if (!s.ok) throw new Error(await readError(s))
   const { token, model } = await s.json()
 
