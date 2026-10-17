@@ -4,7 +4,7 @@ import { askJson } from './client'
 
 const clamp = (v: any) => Math.max(0, Math.min(100, Math.round(+v || 0)))
 
-/** Scores ideas for originality, feasibility and relevance and saves each review. Returns how many were reviewed. */
+/** Scores ideas in bounded parallel batches and persists completed reviews as they finish. */
 export async function reviewIdeas(a: App, ideas: Idea[], opts: { community?: string; signal?: AbortSignal; onProgress?: (s: string) => void; forceYoutubeRefresh?: boolean } = {}) {
   const d = a.data
   const w = { o: d.settings?.wo ?? 40, f: d.settings?.wf ?? 25, r: d.settings?.wr ?? 35 }
@@ -17,44 +17,78 @@ export async function reviewIdeas(a: App, ideas: Idea[], opts: { community?: str
       const o = 62 + hash % 34, f = 58 + (hash >>> 4) % 38, r = 60 + (hash >>> 9) % 36
       await a.saveReview(idea.id, { o, f, r, score: Math.round((o * w.o + f * w.f + r * w.r) / (w.o + w.f + w.r || 1)), reason: 'Demo score based on the sample idea and the space’s configured signal weights. In a live space, QuorlythBot would explain its assessment using the real idea context.', status: a.statusOf(idea.id) })
       done++
-      await new Promise(resolve => setTimeout(resolve, 120))
     }
+    opts.onProgress?.(`Reviewed ${done} of ${ideas.length} sample ideas.`)
     return done
   }
-  let done = 0
+
   const batches: Idea[][] = []
   for (let k = 0; k < ideas.length; k += 10) batches.push(ideas.slice(k, k + 10))
-  for (const b of batches) {
+  let done = 0
+  let nextBatch = 0
+  let firstError: unknown = null
+
+  async function processBatch(b: Idea[], batchIndex: number) {
     if (opts.signal?.aborted) throw new DOMException('Review cancelled', 'AbortError')
-    opts.onProgress?.(`Reviewing ideas ${done + 1} to ${done + b.length} of ${ideas.length}...`)
-    const o = await askJson<{ reviews: any[]; youtubeSignalsByIdea?: Record<string, YouTubeSocialSignals> }>(
+    opts.onProgress?.(`Scoring batch ${batchIndex + 1} of ${batches.length} · ${b.length} ideas...`)
+    const output = await askJson<{ reviews: any[]; youtubeSignalsByIdea?: Record<string, YouTubeSocialSignals> }>(
       `You review ideas from a creator's fan community. For each idea give originality, feasibility and audience relevance as whole numbers from 0 to 100, and a reason of one or two plain sentences naming what is strong or weak. Score originality, feasibility, and relevance only from the idea text/tags and supplied Quorlyth in-app data; YouTube signals must not change those numeric scores or the main reason. In a separate youtubeRationale field, you may cite at most one matching public video using its exact title, channel, publish date and individual public counts. Do not calculate averages, aggregate metrics across videos, or claim that YouTube counts establish Quorlyth community demand. Do not infer demand from missing signals. Reply with only JSON: {"reviews":[{"id":"same id","originality":0,"feasibility":0,"relevance":0,"reason":"text","youtubeRationale":"text or empty"}]}\nCommunity: ${opts.community || 'All communities'}\nIdeas: ${JSON.stringify(b.map(i => ({ id: i.id, title: i.title, details: (i.body || '').slice(0, 600), backers: a.votesOf(i.id), tags: i.tags || [] })))}`,
       {
         signal: opts.signal,
         youtubeIdeas: b.map(i => ({ id: i.id, title: i.title, body: (i.body || '').slice(0, 600), tags: i.tags || [] })),
         forceYoutubeRefresh: opts.forceYoutubeRefresh,
+        tier: 'quick',
       },
     )
     if (opts.signal?.aborted) throw new DOMException('Review cancelled', 'AbortError')
+
     const byId = new Map<string, any>()
-    for (const x of Array.isArray(o?.reviews) ? o.reviews : []) {
-      if (x && typeof x.id === 'string' && b.some(i => i.id === x.id) && !byId.has(x.id)) byId.set(x.id, x)
+    for (const item of Array.isArray(output?.reviews) ? output.reviews : []) {
+      if (item && typeof item.id === 'string' && b.some(idea => idea.id === item.id) && !byId.has(item.id)) byId.set(item.id, item)
     }
-    const missing = b.filter(i => {
-      const x = byId.get(i.id)
-      return !x || ![x.originality, x.feasibility, x.relevance].every(v => Number.isFinite(Number(v)))
+    const missing = b.filter(idea => {
+      const item = byId.get(idea.id)
+      return !item || ![item.originality, item.feasibility, item.relevance].every(value => Number.isFinite(Number(value)))
     })
     if (missing.length) {
-      throw new Error('QuorlythBot returned incomplete review results for ' + missing.length + ' idea' + (missing.length === 1 ? '' : 's') + ' (' + missing.slice(0, 3).map(i => i.title).join(', ') + '). Completed batches were saved; retry to review the remaining ideas.')
+      throw new Error('QuorlythBot returned incomplete review results for ' + missing.length + ' idea' + (missing.length === 1 ? '' : 's') + ' (' + missing.slice(0, 3).map(idea => idea.title).join(', ') + '). Completed batches were saved; retry to review the remaining ideas.')
     }
-    for (const idea of b) {
+
+    const results = await Promise.all(b.map(async idea => {
       if (opts.signal?.aborted) throw new DOMException('Review cancelled', 'AbortError')
-      const x = byId.get(idea.id)
-      const o1 = clamp(x.originality), f1 = clamp(x.feasibility), r1 = clamp(x.relevance)
-      const saved = await a.saveReview(idea.id, { o: o1, f: f1, r: r1, score: Math.round((o1 * w.o + f1 * w.f + r1 * w.r) / (w.o + w.f + w.r || 1)), reason: String(x.reason || '').slice(0, 400), youtubeRationale: String(x.youtubeRationale || '').slice(0, 600), youtubeSignals: o.youtubeSignalsByIdea?.[idea.id], status: a.statusOf(idea.id) })
-      if (!saved) throw new Error('Could not save the AI review for "' + idea.title + '". Completed reviews were saved; please retry.')
-      done++
-    }
+      const item = byId.get(idea.id)
+      const originality = clamp(item.originality), feasibility = clamp(item.feasibility), relevance = clamp(item.relevance)
+      return a.saveReview(idea.id, {
+        o: originality,
+        f: feasibility,
+        r: relevance,
+        score: Math.round((originality * w.o + feasibility * w.f + relevance * w.r) / (w.o + w.f + w.r || 1)),
+        reason: String(item.reason || '').slice(0, 400),
+        youtubeRationale: String(item.youtubeRationale || '').slice(0, 600),
+        youtubeSignals: output.youtubeSignalsByIdea?.[idea.id],
+        status: a.statusOf(idea.id),
+      })
+    }))
+    const failedIndex = results.findIndex(saved => !saved)
+    if (failedIndex >= 0) throw new Error('Could not save the AI review for "' + b[failedIndex].title + '". Completed reviews were saved; please retry.')
+    done += b.length
+    opts.onProgress?.(`Reviewed ${done} of ${ideas.length} ideas...`)
   }
+
+  // Two concurrent batches improve throughput without flooding the AI or YouTube APIs.
+  const workers = Array.from({ length: Math.min(2, batches.length) }, async () => {
+    while (!firstError && !opts.signal?.aborted) {
+      const batchIndex = nextBatch++
+      if (batchIndex >= batches.length) break
+      try {
+        await processBatch(batches[batchIndex], batchIndex)
+      } catch (error) {
+        if (!firstError) firstError = error
+      }
+    }
+  })
+  await Promise.all(workers)
+  if (opts.signal?.aborted) throw new DOMException('Review cancelled', 'AbortError')
+  if (firstError) throw firstError
   return done
 }
