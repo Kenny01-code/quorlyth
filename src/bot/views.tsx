@@ -141,7 +141,7 @@ export function BotViews(p: P) {
           <div className="acts"><button className="btn" disabled={vm.state === 'rec'} onClick={matchVoice}><Icon name="mic" size={16} />{vm.state === 'rec' ? 'Listening' : 'Start'}</button></div>
           <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>This tunes a studio voice to feel like yours. It is not a clone. Cloning a real voice needs a dedicated voice service and that person's consent.</p>
         </div>
-        <p className="dim" style={{ fontSize: 12 }}>Each preset has its own voice and speaking style. If studio speech is unavailable, QuorlythBot uses a matching voice from your browser. Voice cloning is not included.</p></>
+        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Accent guidance helps shape pronunciation and cadence, but exact regional delivery can vary. If studio speech is unavailable, QuorlythBot falls back to a voice your browser provides. Voice cloning is not included.</p></>
     )
   }
 
