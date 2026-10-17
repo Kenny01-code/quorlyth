@@ -2334,19 +2334,19 @@ html {
 }
 
 
-/* Long analytics charts stay inside their glass cards. The scrollbar remains
-   functional for touch, trackpads, mouse wheels, and keyboard focus without a visible track. */
+/* Original responsive analytics chart proportions with horizontal overflow only when needed.
+   Scrolling remains accessible while the scrollbar itself stays visually hidden. */
 .chs {
+  display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  max-height: min(68dvh, 720px);
   box-sizing: border-box;
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: hidden;
   margin-top: 18px;
   scroll-behavior: smooth;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;

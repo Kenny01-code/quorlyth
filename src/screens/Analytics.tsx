@@ -1,7 +1,6 @@
 import { type ReactNode, type WheelEvent, useEffect, useMemo, useState } from 'react'
 import '../styles/analytics.css'
 import { useNavigate } from 'react-router-dom'
-import { jsPDF } from 'jspdf'
 import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
 import { AreaChart, BarChart, Daily, Donut, Funnel, Heat, TopList, fd } from '../components/Charts'
@@ -137,22 +136,52 @@ function Inner() {
   }, [data, a.statusOf, a.votesOf, ownersByCommunity, scopedMembers, scopedContributors, scopedMetricsReady])
 
   const daily = (n: number): Daily => {
-    const d = 864e5, t0 = new Date().setHours(0, 0, 0, 0), v: number[] = [], dt: number[] = []
-    for (let i = n - 1; i >= 0; i--) { const s = t0 - i * d; v.push(data.ideas.filter(x => x.at >= s && x.at < s + d).length); dt.push(s) }
+    const dayMs = 864e5
+    const today = new Date().setHours(0, 0, 0, 0)
+    const v = Array(n).fill(0) as number[]
+    const dt = Array.from({ length: n }, (_, i) => today - (n - 1 - i) * dayMs)
+    for (const idea of data.ideas) {
+      const index = Math.floor((idea.at - today) / dayMs) + n - 1
+      if (index >= 0 && index < n) v[index]++
+    }
     return { v, d: dt }
   }
-  const dd = daily(rg)
+  const dd = useMemo(() => daily(rg), [data.ideas, rg])
   const barRows = () => {
     const o = cs.bar
-    let rows = data.communities.map(c => {
+    const ideaCounts = new Map<string, number>()
+    const backingCounts = new Map<string, number>()
+    const communityByIdea = new Map<string, string>()
+    const promotionCounts = new Map<string, number>()
+    const memberCounts = new Map<string, number>()
+
+    for (const idea of data.ideas) {
+      communityByIdea.set(idea.id, idea.cid)
+      ideaCounts.set(idea.cid, (ideaCounts.get(idea.cid) || 0) + 1)
+      backingCounts.set(idea.cid, (backingCounts.get(idea.cid) || 0) + a.votesOf(idea.id))
+    }
+    for (const promotion of data.promotions) {
+      const cid = communityByIdea.get(promotion.ideaId)
+      if (cid) promotionCounts.set(cid, (promotionCounts.get(cid) || 0) + 1)
+    }
+    if (!scopedMetricsReady) {
+      for (const memberships of Object.values(data.members)) {
+        for (const [cid, joined] of Object.entries(memberships || {})) {
+          if (joined) memberCounts.set(cid, (memberCounts.get(cid) || 0) + 1)
+        }
+      }
+    }
+
+    const rows = data.communities.map(c => {
       let v = 0
-      if (o.m === 'ideas') v = data.ideas.filter(i => i.cid === c.id).length
-      else if (o.m === 'backs') data.ideas.forEach(i => { if (i.cid === c.id) v += a.votesOf(i.id) })
-      else if (o.m === 'members') v = scopedMetricsReady ? (scopedMembers[c.id] || []).length : Object.keys(data.members).filter(u => data.members[u]?.[c.id]).length
-      else v = data.promotions.filter(p => data.ideas.find(i => i.id === p.ideaId)?.cid === c.id).length
+      if (o.m === 'ideas') v = ideaCounts.get(c.id) || 0
+      else if (o.m === 'backs') v = backingCounts.get(c.id) || 0
+      else if (o.m === 'members') v = scopedMetricsReady ? (scopedMembers[c.id] || []).length : (memberCounts.get(c.id) || 0)
+      else v = promotionCounts.get(c.id) || 0
       return { n: c.name, v }
     })
-    if (o.s === 'value') rows.sort((x, y) => y.v - x.v); else if (o.s === 'name') rows.sort((x, y) => x.n.localeCompare(y.n))
+    if (o.s === 'value') rows.sort((x, y) => y.v - x.v)
+    else if (o.s === 'name') rows.sort((x, y) => x.n.localeCompare(y.n))
     return o.n ? rows.slice(0, o.n) : rows
   }
   const donut: [string, number, string][] = [['Ready to share', X.sc.promoted, '#fff'], ['Selected', X.sc.selected, '#d0d0d0'], ['In review', X.sc.review, '#8a8a8a'], ['Held', X.sc.held, '#555'], ['Declined', X.sc.declined, '#333']]
@@ -185,7 +214,8 @@ function Inner() {
     const rows = data.ideas.map(i => [q(i.title), q(data.communities.find(c => c.id === i.cid)?.name), q(a.nm(i.authorId)), a.votesOf(i.id), STATUS_LABEL[a.statusOf(i.id)], data.reviews[i.id]?.score ?? '', new Date(i.at).toISOString()].join(','))
     download('quorlyth-ideas.csv', 'text/csv', 'title,community,author,backings,status,score,created\n' + rows.join('\n'))
   }
-  function pdf() {
+  async function pdf() {
+    const { jsPDF } = await import('jspdf')
     const d = new jsPDF({ unit: 'mm', format: 'a4' }), W = 210, M = 16
     let y = 54
     const T = (s: any, n = 0) => { s = String(s ?? '').replace(/[^\x20-\x7E\u00A0-\u00FF]/g, ''); return n && s.length > n ? s.slice(0, n - 1) + '...' : s }
