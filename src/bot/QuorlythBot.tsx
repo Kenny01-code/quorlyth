@@ -470,7 +470,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     const clean = text.replace(/\[\[.*?\]\]/g, '').trim()
     if (!clean || !bs.voice) return
     const key = messageKey || 'announcement:' + Date.now()
-    void playSpeech(clean.slice(0, 600), key, false)
+    void playSpeech(clean, key, false)
   }
 
   function persist(c: Chat) {
