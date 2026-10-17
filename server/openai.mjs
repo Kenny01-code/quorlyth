@@ -2,6 +2,7 @@ import { fetchYouTubeSignalsForIdeas, formatYouTubeSignalsContext } from './yout
 import { buildAuthenticatedBotContext } from './bot-context.mjs'
 // All OpenAI calls happen here, on the server. The key never reaches the browser.
 const KEY = () => process.env.OPENAI_API_KEY
+const ELEVENLABS_KEY = () => process.env.ELEVENLABS_API_KEY
 const MODEL = () => process.env.OPENAI_MODEL || 'gpt-4o'
 const REALTIME_MODEL = () => {
   const configured = process.env.OPENAI_REALTIME_MODEL
@@ -673,30 +674,137 @@ function speechStyleInstructions(value) {
 }
 
 /** Natural voice for replies and previews. Provider credentials remain server-side. */
+const ELEVENLABS_DEFAULT_VOICES = {
+  // Official ElevenLabs premade voices. These IDs are only used when the user
+  // has explicitly configured ELEVENLABS_API_KEY; provider calls stay server-side.
+  marin: '21m00Tcm4TlvDq8ikWAM',   // Rachel — warm American female
+  sage: 'EXAVITQu4vr4xnSDxMaL',    // Bella — clear female
+  shimmer: 'MF3mGyEYCl7XYWbV9V6O', // Elli — expressive female
+  cedar: 'pNInz6obpgDQGcFmaJgB',   // Adam — deep male
+  echo: 'ErXwobaYiN019PkySvjV',    // Antoni — smooth male
+  ballad: 'TxGEqnHWrfWFTfGW9XjX',  // Josh — relaxed male
+  coral: '21m00Tcm4TlvDq8ikWAM',
+  alloy: '21m00Tcm4TlvDq8ikWAM',
+  ash: 'pNInz6obpgDQGcFmaJgB',
+  nova: 'MF3mGyEYCl7XYWbV9V6O',
+  onyx: 'pNInz6obpgDQGcFmaJgB',
+  fable: 'ErXwobaYiN019PkySvjV',
+  verse: 'EXAVITQu4vr4xnSDxMaL',
+}
+const ELEVENLABS_PERSONAS = {
+  marin: 'ARIA',
+  sage: 'SELENE',
+  shimmer: 'NOVA',
+  cedar: 'ATLAS',
+  echo: 'ORION',
+  ballad: 'LEO',
+}
+
+function elevenLabsVoiceId(voice, accent) {
+  const persona = ELEVENLABS_PERSONAS[voice]
+  const accentKey = accent.toUpperCase().replace(/[^A-Z]/g, '_')
+  const personaOverride = persona && process.env[`ELEVENLABS_VOICE_${accentKey}_${persona}_ID`]?.trim()
+  const accentOverride = process.env[`ELEVENLABS_VOICE_${accentKey}_ID`]?.trim()
+  if (personaOverride || accentOverride) return personaOverride || accentOverride
+
+  // Accent is determined by the actual trained voice in ElevenLabs, not a
+  // client-side language label. Don't silently substitute a US voice for a
+  // Nigerian/British selection; let OpenAI's accent-steered model handle those
+  // until a real accent-matched ElevenLabs voice ID is configured.
+  if (accent === 'nigerian' || accent === 'british') return null
+  const genericPersonaOverride = persona && process.env[`ELEVENLABS_VOICE_${persona}_ID`]?.trim()
+  return genericPersonaOverride || ELEVENLABS_DEFAULT_VOICES[voice] || null
+}
+
+function audioResponse(res, audio, provider) {
+  res.statusCode = 200
+  res.setHeader('Content-Type', 'audio/mpeg')
+  res.setHeader('Cache-Control', 'no-store')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Quorlyth-Voice-Provider', provider)
+  res.end(Buffer.from(audio))
+}
+
+async function requestElevenLabsSpeech(text, voiceId) {
+  const model = ['eleven_multilingual_v2', 'eleven_flash_v2_5'].includes(process.env.ELEVENLABS_TTS_MODEL)
+    ? process.env.ELEVENLABS_TTS_MODEL
+    : 'eleven_multilingual_v2'
+  return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'audio/mpeg',
+      'xi-api-key': ELEVENLABS_KEY(),
+    },
+    body: JSON.stringify({
+      text,
+      model_id: model,
+      voice_settings: {
+        stability: 0.45,
+        similarity_boost: 0.8,
+        style: 0,
+        use_speaker_boost: true,
+        speed: 1,
+      },
+    }),
+  })
+}
+
+async function requestOpenAISpeech(text, voice, accent) {
+  return fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEY()}` },
+    body: JSON.stringify({
+      model: ['gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'].includes(process.env.OPENAI_TTS_MODEL) ? process.env.OPENAI_TTS_MODEL : 'gpt-4o-mini-tts',
+      voice,
+      input: text,
+      instructions: speechStyleInstructions(accent),
+      response_format: 'mp3',
+      speed: 1,
+    }),
+  })
+}
+
+/** Natural voice: ElevenLabs first for supported configured voices, with OpenAI as the accent-aware failover. */
 export async function speak(req, res) {
   try {
-    needOpenAI('Natural voice playback')
     const body = await readBody(req)
     const text = typeof body.text === 'string' ? body.text.trim().slice(0, 1500) : ''
     const voice = SPEECH_VOICES.has(body.voice) ? body.voice : 'coral'
     const accent = speechAccent(body.accent)
     if (!text) return send(res, 400, { error: 'Add a reply before playing its voice.' })
-    const r = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEY()}` },
-      body: JSON.stringify({
-        model: ['gpt-4o-mini-tts', 'gpt-4o-mini-tts-2025-12-15'].includes(process.env.OPENAI_TTS_MODEL) ? process.env.OPENAI_TTS_MODEL : 'gpt-4o-mini-tts',
-        voice,
-        input: text,
-        instructions: speechStyleInstructions(accent),
-        response_format: 'mp3',
-        speed: 1,
-      }),
-    })
-    if (!r.ok) return send(res, r.status, { error: r.status === 429 || r.status >= 500 ? 'QuorlythBot voice playback is temporarily unavailable. Please try again shortly.' : 'QuorlythBot could not prepare voice playback for this response.' })
-    res.statusCode = 200
-    res.setHeader('Content-Type', 'audio/mpeg')
-    res.setHeader('Cache-Control', 'no-store')
-    res.end(Buffer.from(await r.arrayBuffer()))
+
+    // ElevenLabs provides the premium voice track; voice IDs and credentials stay
+    // on the server. Nigerian/British voices must be real accent-matched IDs set
+    // in Vercel rather than a misleading American voice with an accent label.
+    if (ELEVENLABS_KEY()) {
+      const voiceId = elevenLabsVoiceId(voice, accent)
+      if (voiceId) {
+        try {
+          const eleven = await requestElevenLabsSpeech(text, voiceId)
+          if (eleven.ok) return audioResponse(res, await eleven.arrayBuffer(), 'elevenlabs')
+        } catch {
+          // Fall through to OpenAI when ElevenLabs is rate-limited or unreachable.
+        }
+      }
+    }
+
+    if (KEY()) {
+      try {
+        const openai = await requestOpenAISpeech(text, voice, accent)
+        if (openai.ok) return audioResponse(res, await openai.arrayBuffer(), 'openai')
+      } catch {
+        // Return one stable user-facing message below; never expose provider details.
+      }
+    }
+
+    if (!ELEVENLABS_KEY() && !KEY()) {
+      return send(res, 503, { error: 'Natural voice is not configured. Add ELEVENLABS_API_KEY or OPENAI_API_KEY to the server environment.' })
+    }
+    if (ELEVENLABS_KEY() && (accent === 'nigerian' || accent === 'british') && !KEY()
+      && !process.env[`ELEVENLABS_VOICE_${accent.toUpperCase()}_ID`]?.trim()) {
+      return send(res, 503, { error: `Add a real accent-matched voice ID as ELEVENLABS_VOICE_${accent.toUpperCase()}_ID to enable this accent without the OpenAI fallback.` })
+    }
+    return send(res, 503, { error: 'QuorlythBot could not prepare natural voice audio just now. Please try again shortly.' })
   } catch (e) { const safe = safeHandlerError(e, 'QuorlythBot'); send(res, safe.status, { error: safe.message, retryable: safe.status >= 500 }) }
 }
