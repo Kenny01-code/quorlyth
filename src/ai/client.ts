@@ -2,6 +2,8 @@ export interface BotContextRequest { route?: string; projectId?: string; tone?: 
 export interface StreamOpts { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal; onText?: (full: string, piece: string) => void; accessToken?: string; context?: BotContextRequest }
 
 const SPEECH_PRESETS: Record<string, { gender: 'female' | 'male'; rate: number; pitch: number; names: RegExp }> = {
+  marin: { gender: 'female', rate: 0.98, pitch: 1.04, names: /jenny|samantha|aria|ava|allison|siri.*female/i },
+  cedar: { gender: 'male', rate: 0.97, pitch: 0.96, names: /guy|david|mark|daniel|james|ryan|alex|fred|tom|siri.*male/i },
   coral: { gender: 'female', rate: 0.96, pitch: 1.08, names: /aria|jenny|zira|samantha|victoria|karen|susan|ava|allison|siri.*female/i },
   sage: { gender: 'female', rate: 0.9, pitch: 1.02, names: /samantha|karen|susan|serena|siri.*female/i },
   shimmer: { gender: 'female', rate: 1.05, pitch: 1.16, names: /jenny|zira|ava|siri.*female/i },
@@ -272,16 +274,21 @@ export async function speakText(
     const audio = new Audio(url)
     audio.preload = 'auto'
     let cleaned = false
-    const done = () => {
+    let started = false
+    const cleanup = () => {
       if (cleaned) return
       cleaned = true
       URL.revokeObjectURL(url)
+    }
+    const done = () => {
+      if (cleaned) return
+      cleanup()
       onEnd?.()
     }
-    audio.onplay = () => onStart?.()
+    audio.onplay = () => { started = true; onStart?.() }
     audio.onpause = () => { /* pause is a supported user action, not completion */ }
     audio.onended = done
-    audio.onerror = done
+    audio.onerror = () => { if (started) done() }
     try {
       await audio.play()
       return {
@@ -291,7 +298,8 @@ export async function speakText(
       }
     } catch (error) {
       audio.src = ''
-      done()
+      if (started) done()
+      else cleanup()
       if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
       // Continue with the browser voice if remote playback is unavailable or blocked.
     }
