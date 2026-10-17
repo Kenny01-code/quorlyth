@@ -410,7 +410,7 @@ test('ElevenLabs is preferred for natural American voice and never exposes its k
   const res = response()
   await speak({ body: { text: 'Hey, how are you doing?', voice: 'marin', accent: 'american' } }, res)
 
-  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM?output_format=mp3_44100_128')
+  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x?output_format=mp3_44100_128')
   assert.equal(requestOptions.headers['xi-api-key'], 'server-only-elevenlabs-test-key')
   const payload = JSON.parse(requestOptions.body)
   assert.equal(payload.model_id, 'eleven_multilingual_v2')
@@ -442,6 +442,26 @@ test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
   assert.equal(requested[1].options.headers.Authorization, 'Bearer server-only-openai-test-key')
   assert.equal(res.statusCode, 200)
   assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'openai')
+})
+
+test('a configured Nigerian ElevenLabs voice ID is used instead of a mismatched default accent', async () => {
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
+  process.env.ELEVENLABS_VOICE_NIGERIAN_ID = 'user-owned-nigerian-voice-id'
+  delete process.env.OPENAI_API_KEY
+  let requestUrl = ''
+  let requestOptions
+  globalThis.fetch = async (url, options = {}) => {
+    requestUrl = String(url)
+    requestOptions = options
+    return new Response(Buffer.from([9, 8, 7]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Good morning', voice: 'marin', accent: 'nigerian' } }, res)
+
+  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/user-owned-nigerian-voice-id?output_format=mp3_44100_128')
+  assert.equal(requestOptions.headers['xi-api-key'], 'server-only-elevenlabs-test-key')
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
 })
 
 test('a Nigerian accent never silently uses an American ElevenLabs voice', async () => {
