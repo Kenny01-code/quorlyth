@@ -123,6 +123,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     } catch { return null }
   })
   const panel = useRef<HTMLDivElement>(null)
+  const initialOpenHandled = useRef(false)
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
   const theme = bs.theme
@@ -240,7 +241,11 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
 
   // The app defers loading this module until the lightweight launcher is clicked.
   // On that first click, open directly and preserve the normal welcome interaction.
-  useEffect(() => { if (initialOpen) openPanel() }, [])
+  useEffect(() => {
+    if (!initialOpen || initialOpenHandled.current) return
+    initialOpenHandled.current = true
+    openPanel()
+  }, [initialOpen])
 
   function clearLauncherHold() {
     if (launcherHoldTimer.current !== null) window.clearTimeout(launcherHoldTimer.current)
