@@ -7,6 +7,7 @@ import { Palette } from './components/Palette'
 import { Shortcuts } from './components/Shortcuts'
 import { NotifPanel } from './components/NotifPanel'
 import { WritingAssistant } from './components/WritingAssistant'
+import { Logo } from './lib/Logo'
 const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.Landing })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
 const Dashboard = lazy(() => import('./screens/Dashboard').then(m => ({ default: m.Dashboard })))
@@ -58,6 +59,14 @@ export default function App() {
   const [intro, setIntro] = useState(() => !sessionStorage.getItem('qintro'))
   const [replay, setReplay] = useState(0)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
+  // Download the full bot experience only after the user opens its lightweight launcher.
+  const [botMounted, setBotMounted] = useState(false)
+  const [deferredLauncherHidden, setDeferredLauncherHidden] = useState(false)
+  const [showDeferredLauncherRestore, setShowDeferredLauncherRestore] = useState(false)
+  const deferredRestoreTimer = useRef<number | null>(null)
+  const deferredHoldTimer = useRef<number | null>(null)
+  const deferredHoldOrigin = useRef<{ x: number; y: number } | null>(null)
+  const deferredLongPressTriggered = useRef(false)
   const [desktopPermission, setDesktopPermission] = useState<NotificationPermission | 'unsupported'>(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
@@ -72,6 +81,46 @@ export default function App() {
   const notificationSessionStartedAt = useRef(0)
   const knownMessages = useRef<Set<string> | null>(null)
   const g = useRef(0)
+
+  useEffect(() => {
+    const restoreLauncher = (event: KeyboardEvent) => {
+      if (event.altKey && event.shiftKey && event.code === 'KeyB') {
+        event.preventDefault()
+        setDeferredLauncherHidden(false)
+        setShowDeferredLauncherRestore(false)
+        if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
+        deferredRestoreTimer.current = null
+      }
+    }
+    window.addEventListener('keydown', restoreLauncher)
+    return () => window.removeEventListener('keydown', restoreLauncher)
+  }, [])
+
+  useEffect(() => () => {
+    if (deferredHoldTimer.current !== null) window.clearTimeout(deferredHoldTimer.current)
+    if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
+  }, [])
+
+  const clearDeferredLauncherHold = () => {
+    if (deferredHoldTimer.current !== null) window.clearTimeout(deferredHoldTimer.current)
+    deferredHoldTimer.current = null
+    deferredHoldOrigin.current = null
+  }
+  const hideDeferredLauncher = () => {
+    setDeferredLauncherHidden(true)
+    setShowDeferredLauncherRestore(true)
+    if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
+    deferredRestoreTimer.current = window.setTimeout(() => {
+      setShowDeferredLauncherRestore(false)
+      deferredRestoreTimer.current = null
+    }, 10000)
+  }
+  const restoreDeferredLauncher = () => {
+    setDeferredLauncherHidden(false)
+    setShowDeferredLauncherRestore(false)
+    if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
+    deferredRestoreTimer.current = null
+  }
 
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
 
@@ -259,7 +308,43 @@ export default function App() {
       {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
-      <Suspense fallback={null}><QuorlythBot /></Suspense>
+      {!botMounted ? <>
+        {!deferredLauncherHidden && <button
+          id="astl"
+          className="astl"
+          aria-label="Open QuorlythBot"
+          title="Right-click to hide · Press and hold on mobile to hide"
+          onClick={() => {
+            if (deferredLongPressTriggered.current) { deferredLongPressTriggered.current = false; return }
+            setBotMounted(true)
+          }}
+          onContextMenu={event => { event.preventDefault(); hideDeferredLauncher() }}
+          onPointerDown={event => {
+            if (event.pointerType !== 'touch') return
+            clearDeferredLauncherHold()
+            deferredLongPressTriggered.current = false
+            deferredHoldOrigin.current = { x: event.clientX, y: event.clientY }
+            deferredHoldTimer.current = window.setTimeout(() => {
+              deferredLongPressTriggered.current = true
+              deferredHoldTimer.current = null
+              hideDeferredLauncher()
+              window.setTimeout(() => { deferredLongPressTriggered.current = false }, 900)
+            }, 650)
+          }}
+          onPointerMove={event => {
+            const origin = deferredHoldOrigin.current
+            if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 12) clearDeferredLauncherHold()
+          }}
+          onPointerUp={clearDeferredLauncherHold}
+          onPointerCancel={clearDeferredLauncherHold}
+          onPointerLeave={clearDeferredLauncherHold}
+        ><span className="astm"><Logo size={30} /></span></button>}
+        {deferredLauncherHidden && showDeferredLauncherRestore && <div className="qbot-launcher-hidden-notice" role="status">
+          <span>QuorlythBot hidden</span>
+          <button type="button" onClick={restoreDeferredLauncher}>Undo</button>
+          <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
+        </div>}
+      </> : <Suspense fallback={<div className="astl qbot-deferred-loading" role="status" aria-label="Loading QuorlythBot"><span className="astm"><Logo size={30} /></span></div>}><QuorlythBot initialOpen /></Suspense>}
       <Toast />
       <WritingAssistant />
     </>

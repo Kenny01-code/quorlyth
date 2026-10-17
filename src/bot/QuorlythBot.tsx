@@ -22,18 +22,33 @@ const PHRASES = {
 }
 
 function usePlaceholder(role: 'owner' | 'member' | 'visitor', active: boolean) {
-  const [ph, setPh] = useState('Message QuorlythBot')
+  const [index, setIndex] = useState(0)
   useEffect(() => {
-    if (!active) { setPh('Message QuorlythBot'); return }
-    const L = PHRASES[role]; let k = 0, i = 0, dir = 1, t: number
-    const tick = () => {
-      const s = L[k % L.length]
-      if (dir > 0) { i++; setPh(s.slice(0, i) + '\u258d'); if (i >= s.length) { dir = -1; t = window.setTimeout(tick, 1900); return } t = window.setTimeout(tick, 32 + Math.random() * 34) }
-      else { i -= 2; if (i <= 0) { i = 0; dir = 1; k++; setPh('\u258d'); t = window.setTimeout(tick, 280); return } setPh(s.slice(0, i) + '\u258d'); t = window.setTimeout(tick, 16) }
-    }
-    tick(); return () => clearTimeout(t)
+    if (!active) { setIndex(0); return }
+    // Rotate a complete suggestion periodically instead of typing/deleting each
+    // character. The old 16–66ms updates re-rendered the entire bot subtree
+    // repeatedly even when the user was not interacting with it.
+    const timer = window.setInterval(() => {
+      setIndex(current => (current + 1) % PHRASES[role].length)
+    }, 4600)
+    return () => window.clearInterval(timer)
   }, [role, active])
-  return ph
+  return active ? PHRASES[role][index % PHRASES[role].length] : 'Message QuorlythBot'
+}
+
+
+function friendlyBotError(error: unknown): string {
+  const value = error && typeof error === 'object' ? error as { name?: unknown; message?: unknown } : null
+  const name = typeof value?.name === 'string' ? value.name : ''
+  const message = typeof value?.message === 'string' ? value.message : typeof error === 'string' ? error : ''
+  if (name === 'AbortError') return 'I stopped that response. Send another message whenever you’re ready.'
+  if (/credit_balance_exhausted|insufficient_quota|no credits remaining/i.test(message)) return 'I’m temporarily unable to generate a reply because the AI service needs attention. Please try again later.'
+  if (/session could not be verified|session.*expired|sign-in session/i.test(message)) return 'Your Quorlyth session needs a refresh. Reload the page, then try your message again.'
+  if (/securely load the app context|context.*unavailable/i.test(message)) return 'I couldn’t securely load the latest Quorlyth context just now. Please try again in a moment.'
+  if (/failed to fetch|networkerror|network request failed|offline|load failed/i.test(message)) return 'I couldn’t reach QuorlythBot just now. Check your connection and try again.'
+  if (/timed out|stalled|interrupted before it finished/i.test(message)) return 'That reply didn’t finish coming through. Please try again and I’ll take another run at it.'
+  if (/temporarily unavailable|available ai services/i.test(message)) return 'I’m having trouble reaching the AI service right now. Please try again shortly.'
+  return 'I hit a temporary snag while preparing that answer. Your message is still here; please try again in a moment.'
 }
 
 type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
@@ -55,7 +70,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
   }
 }
 
-export function QuorlythBot() {
+export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) {
   const a = useApp()
   const nav = useNavigate()
   const loc = useLocation()
@@ -70,7 +85,7 @@ export function QuorlythBot() {
   const liveFallback = useRef(false)
   const liveRecognition = useRef<any>(null)
   const audio = useRef<{ stop(): void } | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
   const [minimized, setMinimized] = useState(false)
   const [launcherHidden, setLauncherHidden] = useState(false)
   const [showLauncherRestore, setShowLauncherRestore] = useState(false)
@@ -109,6 +124,7 @@ export function QuorlythBot() {
     } catch { return null }
   })
   const panel = useRef<HTMLDivElement>(null)
+  const initialOpenHandled = useRef(false)
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
   const theme = bs.theme
@@ -180,7 +196,14 @@ export function QuorlythBot() {
     if (!scroller) return
     const last = cur ? cur.msgs[cur.msgs.length - 1] : undefined
     const distanceFromBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
-    if (last?.r === 'u' || distanceFromBottom < 160) scroller.scrollTop = scroller.scrollHeight
+    // Keep following the conversation only if the user is already at the bottom
+    // or just submitted a message. One frame per stream update prevents layout thrash.
+    if (last?.r !== 'u' && distanceFromBottom >= 160) return
+    const frame = window.requestAnimationFrame(() => {
+      if (!log.current) return
+      log.current.scrollTo({ top: log.current.scrollHeight, behavior: 'auto' })
+    })
+    return () => window.cancelAnimationFrame(frame)
   }, [cur?.msgs.length, latestMessageText, busy])
   useEffect(() => {
     const restoreWithShortcut = (event: KeyboardEvent) => {
@@ -216,6 +239,14 @@ export function QuorlythBot() {
     const msg = !a.me ? 'Welcome to Quorlyth. Sign in to enter your space.' : first ? `Welcome, ${name}. I am QuorlythBot, your concierge. Ask me anything, or let me show you around.` : `Welcome back, ${name}.`
     setTimeout(() => { setCaption(msg); first ? robot.current?.welcome() : robot.current?.wave(); say(msg); setTimeout(() => setCaption(''), 6000) }, 700)
   }
+
+  // The app defers loading this module until the lightweight launcher is clicked.
+  // On that first click, open directly and preserve the normal welcome interaction.
+  useEffect(() => {
+    if (!initialOpen || initialOpenHandled.current) return
+    initialOpenHandled.current = true
+    openPanel()
+  }, [initialOpen])
 
   function clearLauncherHold() {
     if (launcherHoldTimer.current !== null) window.clearTimeout(launcherHoldTimer.current)
@@ -267,11 +298,15 @@ export function QuorlythBot() {
     if (!asksLocalWeather && !asksLocation) return ''
     if (!navigator.geolocation) return 'The browser does not support geolocation. Ask the user to name their city for local weather or nearby results.'
     try {
-      const position: GeolocationPosition = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }))
+      const position: GeolocationPosition = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 }))
       if (asksLocalWeather) {
         const { latitude, longitude } = position.coords
         const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(String(latitude)) + '&longitude=' + encodeURIComponent(String(longitude)) + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto'
-        const response = await fetch(url)
+        const controller = new AbortController()
+        const timer = window.setTimeout(() => controller.abort(), 3500)
+        let response: Response
+        try { response = await fetch(url, { signal: controller.signal }) }
+        finally { window.clearTimeout(timer) }
         if (!response.ok) return 'Location permission was granted, but the live weather service is unavailable. Do not invent weather; ask the user to try again or name a city.'
         const weather = await response.json()
         return 'The user explicitly requested local weather and granted browser location permission. Live weather data from Open-Meteo for their approximate current coordinates: ' + JSON.stringify({ timezone: weather.timezone, current: weather.current, units: weather.current_units }) + '. Use these values as current weather, state that they are approximate to the browser location, and do not claim a more precise address.'
@@ -322,7 +357,7 @@ export function QuorlythBot() {
   }
   const add = (c: Chat | null, m: ChatMsg, title?: string): Chat => {
     const base = c || { id: 'c_' + slug(), title: (title || m.t).slice(0, 44), pj, at: Date.now(), upd: Date.now(), msgs: [] }
-    const next = { ...base, msgs: [...base.msgs, m] }
+    const next = { ...base, msgs: [...base.msgs, m].slice(-100) }
     setCur(next); return next
   }
 
@@ -410,11 +445,16 @@ export function QuorlythBot() {
     let renderTimer: number | null = null
     let latestClean = ''
     try {
-      const turns = c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
+      const turns = c.msgs.filter(m => !(m as any).live).slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
       const liveContext = await requestLiveContext(t)
+      const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
+      const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
+      if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
+      const botContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveContext }
       let first = true
       const full = await streamChat(turns, {
-        system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : ''), tier: bs.model, signal: ctl.current.signal,
+        ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
+        ...(accessToken ? { accessToken, context: botContext } : {}), tier: bs.model, signal: ctl.current.signal,
         onText: f => {
           if (first) { first = false; setThinkingTask(''); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
           latestClean = f.replace(/\[\[[\s\S]*$/, '').trim()
@@ -432,7 +472,7 @@ export function QuorlythBot() {
       const g = full.match(/\[\[go:([^\]]+)\]\]/), o = full.match(/\[\[open:([\w-]+)\]\]/)
       if (g) btns.push({ a: 'go', id: g[1], l: 'Open ' + g[1].replace('/', '') || 'home' })
       if (o && a.data.ideas.some(i => i.id === o[1])) btns.push({ a: 'idea', id: o[1], l: 'Open that idea' })
-      const clean = full.replace(/\[\[[\s\S]*?\]\]/g, '').trim()
+      const clean = full.replace(/\[\[[\s\S]*?\]\]/g, '').trim() || 'I couldn’t put together a complete answer that time. Could you try asking again?'
       c = { ...c, msgs: [...c.msgs, { r: 'a', t: clean, btns }] }
       persist(c)
       robot.current?.talk(false); say(clean)
@@ -440,7 +480,7 @@ export function QuorlythBot() {
     } catch (e: any) {
       if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
       robot.current?.think(false); robot.current?.talk(false)
-      if (e.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: e.message?.includes('OPENAI_API_KEY') ? 'The AI key is missing on the server. Add OPENAI_API_KEY to your .env file and restart npm run dev:ai.' : 'Sorry, that did not go through. ' + (e.message || '') }] }; persist(c) }
+      if (e?.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: friendlyBotError(e) }] }; persist(c) }
       else setCur(c)
     }
     setBusy(false); setThinkingTask(''); setStatus('Online'); ctl.current = null
@@ -461,7 +501,8 @@ export function QuorlythBot() {
         n = { ...n, msgs: [...n.msgs, { r: 'a', t: `Review complete. I scored ${count} idea${count === 1 ? '' : 's'} for originality, feasibility, and audience relevance.`, btns: [{ a: 'go', id: '/queue', l: 'Open review queue' }] }] }
         persist(n); robot.current?.cheer(); say(`Review complete. I scored ${count} idea${count === 1 ? '' : 's'} for originality, feasibility, and audience relevance.`)
       } catch (e: any) {
-        n = { ...n, msgs: [...n.msgs, { r: 'a', t: e.message || 'I could not finish the review. Your ideas are still in the queue.' }] }; persist(n); say(n.msgs[n.msgs.length - 1].t)
+        const message = friendlyBotError(e)
+        n = { ...n, msgs: [...n.msgs, { r: 'a', t: message }] }; persist(n); say(message)
       }
       setBusy(false); setStatus('Online'); return
     }
@@ -473,7 +514,7 @@ export function QuorlythBot() {
         const o = await askJson<{ welcome: string; rules: string }>(`Write a welcome message (two warm sentences) and four short community guidelines (one line each, joined with newlines) for this fan community. Reply with only JSON: {"welcome":"text","rules":"line one\\nline two\\nline three\\nline four"}\nCommunity: ${c.name}. Purpose: ${c.purpose || 'share ideas'}. Tone: ${bs.tone}.`)
         setPend(JSON.stringify({ cid: c.id, ...o }))
         n = { ...n, msgs: [...n.msgs, { r: 'a', t: `Here is a welcome message:\n${o.welcome}\n\nAnd guidelines:\n${o.rules}`, btns: [{ a: 'apply', id: c.id, l: 'Apply to ' + c.name }] }] }; persist(n); say(n.msgs[n.msgs.length - 1].t)
-      } catch (e: any) { n = { ...n, msgs: [...n.msgs, { r: 'a', t: e.message }] }; setCur(n); say(e.message) }
+      } catch (e: any) { const message = friendlyBotError(e); n = { ...n, msgs: [...n.msgs, { r: 'a', t: message }] }; setCur(n); say(message) }
       setBusy(false); return
     }
     if (id === 'find') {
@@ -552,9 +593,13 @@ export function QuorlythBot() {
         c = add(c, { r: 'u', t: spoken }, 'Live conversation')
         try {
           let first = true
-          const answer = await streamChat(c.msgs.slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t })), {
-            system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a voice conversation. Speak naturally in short sentences. You can help with the app, but do not claim to execute an action unless the app has actually done it.',
-            tier: bs.model,
+          const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
+          const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
+          if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
+          const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
+          const answer = await streamChat(c.msgs.filter(m => !(m as any).live).slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t })), {
+            ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a voice conversation. Speak naturally in short sentences. You can help with the app, but do not claim to execute an action unless the app has actually done it.' } : {}),
+            ...(accessToken ? { accessToken, context: voiceContext } : {}), tier: bs.model,
             onText: full => { if (first) first = false; setLive(l => l ? { ...l, state: 'speaking', bot: full } : l) },
           })
           c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }] }
@@ -565,7 +610,7 @@ export function QuorlythBot() {
               .catch(() => { try { const utterance = new SpeechSynthesisUtterance(answer.slice(0, 900)); utterance.lang = navigator.language || 'en-US'; utterance.onend = utterance.onerror = () => resolve(); window.speechSynthesis.speak(utterance) } catch { resolve() } })
           })
         } catch (error: any) {
-          const message = error?.message || 'I could not finish that voice reply. Please try again.'
+          const message = friendlyBotError(error)
           a.toast(message)
           c = { ...c, msgs: [...c.msgs, { r: 'a', t: message }] }; persist(c)
         }
@@ -575,8 +620,13 @@ export function QuorlythBot() {
     }
     // Prefer the low-latency Realtime API; fall back to browser recognition only if it cannot connect.
     try {
+      const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
+      const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
+      if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
+      const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
       rt.current = await startRealtime({
         instructions: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + '\nThis is a live spoken conversation, like a phone call. Reply in one to three short natural sentences, the way a warm person would speak. Use contractions. No lists or markdown. You can call the tools to take the person to a page or open an idea.',
+        ...(accessToken ? { accessToken, context: voiceContext } : {}),
         voice: v.ai,
         tools: [
           { type: 'function', name: 'navigate', description: 'Take the person to a page of the app.', parameters: { type: 'object', properties: { page: { type: 'string', enum: ['home', 'dashboard', 'communities', 'queue', 'promote', 'analytics', 'settings', 'profile'] } }, required: ['page'] } },
@@ -604,7 +654,7 @@ export function QuorlythBot() {
         browserLive()
       } else {
         setLive(null)
-        a.toast(/NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : e.message || 'Live voice could not start')
+        a.toast(/NotAllowed|Permission/i.test(String(e?.name || '') + ' ' + String(e?.message || '')) ? 'The microphone is blocked. Allow it in your browser settings.' : friendlyBotError(e))
       }
     }
   }
@@ -1081,7 +1131,11 @@ export function QuorlythBot() {
                             {i === msgs.length - 1 && !busy && <button aria-label="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /></button>}</div>
                         </div>
                       ))}
-                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma typing" role="status" aria-label="QuorlythBot is thinking"><span>QuorlythBot is thinking</span>{thinkingTask && <small className="qbot-task-status">{thinkingTask}</small>}<i /><i /><i /></div>}
+                      {busy && !msgs.some(m => (m as any).live) && <div className="am ma qbot-thinking-panel" role="status" aria-live="polite" aria-label="QuorlythBot is preparing a reply">
+                          <span className="qbot-thinking-orbit" aria-hidden="true"><i /><i /><Icon name="message" size={16} /></span>
+                          <span className="qbot-thinking-copy"><strong>On it. Let me check the right context.</strong><small>{thinkingTask || 'Putting together a useful answer'}</small><span>Just a moment — I’ll be clear if anything is uncertain.</span></span>
+                          <span className="qbot-thinking-signal" aria-hidden="true"><i /><i /><i /></span>
+                        </div>}
                     </div>
                   )
                 ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
