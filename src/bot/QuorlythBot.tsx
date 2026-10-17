@@ -7,6 +7,7 @@ import { useApp } from '../data/AppProvider'
 import { Chat, ChatMsg } from '../lib/types'
 import { cn, slug, when } from '../lib/util'
 import { askJson, startRealtime, speakText, streamChat } from '../ai/client'
+import type { SpeechPlayback } from '../ai/client'
 import { Robot, RobotApi } from './Robot'
 import { ChatMenu } from './ChatMenu'
 import { BotViews } from './views'
@@ -84,7 +85,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
   const rt = useRef<Awaited<ReturnType<typeof startRealtime>> | null>(null)
   const liveFallback = useRef(false)
   const liveRecognition = useRef<any>(null)
-  const audio = useRef<{ stop(): void } | null>(null)
+  const audio = useRef<SpeechPlayback | null>(null)
+  const speechRequest = useRef<AbortController | null>(null)
+  const speechMessageKeyRef = useRef('')
+  const [speechMessageKey, setSpeechMessageKey] = useState('')
+  const [speechState, setSpeechState] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle')
+  const [thinkingPhase, setThinkingPhase] = useState<'off' | 'thinking' | 'leaving'>('off')
+  const thinkingExitTimer = useRef<number | null>(null)
   const [open, setOpen] = useState(initialOpen)
   const [minimized, setMinimized] = useState(false)
   const [launcherHidden, setLauncherHidden] = useState(false)
@@ -326,28 +333,104 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     return `Browser language: ${lang}. Device time zone: ${zone}. Current local date and time: ${localTime}. Browser online: ${navigator.onLine ? 'yes' : 'no'}. Browser speech output: ${speech ? 'available' : 'unavailable'}. Browser speech recognition: ${recognition ? 'available' : 'unavailable'}. Precise device location has not been read; ask before requesting location permission and never pretend to know GPS coordinates.`
   }
 
-  function say(text: string) {
-    const clean = text.replace(/\[\[.*?\]\]/g, '').trim()
+  function stopVoice() {
+    speechMessageKeyRef.current = ''
+    speechRequest.current?.abort()
+    speechRequest.current = null
+    const playback = audio.current
+    audio.current = null
+    playback?.stop()
+    setSpeechMessageKey('')
+    setSpeechState('idle')
+    robot.current?.talk(false)
+    setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
+  }
+
+  async function playSpeech(text: string, key: string, showError: boolean) {
+    const clean = text.replace(/\[\[.*?\]\]/g, '').trim().slice(0, 1500)
     if (!clean) return
-    const v = VOICES.find(x => x.id === bs.vid) || VOICES[0]
-    if (!bs.voice) { robot.current?.talk(true); setTimeout(() => robot.current?.talk(false), Math.min(9000, 700 + clean.length * 52)); return }
-    audio.current?.stop()
-    speakText(clean.slice(0, 600), v.ai, () => { robot.current?.talk(true); setStatus('Speaking') }, () => { robot.current?.talk(false); setStatus('Online') })
-      .then(h => (audio.current = h))
-      .catch(() => {
-        if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
-          robot.current?.talk(true); setTimeout(() => robot.current?.talk(false), Math.min(9000, 700 + clean.length * 52)); setStatus('Online'); return
-        }
-        window.speechSynthesis.cancel()
-        const utterance = new SpeechSynthesisUtterance(clean.slice(0, 900))
-        utterance.lang = 'en-US'; utterance.rate = 1; utterance.pitch = 1.02
-        const voices = window.speechSynthesis.getVoices()
-        utterance.voice = voices.find(x => x.lang === 'en-US') || voices.find(x => x.lang.startsWith('en')) || null
-        utterance.onstart = () => { robot.current?.talk(true); setStatus('Speaking') }
-        utterance.onend = utterance.onerror = () => { robot.current?.talk(false); setStatus('Online') }
-        audio.current = { stop: () => window.speechSynthesis.cancel() }
-        window.speechSynthesis.speak(utterance)
-      })
+    speechRequest.current?.abort()
+    const oldPlayback = audio.current
+    audio.current = null
+    speechMessageKeyRef.current = key
+    setSpeechMessageKey(key)
+    setSpeechState('loading')
+    setStatus('Preparing voice')
+    oldPlayback?.stop()
+    const controller = new AbortController()
+    speechRequest.current = controller
+    const voice = VOICES.find(item => item.id === bs.vid) || VOICES[0]
+    try {
+      const playback = await speakText(
+        clean,
+        voice.ai,
+        () => {
+          if (speechMessageKeyRef.current !== key || controller.signal.aborted) return
+          setSpeechState('playing')
+          setStatus('Speaking')
+          robot.current?.talk(true)
+        },
+        () => {
+          if (speechMessageKeyRef.current !== key) return
+          audio.current = null
+          speechMessageKeyRef.current = ''
+          setSpeechMessageKey('')
+          setSpeechState('idle')
+          robot.current?.talk(false)
+          setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
+        },
+        { accent: bs.accent || 'auto', signal: controller.signal },
+      )
+      if (controller.signal.aborted || speechMessageKeyRef.current !== key) {
+        playback.stop()
+        return
+      }
+      audio.current = playback
+    } catch (error) {
+      const aborted = controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')
+      if (speechMessageKeyRef.current === key) {
+        audio.current = null
+        speechMessageKeyRef.current = ''
+        setSpeechMessageKey('')
+        setSpeechState('idle')
+        robot.current?.talk(false)
+        setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
+      }
+      if (showError && !aborted) {
+        a.toast('Voice playback is unavailable right now. The written reply is still here.')
+      }
+    } finally {
+      if (speechRequest.current === controller) speechRequest.current = null
+    }
+  }
+
+  function toggleReplySpeech(key: string, text: string) {
+    if (speechMessageKeyRef.current === key) {
+      if (speechState === 'loading') {
+        stopVoice()
+      } else if (speechState === 'playing') {
+        audio.current?.pause()
+        setSpeechState('paused')
+        setStatus('Paused')
+        robot.current?.talk(false)
+      } else if (speechState === 'paused') {
+        audio.current?.resume()
+        setSpeechState('playing')
+        setStatus('Speaking')
+        robot.current?.talk(true)
+      } else {
+        void playSpeech(text, key, true)
+      }
+      return
+    }
+    void playSpeech(text, key, true)
+  }
+
+  function say(text: string, messageKey?: string) {
+    const clean = text.replace(/\[\[.*?\]\]/g, '').trim()
+    if (!clean || !bs.voice) return
+    const key = messageKey || 'announcement:' + Date.now()
+    void playSpeech(clean.slice(0, 600), key, false)
   }
 
   function persist(c: Chat) {
