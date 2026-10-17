@@ -235,6 +235,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                 submissions={a.data.workSubmissions.filter(item => item.milestoneId === milestone.id)}
                 canManage={canManage}
                 canCollaborate={canCollaborate && active}
+                projectActive={active}
               />
             </div>
           </article>
