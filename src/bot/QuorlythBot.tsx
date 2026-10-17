@@ -1374,11 +1374,11 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                 <div className={cn('ast-cap', caption && 'on')}>{caption}</div><div className="bnm">QuorlythBot</div>
               </div>
               {live && (
-                <div className="blive">
+                <div className="blive" aria-live="polite">
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
                   <div className="blc">{live.state === 'listening' ? (live.user ? <><span className="dim">You · live transcript</span><br />{live.user}</> : <span className="dim">Listening to you… start speaking whenever you’re ready.</span>) : live.state === 'thinking' ? (live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Thinking…</span>) : live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : <span className="dim">Connecting your conversation…</span>}</div>
                   <div className="acts" style={{ justifyContent: 'center', margin: 0 }}>
-                    <span className="dim" style={{ fontSize: 12 }}>Hands-free conversation · Tap Talk live again to end</span>
+                    <span className="dim" style={{ fontSize: 12 }}>Studio voice · {VOICES.find(item => item.id === bs.vid)?.n || 'Aria'} · Talk live again to end</span>
                   </div>
                 </div>
               )}
