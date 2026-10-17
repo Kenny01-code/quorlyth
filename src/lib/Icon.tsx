@@ -80,6 +80,9 @@ const GLYPH_FOR_ICON: Record<string, QuorlythGlyphName> = {
   'stage': 'stage',
   'live': 'live',
   'stop': 'stop',
+  'play': 'start',
+  'pause': 'pause',
+  'loader-circle': 'progress',
   'palette': 'palette',
 }
 
