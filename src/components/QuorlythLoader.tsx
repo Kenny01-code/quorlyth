@@ -2,19 +2,16 @@ import { Logo } from '../lib/Logo'
 
 type LoaderVariant = 'screen' | 'route'
 
-/**
- * Brand-matched, CSS-only loading treatment.
- * It uses Quorlyth's existing SVG mark, so the loader needs no image request,
- * canvas, animation package, or additional network round-trip.
- */
+/** Compact logo-only loader. The screen variant positions this small mark over the
+ * current page; it never paints a full-screen backdrop or delays route readiness. */
 export function QuorlythLoader({
   variant = 'route',
-  label = 'Preparing your workspace',
+  label = 'Loading',
 }: {
   variant?: LoaderVariant
   label?: string
 }) {
-  const size = variant === 'screen' ? 62 : 48
+  const size = variant === 'screen' ? 54 : 44
 
   return (
     <div
@@ -30,9 +27,6 @@ export function QuorlythLoader({
         <span className="q-loader__orbit q-loader__orbit--micro"><i /></span>
         <span className="q-loader__mark"><Logo size={size} /></span>
       </span>
-      <span className="q-loader__wordmark" aria-hidden="true">QUORLYTH</span>
-      <span className="q-loader__label">{label}</span>
-      <span className="q-loader__signal" aria-hidden="true"><i /></span>
     </div>
   )
 }
