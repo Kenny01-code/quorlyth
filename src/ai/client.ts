@@ -246,7 +246,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const signal = options.signal
@@ -254,6 +254,12 @@ export async function speakText(
   if (!source) throw new Error('There is no text to speak.')
 
   let response: Response | null = null
+  let browserFallbackNotified = false
+  const notifyBrowserFallback = () => {
+    if (browserFallbackNotified) return
+    browserFallbackNotified = true
+    options.onBrowserFallback?.()
+  }
   try {
     response = await fetch('/api/speak', {
       method: 'POST',
@@ -301,7 +307,8 @@ export async function speakText(
       if (started) done()
       else cleanup()
       if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
-      // Continue with the browser voice if remote playback is unavailable or blocked.
+      // Make the downgrade visible instead of silently presenting a device voice as a Studio voice.
+      notifyBrowserFallback()
     }
   }
 
@@ -310,6 +317,7 @@ export async function speakText(
     throw new Error('Natural voice playback is unavailable. Your text response is still available.')
   }
 
+  notifyBrowserFallback()
   window.speechSynthesis.cancel()
   const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
   const utterance = new SpeechSynthesisUtterance(source.slice(0, 900))

@@ -5,6 +5,8 @@ import { chat, json, realtimeSession, speak } from './openai.mjs'
 const originalFetch = globalThis.fetch
 const originalGeminiKey = process.env.GEMINI_API_KEY
 const originalOpenAIKey = process.env.OPENAI_API_KEY
+const originalElevenLabsKey = process.env.ELEVENLABS_API_KEY
+const originalElevenLabsNigerianVoiceId = process.env.ELEVENLABS_VOICE_NIGERIAN_ID
 const originalRealtimeModel = process.env.OPENAI_REALTIME_MODEL
 const originalXaiKey = process.env.XAI_API_KEY
 const originalXaiModel = process.env.XAI_MODEL
@@ -29,6 +31,10 @@ afterEach(() => {
   else process.env.GEMINI_API_KEY = originalGeminiKey
   if (originalOpenAIKey === undefined) delete process.env.OPENAI_API_KEY
   else process.env.OPENAI_API_KEY = originalOpenAIKey
+  if (originalElevenLabsKey === undefined) delete process.env.ELEVENLABS_API_KEY
+  else process.env.ELEVENLABS_API_KEY = originalElevenLabsKey
+  if (originalElevenLabsNigerianVoiceId === undefined) delete process.env.ELEVENLABS_VOICE_NIGERIAN_ID
+  else process.env.ELEVENLABS_VOICE_NIGERIAN_ID = originalElevenLabsNigerianVoiceId
   if (originalRealtimeModel === undefined) delete process.env.OPENAI_REALTIME_MODEL
   else process.env.OPENAI_REALTIME_MODEL = originalRealtimeModel
   if (originalXaiKey === undefined) delete process.env.XAI_API_KEY
@@ -365,7 +371,8 @@ test('returns a 400 for malformed JSON instead of silently treating it as an emp
   assert.match(JSON.parse(res.output).error, /valid JSON/i)
 })
 
-test('natural voice endpoint applies the selected accent without exposing provider credentials', async () => {
+test('natural voice endpoint applies the selected accent using server-side OpenAI fallback', async () => {
+  delete process.env.ELEVENLABS_API_KEY
   process.env.OPENAI_API_KEY = 'server-only-test-key'
   let requestUrl = ''
   let requestOptions
@@ -388,5 +395,91 @@ test('natural voice endpoint applies the selected accent without exposing provid
   assert.equal(payload.response_format, 'mp3')
   assert.equal(res.statusCode, 200)
   assert.equal(res.headers['Content-Type'], 'audio/mpeg')
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'openai')
   assert.ok(res.output.length > 0)
 })
+
+test('ElevenLabs is preferred for natural American voice and never exposes its key to the browser', async () => {
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
+  delete process.env.OPENAI_API_KEY
+  let requestUrl = ''
+  let requestOptions
+  globalThis.fetch = async (url, options = {}) => {
+    requestUrl = String(url)
+    requestOptions = options
+    return new Response(Buffer.from([4, 3, 2, 1]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Hey, how are you doing?', voice: 'marin', accent: 'american' } }, res)
+
+  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x?output_format=mp3_44100_128')
+  assert.equal(requestOptions.headers['xi-api-key'], 'server-only-elevenlabs-test-key')
+  const payload = JSON.parse(requestOptions.body)
+  assert.equal(payload.model_id, 'eleven_multilingual_v2')
+  assert.equal(payload.text, 'Hey, how are you doing?')
+  assert.equal(payload.voice_settings.stability, 0.45)
+  assert.equal(payload.voice_settings.similarity_boost, 0.8)
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['Content-Type'], 'audio/mpeg')
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
+  assert.ok(res.output.length > 0)
+})
+
+test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
+  process.env.OPENAI_API_KEY = 'server-only-openai-test-key'
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push({ url: String(url), options })
+    if (String(url).includes('api.elevenlabs.io')) return new Response(JSON.stringify({ detail: 'invalid key' }), { status: 401 })
+    return new Response(Buffer.from([8, 7, 6]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Hello there', voice: 'cedar', accent: 'american' } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.match(requested[0].url, /api\.elevenlabs\.io\/v1\/text-to-speech/)
+  assert.equal(requested[1].url, 'https://api.openai.com/v1/audio/speech')
+  assert.equal(requested[1].options.headers.Authorization, 'Bearer server-only-openai-test-key')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'openai')
+})
+
+test('a configured Nigerian ElevenLabs voice ID is used instead of a mismatched default accent', async () => {
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
+  process.env.ELEVENLABS_VOICE_NIGERIAN_ID = 'user-owned-nigerian-voice-id'
+  delete process.env.OPENAI_API_KEY
+  let requestUrl = ''
+  let requestOptions
+  globalThis.fetch = async (url, options = {}) => {
+    requestUrl = String(url)
+    requestOptions = options
+    return new Response(Buffer.from([9, 8, 7]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Good morning', voice: 'marin', accent: 'nigerian' } }, res)
+
+  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/user-owned-nigerian-voice-id?output_format=mp3_44100_128')
+  assert.equal(requestOptions.headers['xi-api-key'], 'server-only-elevenlabs-test-key')
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
+})
+
+test('a Nigerian accent never silently uses an American ElevenLabs voice', async () => {
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
+  process.env.OPENAI_API_KEY = 'server-only-openai-test-key'
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push(String(url))
+    return new Response(Buffer.from([1, 2, 3]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Welcome to Quorlyth', voice: 'marin', accent: 'nigerian' } }, res)
+
+  assert.deepEqual(requested, ['https://api.openai.com/v1/audio/speech'])
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'openai')
+})
+

@@ -419,7 +419,15 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           robot.current?.talk(false)
           setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
         },
-        { accent: bs.accent || 'auto', signal: controller.signal },
+        {
+          accent: bs.accent || 'auto',
+          signal: controller.signal,
+          onBrowserFallback: () => {
+            if (showError && !controller.signal.aborted) {
+              a.toast("Natural voice audio couldn't be reached, so your device's built-in voice is playing. This isn't a QuorlythBot Studio voice.");
+            }
+          },
+        },
       )
       if (controller.signal.aborted || speechMessageKeyRef.current !== key) {
         playback.stop()
