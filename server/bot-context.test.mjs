@@ -41,10 +41,10 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
     }
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_owner') return json(true)
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_admin') return json(false)
-    if (parsed.pathname === '/rest/v1/docs') {
+    if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('or')) {
       assert.equal(parsed.searchParams.get('select'), 'path,data')
       assert.match(parsed.searchParams.get('or') || '', /communities/)
-      assert.match(parsed.searchParams.get('or') || '', /data\/users\/user-private-uuid/)
+      assert.doesNotMatch(parsed.searchParams.get('or') || '', /data\/users/)
       return json([
         { path: 'settings/space', data: { name: 'Quorlyth Test Space' } },
         { path: 'communities/community-1', data: { name: 'Fan Lab', ownerId: 'user-private-uuid', purpose: 'Develop ideas with fans' } },
@@ -52,6 +52,11 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
         { path: 'ideaOutcomes/idea-1', data: { status: 'selected', at: 120 } },
         { path: 'reviews/idea-1', data: { score: 84 } },
         { path: 'members/user-private-uuid', data: { c: { 'community-1': true } } },
+      ])
+    }
+    if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('path')) {
+      assert.match(parsed.searchParams.get('path') || '', /data\/users\/user-private-uuid/)
+      return json([
         { path: 'data/users/user-private-uuid/botset', data: { tone: 'warm', len: 'medium', emo: false } },
         { path: 'data/users/user-private-uuid/p_strategy', data: { name: 'Launch plan', ins: 'Focus on accessible launch steps.' } },
       ])
@@ -82,7 +87,7 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
   assert.doesNotMatch(system, /secret@example\.com/)
   assert.doesNotMatch(system, /user-private-uuid/)
   assert.doesNotMatch(system, /public-test-anon-key/)
-  assert.equal(requests.length, 4)
+  assert.equal(requests.length, 5)
   assert.ok(requests.every(item => item.options.headers.Authorization === 'Bearer user-session-token'))
 })
 
@@ -134,7 +139,7 @@ test('authenticated chat ignores a browser-built system prompt and uses RLS-scop
     }
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_owner') return json(true)
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_admin') return json(false)
-    if (parsed.pathname === '/rest/v1/docs') {
+    if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('or')) {
       assert.equal(options.headers.Authorization, 'Bearer user-session-token')
       return json([
         { path: 'settings/space', data: { name: 'Quorlyth Test Space' } },
@@ -143,6 +148,7 @@ test('authenticated chat ignores a browser-built system prompt and uses RLS-scop
         { path: 'ideaOutcomes/idea-1', data: { status: 'selected', at: 120 } },
       ])
     }
+    if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('path')) return json([])
     if (parsed.hostname === 'api.openai.com') {
       assert.equal(options.headers.Authorization, 'Bearer test-provider-secret')
       providerMessages = JSON.parse(options.body).messages
