@@ -6,7 +6,8 @@ import { Idea, Milestone, WorkAttachment, WorkSubmission } from '../lib/types'
 
 const MAX_ATTACHMENTS = 8
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
-const MAX_LOCAL_BYTES = 1 * 1024 * 1024
+const MAX_LOCAL_BYTES = 256 * 1024
+const MAX_LOCAL_TOTAL_BYTES = 700 * 1024
 
 function fileSize(bytes: number) {
   if (bytes < 1024) return bytes + ' B'
@@ -98,7 +99,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
   const uploadAvailable = typeof a.backend?.uploadWorkFile === 'function' && typeof a.backend?.deleteWorkFile === 'function'
   const maximumSize = a.backend?.auth.mode === 'local' ? MAX_LOCAL_BYTES : MAX_UPLOAD_BYTES
   const canSubmit = canCollaborate && !canManage && !assignedElsewhere && milestone.status !== 'done' && !blocked && mine?.status !== 'submitted'
-  const canStart = canCollaborate && !assignedElsewhere && milestone.status === 'todo' && !blocked
+  const canStart = canCollaborate && !canManage && !assignedElsewhere && milestone.status === 'todo' && !blocked
   const acceptedTypes = 'image/*,video/*,audio/*,.pdf,.txt,.md,.csv,.json,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip'
   const displayedSubmissions = [...submissions].sort((first, second) => second.submittedAt - first.submittedAt || second.revision - first.revision)
 
@@ -116,6 +117,11 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
     const tooLarge = files.find(file => file.size > maximumSize)
     if (tooLarge) {
       a.toast('“' + tooLarge.name + '” is too large. The limit is ' + fileSize(maximumSize) + ' per file.')
+      return
+    }
+    if (a.backend?.auth.mode === 'local'
+      && attachments.reduce((sum, item) => sum + item.size, 0) + files.reduce((sum, item) => sum + item.size, 0) > MAX_LOCAL_TOTAL_BYTES) {
+      a.toast('Local mode has a 700 KB total attachment limit to protect browser storage. Configure Supabase for larger files.')
       return
     }
     setUploading(true)
