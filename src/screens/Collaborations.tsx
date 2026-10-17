@@ -350,11 +350,11 @@ function Workspace() {
         {canManage && <section className="glass pad ql-ai-plan">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <span className="chip"><QuorlythGlyph name="insight" size={14} />Quorlyth Signal Engine</span>
+              <span className="chip"><QuorlythGlyph name="plan" size={14} />Quorlyth Signal Engine</span>
               <h3 style={{ fontSize: 19, marginTop: 12 }}>Turn discussion into a buildable plan</h3>
               <p className="mut" style={{ marginTop: 6 }}>AI filters duplicate or off-topic discussion, identifies actionable signals, and drafts milestones with clear definitions of done. Review everything before it changes your workspace.</p>
             </div>
-            <button className="btn p" disabled={aiBusy || applyingPlan} onClick={organizeWithAI}><QuorlythGlyph name="spark" size={15} />{aiBusy ? 'Organizing signals…' : aiPlan ? 'Regenerate plan' : 'Organize with AI'}</button>
+            <button className="btn p" disabled={aiBusy || applyingPlan} onClick={organizeWithAI}><QuorlythGlyph name="idea" size={15} />{aiBusy ? 'Organizing signals…' : aiPlan ? 'Regenerate plan' : 'Organize with AI'}</button>
           </div>
           {aiPlan && <div style={{ display: 'grid', gap: 14, marginTop: 18 }}>
             <div className="grid i2" style={{ gap: 10 }}>
