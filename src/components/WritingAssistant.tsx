@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { askJson, streamChat } from '../ai/client'
 
 type Point = { x: number; y: number }
@@ -21,6 +22,7 @@ export function WritingAssistant() {
   const [target, setTarget] = useState<HTMLTextAreaElement | null>(null)
   const [anchor, setAnchor] = useState<Point>({ x: 0, y: 0 })
   const [panel, setPanel] = useState<Point>({ x: 12, y: 12 })
+  const [anchorVisible, setAnchorVisible] = useState(false)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<WritingMode>(MODES[0])
@@ -30,16 +32,85 @@ export function WritingAssistant() {
   const generation = useRef<AbortController | null>(null)
 
   useEffect(() => {
+    let frame = 0
     const position = (el: HTMLTextAreaElement | null) => {
-      if (!el?.isConnected) return
+      if (!el?.isConnected) {
+        setAnchorVisible(false)
+        return
+      }
+
       const rect = el.getBoundingClientRect()
-      setAnchor({
-        x: Math.max(8, Math.min(window.innerWidth - 48, rect.right - 42)),
-        y: Math.max(8, Math.min(window.innerHeight - 48, rect.bottom - 45)),
-      })
-      setPanel({
-        x: Math.max(12, Math.min(window.innerWidth - 348, rect.right - 336)),
-        y: rect.top > 390 ? Math.max(12, rect.top - 374) : Math.max(12, Math.min(window.innerHeight - 370, rect.bottom + 10)),
+      if (rect.width < 44 || rect.height < 44) {
+        setAnchorVisible(false)
+        return
+      }
+
+      // Intersect the textarea with the viewport and each ancestor that clips
+      // content. The robot must follow the visible typing area, never stick to
+      // a viewport edge after its field has scrolled out of view.
+      let clipLeft = 0
+      let clipTop = 0
+      let clipRight = window.innerWidth
+      let clipBottom = window.innerHeight
+      for (let parent = el.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
+        const style = window.getComputedStyle(parent)
+        if (style.display === 'none' || style.visibility === 'hidden' || parent.hasAttribute('hidden')) {
+          setAnchorVisible(false)
+          setOpen(current => current ? false : current)
+          generation.current?.abort()
+          generation.current = null
+          setLoading(false)
+          return
+        }
+        const parentRect = parent.getBoundingClientRect()
+        if (style.overflowX !== 'visible') {
+          clipLeft = Math.max(clipLeft, parentRect.left)
+          clipRight = Math.min(clipRight, parentRect.right)
+        }
+        if (style.overflowY !== 'visible') {
+          clipTop = Math.max(clipTop, parentRect.top)
+          clipBottom = Math.min(clipBottom, parentRect.bottom)
+        }
+      }
+
+      const left = Math.max(8, rect.left, clipLeft)
+      const right = Math.min(window.innerWidth - 8, rect.right, clipRight)
+      const top = Math.max(8, rect.top, clipTop)
+      const bottom = Math.min(window.innerHeight - 8, rect.bottom, clipBottom)
+      if (right - left < 44 || bottom - top < 44) {
+        setAnchorVisible(false)
+        setOpen(current => current ? false : current)
+        generation.current?.abort()
+        generation.current = null
+        setLoading(false)
+        return
+      }
+
+      setAnchorVisible(true)
+      const nextAnchor = {
+        x: Math.round(Math.max(left, right - 42)),
+        y: Math.round(Math.max(top, bottom - 42)),
+      }
+      setAnchor(current => current.x === nextAnchor.x && current.y === nextAnchor.y ? current : nextAnchor)
+
+      // Keep the tool close to this textarea while fitting the panel inside the
+      // viewport. Recalculate after scroll, resize, and textarea growth.
+      const panelWidth = Math.min(336, Math.max(0, window.innerWidth - 24))
+      const panelHeight = Math.min(420, Math.max(0, window.innerHeight * 0.76))
+      const above = top - 12 >= Math.min(panelHeight, 280)
+      const preferredTop = above ? top - panelHeight - 10 : bottom + 10
+      const nextPanel = {
+        x: Math.round(Math.max(12, Math.min(window.innerWidth - panelWidth - 12, right - panelWidth))),
+        y: Math.round(Math.max(12, Math.min(window.innerHeight - panelHeight - 12, preferredTop))),
+      }
+      setPanel(current => current.x === nextPanel.x && current.y === nextPanel.y ? current : nextPanel)
+    }
+
+    const schedulePosition = () => {
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        position(target)
       })
     }
     const onFocusIn = (event: FocusEvent) => {
@@ -55,30 +126,51 @@ export function WritingAssistant() {
         setError('')
         position(node)
       } else {
+        generation.current?.abort()
+        generation.current = null
         setLoading(false)
         setTarget(null)
+        setAnchorVisible(false)
         setOpen(false)
         setPreview('')
         setOptions([])
+        setError('')
       }
     }
-    const onMove = () => position(target)
     const observer = new MutationObserver(() => {
       if (target && !target.isConnected) {
         setTarget(null)
+        setAnchorVisible(false)
         setOpen(false)
+        generation.current?.abort()
+        generation.current = null
       }
     })
+    const resizeObserver = target ? new ResizeObserver(schedulePosition) : null
+
     document.addEventListener('focusin', onFocusIn, true)
-    window.addEventListener('resize', onMove)
-    window.addEventListener('scroll', onMove, true)
+    window.addEventListener('resize', schedulePosition)
+    window.addEventListener('scroll', schedulePosition, true)
+    window.visualViewport?.addEventListener('resize', schedulePosition)
+    window.visualViewport?.addEventListener('scroll', schedulePosition)
+    target?.addEventListener('input', schedulePosition)
+    target?.addEventListener('change', schedulePosition)
+    if (target) resizeObserver?.observe(target)
     if (document.body) observer.observe(document.body, { childList: true, subtree: true })
+    schedulePosition()
+
     return () => {
+      if (frame) window.cancelAnimationFrame(frame)
       generation.current?.abort()
       generation.current = null
       document.removeEventListener('focusin', onFocusIn, true)
-      window.removeEventListener('resize', onMove)
-      window.removeEventListener('scroll', onMove, true)
+      window.removeEventListener('resize', schedulePosition)
+      window.removeEventListener('scroll', schedulePosition, true)
+      window.visualViewport?.removeEventListener('resize', schedulePosition)
+      window.visualViewport?.removeEventListener('scroll', schedulePosition)
+      target?.removeEventListener('input', schedulePosition)
+      target?.removeEventListener('change', schedulePosition)
+      resizeObserver?.disconnect()
       observer.disconnect()
     }
   }, [target])
@@ -177,9 +269,9 @@ export function WritingAssistant() {
     applyText(preview)
   }
 
-  if (!target?.isConnected) return null
+  if (!target?.isConnected || !anchorVisible) return null
 
-  return (
+  return createPortal((
     <>
       <div className="q-writing-assistant-anchor q-writing-assistant-ui" style={{ left: anchor.x, top: anchor.y }}>
         <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else { generation.current?.abort(); setLoading(false); setOptions([]) } }}>
@@ -202,5 +294,5 @@ export function WritingAssistant() {
         <footer className="q-writing-panel-footer"><span>{loading ? 'Preparing a focused suggestion' : options.length ? 'Choose one to use it' : preview ? 'Review before applying' : 'AI help adapts to this field'}</span>{preview && !loading && <><button type="button" className="q-writing-secondary" onClick={() => { setPreview(''); setError('') }}>Discard</button><button type="button" className="q-writing-apply" onClick={applyPreview}>Apply text</button></>}</footer>
       </section>}
     </>
-  )
+  ), document.body)
 }
