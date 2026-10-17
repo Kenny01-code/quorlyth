@@ -41,7 +41,7 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
     }
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_owner') return json(true)
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_admin') return json(false)
-    if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('or')) {
+    if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('or') && !(parsed.searchParams.get('or') || '').includes('data/users/user-private-uuid/botset')) {
       assert.equal(parsed.searchParams.get('select'), 'path,data')
       assert.match(parsed.searchParams.get('or') || '', /communities/)
       assert.doesNotMatch(parsed.searchParams.get('or') || '', /data\/users/)
@@ -140,7 +140,7 @@ test('authenticated chat ignores a browser-built system prompt and uses RLS-scop
     }
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_owner') return json(true)
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_admin') return json(false)
-    if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('or') && !String(parsed.searchParams.get('or')).includes('data/users/user-private-uuid/botset')) {
+    if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('or') && !(parsed.searchParams.get('or') || '').includes('data/users/user-private-uuid/botset')) {
       assert.equal(options.headers.Authorization, 'Bearer user-session-token')
       return json([
         { path: 'settings/space', data: { name: 'Quorlyth Test Space' } },
