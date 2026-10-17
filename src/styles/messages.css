@@ -3349,3 +3349,12 @@ main:has(.chat-page) > .on { width: 100%; min-width: 0; }
   .chat-page .chat-person { transition: none !important; }
   .chat-page .chat-send::before { display: none; }
 }
+
+/* Context-aware AI suggestions in every textarea, styled as compact liquid-glass choices. */
+.q-writing-options { display:grid; gap:7px; min-width:0; }
+.q-writing-option { display:grid; grid-template-columns:26px minmax(0,1fr) auto; align-items:start; gap:8px; width:100%; padding:10px; border:1px solid rgba(255,255,255,.12); border-radius:12px; background:linear-gradient(135deg,rgba(255,255,255,.055),rgba(255,255,255,.018)); color:rgba(255,255,255,.87); text-align:left; cursor:pointer; transition:background .16s ease,border-color .16s ease,transform .16s ease; }
+.q-writing-option:hover { border-color:rgba(255,255,255,.3); background:rgba(255,255,255,.09); transform:translateY(-1px); }
+.q-writing-option-number { display:grid; place-items:center; width:24px; height:24px; border:1px solid rgba(255,255,255,.13); border-radius:8px; color:rgba(255,255,255,.48); font-size:9px; }
+.q-writing-option-text { min-width:0; font-size:11px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+.q-writing-option-use { align-self:center; padding:4px 7px; border:1px solid rgba(255,255,255,.16); border-radius:7px; color:rgba(255,255,255,.76); font-size:9px; }
+@media (prefers-reduced-motion: reduce) { .q-writing-option { transition:none !important; } .q-writing-option:hover { transform:none; } }
