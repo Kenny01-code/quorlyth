@@ -19,7 +19,7 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/projects', label: 'Projects', icon: 'insight' },
   { path: '/collaborations', label: 'Collaborations', icon: 'collab' },
   { path: '/promote', label: 'Promote', icon: 'promote', owner: true },
-  { path: '/settings', label: 'Settings', icon: 'settings', platformAdminOnly: true },
+  { path: '/settings', label: 'Settings', icon: 'settings' },
   { path: '/me', label: 'My space', icon: 'member' },
   { path: '/database', label: 'Database', icon: 'db', owner: true, platformOwnerOnly: true },
 ]

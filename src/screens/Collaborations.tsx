@@ -6,6 +6,7 @@ import { MilestoneBoard } from '../components/MilestoneBoard'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp, useComments } from '../data/AppProvider'
 import { when } from '../lib/util'
+import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
 
 
 const dateInput = (timestamp?: number | null) => {
@@ -214,6 +215,9 @@ function Workspace() {
   const [workspaceSummary, setWorkspaceSummary] = useState('Collaboration workspace ready. Add a project plan and milestones to coordinate the work.')
   const [projectDueDate, setProjectDueDate] = useState('')
   const [busy, setBusy] = useState(false)
+  const [aiPlan, setAiPlan] = useState<AIProjectPlan | null>(null)
+  const [aiBusy, setAiBusy] = useState(false)
+  const [applyingPlan, setApplyingPlan] = useState(false)
   const idea = a.data.ideas.find(item => item.id === id)
   const project = a.data.projects[id]
   useEffect(() => setProjectDueDate(dateInput(project?.dueAt)), [project?.dueAt])
@@ -262,6 +266,54 @@ function Workspace() {
     </div>
   }
 
+  async function organizeWithAI() {
+    if (!idea || !community || !canManage) return
+    setAiBusy(true)
+    try {
+      const plan = await generateProjectPlan({
+        idea: { id: idea.id, title: idea.title, body: idea.body, tags: idea.tags },
+        community: { name: community.name, purpose: community.purpose, rules: community.rules },
+        comments: comments.map(comment => ({ id: comment.id, authorId: comment.authorId, text: comment.text, at: comment.at })),
+        team: workspaceTeamIds.map(memberId => ({ id: memberId, name: a.nm(memberId) })),
+      })
+      setAiPlan(plan)
+      a.toast('AI project plan is ready to review.')
+    } catch (error: any) {
+      a.toast(error?.message || 'Quorlyth could not organize this discussion. Please try again.')
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  async function applyAIPlan() {
+    if (!aiPlan || !idea || !canManage || !project) return
+    setApplyingPlan(true)
+    try {
+      if (aiPlan.project_summary && aiPlan.project_summary !== project.summary) {
+        const updated = await a.updateProject(id, { summary: aiPlan.project_summary })
+        if (!updated) throw new Error('The project brief could not be updated. Your milestone plan is still available to review.')
+      }
+      const existingTitles = new Set(milestones.map(milestone => milestone.title.trim().toLowerCase()))
+      let created = 0
+      for (const item of aiPlan.milestones) {
+        if (existingTitles.has(item.title.trim().toLowerCase())) continue
+        const ok = await a.addMilestone(id, item.title, item.description, {
+          priority: item.priority,
+          acceptanceCriteria: item.definition_of_done,
+        })
+        if (!ok) throw new Error('Some milestones could not be saved. Review the workspace before retrying; existing milestone titles will be skipped.')
+        existingTitles.add(item.title.trim().toLowerCase())
+        created++
+      }
+      setAiPlan(null)
+      a.toast(`AI plan applied. Added ${created} new milestone${created === 1 ? '' : 's'}.`)
+    } catch (error: any) {
+      a.toast(error?.message || 'The AI plan could not be applied completely.')
+    } finally {
+      setApplyingPlan(false)
+    }
+  }
+
   async function postReply(event: FormEvent) {
     event.preventDefault()
     if (!reply.trim()) return
@@ -295,6 +347,37 @@ function Workspace() {
             <div className="ql-project-progress__track"><i style={{ width: progress + '%' }} /></div>
           </div>
         </section>
+        {canManage && <section className="glass pad ql-ai-plan">
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <span className="chip"><QuorlythGlyph name="plan" size={14} />Quorlyth Signal Engine</span>
+              <h3 style={{ fontSize: 19, marginTop: 12 }}>Turn discussion into a buildable plan</h3>
+              <p className="mut" style={{ marginTop: 6 }}>AI filters duplicate or off-topic discussion, identifies actionable signals, and drafts milestones with clear definitions of done. Review everything before it changes your workspace.</p>
+            </div>
+            <button className="btn p" disabled={aiBusy || applyingPlan} onClick={organizeWithAI}><QuorlythGlyph name="idea" size={15} />{aiBusy ? 'Organizing signals…' : aiPlan ? 'Regenerate plan' : 'Organize with AI'}</button>
+          </div>
+          {aiPlan && <div style={{ display: 'grid', gap: 14, marginTop: 18 }}>
+            <div className="grid i2" style={{ gap: 10 }}>
+              <div className="glass pad"><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Estimated signal score</p><strong style={{ fontSize: 28, fontWeight: 400 }}>{aiPlan.signal_score}<span className="dim" style={{ fontSize: 14 }}>/100</span></strong><p className="mut" style={{ fontSize: 12 }}>AI estimate of clarity, relevance, and actionability</p></div>
+              <div className="glass pad"><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Estimated noise reduction</p><strong style={{ fontSize: 28, fontWeight: 400 }}>{aiPlan.noise_reduction_ratio}<span className="dim" style={{ fontSize: 14 }}>%</span></strong><p className="mut" style={{ fontSize: 12 }}>AI estimate for the supplied discussion only, not a measured platform-wide metric</p></div>
+            </div>
+            <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Suggested project</p><h4 style={{ fontSize: 17, marginTop: 4 }}>{aiPlan.project_title}</h4><p className="mut" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p></div>
+            <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Why these signals</p><p className="mut" style={{ marginTop: 5 }}>{aiPlan.evidence_summary || 'Review the source discussion alongside the proposed milestones.'}</p></div>
+            {aiPlan.lead_collaborator && <p className="mut">Suggested lead collaborator: <strong>{a.nm(aiPlan.lead_collaborator)}</strong> <span className="dim">(confirm with the team before assigning)</span></p>}
+            {!!aiPlan.definition_of_done.length && <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Project definition of done</p><ul style={{ marginTop: 7, paddingLeft: 20 }}>{aiPlan.definition_of_done.map((item, index) => <li key={index} className="mut" style={{ marginTop: 5 }}>{item}</li>)}</ul></div>}
+            <div style={{ display: 'grid', gap: 8 }}>
+              <p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Draft milestones · {aiPlan.milestones.length}</p>
+              {aiPlan.milestones.map((item, index) => <div key={item.title + index} className="glass pad" style={{ display: 'grid', gap: 5 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><span className="chip">{String(index + 1).padStart(2, '0')}</span><strong>{item.title}</strong><span className="chip">{item.priority}</span></div>
+                <p className="mut">{item.description}</p>
+                <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p>
+              </div>)}
+            </div>
+            {!!aiPlan.filtered_out.length && <details><summary className="mut" style={{ cursor: 'pointer' }}>View filtered items ({aiPlan.filtered_out.length})</summary><div style={{ display: 'grid', gap: 8, marginTop: 10 }}>{aiPlan.filtered_out.map((item, index) => <div key={item.item + index} className="glass pad"><strong>{item.item}</strong><p className="mut" style={{ marginTop: 4 }}>{item.reason}</p></div>)}</div></details>}
+            <div className="acts"><button className="btn p" disabled={applyingPlan || aiBusy} onClick={applyAIPlan}><QuorlythGlyph name="check" size={14} />{applyingPlan ? 'Applying plan…' : 'Apply brief and milestones'}</button><button className="btn" disabled={applyingPlan} onClick={() => setAiPlan(null)}>Discard draft</button></div>
+            <p className="dim" style={{ fontSize: 11 }}>AI-generated estimates and plans are suggestions. Check the source evidence and confirm assignments before acting.</p>
+          </div>}
+        </section>}
         <MilestoneBoard idea={idea} projectId={id} projectStatus={project.status} milestones={milestones} teamMemberIds={workspaceTeamIds} canCollaborate={canAccess} canManage={canManage} />
       </div>
       <div style={{ display: 'grid', gap: 14, minWidth: 0 }}>

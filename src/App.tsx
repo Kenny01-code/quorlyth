@@ -43,6 +43,16 @@ function DemoRedirect({ onBeforeRedirect }: { onBeforeRedirect: () => void }) {
   return null
 }
 
+function DelayedRouteLoader() {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    // Keep fast route changes visually quiet; only show the Quorlyth mark if a lazy page is genuinely slow.
+    const timer = window.setTimeout(() => setVisible(true), 700)
+    return () => window.clearTimeout(timer)
+  }, [])
+  return visible ? <QuorlythLoader variant="route" label="Opening page" /> : null
+}
+
 function MissingRoute() {
   const nav = useNavigate()
   return <div className="glass pad" style={{ maxWidth: 560, margin: '48px auto' }}>
@@ -62,10 +72,6 @@ export default function App() {
   // The cinematic intro is opt-in, and the signature loader is reserved for real page-to-page navigation.
   const [intro, setIntro] = useState(false)
   const [replay, setReplay] = useState(0)
-  const [navigationTransition, setNavigationTransition] = useState(false)
-  const [hasNavigated, setHasNavigated] = useState(false)
-  const previousPathname = useRef(loc.pathname)
-  const initialRouteSettled = useRef(false)
   const skipNextPageTransition = useRef(false)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
   // Download the full bot experience only after the user opens its lightweight launcher.
@@ -80,6 +86,9 @@ export default function App() {
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
+  useEffect(() => {
+    if (us.st.preferences?.sound !== undefined) setSound(us.st.preferences.sound)
+  }, [a.me?.id, us.st.preferences?.sound])
   const unread = notifs.filter(n => n.unread).length
   const pendingRequests = a.platformAdmin ? a.data.requests.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at }).length : 0
   const unreadRequests = notifs.filter(n => n.kind === 'settings' && n.unread).length
@@ -133,33 +142,6 @@ export default function App() {
 
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
 
-  // Show the signature animation only after the app has settled on its initial route.
-  // A short transition covers fast page swaps; Suspense keeps the compact mark visible
-  // for longer lazy-page imports without forcing the destination to wait for animation.
-  useEffect(() => {
-    if (!a.ready || a.startupError) return
-
-    if (!initialRouteSettled.current) {
-      initialRouteSettled.current = true
-      previousPathname.current = loc.pathname
-      if (loc.pathname === '/demo') skipNextPageTransition.current = true
-      return
-    }
-
-    if (previousPathname.current === loc.pathname) return
-    previousPathname.current = loc.pathname
-
-    if (skipNextPageTransition.current) {
-      skipNextPageTransition.current = false
-      return
-    }
-
-    setHasNavigated(true)
-    setNavigationTransition(true)
-    const timer = window.setTimeout(() => setNavigationTransition(false), 460)
-    return () => window.clearTimeout(timer)
-  }, [a.ready, a.startupError, loc.pathname])
-
   useEffect(() => {
     if (!a.me || (loc.pathname === '/signin' && new URLSearchParams(loc.search).get('recovery') === '1')) return
     const dest = sessionStorage.getItem('qreturn')
@@ -206,9 +188,9 @@ export default function App() {
       && n.at <= now + 30_000
     )
     if (fresh.length) {
-      if (sound) chime()
+      if (sound && us.st.preferences?.sound !== false) chime()
       a.toast(fresh.length === 1 ? fresh[0].text : `${fresh.length} new Quorlyth notifications`)
-      if (document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      if (us.st.preferences?.desktopNotifications !== false && document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         fresh.forEach(n => {
           try { new Notification('Quorlyth', { body: n.text, tag: n.key }) } catch {}
         })
@@ -308,13 +290,12 @@ export default function App() {
   return (
     <>
       <div id="sp" />
-      {navigationTransition && <QuorlythLoader variant="screen" label="Opening page" />}
       {intro && <Intro replay={replay} onDone={() => { setIntro(false); sessionStorage.setItem('qintro', '1') }} />}
       <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main">
         <section className="on">
-          <Suspense fallback={hasNavigated ? <QuorlythLoader variant="route" label="Opening page" /> : null}>
+          <Suspense fallback={<DelayedRouteLoader />}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/demo" element={<DemoRedirect onBeforeRedirect={() => { skipNextPageTransition.current = true }} />} />
@@ -343,7 +324,7 @@ export default function App() {
           </Suspense>
         </section>
       </main>
-      {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
+      {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
       {!botMounted ? <>
