@@ -1268,14 +1268,14 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                         const speechIcon = activeSpeech
                           ? speechState === 'paused' ? 'play' : speechState === 'loading' ? 'loader-circle' : 'pause'
                           : 'play'
-                        const speechLabel = activeSpeech
+                        const speechLabel = (m as any).live ? 'Reply is still being prepared' : activeSpeech
                           ? speechState === 'paused' ? 'Resume voice playback' : speechState === 'loading' ? 'Cancel voice preparation' : 'Pause voice playback'
                           : 'Play reply aloud'
                         return (
                           <div key={i} className="am ma"><div className="mt">{m.t}{(m as any).live && <span className="btyping" aria-label="QuorlythBot is typing"><i /><i /><i /></span>}</div>
                             {m.btns?.length ? <div style={{ marginTop: 8 }}>{m.btns.map((b, k) => <button key={k} className="chip on" onClick={() => act(b)}>{b.l}</button>)}</div> : null}
                             <div className="mact">
-                              <button aria-label={speechLabel} title={speechLabel} aria-pressed={activeSpeech && speechState === 'playing'} onClick={() => toggleReplySpeech(speechKey, m.t)}><Icon name={speechIcon} size={14} /></button>
+                              <button disabled={!!(m as any).live} aria-label={speechLabel} title={speechLabel} aria-pressed={activeSpeech && speechState === 'playing'} onClick={() => toggleReplySpeech(speechKey, m.t)}><Icon name={speechIcon} size={14} /></button>
                               {activeSpeech && <button aria-label="Stop voice playback" title="Stop voice playback" onClick={stopVoice}><Icon name="stop" size={14} /></button>}
                               <button aria-label="Copy" title="Copy reply" onClick={() => navigator.clipboard.writeText(m.t).then(() => a.toast('Copied'))}><Icon name="copy" size={14} /></button>
                               <button aria-label="Save" title="Save reply" onClick={() => { bd.put('l_' + slug(), { title: m.t.slice(0, 48), text: m.t, at: Date.now() }); a.toast('Saved to your library') }}><Icon name="star" size={14} /></button>
