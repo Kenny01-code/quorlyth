@@ -38,7 +38,8 @@ function DemoRedirect({ onBeforeRedirect }: { onBeforeRedirect: () => void }) {
     if (!a.demo) a.enterDemo()
     onBeforeRedirect()
     nav('/dashboard', { replace: true })
-  }, [a.demo, a.enterDemo, nav, onBeforeRedirect])
+  // The callback only writes to a stable ref; it intentionally doesn't trigger another redirect on parent rerenders.
+  }, [a.demo, a.enterDemo, nav])
   return null
 }
 
