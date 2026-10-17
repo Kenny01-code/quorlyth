@@ -35,7 +35,14 @@ export async function generateProjectPlan(input: {
   team: Array<{ id: string; name: string }>
   signal?: AbortSignal
 }): Promise<AIProjectPlan> {
-  const result = await askJson<AIProjectPlan>({
+  const result = await askJson<AIProjectPlan>(JSON.stringify({
+      task: 'Organize community signal into a collaboration-ready project plan.',
+      community: input.community,
+      source_idea: input.idea,
+      discussion: input.comments.slice(-40).map(comment => ({ id: comment.id, authorId: comment.authorId, text: comment.text.slice(0, 800), at: comment.at })),
+      eligible_team_members: input.team,
+      constraints: { maxMilestones: 7, minMilestones: 3, maxFilteredOut: 12, outputLocale: 'en', noUnverifiedDemandClaims: true },
+    }), {
     system: [
       'You are Quorlyth Signal Engine, an evidence-first community signal analyst and project planner.',
       'Transform raw fan/community discussion into a practical collaboration plan without inventing facts.',
@@ -50,28 +57,9 @@ export async function generateProjectPlan(input: {
       'Return valid JSON only, with exactly these keys: project_title, project_summary, lead_collaborator, milestones, definition_of_done, signal_score, noise_reduction_ratio, evidence_summary, filtered_out.',
       'milestones must contain objects with title, description, priority (low|normal|high|critical), definition_of_done.',
     ].join(' '),
-    prompt: JSON.stringify({
-      task: 'Organize community signal into a collaboration-ready project plan.',
-      community: input.community,
-      source_idea: input.idea,
-      discussion: input.comments.slice(-40).map(comment => ({
-        id: comment.id,
-        authorId: comment.authorId,
-        text: comment.text.slice(0, 800),
-        at: comment.at,
-      })),
-      eligible_team_members: input.team,
-      constraints: {
-        maxMilestones: 7,
-        minMilestones: 3,
-        maxFilteredOut: 12,
-        outputLocale: 'en',
-        noUnverifiedDemandClaims: true,
-      },
-    }),
     tier: 'smart',
     signal: input.signal,
-  } as any)
+  })
 
   const allowedPriorities = new Set(['low', 'normal', 'high', 'critical'])
   const teamIdsAndNames = new Set(input.team.flatMap(member => [member.id, member.name]))
