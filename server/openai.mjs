@@ -675,21 +675,39 @@ function speechStyleInstructions(value) {
 
 /** Natural voice for replies and previews. Provider credentials remain server-side. */
 const ELEVENLABS_DEFAULT_VOICES = {
-  // Official ElevenLabs premade voices. These IDs are only used when the user
-  // has explicitly configured ELEVENLABS_API_KEY; provider calls stay server-side.
-  marin: '21m00Tcm4TlvDq8ikWAM',   // Rachel — warm American female
-  sage: 'EXAVITQu4vr4xnSDxMaL',    // Bella — clear female
-  shimmer: 'MF3mGyEYCl7XYWbV9V6O', // Elli — expressive female
-  cedar: 'pNInz6obpgDQGcFmaJgB',   // Adam — deep male
-  echo: 'ErXwobaYiN019PkySvjV',    // Antoni — smooth male
-  ballad: 'TxGEqnHWrfWFTfGW9XjX',  // Josh — relaxed male
-  coral: '21m00Tcm4TlvDq8ikWAM',
-  alloy: '21m00Tcm4TlvDq8ikWAM',
-  ash: 'pNInz6obpgDQGcFmaJgB',
-  nova: 'MF3mGyEYCl7XYWbV9V6O',
-  onyx: 'pNInz6obpgDQGcFmaJgB',
-  fable: 'ErXwobaYiN019PkySvjV',
-  verse: 'EXAVITQu4vr4xnSDxMaL',
+  // Current ElevenLabs premade voice IDs, grouped by trained accent.
+  american: {
+    marin: '9BWtsMINqrJLrRacOk9x',   // Aria — warm American female
+    sage: 'EXAVITQu4vr4xnSDxMaL',    // Sarah — calm female
+    shimmer: 'cgSgspJ2msm6clMCkdW9', // Jessica — expressive female
+    cedar: 'pNInz6obpgDQGcFmaJgB',   // Adam — deep male
+    echo: 'CwhRBWXzGAHq8TQ4Fs17',    // Roger — confident male
+    ballad: 'nPczCjzI2devNBz1zQrb',  // Brian — relaxed male
+    coral: '9BWtsMINqrJLrRacOk9x',
+    alloy: 'EXAVITQu4vr4xnSDxMaL',
+    ash: 'pNInz6obpgDQGcFmaJgB',
+    nova: 'cgSgspJ2msm6clMCkdW9',
+    onyx: 'pNInz6obpgDQGcFmaJgB',
+    fable: 'CwhRBWXzGAHq8TQ4Fs17',
+    verse: 'EXAVITQu4vr4xnSDxMaL',
+  },
+  // The accent is embodied in these voices (the API does not accept an
+  // independent accent steering prompt for ordinary ElevenLabs TTS).
+  british: {
+    marin: 'Xb7hH8MSUJpSbSDYk0k2',   // Alice — British female
+    sage: 'pFZP5JQG7iQjIQuC4Bku',    // Lily — British female
+    shimmer: 'Xb7hH8MSUJpSbSDYk0k2',
+    cedar: 'onwK4e9ZLuTAKqWW03F9',   // Daniel — British male
+    echo: 'JBFqnCBsd6RMkjVDRZzb',    // George — British male
+    ballad: 'N2lVS1w4EtoT3dr4eOWO',  // Callum — British/Scottish male
+    coral: 'Xb7hH8MSUJpSbSDYk0k2',
+    alloy: 'Xb7hH8MSUJpSbSDYk0k2',
+    ash: 'onwK4e9ZLuTAKqWW03F9',
+    nova: 'pFZP5JQG7iQjIQuC4Bku',
+    onyx: 'onwK4e9ZLuTAKqWW03F9',
+    fable: 'JBFqnCBsd6RMkjVDRZzb',
+    verse: 'pFZP5JQG7iQjIQuC4Bku',
+  },
 }
 const ELEVENLABS_PERSONAS = {
   marin: 'ARIA',
@@ -707,13 +725,12 @@ function elevenLabsVoiceId(voice, accent) {
   const accentOverride = process.env[`ELEVENLABS_VOICE_${accentKey}_ID`]?.trim()
   if (personaOverride || accentOverride) return personaOverride || accentOverride
 
-  // Accent is determined by the actual trained voice in ElevenLabs, not a
-  // client-side language label. Don't silently substitute a US voice for a
-  // Nigerian/British selection; let OpenAI's accent-steered model handle those
-  // until a real accent-matched ElevenLabs voice ID is configured.
-  if (accent === 'nigerian' || accent === 'british') return null
+  // Nigerian English is not reliably represented by an American premade voice.
+  // Require an actual Nigeria-matched voice from the user's ElevenLabs account.
+  if (accent === 'nigerian') return null
   const genericPersonaOverride = persona && process.env[`ELEVENLABS_VOICE_${persona}_ID`]?.trim()
-  return genericPersonaOverride || ELEVENLABS_DEFAULT_VOICES[voice] || null
+  const accentVoices = ELEVENLABS_DEFAULT_VOICES[accent] || ELEVENLABS_DEFAULT_VOICES.american
+  return genericPersonaOverride || accentVoices[voice] || null
 }
 
 function audioResponse(res, audio, provider) {
