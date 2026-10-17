@@ -3,6 +3,7 @@ import { Av } from './ui'
 import { QuorlythGlyph } from './QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, MilestonePriority } from '../lib/types'
+import { MilestoneWorkPanel } from './MilestoneWorkPanel'
 
 type FilterKey = 'all' | 'open' | 'mine' | 'overdue' | 'blocked'
 type MilestoneDraft = {
@@ -49,13 +50,14 @@ const dateLabel = (timestamp?: number | null) => timestamp
   : ''
 const isOverdue = (milestone: Milestone) => !!milestone.dueAt && milestone.status !== 'done' && milestone.dueAt < Date.now()
 
-export function MilestoneBoard({ idea, projectId, projectStatus, milestones, teamMemberIds, canCollaborate }: {
+export function MilestoneBoard({ idea, projectId, projectStatus, milestones, teamMemberIds, canCollaborate, canManage }: {
   idea: Idea
   projectId: string
   projectStatus: 'active' | 'completed'
   milestones: Milestone[]
   teamMemberIds: string[]
   canCollaborate: boolean
+  canManage: boolean
 }) {
   const a = useApp()
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -64,7 +66,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   const [draft, setDraft] = useState<MilestoneDraft>(blankDraft)
   const [busyId, setBusyId] = useState('')
   const active = projectStatus === 'active'
-  const canEdit = canCollaborate && active
+  const canEdit = canManage && active
   const completed = milestones.filter(item => item.status === 'done').length
   const blocked = milestones.filter(item => item.blocked && item.status !== 'done').length
   const overdue = milestones.filter(isOverdue).length
@@ -227,6 +229,13 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                 {milestone.status === 'todo' && <button type="button" className="ql-primary-action" disabled={busyId === milestone.id || !!milestone.blocked} onClick={() => void changeStatus(milestone, 'done')}><QuorlythGlyph name="complete" size={14} />Complete outcome</button>}
                 {milestone.status === 'done' && <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="progress" size={14} />Reopen</button>}
               </div>}
+              <MilestoneWorkPanel
+                idea={idea}
+                milestone={milestone}
+                submissions={a.data.workSubmissions.filter(item => item.milestoneId === milestone.id)}
+                canManage={canManage}
+                canCollaborate={canCollaborate && active}
+              />
             </div>
           </article>
         })}
