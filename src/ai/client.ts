@@ -240,7 +240,24 @@ export async function startRealtime(opts: {
   }
 }
 
-/** Uses the selected Studio persona through server-side TTS. Device voice fallback is opt-in only. */
+// Voice playback is exclusive across QuorlythBot, Live Talk, and Voice Studio previews.
+// Aborting an older request before it reaches playback prevents delayed clips from overlapping.
+let speechRun = 0
+let activeSpeechController: AbortController | null = null
+let activeSpeechPlayback: SpeechPlayback | null = null
+
+export function stopSpeechPlayback(): void {
+  speechRun += 1
+  const controller = activeSpeechController
+  const playback = activeSpeechPlayback
+  activeSpeechController = null
+  activeSpeechPlayback = null
+  controller?.abort()
+  playback?.stop()
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel()
+}
+
+/** Uses the selected Studio persona through server-side TTS. Only one speech run may play at a time. */
 export async function speakText(
   text: string,
   voice: string,
@@ -249,102 +266,184 @@ export async function speakText(
   options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
-  const signal = options.signal
   const source = text.trim().slice(0, 1500)
   if (!source) throw new Error('There is no text to speak.')
+  if (options.signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
 
-  let response: Response | null = null
+  // A single shared owner avoids duplicate audio when a message, live response,
+  // and voice preview are triggered close together.
+  stopSpeechPlayback()
+  const run = speechRun
+  const controller = new AbortController()
+  const externalSignal = options.signal
+  const abortFromCaller = () => {
+    if (activeSpeechController === controller) stopSpeechPlayback()
+    else controller.abort()
+  }
+  externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
+  activeSpeechController = controller
+  const signal = controller.signal
+  let handedOff = false
   let browserFallbackNotified = false
+  let ownedPlayback: SpeechPlayback | null = null
+
+  const isSuperseded = () => signal.aborted || run !== speechRun
+  const assertCurrent = () => {
+    if (isSuperseded()) throw new DOMException('Speech cancelled or replaced by a newer voice request.', 'AbortError')
+  }
+  const releaseOwner = () => {
+    externalSignal?.removeEventListener('abort', abortFromCaller)
+    if (activeSpeechController === controller) activeSpeechController = null
+    if (ownedPlayback && activeSpeechPlayback === ownedPlayback) activeSpeechPlayback = null
+  }
   const notifyBrowserFallback = () => {
     if (browserFallbackNotified) return
     browserFallbackNotified = true
     options.onBrowserFallback?.()
   }
+
   try {
-    response = await fetch('/api/speak', {
-      method: 'POST',
-      signal,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: source, voice, accent }),
-    })
-  } catch (error) {
-    if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
-  }
-
-  if (signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
-
-  if (response?.ok) {
-    const blob = await response.blob()
-    if (signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
-    const url = URL.createObjectURL(blob)
-    const audio = new Audio(url)
-    audio.preload = 'auto'
-    let cleaned = false
-    let started = false
-    const cleanup = () => {
-      if (cleaned) return
-      cleaned = true
-      URL.revokeObjectURL(url)
+    let response: Response | null = null
+    try {
+      response = await fetch('/api/speak', {
+        method: 'POST',
+        signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: source, voice, accent }),
+      })
+    } catch (error) {
+      if (isSuperseded() || (error instanceof Error && error.name === 'AbortError')) throw error
     }
-    const done = () => {
-      if (cleaned) return
-      cleanup()
+
+    assertCurrent()
+
+    if (response?.ok) {
+      const blob = await response.blob()
+      assertCurrent()
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      audio.preload = 'auto'
+      let cleaned = false
+      let finished = false
+      let started = false
+
+      const cleanupUrl = () => {
+        if (cleaned) return
+        cleaned = true
+        URL.revokeObjectURL(url)
+      }
+      const finish = (notify = true) => {
+        if (finished) return
+        finished = true
+        cleanupUrl()
+        signal.removeEventListener('abort', abortAudio)
+        releaseOwner()
+        if (notify) onEnd?.()
+      }
+      const abortAudio = () => {
+        try {
+          audio.pause()
+          audio.currentTime = 0
+          audio.removeAttribute('src')
+          audio.load()
+        } catch { /* Audio may not have entered playback yet. */ }
+        finish()
+      }
+
+      audio.onplay = () => {
+        if (isSuperseded()) {
+          abortAudio()
+          return
+        }
+        started = true
+        onStart?.()
+      }
+      audio.onpause = () => { /* Pausing is a supported user action, not completion. */ }
+      audio.onended = () => finish()
+      audio.onerror = () => { if (started) finish() }
+
+      ownedPlayback = {
+        pause: () => { if (!isSuperseded()) audio.pause() },
+        resume: () => { if (!isSuperseded()) void audio.play().catch(() => finish()) },
+        stop: abortAudio,
+      }
+      activeSpeechPlayback = ownedPlayback
+      signal.addEventListener('abort', abortAudio, { once: true })
+
+      try {
+        await audio.play()
+        assertCurrent()
+        handedOff = true
+        return ownedPlayback
+      } catch (error) {
+        const wasReplaced = isSuperseded() || (error instanceof Error && error.name === 'AbortError')
+        if (started) finish()
+        else {
+          try {
+            audio.pause()
+            audio.removeAttribute('src')
+            audio.load()
+          } catch { /* Ignore cleanup errors before playback. */ }
+          finish(false)
+        }
+        if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
+        if (options.allowBrowserFallback !== true) {
+          throw new Error('The selected QuorlythBot Studio voice could not play. Your written reply is still available; please retry in a moment.')
+        }
+        notifyBrowserFallback()
+        // Restore cancellation wiring if the request falls back to browser TTS.
+        externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
+        activeSpeechController = controller
+        if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
+      }
+    }
+
+    assertCurrent()
+    if (options.allowBrowserFallback !== true) {
+      throw new Error('The selected QuorlythBot Studio voice is temporarily unavailable. Your written reply is still available.')
+    }
+    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+      throw new Error('Natural voice playback is unavailable. Your text response is still available.')
+    }
+
+    notifyBrowserFallback()
+    window.speechSynthesis.cancel()
+    const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
+    const utterance = new SpeechSynthesisUtterance(source.slice(0, 900))
+    utterance.lang = accentLocale(accent)
+    utterance.rate = preset.rate
+    utterance.pitch = preset.pitch
+    utterance.voice = browserVoice(voice, accent)
+    let finished = false
+    const finishNative = () => {
+      if (finished) return
+      finished = true
+      signal.removeEventListener('abort', stopNative)
+      releaseOwner()
       onEnd?.()
     }
-    audio.onplay = () => { started = true; onStart?.() }
-    audio.onpause = () => { /* pause is a supported user action, not completion */ }
-    audio.onended = done
-    audio.onerror = () => { if (started) done() }
-    try {
-      await audio.play()
-      return {
-        pause: () => audio.pause(),
-        resume: () => { void audio.play().catch(() => onEnd?.()) },
-        stop: () => { audio.pause(); audio.currentTime = 0; done() },
-      }
-    } catch (error) {
-      audio.src = ''
-      if (started) done()
-      else cleanup()
-      if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
-      // Never silently replace the user's chosen Studio persona with a device-default voice.
-      if (options.allowBrowserFallback !== true) {
-        throw new Error('The selected QuorlythBot Studio voice could not play. Your written reply is still available; please retry in a moment.')
-      }
-      notifyBrowserFallback()
+    const stopNative = () => {
+      window.speechSynthesis.cancel()
+      finishNative()
     }
-  }
+    utterance.onstart = () => {
+      if (isSuperseded()) stopNative()
+      else onStart?.()
+    }
+    utterance.onend = finishNative
+    utterance.onerror = finishNative
+    signal.addEventListener('abort', stopNative, { once: true })
 
-  if (signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
-  // Device speech is optional only when a caller explicitly opts into it.
-  // QuorlythBot Studio playback defaults to the actual selected server-side voice.
-  if (options.allowBrowserFallback !== true) {
-    throw new Error('The selected QuorlythBot Studio voice is temporarily unavailable. Your written reply is still available.')
-  }
-  if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
-    throw new Error('Natural voice playback is unavailable. Your text response is still available.')
-  }
-
-  notifyBrowserFallback()
-  window.speechSynthesis.cancel()
-  const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
-  const utterance = new SpeechSynthesisUtterance(source.slice(0, 900))
-  utterance.lang = accentLocale(accent)
-  utterance.rate = preset.rate
-  utterance.pitch = preset.pitch
-  utterance.voice = browserVoice(voice, accent)
-  let finished = false
-  const done = () => { if (finished) return; finished = true; onEnd?.() }
-  utterance.onstart = () => onStart?.()
-  utterance.onend = done
-  utterance.onerror = done
-  if (signal) {
-    signal.addEventListener('abort', () => { window.speechSynthesis.cancel(); done() }, { once: true })
-  }
-  window.speechSynthesis.speak(utterance)
-  return {
-    pause: () => window.speechSynthesis.pause(),
-    resume: () => window.speechSynthesis.resume(),
-    stop: () => { window.speechSynthesis.cancel(); done() },
+    ownedPlayback = {
+      pause: () => { if (!isSuperseded()) window.speechSynthesis.pause() },
+      resume: () => { if (!isSuperseded()) window.speechSynthesis.resume() },
+      stop: stopNative,
+    }
+    activeSpeechPlayback = ownedPlayback
+    window.speechSynthesis.speak(utterance)
+    handedOff = true
+    return ownedPlayback
+  } finally {
+    if (!handedOff) releaseOwner()
   }
 }

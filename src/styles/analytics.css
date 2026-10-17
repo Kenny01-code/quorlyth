@@ -49,3 +49,22 @@
  .member-analytics .head{margin-bottom:10px}
  .member-analytics .head .chip{padding:6px 10px}
 }
+
+
+/* Analytics canvases may be wider than the card, but never widen the page itself. */
+.member-analytics .chs {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.member-analytics .chs::-webkit-scrollbar {
+  display: none !important;
+  width: 0;
+  height: 0;
+}

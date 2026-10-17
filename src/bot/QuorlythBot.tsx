@@ -6,7 +6,7 @@ import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { Chat, ChatMsg } from '../lib/types'
 import { cn, slug, when } from '../lib/util'
-import { askJson, speakText, streamChat } from '../ai/client'
+import { askJson, speakText, stopSpeechPlayback, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
 import { Robot, RobotApi } from './Robot'
 import { ChatMenu } from './ChatMenu'
@@ -383,6 +383,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     const playback = audio.current
     audio.current = null
     playback?.stop()
+    stopSpeechPlayback()
     setSpeechMessageKey('')
     setSpeechState('idle')
     robot.current?.talk(false)
@@ -916,6 +917,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     rt.current = null
     audio.current?.stop()
     audio.current = null
+    stopSpeechPlayback()
     try { window.speechSynthesis?.cancel() } catch {}
     setLive(null)
     setCaption('')
@@ -1244,8 +1246,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             <aside className={cn("bs", narrow && "qbot-sidebar-drawer")}>
               <div className="bs-t"><span className="astm2"><Logo size={24} /></span><b className="bwm">{wm('Quorlyth')}</b><button className="bib" aria-label="Close sidebar" onClick={() => setSide(false)}><Icon name="panel" size={18} /></button></div>
               <div className="bs-n">
-                <button className="bsb p" onClick={() => { if (busy) return; setCur(null); setView('chat') }}><Icon name="plus" size={18} />New chat</button>
-                {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
+                <button className="bsb p" onClick={() => { if (busy) return; stopLive(); stopVoice(); setCur(null); setView('chat') }}><Icon name="plus" size={18} />New chat</button>
+                {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
               </div>
               <div className="bs-s"><div className="iw"><Icon name="search" size={18} /><input placeholder="Search chats" aria-label="Search chats" value={q} onChange={e => setQ(e.target.value)} /></div></div>
               <div className="bs-l">
@@ -1258,7 +1260,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                 </>}
               </div>
               <div className="bs-f">
-                <button className={cn('bsb', view === 'settings' && 'on')} onClick={() => { setView('settings'); if (narrow) setSide(false) }}><Icon name="settings" size={18} />Settings</button>
+                <button className={cn('bsb', view === 'settings' && 'on')} onClick={() => { stopLive(); stopVoice(); setView('settings'); if (narrow) setSide(false) }}><Icon name="settings" size={18} />Settings</button>
                 <button className="bsu" onClick={() => { nav('/me'); if (narrow) setSide(false) }}>{a.me ? <Av id={a.me.id} size={34} /> : <Icon name="member" size={18} />}<span><b>{a.me ? a.nm(a.me.id) : 'Visitor'}</b><i>{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Signed out'}</i></span></button>
               </div>
             </aside>

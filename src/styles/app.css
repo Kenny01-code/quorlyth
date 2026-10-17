@@ -2332,3 +2332,40 @@ html {
 @media (prefers-reduced-motion:reduce) {
   html { scroll-behavior:auto; }
 }
+
+
+/* Long analytics charts stay inside their glass cards. The scrollbar remains
+   functional for touch, trackpads, mouse wheels, and keyboard focus without a visible track. */
+.chs {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  max-height: min(68dvh, 720px);
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: auto;
+  margin-top: 18px;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.chs::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.chs:focus-visible {
+  outline: 1px solid rgba(255,255,255,.22);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+.chs svg {
+  display: block;
+  flex: none;
+  max-width: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chs { scroll-behavior: auto; }
+}

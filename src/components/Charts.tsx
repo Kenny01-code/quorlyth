@@ -7,7 +7,8 @@ export const fd = (t: number) => new Date(t).toLocaleDateString(undefined, { mon
 export interface AreaOpts { sm: boolean; pts: boolean; lab: boolean; avg: boolean; ma: boolean; grid: boolean }
 export function AreaChart({ dd, o }: { dd: Daily; o: AreaOpts }) {
   const id = useId().replace(/:/g, '')
-  const v = dd.v, W = 760, H = 300, L = 40, R = 12, T = 18, B = 32, pw = W - L - R, ph = H - T - B
+  // Give long date ranges a wider canvas so points remain readable instead of squeezing together.
+  const v = dd.v, W = Math.max(760, Math.min(1800, v.length * 20 + 60)), H = 300, L = 40, R = 12, T = 18, B = 32, pw = W - L - R, ph = H - T - B
   const mx = Math.max(1, ...v), mr = Math.ceil(mx * 1.15) || 1, n = v.length
   const X = (i: number) => L + (n > 1 ? i / (n - 1) : 0.5) * pw, Y = (y: number) => T + ph - (y / mr) * ph
   const pts = v.map((y, i) => [X(i), Y(y)])
@@ -21,7 +22,7 @@ export function AreaChart({ dd, o }: { dd: Daily; o: AreaOpts }) {
   const avg = v.reduce((x, y) => x + y, 0) / (n || 1)
   const ma = v.map((_, i) => { const w = v.slice(Math.max(0, i - 6), i + 1); return [X(i), Y(w.reduce((x, y) => x + y, 0) / w.length)] })
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 520, height: 'auto', display: 'block' }} role="img" aria-label="Ideas per day">
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: W, minWidth: W, maxWidth: 'none', height: 'auto', display: 'block' }} role="img" aria-label={`Ideas per day over ${n} days`}>
       <defs><linearGradient id={'af' + id} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#fff" stopOpacity=".3" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient></defs>
       {[0, 1, 2, 3, 4].map(g => { const yy = T + (ph * g) / 4; return <g key={g}>{o.grid && <line x1={L} x2={W - R} y1={yy} y2={yy} stroke="rgba(255,255,255,.08)" />}<text x={L - 8} y={yy + 4} textAnchor="end" fill="#6b6b6b" fontSize="11">{Math.round(mr * (1 - g / 4))}</text></g> })}
       {[0, 1, 2, 3, 4].map(k => { const i = Math.round((k * (n - 1)) / 4); return <text key={k} x={X(i)} y={H - 8} textAnchor="middle" fill="#6b6b6b" fontSize="11">{fd(dd.d[i])}</text> })}
@@ -36,12 +37,13 @@ export function AreaChart({ dd, o }: { dd: Daily; o: AreaOpts }) {
 
 export interface BarOpts { m: string; o: 'v' | 'h'; s: string; n: number; lab: boolean; grid: boolean; avg: boolean; pct: boolean }
 export function BarChart({ rows, o }: { rows: { n: string; v: number }[]; o: BarOpts }) {
-  const W = 760, tot = rows.reduce((a, r) => a + r.v, 0), mx = Math.max(1, ...rows.map(r => r.v)), avg = tot / (rows.length || 1)
+  // Vertical comparisons scale with the number of communities so category labels and bars do not collide.
+  const W = o.o === 'h' ? 760 : Math.min(2800, Math.max(760, rows.length * 86 + 60)), tot = rows.reduce((a, r) => a + r.v, 0), mx = Math.max(1, ...rows.map(r => r.v)), avg = tot / (rows.length || 1)
   const lab = (r: { v: number }) => (o.lab ? (o.pct && tot ? Math.round((r.v / tot) * 100) + '%' : r.v) : '')
   if (o.o === 'h') {
     const rh = 46, H = rows.length * rh + 34, L = 140, pw = W - L - 70
     return (
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 520, height: 'auto', display: 'block' }} role="img" aria-label="Bar chart">
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: W, minWidth: W, maxWidth: 'none', height: 'auto', display: 'block' }} role="img" aria-label="Community comparison bar chart">
         <defs><linearGradient id="bgh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#555" /><stop offset="1" stopColor="#fff" /></linearGradient></defs>
         {[0, 1, 2, 3, 4].map(g => { const x = L + (pw * g) / 4; return <g key={g}>{o.grid && <line x1={x} x2={x} y1={6} y2={H - 24} stroke="rgba(255,255,255,.08)" />}<text x={x} y={H - 6} textAnchor="middle" fill="#6b6b6b" fontSize="11">{Math.round((mx * g) / 4)}</text></g> })}
         {rows.map((r, i) => { const y = i * rh + 8, w = Math.max((r.v / mx) * pw, 3); return <g key={i} className="bvh"><title>{r.n}: {r.v}</title><text x={L - 12} y={y + rh / 2 - 2} textAnchor="end" fill="#a8a8a8" fontSize="12">{r.n.slice(0, 18)}</text><rect className="bv" style={{ ['--i' as any]: i }} x={L} y={y + 6} width={w} height={rh - 22} rx="8" fill="url(#bgh)" opacity=".92" />{o.lab && <text x={L + w + 10} y={y + rh / 2 - 2} fill="#e4e4e4" fontSize="12">{lab(r)}</text>}</g> })}
@@ -51,7 +53,7 @@ export function BarChart({ rows, o }: { rows: { n: string; v: number }[]; o: Bar
   }
   const H = 340, L = 44, B = 56, T = 28, pw = W - L - 12, ph = H - T - B, bw = Math.min(64, (pw / (rows.length || 1)) * 0.62)
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 520, height: 'auto', display: 'block' }} role="img" aria-label="Bar chart">
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: W, minWidth: W, maxWidth: 'none', height: 'auto', display: 'block' }} role="img" aria-label="Community comparison bar chart">
       <defs><linearGradient id="bgv" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#555" /><stop offset="1" stopColor="#fff" /></linearGradient></defs>
       {[0, 1, 2, 3, 4].map(g => { const y = T + (ph * g) / 4; return <g key={g}>{o.grid && <line x1={L} x2={W - 12} y1={y} y2={y} stroke="rgba(255,255,255,.08)" />}<text x={L - 8} y={y + 4} textAnchor="end" fill="#6b6b6b" fontSize="11">{Math.round(mx * (1 - g / 4))}</text></g> })}
       {rows.map((r, i) => { const cx = L + (pw * (i + 0.5)) / rows.length, h = Math.max((r.v / mx) * ph, 3); return <g key={i} className="bvh"><title>{r.n}: {r.v}</title><rect className="bv" style={{ ['--i' as any]: i }} x={cx - bw / 2} y={T + ph - h} width={bw} height={h} rx="10" fill="url(#bgv)" opacity=".92" />{o.lab && <text x={cx} y={T + ph - h - 8} textAnchor="middle" fill="#e4e4e4" fontSize="12">{lab(r)}</text>}<text x={cx} y={H - B + 22} textAnchor="middle" fill="#a8a8a8" fontSize="12">{r.n.slice(0, 12)}</text></g> })}

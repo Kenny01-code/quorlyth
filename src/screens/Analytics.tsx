@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { type ReactNode, type WheelEvent, useEffect, useMemo, useState } from 'react'
 import '../styles/analytics.css'
 import { useNavigate } from 'react-router-dom'
 import { jsPDF } from 'jspdf'
@@ -14,6 +14,24 @@ import { communityOwnerLookup, isCommunityOwnerContribution } from '../lib/contr
 
 export function Analytics() {
   return <Gate><Inner /></Gate>
+}
+
+/** Keyboard-, trackpad-, and mouse-wheel-friendly viewport for long chart canvases. */
+function ChartViewport({ children, label }: { children: ReactNode; label: string }) {
+  const onWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const viewport = event.currentTarget
+    const hasHorizontalOverflow = viewport.scrollWidth > viewport.clientWidth + 1
+    const hasVerticalOverflow = viewport.scrollHeight > viewport.clientHeight + 1
+    if (!hasHorizontalOverflow) return
+    if (event.shiftKey) {
+      viewport.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+      event.preventDefault()
+    } else if (!hasVerticalOverflow && Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      viewport.scrollLeft += event.deltaY
+      event.preventDefault()
+    }
+  }
+  return <div className="chs" role="region" aria-label={label} tabIndex={0} onWheel={onWheel}>{children}</div>
 }
 
 function Inner() {
@@ -148,8 +166,8 @@ function Inner() {
   if (!hasGlobalAnalyticsAccess && ownedCommunities.length === 0) return <MemberAnalyticsView />
 
   function body(g: ChartKey) {
-    if (g === 'area') return <div className="chs"><AreaChart dd={dd} o={cs.area} /></div>
-    if (g === 'bar') { const rows = barRows(); return rows.length ? <div className="chs"><BarChart rows={rows} o={cs.bar as any} /></div> : <p className="mut" style={{ marginTop: 18 }}>No communities yet.</p> }
+    if (g === 'area') return <ChartViewport label="Ideas per day chart"><AreaChart dd={dd} o={cs.area} /></ChartViewport>
+    if (g === 'bar') { const rows = barRows(); return rows.length ? <ChartViewport label="Community comparison chart: Ideas shared, backings, members, or posts prepared to share"><BarChart rows={rows} o={cs.bar as any} /></ChartViewport> : <p className="mut" style={{ marginTop: 18 }}>No communities yet.</p> }
     if (g === 'don') return <Donut items={donut} total={data.ideas.length} o={cs.don} />
     if (g === 'heat') return <Heat ideas={data.ideas} val={cs.heat.val} />
     if (g === 'fun') return <Funnel rows={funnel} o={cs.fun} />
@@ -326,14 +344,14 @@ function MemberAnalyticsView() {
   function body(g: ChartKey) {
     if (g === 'area') {
       return ideasInRange > 0
-        ? <div className="chs"><AreaChart dd={activity} o={cs.area} /></div>
+        ? <ChartViewport label="Your ideas per day chart"><AreaChart dd={activity} o={cs.area} /></ChartViewport>
         : <PersonalChartEmpty title={myIdeas.length ? 'No ideas in this period' : 'Your activity starts here'} detail={myIdeas.length ? 'No ideas were submitted in the selected date range. Choose 30 or 90 days to see earlier activity.' : 'Once you share an idea, your day-by-day activity will appear here.'} />
     }
     if (g === 'bar') {
       const rows = barRows()
       if (!activityCommunities.length) return <PersonalChartEmpty title="No communities to compare yet" detail="Join a community, or share an idea in one, to see your personal activity by community." />
       if (!rows.some(row => row.v > 0)) return <PersonalChartEmpty title="Nothing to compare yet" detail={effectiveBarMeasure === 'backs' ? 'Backings received on your ideas will appear here.' : 'Your idea submissions will appear here as you contribute.'} />
-      return <div className="chs"><BarChart rows={rows} o={{ ...cs.bar, m: effectiveBarMeasure } as any} /></div>
+      return <ChartViewport label="Your ideas shared and backings by community chart"><BarChart rows={rows} o={{ ...cs.bar, m: effectiveBarMeasure } as any} /></ChartViewport>
     }
     if (g === 'don') return myIdeas.length
       ? <Donut items={statuses} total={myIdeas.length} o={cs.don} />
