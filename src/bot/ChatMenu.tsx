@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Icon } from '../lib/Icon'
+import { BotIcon as Icon } from './BotIcon'
 import { Chat } from '../lib/types'
 import { THEMES } from './config'
 import { Project } from './useBotData'

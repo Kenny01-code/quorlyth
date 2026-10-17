@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Icon, GoogleG } from '../lib/Icon'
+import { Logo } from '../lib/Logo'
 import { Gate } from '../components/Gate'
 import { ShareCard } from '../components/ShareCard'
 import { Av, Chip, Head } from '../components/ui'
@@ -142,6 +143,19 @@ function PersonalSettings() {
       await userState.patch({ preferences: { profileVisibility: visibility, emailNotifications, desktopNotifications, sound: soundEnabled } })
       a.toast('Personal settings saved')
     }}><Icon name="save" size={16} />Save personal settings</button></div>
+    <div className="glass pad" style={{ marginTop: 20, padding: 18, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ width: 62, height: 62, flex: '0 0 62px', display: 'grid', placeItems: 'center', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, background: 'rgba(255,255,255,.025)' }}>
+        <Logo size={48} />
+      </div>
+      <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+        <h3 style={{ fontSize: 15, marginBottom: 4 }}>Quorlyth logo</h3>
+        <p className="dim" style={{ fontSize: 12, lineHeight: 1.5, margin: 0 }}>Download the original site mark as a transparent, scalable SVG for documents, projects, and designs.</p>
+      </div>
+      <a className="btn p" href="/quorlyth-logo.svg" download="quorlyth-logo.svg" aria-label="Download the Quorlyth site logo as an SVG">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3" /></svg>
+        Download logo
+      </a>
+    </div>
     <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>Notification preferences are saved to your account. Email delivery depends on configured notification services.</p>
   </>
 }

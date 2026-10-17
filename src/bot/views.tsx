@@ -1,5 +1,5 @@
 import { RefObject, useState } from 'react'
-import { Icon } from '../lib/Icon'
+import { BotIcon as Icon } from './BotIcon'
 import { Chip } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { cn, slug, when } from '../lib/util'
