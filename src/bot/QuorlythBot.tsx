@@ -22,32 +22,18 @@ const PHRASES = {
 }
 
 function usePlaceholder(role: 'owner' | 'member' | 'visitor', active: boolean) {
-  const [ph, setPh] = useState('Message QuorlythBot')
+  const [index, setIndex] = useState(0)
   useEffect(() => {
-    if (!active) { setPh('Message QuorlythBot'); return }
-    const L = PHRASES[role]; let k = 0, i = 0, dir = 1, t: number
-    const tick = () => {
-      const s = L[k % L.length]
-      if (dir > 0) { i++; setPh(s.slice(0, i) + '\u258d'); if (i >= s.length) { dir = -1; t = window.setTimeout(tick, 1900); return } t = window.setTimeout(tick, 32 + Math.random() * 34) }
-      else { i -= 2; if (i <= 0) { i = 0; dir = 1; k++; setPh('\u258d'); t = window.setTimeout(tick, 280); return } setPh(s.slice(0, i) + '\u258d'); t = window.setTimeout(tick, 16) }
-    }
-    tick(); return () => clearTimeout(t)
+    if (!active) { setIndex(0); return }
+    // Rotate a complete suggestion periodically instead of typing/deleting each
+    // character. The old 16–66ms updates re-rendered the entire bot subtree
+    // repeatedly even when the user was not interacting with it.
+    const timer = window.setInterval(() => {
+      setIndex(current => (current + 1) % PHRASES[role].length)
+    }, 4600)
+    return () => window.clearInterval(timer)
   }, [role, active])
-  return ph
-}
-
-function friendlyBotError(error: unknown): string {
-  const value = error && typeof error === 'object' ? error as { name?: unknown; message?: unknown } : null
-  const name = typeof value?.name === 'string' ? value.name : ''
-  const message = typeof value?.message === 'string' ? value.message : typeof error === 'string' ? error : ''
-  if (name === 'AbortError') return 'I stopped that response. Send another message whenever you’re ready.'
-  if (/credit_balance_exhausted|insufficient_quota|no credits remaining/i.test(message)) return 'I’m temporarily unable to generate a reply because the AI service needs attention. Please try again later.'
-  if (/session could not be verified|session.*expired|sign-in session/i.test(message)) return 'Your Quorlyth session needs a refresh. Reload the page, then try your message again.'
-  if (/securely load the app context|context.*unavailable/i.test(message)) return 'I couldn’t securely load the latest Quorlyth context just now. Please try again in a moment.'
-  if (/failed to fetch|networkerror|network request failed|offline|load failed/i.test(message)) return 'I couldn’t reach QuorlythBot just now. Check your connection and try again.'
-  if (/timed out|stalled|interrupted before it finished/i.test(message)) return 'That reply didn’t finish coming through. Please try again and I’ll take another run at it.'
-  if (/temporarily unavailable|available ai services/i.test(message)) return 'I’m having trouble reaching the AI service right now. Please try again shortly.'
-  return 'I hit a temporary snag while preparing that answer. Your message is still here; please try again in a moment.'
+  return active ? PHRASES[role][index % PHRASES[role].length] : 'Message QuorlythBot'
 }
 
 type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
