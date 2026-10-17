@@ -71,13 +71,14 @@ function AttachmentLink({ attachment, removable, onRemove }: {
   )
 }
 
-export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, canCollaborate }: {
+export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, canCollaborate, projectActive }: {
   idea: Idea
   milestone: Milestone
   submissions: WorkSubmission[]
   canManage: boolean
   /** Access to submit/start work; false for read-only audiences or a closed project. */
   canCollaborate: boolean
+  projectActive: boolean
 }) {
   const a = useApp()
   const [summary, setSummary] = useState('')
@@ -276,6 +277,8 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
       {mine?.status === 'submitted' && <div className="q-work-readonly"><QuorlythGlyph name="progress" size={16} /><span>Your latest revision was submitted on {dateTime(mine.submittedAt)} and is waiting for review.</span></div>}
       {!canCollaborate && !canManage && <p className="q-work-muted">You can read work updates shared by the collaboration team, but only team members can submit files.</p>}
 
+      {canManage && !projectActive && pendingReviewCount > 0 && <div className="q-work-readonly"><QuorlythGlyph name="lock" size={16} /><span>This project is closed. Reopen it before reviewing the pending submissions.</span></div>}
+
       {displayedSubmissions.length > 0 && (
         <div className="q-work-history">
           <div className="q-work-history__title"><h6>Submission history</h6><span>{displayedSubmissions.length} total</span></div>
@@ -289,7 +292,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
               <p className="q-work-submission__summary">{submission.summary}</p>
               {submission.attachments.length > 0 && <div className="q-work-submission__files">{submission.attachments.map(attachment => <AttachmentLink key={attachment.path} attachment={attachment} />)}</div>}
               {submission.reviewNote && <div className={'q-work-feedback ' + (submission.status === 'changes_requested' ? 'is-changes' : 'is-approved')}><QuorlythGlyph name={submission.status === 'changes_requested' ? 'alert' : 'complete'} size={16} /><div><strong>{submission.status === 'changes_requested' ? 'Changes requested' : 'Review note'}</strong><p>{submission.reviewNote}</p>{submission.reviewedAt ? <small>Reviewed {dateTime(submission.reviewedAt)}{submission.reviewedBy ? ' by ' + a.nm(submission.reviewedBy) : ''}</small> : null}</div></div>}
-              {canManage && submission.status === 'submitted' && (
+              {canManage && projectActive && submission.status === 'submitted' && (
                 <div className="q-work-review">
                   <label className="q-work-label" htmlFor={'q-work-review-' + submission.id}>Feedback for contributor <small>Optional for approval; required for requested changes.</small></label>
                   <textarea id={'q-work-review-' + submission.id} className="q-work-review__textarea" value={reviewNotes[submission.id] || ''} onChange={event => setReviewNotes(current => ({ ...current, [submission.id]: event.target.value }))} maxLength={1600} placeholder="What is good, or what still needs to change?" />
