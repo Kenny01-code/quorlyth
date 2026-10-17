@@ -223,7 +223,7 @@ export async function createBackend(): Promise<Backend> {
     async uploadWorkFile(ideaId, milestoneId, file) {
       const current = await auth.current()
       if (!current) throw new Error('Sign in before attaching files to a submission.')
-      if (file.size > 1_000_000) throw new Error('Local mode supports files up to 1 MB. Configure Supabase Storage for larger project files.')
+      if (file.size > 256 * 1024) throw new Error('Local mode supports files up to 256 KB. Configure Supabase Storage for larger project files.')
       const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-90) || 'attachment'
       const path = 'local/' + ideaId + '/' + milestoneId + '/' + current.id + '/' + crypto.randomUUID() + '-' + filename
       const dataUrl = await new Promise<string>((resolve, reject) => {
