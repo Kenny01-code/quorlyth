@@ -155,6 +155,8 @@ function buildSystem({ user, records, userDocs, route, projectId, preferences, i
   }
   const role = isOwner ? 'verified platform owner' : isAdmin ? 'platform administrator (not the platform owner)' : owned.length ? 'community owner, limited to communities they manage' : user ? 'signed-in member' : 'visitor'
   const space = records.get('settings/space')
+  const decision = records.get('decisions/' + userId)
+  const passesSitePostGate = isOwner || space?.appr !== true || decision?.status === 'approved'
   const queueCount = ideas.filter(i => visibleStatus(i, outcomes, reviews) === 'review' && (isOwner || isAdmin || ownedIds.has(i.cid))).length
   const ownedSummary = owned.map(c => JSON.stringify(text(c.name, 100))).slice(0, MAX_COMMUNITIES).join('; ') || 'none found in accessible records'
   const joinedSummary = joined.map(c => JSON.stringify(text(c.name, 100))).slice(0, MAX_COMMUNITIES).join('; ') || 'none found in accessible records'
@@ -188,6 +190,7 @@ function buildSystem({ user, records, userDocs, route, projectId, preferences, i
     'ROLE: The authenticated account is a ' + role + '. No display name or personal identifiers are needed for this answer.',
     prefs,
     'Space name: ' + text(space?.name || 'not available in the records returned', 100) + '.',
+    'Idea-posting gate: ' + (passesSitePostGate ? 'this account passes the site-level approval gate using the current visible settings; the selected community’s own posting rules and membership still apply.' : 'this account does not pass the site-level approval gate. Explain that access approval is needed; do not imply approval has already been granted.'),
     'Communities accessible in the returned context: ' + communitySummary + '.',
     'Communities managed by this account: ' + ownedSummary + '. Joined communities: ' + joinedSummary + '.',
     'Ideas authored by this account: ' + (myIdeas.length ? myIdeas.map(describeIdea).join('\n') : 'No authored idea records were returned.'),
@@ -243,7 +246,7 @@ export async function buildAuthenticatedBotContext({ authorization, context = {}
   try { user = await authResponse.json() } catch { throw contextError(401, 'BOT_CONTEXT_SESSION_INVALID') }
   if (!user || typeof user.id !== 'string' || !user.id) throw contextError(401, 'BOT_CONTEXT_SESSION_INVALID')
 
-  const collectionNames = ['communities', 'ideas', 'reviews', 'ideaOutcomes', 'votes', 'members', 'profiles', 'volunteers', 'projects', 'milestones', 'settings']
+  const collectionNames = ['communities', 'ideas', 'reviews', 'ideaOutcomes', 'votes', 'members', 'profiles', 'volunteers', 'projects', 'milestones', 'settings', 'decisions']
   const docsUrl = new URL('/rest/v1/docs', base)
   docsUrl.searchParams.set('select', 'path,data')
   docsUrl.searchParams.set('or', '(' + collectionNames.map(name => 'path.like.' + name + '/*').join(',') + ')')
