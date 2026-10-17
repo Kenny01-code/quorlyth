@@ -288,4 +288,5 @@ using (
         from pg_catalog.jsonb_array_elements(coalesce(d.data->'attachments', '[]'::jsonb)) attachment
         where attachment.value->>'path' = storage.objects.name
       )
+    )
   );
