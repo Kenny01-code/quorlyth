@@ -11,6 +11,7 @@ import { ShareCard } from '../components/ShareCard'
 import { useDraftState } from '../lib/useDraftState'
 
 const ICONS = ['community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab']
+const BADGE_ICONS = ['star', 'community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab', 'approve', 'lock']
 const COVERS = [['a', 'Aurora'], ['b', 'Halo'], ['c', 'Grid'], ['d', 'Dusk']]
 const RULE = { anyone: 'Anyone can post', members: 'Members can post', owner: 'Owner posts only' }
 
@@ -264,6 +265,7 @@ function Detail({ cid }: { cid: string }) {
 
       {tab === 2 && (
         <div className="glass pad community-member-panel"><div className="profile-section-heading"><div><p className="dim">YOUR COMMUNITY</p><h3 style={{ marginBottom: 4 }}>Members</h3><p className="mut">Recognize the people helping this community move forward.</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
+          {own && <BadgeDesigner community={c} onSave={badges => a.saveCommunity(cid, { badges })} />}
           {loadingMemberIds ? (
             <p className="mut" style={{ padding: '18px 0' }}>Loading community members…</p>
           ) : !own && !joined ? (
@@ -273,34 +275,27 @@ function Detail({ cid }: { cid: string }) {
           ) : (
             mem.map(u => {
               const badge = c.memberBadges?.[u] || ''
+              const badgeIcon = c.badges?.find(item => item.label === badge)?.icon || 'star'
               return (
                 <div key={u} className="row community-member-row" style={{ cursor: 'default' }}>
                   <Av id={u} size={42} />
                   <div className="t">
                     <h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3>
                     <p className="dim">{data.profiles[u]?.head || 'Member'}</p>
-                    {badge && <span className="community-member-badge"><span aria-hidden="true">✧</span>{badge}</span>}
+                    {badge && <span className="community-member-badge"><Icon name={badgeIcon} size={13} />{badge}</span>}
                   </div>
                   {own && (
                     <div className="community-member-actions">
                       <label className="field community-badge-select">
                         <span>Assign community badge</span>
-                        <select
-                          aria-label={'Assign a badge to ' + a.nm(u)}
-                          value={badge}
-                          onChange={async e => {
-                            const next = { ...(c.memberBadges || {}) }
-                            if (e.target.value) next[u] = e.target.value
-                            else delete next[u]
-                            await a.saveCommunity(cid, { memberBadges: next })
-                          }}
-                        >
+                        <select aria-label={'Assign a badge to ' + a.nm(u)} value={badge} onChange={async e => {
+                          const next = { ...(c.memberBadges || {}) }
+                          if (e.target.value) next[u] = e.target.value
+                          else delete next[u]
+                          await a.saveCommunity(cid, { memberBadges: next })
+                        }}>
                           <option value="">No badge</option>
-                          <option value="Founding Member">Founding Member</option>
-                          <option value="Top Contributor">Top Contributor</option>
-                          <option value="Idea Architect">Idea Architect</option>
-                          <option value="Community MVP">Community MVP</option>
-                          <option value="Trusted Member">Trusted Member</option>
+                          {(c.badges || []).map(item => <option key={item.label} value={item.label}>{item.label}</option>)}
                         </select>
                       </label>
                       <Chip onClick={async () => {
@@ -320,7 +315,6 @@ function Detail({ cid }: { cid: string }) {
           )}
         </div>
       )}
-
       {tab === 3 && own && <JoinRequests cid={cid} />}
       {tab === 4 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
       {tab === 5 && own && <CommunitySettings c={c} />}
@@ -440,4 +434,22 @@ function CommunitySettings({ c }: { c: Community }) {
       </div>
     </div>
   )
+}
+
+
+function BadgeDesigner({ community, onSave }: { community: Community; onSave: (badges: { label: string; icon: string }[]) => Promise<boolean> }) {
+  const a = useApp()
+  const [label, setLabel] = useState('')
+  const [icon, setIcon] = useState('star')
+  const [saving, setSaving] = useState(false)
+  const badges = community.badges || []
+  return <div className="glass pad" style={{ margin: '16px 0', padding: 16 }}>
+    <div className="profile-section-heading"><div><p className="dim">OWNER TOOLS</p><h3 style={{ marginBottom: 4 }}>Custom community badges</h3><p className="mut">Create named badges with their own Quorlyth icons, then assign them to members below.</p></div><span className="profile-section-mark"><Icon name="star" size={18} /></span></div>
+    <div className="grid g2">
+      <label className="field"><span>Badge name</span><input value={label} maxLength={36} onChange={e => setLabel(e.target.value)} placeholder="e.g. Founding Member" /></label>
+      <label className="field"><span>Badge icon</span><select value={icon} onChange={e => setIcon(e.target.value)}>{BADGE_ICONS.map(name => <option key={name} value={name}>{name.replace(/-/g, ' ')}</option>)}</select></label>
+    </div>
+    <div className="acts"><span className="community-member-badge"><Icon name={icon} size={13} />{label.trim() || 'Badge preview'}</span><button className="btn p" disabled={saving || !label.trim() || badges.some(b => b.label.toLowerCase() === label.trim().toLowerCase())} onClick={async () => { setSaving(true); const ok = await onSave([...badges, { label: label.trim(), icon }]); setSaving(false); if (ok) { setLabel(''); a.toast('Custom badge created') } }}>{saving ? 'Saving…' : 'Create badge'}</button></div>
+    {badges.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>{badges.map(b => <span key={b.label} className="community-member-badge"><Icon name={b.icon} size={13} />{b.label}<button className="lk" aria-label={'Delete badge ' + b.label} onClick={async () => { const ok = await onSave(badges.filter(item => item.label !== b.label)); if (ok) a.toast('Badge removed from available badges') }}>×</button></span>)}</div>}
+  </div>
 }
