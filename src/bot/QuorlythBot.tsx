@@ -69,7 +69,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
   }
 }
 
-export function QuorlythBot() {
+export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) {
   const a = useApp()
   const nav = useNavigate()
   const loc = useLocation()
@@ -84,7 +84,7 @@ export function QuorlythBot() {
   const liveFallback = useRef(false)
   const liveRecognition = useRef<any>(null)
   const audio = useRef<{ stop(): void } | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
   const [minimized, setMinimized] = useState(false)
   const [launcherHidden, setLauncherHidden] = useState(false)
   const [showLauncherRestore, setShowLauncherRestore] = useState(false)
@@ -237,6 +237,10 @@ export function QuorlythBot() {
     const msg = !a.me ? 'Welcome to Quorlyth. Sign in to enter your space.' : first ? `Welcome, ${name}. I am QuorlythBot, your concierge. Ask me anything, or let me show you around.` : `Welcome back, ${name}.`
     setTimeout(() => { setCaption(msg); first ? robot.current?.welcome() : robot.current?.wave(); say(msg); setTimeout(() => setCaption(''), 6000) }, 700)
   }
+
+  // The app defers loading this module until the lightweight launcher is clicked.
+  // On that first click, open directly and preserve the normal welcome interaction.
+  useEffect(() => { if (initialOpen) openPanel() }, [])
 
   function clearLauncherHold() {
     if (launcherHoldTimer.current !== null) window.clearTimeout(launcherHoldTimer.current)
