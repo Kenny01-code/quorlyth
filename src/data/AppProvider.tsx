@@ -1,15 +1,15 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Backend, createBackend } from '../backend'
-import { Comment, Community, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus } from '../lib/types'
+import { Comment, Community, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkSubmission } from '../lib/types'
 import { slug } from '../lib/util'
 import { createDemoBackend, DEMO_ME } from './demo'
 
 type Rec<T> = Record<string, T>
 interface Data {
   communities: Community[]; ideas: Idea[]; reviews: Rec<Review>; outcomes: Rec<Pick<Review, 'status' | 'at'>>; votes: Rec<Rec<boolean>>; members: Rec<Rec<boolean>>
-  profiles: Rec<Profile>; requests: Request[]; joinRequests: CommunityJoinRequest[]; decisions: Rec<Decision>; promotions: Promotion[]; volunteers: VolunteerApplication[]; projects: Rec<Project>; milestones: Milestone[]; settings: SpaceSettings | null; ownerId: string | null
+  profiles: Rec<Profile>; requests: Request[]; joinRequests: CommunityJoinRequest[]; decisions: Rec<Decision>; promotions: Promotion[]; volunteers: VolunteerApplication[]; projects: Rec<Project>; milestones: Milestone[]; workSubmissions: WorkSubmission[]; settings: SpaceSettings | null; ownerId: string | null
 }
-const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], settings: null, ownerId: null }
+const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], workSubmissions: [], settings: null, ownerId: null }
 
 export interface App {
   ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data
@@ -39,6 +39,8 @@ export interface App {
   updateProject: (projectId: string, patch: Partial<Pick<Project, 'summary' | 'status' | 'dueAt'>>) => Promise<boolean>
   addMilestone: (projectId: string, title: string, description: string, details?: MilestoneDetails) => Promise<boolean>
   updateMilestone: (milestoneId: string, patch: MilestonePatch) => Promise<boolean>
+  submitMilestoneWork: (milestoneId: string, summary: string, attachments: WorkAttachment[]) => Promise<boolean>
+  reviewMilestoneWork: (submissionId: string, status: 'approved' | 'changes_requested', reviewNote?: string) => Promise<boolean>
   saveSettings: (p: Partial<SpaceSettings>) => Promise<boolean>
   saveProfile: (p: Partial<Profile>) => Promise<boolean>
   requestCommunityJoin: (cid: string, message?: string) => Promise<boolean>
@@ -170,7 +172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...d,
       reviews: {}, outcomes: {}, votes: {}, members: {}, requests: [],
       joinRequests: [], decisions: {}, promotions: [], volunteers: [],
-      projects: {}, milestones: [], settings: null,
+      projects: {}, milestones: [], workSubmissions: [], settings: null,
     }))
 
     const s = backend.store
@@ -202,6 +204,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         s.subscribe('volunteers', d => set('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
         s.subscribe('projects', d => set('projects', asMap<Project>(d)), onReadError),
         s.subscribe('milestones', d => set('milestones', asList<Milestone>(d).map(item => ({ ...item, status: String(item.status) === 'completed' ? 'done' as const : item.status })).sort((a, b) => a.at - b.at)), onReadError),
+        s.subscribe('workSubmissions', d => set('workSubmissions', asList<WorkSubmission>(d).sort((a, b) => b.submittedAt - a.submittedAt)), onReadError),
         s.subscribe('settings', d => set('settings', d.find(x => x.id === 'space')?.data ?? null), onReadError),
       ] : []),
     ]
@@ -650,12 +653,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!cleanTitle) throw new Error('Milestones need a title.')
         const project = data.projects[projectId]
         if (!project) throw new Error('Create the project before adding milestones.')
-        if (!canCollaborateOnIdea(project.ideaId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can add milestones.')
         if (project.status !== 'active') throw new Error('Reopen the project before adding milestones.')
+        const projectIdea = data.ideas.find(item => item.id === project.ideaId)
+        if (!projectIdea) throw new Error('The project idea could not be found.')
+        if (!canManageCommunity(projectIdea.cid)) throw new Error('Only the community owner or a platform administrator can create and assign milestones.')
         if (details.priority && !['low', 'normal', 'high', 'critical'].includes(details.priority)) throw new Error('Choose a valid milestone priority.')
         if (details.dueAt != null && !Number.isFinite(details.dueAt)) throw new Error('Choose a valid milestone due date.')
-        const projectIdea = data.ideas.find(item => item.id === project.ideaId)
-        const community = projectIdea ? data.communities.find(item => item.id === projectIdea.cid) : undefined
+        const community = data.communities.find(item => item.id === projectIdea.cid)
         const allowedAssignees = new Set([
           projectIdea?.authorId, community?.ownerId, community?.createdBy,
           ...data.volunteers.filter(item => item.ideaId === project.ideaId && item.status === 'accepted').map(item => item.applicantId),
@@ -679,11 +683,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const current = data.milestones.find(item => item.id === milestoneId)
         if (!current) throw new Error('Milestone not found. Refresh the page and try again.')
         if (!canCollaborateOnIdea(current.projectId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can update milestones.')
-        if (patch.priority && !['low', 'normal', 'high', 'critical'].includes(patch.priority)) throw new Error('Choose a valid milestone priority.')
-        if (patch.dueAt != null && !Number.isFinite(patch.dueAt)) throw new Error('Choose a valid milestone due date.')
         const project = data.projects[current.projectId]
         const projectIdea = data.ideas.find(item => item.id === (project?.ideaId || current.projectId))
-        const community = projectIdea ? data.communities.find(item => item.id === projectIdea.cid) : undefined
+        if (!projectIdea) throw new Error('The project idea could not be found.')
+        const manager = canManageCommunity(projectIdea.cid)
+        if (!manager && (
+          Object.keys(patch).some(key => key !== 'status')
+          || patch.status !== 'in_progress'
+          || current.status !== 'todo'
+          || current.blocked
+          || (!!current.assigneeId && current.assigneeId !== me?.id)
+        )) {
+          throw new Error('Collaborators can start an available milestone assigned to them. Only the project manager can edit details or change its final status.')
+        }
+        if (patch.priority && !['low', 'normal', 'high', 'critical'].includes(patch.priority)) throw new Error('Choose a valid milestone priority.')
+        if (patch.dueAt != null && !Number.isFinite(patch.dueAt)) throw new Error('Choose a valid milestone due date.')
+        const community = data.communities.find(item => item.id === projectIdea.cid)
         const allowedAssignees = new Set([
           projectIdea?.authorId, community?.ownerId, community?.createdBy,
           ...data.volunteers.filter(item => item.ideaId === current.projectId && item.status === 'accepted').map(item => item.applicantId),
@@ -701,6 +716,77 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await up('milestones/' + milestoneId, { ...safePatch, updatedAt })
         setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...safePatch, updatedAt } : item) }))
       }, 'Milestone updated'),
+      submitMilestoneWork: (milestoneId, summary, attachments) => w(async () => {
+        if (!me || !st) throw new Error('Sign in before submitting project work.')
+        const milestone = data.milestones.find(item => item.id === milestoneId)
+        if (!milestone) throw new Error('This milestone is no longer available. Refresh and try again.')
+        const project = data.projects[milestone.projectId]
+        const ideaId = project?.ideaId || milestone.projectId
+        const idea = data.ideas.find(item => item.id === ideaId)
+        if (!project || !idea) throw new Error('The project workspace could not be found.')
+        if (project.status !== 'active') throw new Error('This project is closed. Ask the project manager to reopen it before submitting work.')
+        if (milestone.status === 'done') throw new Error('This milestone has already been completed.')
+        if (milestone.blocked) throw new Error('This milestone is blocked. Ask the project manager to clear the blocker first.')
+        if (milestone.assigneeId && milestone.assigneeId !== me.id) throw new Error('This milestone is assigned to another team member.')
+        if (!canCollaborateOnIdea(ideaId)) throw new Error('Only this workspace’s team can submit work.')
+        const cleanSummary = summary.trim().slice(0, 6000)
+        if (cleanSummary.length < 8) throw new Error('Add a meaningful summary of what you completed before submitting.')
+        if (!Array.isArray(attachments) || attachments.length > 8) throw new Error('Attach up to 8 files to each submission.')
+        const localMode = backend?.auth.mode === 'local'
+        const expectedPrefix = localMode
+          ? 'local/' + ideaId + '/' + milestoneId + '/' + me.id + '/'
+          : ideaId + '/' + milestoneId + '/' + me.id + '/'
+        const cleanedAttachments = attachments.map(file => {
+          if (!file || typeof file.path !== 'string' || !file.path.startsWith(expectedPrefix)) throw new Error('One of the attachments is not owned by your current upload session.')
+          if (!file.name || file.name.length > 180 || !Number.isFinite(file.size) || file.size < 0 || file.size > 25 * 1024 * 1024) throw new Error('One of the attachments has invalid file details.')
+          return { path: file.path, name: file.name.slice(0, 180), mimeType: String(file.mimeType || 'application/octet-stream').slice(0, 120), size: file.size, uploadedAt: Number(file.uploadedAt) || Date.now() }
+        })
+        const latestMine = data.workSubmissions
+          .filter(item => item.milestoneId === milestoneId && item.submittedBy === me.id)
+          .sort((first, second) => second.revision - first.revision || second.submittedAt - first.submittedAt)[0]
+        if (latestMine?.status === 'submitted') throw new Error('Your latest submission is already waiting for review.')
+        const revision = (latestMine?.revision || 0) + 1
+        const id = slug()
+        const submittedAt = Date.now()
+        const submission: WorkSubmission = {
+          id, ideaId, projectId: milestone.projectId, milestoneId, submittedBy: me.id,
+          revision, summary: cleanSummary, attachments: cleanedAttachments,
+          status: 'submitted', submittedAt, updatedAt: submittedAt,
+        }
+        await st.create('workSubmissions/' + id, submission)
+        setData(d => ({ ...d, workSubmissions: [submission, ...d.workSubmissions.filter(item => item.id !== id)] }))
+        if (milestone.status === 'todo') {
+          const updatedAt = Date.now()
+          await up('milestones/' + milestoneId, { status: 'in_progress', updatedAt })
+          setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, status: 'in_progress', updatedAt } : item) }))
+        }
+      }, 'Work submitted for review'),
+      reviewMilestoneWork: (submissionId, status, reviewNote = '') => w(async () => {
+        if (!me || !st) throw new Error('Sign in before reviewing project work.')
+        if (!['approved', 'changes_requested'].includes(status)) throw new Error('Choose a valid review decision.')
+        const submission = data.workSubmissions.find(item => item.id === submissionId)
+        if (!submission) throw new Error('This submission is no longer available. Refresh and try again.')
+        const project = data.projects[submission.projectId]
+        const idea = data.ideas.find(item => item.id === submission.ideaId)
+        if (!project || !idea) throw new Error('The submission’s project could not be found.')
+        if (project.status !== 'active') throw new Error('Reopen the project before reviewing pending milestone work.')
+        if (!canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can review submitted work.')
+        if (submission.status !== 'submitted') throw new Error('This submission has already been reviewed.')
+        const cleanNote = reviewNote.trim().slice(0, 1600)
+        if (status === 'changes_requested' && cleanNote.length < 4) throw new Error('Explain what needs to change so the contributor knows what to do next.')
+        const reviewedAt = Date.now()
+        const patch = { status, reviewNote: cleanNote, reviewedAt, reviewedBy: me.id, updatedAt: reviewedAt }
+        await st.update('workSubmissions/' + submissionId, patch)
+        setData(d => ({ ...d, workSubmissions: d.workSubmissions.map(item => item.id === submissionId ? { ...item, ...patch } : item) }))
+        if (status === 'approved') {
+          const milestone = data.milestones.find(item => item.id === submission.milestoneId)
+          if (milestone && milestone.status !== 'done' && project.status === 'active') {
+            const milestonePatch = { status: 'done' as const, updatedAt: Date.now() }
+            await up('milestones/' + milestone.id, milestonePatch)
+            setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestone.id ? { ...item, ...milestonePatch } : item) }))
+          }
+        }
+      }, 'Submission reviewed'),
       saveSettings: p => w(() => up('settings/space', p), 'Saved'),
       saveProfile: async p => {
         const ok = await w(() => up('profiles/' + me!.id, { ...p, at: Date.now() }), 'Profile saved')

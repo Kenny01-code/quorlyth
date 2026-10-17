@@ -295,7 +295,7 @@ function Workspace() {
             <div className="ql-project-progress__track"><i style={{ width: progress + '%' }} /></div>
           </div>
         </section>
-        <MilestoneBoard idea={idea} projectId={id} projectStatus={project.status} milestones={milestones} teamMemberIds={workspaceTeamIds} canCollaborate={canAccess} />
+        <MilestoneBoard idea={idea} projectId={id} projectStatus={project.status} milestones={milestones} teamMemberIds={workspaceTeamIds} canCollaborate={canAccess} canManage={canManage} />
       </div>
       <div style={{ display: 'grid', gap: 14, minWidth: 0 }}>
         <section className="glass pad">

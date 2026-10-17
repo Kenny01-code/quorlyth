@@ -99,7 +99,16 @@ export async function createSupabaseStore(url: string, key: string) {
     async update(path, patch) {
       const cur = await store.get(path)
       if (!cur) throw new Error('not_found')
-      await store.set(path, deepMerge(cur, patch))
+      const next = deepMerge(cur, patch)
+      if (path.startsWith('workSubmissions/') && !path.slice('workSubmissions/'.length).includes('/')) {
+        // Review updates use the dedicated UPDATE policy. An upsert would also
+        // invoke the INSERT policy and is intentionally not allowed for submissions.
+        const { data, error } = await sb.from('docs').update({ data: next }).eq('path', path).select('path').maybeSingle()
+        if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the review')
+        if (!data) throw new Error('Review permission denied or this submission is no longer pending.')
+        return
+      }
+      await store.set(path, next)
     },
     async delete(path) {
       const { error } = await sb.from('docs').delete().or(`path.eq.${path},path.like.${path}/%`)

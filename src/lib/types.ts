@@ -40,3 +40,28 @@ export type MilestonePatch = Partial<Pick<Milestone, 'title' | 'description' | '
 export interface SpaceSettings { name?: string; tag?: string; appr?: boolean; ann?: string; wo?: number; wf?: number; wr?: number }
 export interface ChatMsg { r: 'u' | 'a'; t: string; btns?: { a: string; id?: string; l: string }[] }
 export interface Chat { id: string; title: string; pj?: string; at: number; upd: number; pin?: boolean; color?: string; arch?: boolean; unread?: boolean; msgs: ChatMsg[] }
+
+export interface WorkAttachment {
+  path: string
+  name: string
+  mimeType: string
+  size: number
+  uploadedAt: number
+}
+export type WorkSubmissionStatus = 'submitted' | 'approved' | 'changes_requested'
+export interface WorkSubmission {
+  id: string
+  ideaId: string
+  projectId: string
+  milestoneId: string
+  submittedBy: string
+  revision: number
+  summary: string
+  attachments: WorkAttachment[]
+  status: WorkSubmissionStatus
+  submittedAt: number
+  updatedAt: number
+  reviewedAt?: number
+  reviewedBy?: string
+  reviewNote?: string
+}
