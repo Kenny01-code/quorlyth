@@ -162,7 +162,7 @@ export async function startRealtime(opts: {
 }) {
   opts.onEvent({ type: 'state', state: 'connecting' })
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  const body: Record<string, unknown> = { voice: opts.voice || 'alloy', accent: opts.accent || 'auto', tools: opts.tools || [] }
+  const body: Record<string, unknown> = { voice: opts.voice || 'coral', accent: detectAccent(opts.accent || 'auto'), tools: opts.tools || [] }
   if (opts.accessToken) { headers.Authorization = 'Bearer ' + opts.accessToken; body.context = opts.context || {} }
   else body.instructions = opts.instructions
   const s = await fetch('/api/realtime-session', { method: 'POST', headers, body: JSON.stringify(body) })
