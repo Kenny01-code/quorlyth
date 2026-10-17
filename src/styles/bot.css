@@ -1061,3 +1061,59 @@
   }
 }
 
+
+
+/* QUORLYTHBOT — calm, contextual thinking state (status only; never chain-of-thought). */
+.bot .qbot-thinking-panel {
+  display:flex; align-items:center; gap:12px; width:fit-content; max-width:min(100%,520px);
+  margin:12px 0; padding:12px 14px;
+  border:1px solid rgba(255,255,255,.13); border-radius:18px;
+  color:rgba(255,255,255,.86);
+  background:
+    radial-gradient(ellipse 80% 100% at 0% 0%,rgba(255,255,255,.065),transparent 68%),
+    linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.012) 64%),
+    rgba(0,0,0,.45);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 15px 35px -30px rgba(255,255,255,.38);
+}
+.bot .qbot-thinking-orbit {
+  position:relative; display:grid; place-items:center; flex:0 0 34px; width:34px; height:34px;
+  border:1px solid rgba(255,255,255,.16); border-radius:50%;
+  color:#fff; background:radial-gradient(circle at 32% 24%,rgba(255,255,255,.16),rgba(255,255,255,.025) 70%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 0 25px -18px #fff;
+}
+.bot .qbot-thinking-orbit > i {
+  position:absolute; inset:-4px; border:1px solid rgba(255,255,255,.16); border-radius:50%;
+  animation:qbotThoughtOrbit 3.2s ease-in-out infinite;
+}
+.bot .qbot-thinking-orbit > i:nth-child(2) {
+  inset:-7px; border-color:rgba(255,255,255,.07); animation-delay:-1.6s;
+}
+.bot .qbot-thinking-copy { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.bot .qbot-thinking-copy strong { color:rgba(255,255,255,.92); font-size:12px; font-weight:500; line-height:1.45; letter-spacing:.002em; }
+.bot .qbot-thinking-copy small { color:rgba(255,255,255,.58); font-size:11px; line-height:1.45; }
+.bot .qbot-thinking-copy > span { color:rgba(255,255,255,.33); font-size:9px; line-height:1.45; }
+.bot .qbot-thinking-signal { display:flex; align-items:center; gap:3px; flex:none; margin-left:5px; }
+.bot .qbot-thinking-signal i { display:block; width:3px; height:8px; border-radius:999px; background:rgba(255,255,255,.3); transform-origin:center; animation:qbotThoughtSignal 1.1s ease-in-out infinite; }
+.bot .qbot-thinking-signal i:nth-child(2) { animation-delay:.14s; }
+.bot .qbot-thinking-signal i:nth-child(3) { animation-delay:.28s; }
+@keyframes qbotThoughtOrbit { 0%,100% { transform:scale(.97); opacity:.35; } 50% { transform:scale(1.04); opacity:.8; } }
+@keyframes qbotThoughtSignal { 0%,100% { transform:scaleY(.48); opacity:.35; } 50% { transform:scaleY(1); opacity:.85; } }
+@media (max-width:520px) {
+  .bot .qbot-thinking-panel { gap:9px; padding:10px 11px; border-radius:15px; }
+  .bot .qbot-thinking-copy strong { font-size:11px; }
+  .bot .qbot-thinking-copy small { font-size:10px; }
+  .bot .qbot-thinking-copy > span { max-width:235px; }
+  .bot .qbot-thinking-orbit { flex-basis:30px; width:30px; height:30px; }
+  .bot .qbot-thinking-signal { gap:2px; margin-left:1px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .bot .qbot-thinking-orbit > i,.bot .qbot-thinking-signal i { animation:none!important; }
+  .bot .qbot-thinking-signal i { transform:scaleY(.75); }
+}
+
+/* Keep long QuorlythBot panes native-scrolling and independent of page scroll. */
+.bot .qbot-conversation,.bot .ast-log,.bot .bs-l,.bot .bsscrim {
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  scrollbar-gutter:stable;
+}
