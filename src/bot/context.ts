@@ -29,10 +29,12 @@ export function buildContext(a: App, bs: BotSettings, route: string, project?: P
   const myIdeas = d.ideas.filter(i => i.authorId === a.me?.id).sort((x, y) => y.at - x.at).slice(0, 12)
   const outcome = (id: string) => d.outcomes[id]?.status || d.reviews[id]?.status || 'review'
   const describe = (idea: typeof d.ideas[number]) => {
+    const status = outcome(idea.id)
+    const statusLabel = STATUS_LABEL[status as keyof typeof STATUS_LABEL] || String(status)
     const parts = [
       '- ' + JSON.stringify(idea.title.slice(0, 140)),
       'community: ' + (d.communities.find(c => c.id === idea.cid)?.name || 'not in current context'),
-      'status: ' + STATUS_LABEL[outcome(idea.id) as keyof typeof STATUS_LABEL] || String(outcome(idea.id)),
+      'status: ' + statusLabel,
     ]
     if (idea.authorId === a.me?.id) parts.push('authored by current user')
     if (d.reviews[idea.id]?.score != null && (a.owner || ownedIds.has(idea.cid) || idea.authorId === a.me?.id)) parts.push('visible review score: ' + d.reviews[idea.id].score)
