@@ -12,8 +12,17 @@ export const VOICES: Voice[] = [
   { id: 'leo', n: 'Leo', g: 'm', d: 'Friendly and relaxed', theme: 'emerald', ai: 'ballad' },
 ]
 
-export interface BotSettings { tone: string; len: string; emo: boolean; about: string; voice: boolean; calm: boolean; robot: boolean; model: 'quick' | 'smart'; vid: string; theme: string }
-export const BOT_DEFAULTS: BotSettings = { tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', theme: 'onyx' }
+export type VoiceAccent = 'auto' | 'nigerian' | 'american' | 'british' | 'international'
+export const VOICE_ACCENTS: { id: VoiceAccent; name: string; description: string }[] = [
+  { id: 'auto', name: 'Auto-detect', description: 'Uses your browser language and locale' },
+  { id: 'nigerian', name: 'Nigerian English', description: 'Warm, clear Nigerian English delivery' },
+  { id: 'american', name: 'American English', description: 'Natural US English cadence' },
+  { id: 'british', name: 'British English', description: 'Natural UK English cadence' },
+  { id: 'international', name: 'International English', description: 'Clear, broadly neutral English' },
+]
+
+export interface BotSettings { tone: string; len: string; emo: boolean; about: string; voice: boolean; calm: boolean; robot: boolean; model: 'quick' | 'smart'; vid: string; accent: VoiceAccent; theme: string }
+export const BOT_DEFAULTS: BotSettings = { tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', accent: 'auto', theme: 'onyx' }
 
 export const SKILLS: { id: string; n: string; icon: string; d: string; own: boolean }[] = [
   { id: 'brief', n: 'Community briefing', icon: 'insight', d: 'Themes, demand and next steps from your ideas.', own: true },
