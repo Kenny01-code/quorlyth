@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
@@ -132,10 +132,20 @@ function Mine() {
 
 function Public({ id }: { id: string }) {
   const a = useApp()
+  const [profileVisibility, setProfileVisibility] = useState<'public' | 'members' | 'private'>('members')
+  useEffect(() => {
+    const store = a.backend?.store
+    if (!store || a.demo) return
+    return store.subscribe('data/users/' + id, docs => {
+      const value = docs.find(doc => doc.id === 'state')?.data?.preferences?.profileVisibility
+      setProfileVisibility(value === 'public' || value === 'private' ? value : 'members')
+    }, error => console.warn('Could not load profile visibility preference:', error))
+  }, [a.backend, a.demo, id])
   const { cs } = useChartSettings()
   const nav = useNavigate()
   const q = a.data.profiles[id]
   const my = a.data.ideas.filter(i => i.authorId === id).sort((x, y) => y.at - x.at)
+  if (profileVisibility === 'private' && id !== a.me?.id) return <Empty icon="private" title="This profile is private" text="This member has chosen to keep their profile private." />
   const rc = my.reduce((n, i) => n + a.votesOf(i.id), 0)
   const isCreatorOf = (c: (typeof a.data.communities)[number]) => c.ownerId === id || c.createdBy === id || (id === a.me?.id && a.owner && !c.ownerId && !c.createdBy && a.ownsCommunity(c.id))
   // Public profiles only display listed communities; unlisted spaces remain private.
