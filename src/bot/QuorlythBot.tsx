@@ -501,7 +501,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         n = { ...n, msgs: [...n.msgs, { r: 'a', t: `Review complete. I scored ${count} idea${count === 1 ? '' : 's'} for originality, feasibility, and audience relevance.`, btns: [{ a: 'go', id: '/queue', l: 'Open review queue' }] }] }
         persist(n); robot.current?.cheer(); say(`Review complete. I scored ${count} idea${count === 1 ? '' : 's'} for originality, feasibility, and audience relevance.`)
       } catch (e: any) {
-        n = { ...n, msgs: [...n.msgs, { r: 'a', t: e.message || 'I could not finish the review. Your ideas are still in the queue.' }] }; persist(n); say(n.msgs[n.msgs.length - 1].t)
+        const message = friendlyBotError(e)
+        n = { ...n, msgs: [...n.msgs, { r: 'a', t: message }] }; persist(n); say(message)
       }
       setBusy(false); setStatus('Online'); return
     }
@@ -513,7 +514,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         const o = await askJson<{ welcome: string; rules: string }>(`Write a welcome message (two warm sentences) and four short community guidelines (one line each, joined with newlines) for this fan community. Reply with only JSON: {"welcome":"text","rules":"line one\\nline two\\nline three\\nline four"}\nCommunity: ${c.name}. Purpose: ${c.purpose || 'share ideas'}. Tone: ${bs.tone}.`)
         setPend(JSON.stringify({ cid: c.id, ...o }))
         n = { ...n, msgs: [...n.msgs, { r: 'a', t: `Here is a welcome message:\n${o.welcome}\n\nAnd guidelines:\n${o.rules}`, btns: [{ a: 'apply', id: c.id, l: 'Apply to ' + c.name }] }] }; persist(n); say(n.msgs[n.msgs.length - 1].t)
-      } catch (e: any) { n = { ...n, msgs: [...n.msgs, { r: 'a', t: e.message }] }; setCur(n); say(e.message) }
+      } catch (e: any) { const message = friendlyBotError(e); n = { ...n, msgs: [...n.msgs, { r: 'a', t: message }] }; setCur(n); say(message) }
       setBusy(false); return
     }
     if (id === 'find') {
