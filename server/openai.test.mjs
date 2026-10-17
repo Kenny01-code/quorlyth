@@ -6,6 +6,7 @@ const originalFetch = globalThis.fetch
 const originalGeminiKey = process.env.GEMINI_API_KEY
 const originalOpenAIKey = process.env.OPENAI_API_KEY
 const originalElevenLabsKey = process.env.ELEVENLABS_API_KEY
+const originalElevenLabsNigerianVoiceId = process.env.ELEVENLABS_VOICE_NIGERIAN_ID
 const originalRealtimeModel = process.env.OPENAI_REALTIME_MODEL
 const originalXaiKey = process.env.XAI_API_KEY
 const originalXaiModel = process.env.XAI_MODEL
@@ -32,6 +33,8 @@ afterEach(() => {
   else process.env.OPENAI_API_KEY = originalOpenAIKey
   if (originalElevenLabsKey === undefined) delete process.env.ELEVENLABS_API_KEY
   else process.env.ELEVENLABS_API_KEY = originalElevenLabsKey
+  if (originalElevenLabsNigerianVoiceId === undefined) delete process.env.ELEVENLABS_VOICE_NIGERIAN_ID
+  else process.env.ELEVENLABS_VOICE_NIGERIAN_ID = originalElevenLabsNigerianVoiceId
   if (originalRealtimeModel === undefined) delete process.env.OPENAI_REALTIME_MODEL
   else process.env.OPENAI_REALTIME_MODEL = originalRealtimeModel
   if (originalXaiKey === undefined) delete process.env.XAI_API_KEY
