@@ -1,0 +1,117 @@
+import assert from 'node:assert/strict'
+import { afterEach, test } from 'node:test'
+import { buildAuthenticatedBotContext } from './bot-context.mjs'
+
+const originalFetch = globalThis.fetch
+const envNames = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']
+const originalEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]))
+
+afterEach(() => {
+  globalThis.fetch = originalFetch
+  for (const name of envNames) {
+    if (originalEnv[name] === undefined) delete process.env[name]
+    else process.env[name] = originalEnv[name]
+  }
+})
+
+function configureSupabase() {
+  process.env.SUPABASE_URL = 'https://quorlyth-test.supabase.co'
+  process.env.SUPABASE_ANON_KEY = 'public-test-anon-key'
+  delete process.env.VITE_SUPABASE_URL
+  delete process.env.VITE_SUPABASE_ANON_KEY
+}
+
+function json(payload, status = 200) {
+  return new Response(JSON.stringify(payload), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+test('authenticated bot context uses the caller JWT, RLS query, trusted role RPCs, and omits account secrets', async () => {
+  configureSupabase()
+  const requests = []
+  globalThis.fetch = async (url, options = {}) => {
+    const parsed = new URL(String(url))
+    requests.push({ url: parsed, options })
+    assert.equal(options.headers?.apikey, 'public-test-anon-key')
+    assert.equal(options.headers?.Authorization, 'Bearer user-session-token')
+
+    if (parsed.pathname === '/auth/v1/user') {
+      assert.equal(options.method, undefined)
+      return json({ id: 'user-private-uuid', email: 'secret@example.com', user_metadata: { full_name: 'Divine Example' } })
+    }
+    if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_owner') return json(true)
+    if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_admin') return json(false)
+    if (parsed.pathname === '/rest/v1/docs') {
+      assert.equal(parsed.searchParams.get('select'), 'path,data')
+      assert.match(parsed.searchParams.get('or') || '', /communities/)
+      assert.match(parsed.searchParams.get('or') || '', /data\/users\/user-private-uuid/)
+      return json([
+        { path: 'settings/space', data: { name: 'Quorlyth Test Space' } },
+        { path: 'communities/community-1', data: { name: 'Fan Lab', ownerId: 'user-private-uuid', purpose: 'Develop ideas with fans' } },
+        { path: 'ideas/idea-1', data: { title: 'A fan-led live show', body: 'Let fans shape the next live event.', cid: 'community-1', authorId: 'user-private-uuid', at: 100 } },
+        { path: 'ideaOutcomes/idea-1', data: { status: 'selected', at: 120 } },
+        { path: 'reviews/idea-1', data: { score: 84 } },
+        { path: 'members/user-private-uuid', data: { c: { 'community-1': true } } },
+        { path: 'data/users/user-private-uuid/botset', data: { tone: 'warm', len: 'medium', emo: false } },
+        { path: 'data/users/user-private-uuid/p_strategy', data: { name: 'Launch plan', ins: 'Focus on accessible launch steps.' } },
+      ])
+    }
+    throw new Error('Unexpected mock request: ' + parsed.pathname)
+  }
+
+  const system = await buildAuthenticatedBotContext({
+    authorization: 'Bearer user-session-token',
+    context: {
+      route: '/communities/community-1',
+      projectId: 'p_strategy',
+      tone: 'warm',
+      length: 'medium',
+      emojis: false,
+      browserContext: 'English language; local time zone.',
+      liveContext: 'Current weather requested by the user: mild conditions.',
+    },
+  })
+
+  assert.match(system, /verified platform owner/)
+  assert.match(system, /Quorlyth Test Space/)
+  assert.match(system, /Fan Lab/)
+  assert.match(system, /A fan-led live show/)
+  assert.match(system, /selected/)
+  assert.match(system, /Launch plan/)
+  assert.match(system, /caller.s Supabase session|authenticated user/i)
+  assert.doesNotMatch(system, /secret@example\.com/)
+  assert.doesNotMatch(system, /user-private-uuid/)
+  assert.doesNotMatch(system, /public-test-anon-key/)
+  assert.equal(requests.length, 4)
+  assert.ok(requests.every(item => item.options.headers.Authorization === 'Bearer user-session-token'))
+})
+
+test('invalid or missing sessions fail closed before reading app documents', async () => {
+  configureSupabase()
+  let calls = 0
+  globalThis.fetch = async url => {
+    calls++
+    assert.match(String(url), /\/auth\/v1\/user$/)
+    return json({ message: 'invalid token' }, 401)
+  }
+  await assert.rejects(
+    buildAuthenticatedBotContext({ authorization: 'Bearer invalid-session-token' }),
+    error => error.status === 401 && error.contextError === true,
+  )
+  assert.equal(calls, 1)
+  await assert.rejects(
+    buildAuthenticatedBotContext({ authorization: '' }),
+    error => error.status === 401 && error.contextError === true,
+  )
+  assert.equal(calls, 1)
+})
+
+test('missing Supabase server configuration fails closed with a safe context error', async () => {
+  for (const name of ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']) delete process.env[name]
+  let calls = 0
+  globalThis.fetch = async () => { calls++; return json({}) }
+  await assert.rejects(
+    buildAuthenticatedBotContext({ authorization: 'Bearer user-session-token' }),
+    error => error.status === 503 && error.contextError === true,
+  )
+  assert.equal(calls, 0)
+})
