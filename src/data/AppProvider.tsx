@@ -653,12 +653,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!cleanTitle) throw new Error('Milestones need a title.')
         const project = data.projects[projectId]
         if (!project) throw new Error('Create the project before adding milestones.')
-        if (!canCollaborateOnIdea(project.ideaId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can add milestones.')
         if (project.status !== 'active') throw new Error('Reopen the project before adding milestones.')
+        const projectIdea = data.ideas.find(item => item.id === project.ideaId)
+        if (!projectIdea) throw new Error('The project idea could not be found.')
+        if (!canManageCommunity(projectIdea.cid)) throw new Error('Only the community owner or a platform administrator can create and assign milestones.')
         if (details.priority && !['low', 'normal', 'high', 'critical'].includes(details.priority)) throw new Error('Choose a valid milestone priority.')
         if (details.dueAt != null && !Number.isFinite(details.dueAt)) throw new Error('Choose a valid milestone due date.')
-        const projectIdea = data.ideas.find(item => item.id === project.ideaId)
-        const community = projectIdea ? data.communities.find(item => item.id === projectIdea.cid) : undefined
+        const community = data.communities.find(item => item.id === projectIdea.cid)
         const allowedAssignees = new Set([
           projectIdea?.authorId, community?.ownerId, community?.createdBy,
           ...data.volunteers.filter(item => item.ideaId === project.ideaId && item.status === 'accepted').map(item => item.applicantId),
@@ -682,11 +683,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const current = data.milestones.find(item => item.id === milestoneId)
         if (!current) throw new Error('Milestone not found. Refresh the page and try again.')
         if (!canCollaborateOnIdea(current.projectId)) throw new Error('Only the idea creator, accepted collaborators, and the community owner can update milestones.')
-        if (patch.priority && !['low', 'normal', 'high', 'critical'].includes(patch.priority)) throw new Error('Choose a valid milestone priority.')
-        if (patch.dueAt != null && !Number.isFinite(patch.dueAt)) throw new Error('Choose a valid milestone due date.')
         const project = data.projects[current.projectId]
         const projectIdea = data.ideas.find(item => item.id === (project?.ideaId || current.projectId))
-        const community = projectIdea ? data.communities.find(item => item.id === projectIdea.cid) : undefined
+        if (!projectIdea) throw new Error('The project idea could not be found.')
+        const manager = canManageCommunity(projectIdea.cid)
+        if (!manager && (
+          Object.keys(patch).some(key => key !== 'status')
+          || patch.status !== 'in_progress'
+          || current.status !== 'todo'
+          || current.blocked
+          || (!!current.assigneeId && current.assigneeId !== me?.id)
+        )) {
+          throw new Error('Collaborators can start an available milestone assigned to them. Only the project manager can edit details or change its final status.')
+        }
+        if (patch.priority && !['low', 'normal', 'high', 'critical'].includes(patch.priority)) throw new Error('Choose a valid milestone priority.')
+        if (patch.dueAt != null && !Number.isFinite(patch.dueAt)) throw new Error('Choose a valid milestone due date.')
+        const community = data.communities.find(item => item.id === projectIdea.cid)
         const allowedAssignees = new Set([
           projectIdea?.authorId, community?.ownerId, community?.createdBy,
           ...data.volunteers.filter(item => item.ideaId === current.projectId && item.status === 'accepted').map(item => item.applicantId),
