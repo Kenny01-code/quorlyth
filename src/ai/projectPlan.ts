@@ -39,9 +39,9 @@ export async function generateProjectPlan(input: {
       task: 'Organize community signal into a collaboration-ready project plan.',
       community: input.community,
       source_idea: input.idea,
-      discussion: input.comments.slice(-40).map(comment => ({ id: comment.id, authorId: comment.authorId, text: comment.text.slice(0, 800), at: comment.at })),
-      eligible_team_members: input.team,
-      constraints: { maxMilestones: 7, minMilestones: 3, maxFilteredOut: 12, outputLocale: 'en', noUnverifiedDemandClaims: true },
+      discussion: input.comments.slice(-24).map(comment => ({ id: comment.id, authorId: comment.authorId, text: comment.text.slice(0, 480), at: comment.at })),
+      eligible_team_members: input.team.slice(0, 30),
+      constraints: { maxMilestones: 6, minMilestones: 3, maxFilteredOut: 8, outputLocale: 'en', noUnverifiedDemandClaims: true },
     }), {
     system: [
       'You are Quorlyth Signal Engine, an evidence-first community signal analyst and project planner.',
@@ -57,7 +57,7 @@ export async function generateProjectPlan(input: {
       'Return valid JSON only, with exactly these keys: project_title, project_summary, lead_collaborator, milestones, definition_of_done, signal_score, noise_reduction_ratio, evidence_summary, filtered_out.',
       'milestones must contain objects with title, description, priority (low|normal|high|critical), definition_of_done.',
     ].join(' '),
-    tier: 'smart',
+    tier: 'quick',
     signal: input.signal,
   })
 
