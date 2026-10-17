@@ -2318,3 +2318,17 @@ body > .qbot-drawer-portal.bot .cmx .danger:focus-visible {
 .chat-page .chat-people-list {
   scrollbar-gutter:stable;
 }
+
+
+/* App-wide document scrolling is smooth; nested streaming panes opt into their own
+   auto-scroll policy so live updates never fight an easing animation. */
+html {
+  scroll-behavior:smooth;
+  scroll-padding-top:calc(76px + env(safe-area-inset-top,0px));
+}
+@media (max-width:680px) {
+  html { scroll-padding-top:calc(64px + env(safe-area-inset-top,0px)); }
+}
+@media (prefers-reduced-motion:reduce) {
+  html { scroll-behavior:auto; }
+}
