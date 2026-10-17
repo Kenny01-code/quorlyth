@@ -62,10 +62,8 @@ export async function generateProjectPlan(input: {
   })
 
   const allowedPriorities = new Set(['low', 'normal', 'high', 'critical'])
-  const teamIdsAndNames = new Set(input.team.flatMap(member => [member.id, member.name]))
-  const lead = typeof result.lead_collaborator === 'string' && teamIdsAndNames.has(result.lead_collaborator)
-    ? result.lead_collaborator
-    : ''
+  const rawLead = typeof result.lead_collaborator === 'string' ? result.lead_collaborator : ''
+  const lead = input.team.find(member => member.id === rawLead || member.name === rawLead)?.id || ''
   const milestones = Array.isArray(result.milestones) ? result.milestones.slice(0, 7).map((item: any) => ({
     title: String(item?.title || '').trim().slice(0, 120),
     description: String(item?.description || '').trim().slice(0, 1200),
