@@ -446,7 +446,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     try {
       const turns = c.msgs.filter(m => !(m as any).live).slice(-14).map(m => ({ role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.t }))
       const liveContext = await requestLiveContext(t)
-      const useServerContext = !a.demo && a.backend?.auth.mode === 'supabase'
+      const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
       const botContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveContext }
@@ -591,7 +591,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         c = add(c, { r: 'u', t: spoken }, 'Live conversation')
         try {
           let first = true
-          const useServerContext = !a.demo && a.backend?.auth.mode === 'supabase'
+          const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
           const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
           if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
           const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
@@ -618,7 +618,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     }
     // Prefer the low-latency Realtime API; fall back to browser recognition only if it cannot connect.
     try {
-      const useServerContext = !a.demo && a.backend?.auth.mode === 'supabase'
+      const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
       const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
