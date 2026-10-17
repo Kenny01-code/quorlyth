@@ -439,9 +439,12 @@ function sendStreamFailure(res, error, fallbackMessage) {
 
 async function streamGeminiResponse(r, res) {
   res.statusCode = 200
-  res.setHeader('Content-Type', 'text/event-stream')
-  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Accel-Buffering', 'no')
+  res.flushHeaders?.()
   const dec = new TextDecoder()
   let buf = ''
   const emit = line => {
@@ -470,9 +473,12 @@ async function streamGeminiResponse(r, res) {
 
 async function streamOpenAICompatibleResponse(r, res) {
   res.statusCode = 200
-  res.setHeader('Content-Type', 'text/event-stream')
-  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Accel-Buffering', 'no')
+  res.flushHeaders?.()
   const dec = new TextDecoder()
   let buf = ''
   const emit = line => {
