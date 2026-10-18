@@ -586,10 +586,10 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       }
     }
     // Greetings are deterministic, so do not pay an API round trip just to say hello.
-    if (!raw && /^(?:hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\\s]*$/i.test(t)) {
+    if (!raw && /^(?:hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\s]*$/i.test(t)) {
       stopVoice(); setView('chat')
       const draft = add(cur, { r: 'u', t })
-      const firstName = a.me?.name?.trim().split(/\\s+/)[0]
+      const firstName = a.me?.name?.trim().split(/\s+/)[0]
       const reply = firstName ? `Hey ${firstName}, I'm here. What's on your mind?` : "Hey! I'm here. What would you like to talk about?"
       const next = { ...draft, msgs: [...draft.msgs, { r: 'a' as const, t: reply }] }
       persist(next)
@@ -868,8 +868,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
 
         try {
           // Answer greetings locally so the transcript responds instantly; speech still uses the selected Studio voice.
-          if (/^(?:hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\\s]*$/i.test(spoken)) {
-            const firstName = a.me?.name?.trim().split(/\\s+/)[0]
+          if (/^(?:hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\s]*$/i.test(spoken)) {
+            const firstName = a.me?.name?.trim().split(/\s+/)[0]
             const greetingResponse = firstName ? `Hey ${firstName}, I'm here and listening. What's on your mind?` : "Hey! I'm here and listening. What's on your mind?"
             c = { ...c, msgs: [...c.msgs, { r: 'a', t: greetingResponse }] }
             persist(c)
