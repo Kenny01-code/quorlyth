@@ -1065,8 +1065,9 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           if (!liveFallback.current) return
           speechTail = ''
           const greeting = quickGreeting(spoken)
-          c = add(c, { r: 'u', t: spoken }, 'Live conversation')
-          persist(c)
+          let voiceChat: Chat = add(c, { r: 'u' as const, t: spoken }, 'Live conversation')
+          c = voiceChat
+          persist(voiceChat)
           setLive(current => current ? { ...current, state: 'thinking', user: spoken, bot: '' } : current)
           robot.current?.think(true)
 
@@ -1075,12 +1076,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             let answer = ''
             if (greeting) {
               answer = greeting
-              c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }].slice(-100) }
-              persist(c)
+              voiceChat = { ...voiceChat, msgs: [...voiceChat.msgs, { r: 'a' as const, t: answer }].slice(-100) }
+              c = voiceChat
+              persist(voiceChat)
               setLive(current => current ? { ...current, state: 'speaking', bot: answer } : current)
               enqueueSpeech(answer, controller)
             } else {
-              const recentTurns = c.msgs.filter(message => !(message as any).live).slice(-10)
+              const recentTurns = voiceChat.msgs.filter(message => !(message as any).live).slice(-10)
               const turns = recentTurns.map((message, index) => ({
                 role: (message.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant',
                 content: message.t.slice(-(index === recentTurns.length - 1 ? 4200 : 1400)),
@@ -1120,8 +1122,9 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                 enqueueSpeech(speechTail, controller)
                 speechTail = ''
               }
-              c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }].slice(-100) }
-              persist(c)
+              voiceChat = { ...voiceChat, msgs: [...voiceChat.msgs, { r: 'a' as const, t: answer }].slice(-100) }
+              c = voiceChat
+              persist(voiceChat)
               setLive(current => current ? { ...current, state: 'thinking', bot: answer } : current)
             }
 
@@ -1133,8 +1136,9 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           } catch (voiceError) {
             if (!liveFallback.current || turnNumber !== browserTurnNumber || (voiceError instanceof Error && voiceError.name === 'AbortError')) return
             const message = friendlyBotError(voiceError)
-            c = { ...c, msgs: [...c.msgs, { r: 'a', t: message }].slice(-100) }
-            persist(c)
+            voiceChat = { ...voiceChat, msgs: [...voiceChat.msgs, { r: 'a' as const, t: message }].slice(-100) }
+            c = voiceChat
+            persist(voiceChat)
             setLive(current => current ? { ...current, state: 'thinking', bot: message } : current)
             enqueueSpeech(message, controller)
             await speechQueue
