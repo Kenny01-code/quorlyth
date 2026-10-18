@@ -212,7 +212,7 @@ function shouldTryAnotherProvider(response) {
 async function fetchWithHeaderTimeout(url, options = {}) {
   // TTS uses a shorter header deadline so a stalled provider falls through quickly.
   // Timeout only the wait for response headers, never a healthy streaming body.
-  const isTtsRequest = /\/v1\/tts|\/v1beta\/interactions/.test(url)
+  const isTtsRequest = /\/v1\/(?:tts|audio\/speech|text-to-speech)|\/v1beta\/interactions/.test(url)
   const configuredTimeout = Number(isTtsRequest
     ? process.env.AI_TTS_PROVIDER_TIMEOUT_MS
     : process.env.AI_PROVIDER_TIMEOUT_MS)
