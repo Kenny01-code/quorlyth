@@ -794,7 +794,7 @@ function audioResponse(res, audio, provider, contentType = 'audio/mpeg') {
 async function requestElevenLabsSpeech(text, voiceId) {
   const model = ['eleven_multilingual_v2', 'eleven_flash_v2_5'].includes(process.env.ELEVENLABS_TTS_MODEL)
     ? process.env.ELEVENLABS_TTS_MODEL
-    : 'eleven_multilingual_v2'
+    : 'eleven_flash_v2_5'
   return requestTtsWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: 'POST',
     headers: {
