@@ -26,7 +26,8 @@ const Settings = lazy(() => import('./screens/Settings').then(m => ({ default: m
 const Database = lazy(() => import('./screens/Database').then(m => ({ default: m.Database })))
 const Access = lazy(() => import('./screens/Access').then(m => ({ default: m.Access })))
 const Onboarding = lazy(() => import('./screens/Onboarding').then(m => ({ default: m.Onboarding })))
-const QuorlythBot = lazy(() => import('./bot/QuorlythBot').then(m => ({ default: m.QuorlythBot })))
+const loadQuorlythBot = () => import('./bot/QuorlythBot').then(m => ({ default: m.QuorlythBot }))
+const QuorlythBot = lazy(loadQuorlythBot)
 import { useApp } from './data/AppProvider'
 import { useUserState } from './lib/userState'
 import { chime, useNotifs } from './lib/notifs'
@@ -47,7 +48,7 @@ function DelayedRouteLoader() {
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     // Keep fast route changes visually quiet; only show the Quorlyth mark if a lazy page is genuinely slow.
-    const timer = window.setTimeout(() => setVisible(true), 700)
+    const timer = window.setTimeout(() => setVisible(true), 140)
     return () => window.clearTimeout(timer)
   }, [])
   return visible ? <QuorlythLoader variant="route" label="Opening page" /> : null
@@ -140,7 +141,14 @@ export default function App() {
     deferredRestoreTimer.current = null
   }
 
-  useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
+  useEffect(() => {
+    // Keep route changes instant while ordinary document scrolling remains smooth.
+    const root = document.documentElement
+    const previousBehavior = root.style.scrollBehavior
+    root.style.scrollBehavior = 'auto'
+    window.scrollTo(0, 0)
+    root.style.scrollBehavior = previousBehavior
+  }, [loc.pathname])
 
   useEffect(() => {
     if (!a.me || (loc.pathname === '/signin' && new URLSearchParams(loc.search).get('recovery') === '1')) return
@@ -331,6 +339,8 @@ export default function App() {
         {!deferredLauncherHidden && <button
           id="astl"
           className="astl"
+          onPointerEnter={() => { void loadQuorlythBot().catch(() => {}) }}
+          onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
           aria-label="Open QuorlythBot"
           title="Right-click to hide · Press and hold on mobile to hide"
           onClick={() => {
