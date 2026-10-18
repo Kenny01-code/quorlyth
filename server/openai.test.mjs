@@ -525,7 +525,7 @@ test('ElevenLabs is preferred for natural voice even when Grok is selected for c
   assert.equal(requested[0].url, 'https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x?output_format=mp3_44100_128')
   assert.equal(requested[0].options.headers['xi-api-key'], 'server-only-elevenlabs-test-key')
   const payload = JSON.parse(requested[0].options.body)
-  assert.equal(payload.model_id, 'eleven_multilingual_v2')
+  assert.equal(payload.model_id, 'eleven_flash_v2_5')
   assert.equal(payload.text, 'Hey, how are you doing?')
   assert.equal(payload.voice_settings.stability, 0.45)
   assert.equal(payload.voice_settings.similarity_boost, 0.8)
