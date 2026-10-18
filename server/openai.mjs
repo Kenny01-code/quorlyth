@@ -915,7 +915,7 @@ function logTtsProviderFailure(provider, details) {
   console.warn('[Quorlyth voice] TTS provider failed', { provider, ...details })
 }
 
-/** Voice fallback chain: preferred Grok/Gemini first, then optional legacy TTS providers. */
+/** Voice fallback chain: ElevenLabs by default, then Grok, Gemini, and OpenAI. */
 export async function speak(req, res) {
   try {
     const body = await readBody(req)
@@ -926,12 +926,13 @@ export async function speak(req, res) {
       return send(res, 400, { error: 'Choose a voice in QuorlythBot Voice Studio before playing audio.' })
     }
     const voice = body.voice
-    const selected = (process.env.AI_PROVIDER || 'auto').trim().toLowerCase()
-    const order = selected === 'gemini'
-      ? ['gemini', 'grok', 'elevenlabs', 'openai']
-      : selected === 'openai'
-        ? ['openai', 'grok', 'gemini', 'elevenlabs']
-        : ['grok', 'gemini', 'elevenlabs', 'openai']
+    // Voice selection is intentionally independent from the chat provider.
+    // ElevenLabs is the preferred natural voice, with fast cross-provider fallbacks.
+    const selectedTtsProvider = (process.env.AI_TTS_PROVIDER || 'elevenlabs').trim().toLowerCase()
+    const voiceProviders = ['elevenlabs', 'grok', 'gemini', 'openai']
+    const order = voiceProviders.includes(selectedTtsProvider)
+      ? [selectedTtsProvider, ...voiceProviders.filter(provider => provider !== selectedTtsProvider)]
+      : voiceProviders
 
     for (const provider of order) {
       if (provider === 'grok' && XAI_KEY()) {
