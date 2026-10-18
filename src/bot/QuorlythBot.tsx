@@ -856,11 +856,12 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             enqueueSpeech(speechTail.slice(0, end))
             speechTail = speechTail.slice(match.index + match[0].length)
           }
-          // A long sentence without punctuation should not hold audio indefinitely.
-          if (speechTail.length > 220) {
-            const cut = Math.max(speechTail.lastIndexOf(' ', 180), speechTail.lastIndexOf(',', 180))
-            if (cut > 80) {
-              enqueueSpeech(speechTail.slice(0, cut))
+          // Start voice output on the first useful phrase while the rest of the answer is still streaming.
+          if (speechTail.length > 72) {
+            const cut = Math.max(speechTail.lastIndexOf(' ', 58), speechTail.lastIndexOf(',', 58))
+            if (cut > 36) {
+              const phrase = speechTail.slice(0, cut).trim()
+              enqueueSpeech(/[,.!?]$/.test(phrase) ? phrase : phrase + ',')
               speechTail = speechTail.slice(cut + 1)
             }
           }
