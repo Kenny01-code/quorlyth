@@ -434,7 +434,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; elevenLabsOnly?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const source = text.trim().slice(0, 1500)
@@ -477,7 +477,9 @@ export async function speakText(
     let response: Response | null = null
     let retryBufferedSpeech = false
     try {
-      response = await fetch('/api/speak-stream', {
+      // Voice Studio's "Hear a hello" must use ElevenLabs directly, never the
+      // general multi-provider route. Other callers may still use streaming mode.
+      response = await fetch(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream', {
         method: 'POST',
         signal,
         headers: { 'Content-Type': 'application/json' },
@@ -485,6 +487,9 @@ export async function speakText(
       })
     } catch (error) {
       if (isSuperseded() || (error instanceof Error && error.name === 'AbortError')) throw error
+      if (options.elevenLabsOnly) {
+        throw new Error('ElevenLabs is temporarily unavailable. No alternate voice will be used.')
+      }
       // Older routes, network intermediaries, or deployments may not support the streaming endpoint.
       retryBufferedSpeech = true
     }
