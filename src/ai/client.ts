@@ -428,7 +428,7 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
   return startedPromise
 }
 
-/** Uses the selected Studio persona through server-side provider fallback, then device speech as a last resort. Only one speech run may play at a time. Set allowBrowserFallback:false to disable the device fallback. */
+/** Uses the selected Studio persona through the server-side ElevenLabs endpoint. Device speech is opt-in only; one speech run can play at a time. */
 export async function speakText(
   text: string,
   voice: string,
