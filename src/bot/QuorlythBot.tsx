@@ -247,7 +247,10 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     localStorage.setItem('qseen', '1')
     const name = a.me?.name.split(' ')[0]
     const msg = !a.me ? 'Welcome to Quorlyth. Sign in to enter your space.' : first ? `Welcome, ${name}. I am QuorlythBot, your concierge. Ask me anything, or let me show you around.` : `Welcome back, ${name}.`
-    setTimeout(() => { setCaption(msg); first ? robot.current?.welcome() : robot.current?.wave(); say(msg); setTimeout(() => setCaption(''), 6000) }, 700)
+    setCaption(msg)
+    first ? robot.current?.welcome() : robot.current?.wave()
+    say(msg)
+    window.setTimeout(() => setCaption(''), 6000)
   }
 
   // The app defers loading this module until the lightweight launcher is clicked.
@@ -582,6 +585,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         persist(draft); setPendingAction(action); return
       }
     }
+    // Greetings are deterministic, so do not pay an API round trip just to say hello.
+    if (!raw && /^(?:hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\\s]*$/i.test(t)) {
+      stopVoice(); setView('chat')
+      const draft = add(cur, { r: 'u', t })
+      const firstName = a.me?.name?.trim().split(/\\s+/)[0]
+      const reply = firstName ? `Hey ${firstName}, I'm here. What's on your mind?` : "Hey! I'm here. What would you like to talk about?"
+      const next = { ...draft, msgs: [...draft.msgs, { r: 'a' as const, t: reply }] }
+      persist(next)
+      robot.current?.wave()
+      say(reply, next.id + ':' + (next.msgs.length - 1))
+      return
+    }
     stopVoice(); setView('chat')
     let c = add(cur, { r: 'u', t })
     setBusy(true); robot.current?.think(true); setStatus('Thinking'); setThinkingTask(taskPreview(t)); setCaption('')
@@ -852,6 +867,17 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         }
 
         try {
+          // Answer greetings locally so the transcript responds instantly; speech still uses the selected Studio voice.
+          if (/^(?:hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\\s]*$/i.test(spoken)) {
+            const firstName = a.me?.name?.trim().split(/\\s+/)[0]
+            const greetingResponse = firstName ? `Hey ${firstName}, I'm here and listening. What's on your mind?` : "Hey! I'm here and listening. What's on your mind?"
+            c = { ...c, msgs: [...c.msgs, { r: 'a', t: greetingResponse }] }
+            persist(c)
+            setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: greetingResponse } : l)
+            enqueueSpeech(greetingResponse)
+            await speechQueue
+            return
+          }
           const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
           const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
           if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
