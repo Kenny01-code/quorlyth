@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { chat, json, realtimeSession, speak, speakStream } from './openai.mjs'
+import { chat, json, realtimeSession, speak, speakElevenLabs, speakStream } from './openai.mjs'
 
 const originalFetch = globalThis.fetch
 const originalGeminiKey = process.env.GEMINI_API_KEY
@@ -109,6 +109,26 @@ test('live voice mints a GA realtime client secret with the selected voice', asy
   assert.equal(body.session.audio.output.voice, 'coral')
   assert.equal(JSON.parse(res.output).token, 'ephemeral-test-token')
   assert.equal(JSON.parse(res.output).model, 'gpt-realtime-2.1')
+})
+
+test('live voice can use multilingual text-only output for ElevenLabs playback', async () => {
+  process.env.OPENAI_API_KEY = 'test-openai-secret'
+  let request
+  globalThis.fetch = async (url, options) => {
+    request = { url: String(url), options }
+    return new Response(JSON.stringify({ value: 'ephemeral-text-token' }), { status: 200 })
+  }
+  const res = response()
+  await realtimeSession({ body: { instructions: 'Be helpful', voice: 'marin', accent: 'international', textOnly: true } }, res)
+
+  assert.equal(request.url, 'https://api.openai.com/v1/realtime/client_secrets')
+  const payload = JSON.parse(request.options.body)
+  assert.equal(payload.session.output_modalities[0], 'text')
+  assert.equal(payload.session.audio.input.turn_detection.create_response, false)
+  assert.equal(payload.session.audio.input.transcription.model, 'gpt-4o-mini-transcribe')
+  assert.equal('language' in payload.session.audio.input.transcription, false)
+  assert.equal('output' in payload.session.audio, false)
+  assert.match(payload.session.instructions, /multilingual live conversation/i)
 })
 
 test('chat uses Gemini server-side and streams text as Quorlyth SSE', async () => {
@@ -670,30 +690,52 @@ test('streaming ElevenLabs voice begins sending MP3 before the full clip is gene
   assert.ok(res.output.length > 0)
 })
 
-test('streaming voice falls back to Grok when ElevenLabs requires payment', async () => {
+test('streaming voice never switches away from ElevenLabs when the account requires payment', async () => {
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-stream-test-key'
   process.env.XAI_API_KEY = 'test-xai-stream-fallback-key'
   process.env.GEMINI_API_KEY = 'test-gemini-stream-fallback-key'
-  delete process.env.OPENAI_API_KEY
+  process.env.OPENAI_API_KEY = 'test-openai-stream-fallback-key'
   const requested = []
   globalThis.fetch = async (url, options = {}) => {
     requested.push(String(url))
     if (String(url).includes('api.elevenlabs.io')) {
       return new Response(JSON.stringify({ detail: { status: 'payment_required' } }), { status: 402 })
     }
-    if (String(url).includes('api.x.ai')) {
-      return new Response(Buffer.from([7, 6, 5]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
-    }
-    throw new Error('Unexpected provider should not be reached')
+    throw new Error('A different voice provider must never be requested')
   }
 
   const res = response()
   await speakStream({ body: { text: 'Hello there', voice: 'marin', accent: 'american' } }, res)
 
-  assert.equal(requested.length, 2)
+  assert.equal(requested.length, 1)
   assert.match(requested[0], /api\.elevenlabs\.io\/v1\/text-to-speech\/.*\/stream/)
-  assert.equal(requested[1], 'https://api.x.ai/v1/tts')
-  assert.equal(res.statusCode, 200)
-  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'grok')
+  assert.equal(res.statusCode, 503)
+  assert.match(JSON.parse(res.output).error, /ElevenLabs voice is unavailable/i)
+  assert.match(JSON.parse(res.output).error, /No alternate voice/i)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], undefined)
+})
+
+
+test('buffered ElevenLabs retry never falls back to another voice provider', async () => {
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-buffered-test-key'
+  process.env.XAI_API_KEY = 'test-xai-buffered-fallback-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-buffered-fallback-key'
+  process.env.OPENAI_API_KEY = 'test-openai-buffered-fallback-key'
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push(String(url))
+    if (String(url).includes('api.elevenlabs.io')) {
+      return new Response(JSON.stringify({ detail: { status: 'payment_required' } }), { status: 402 })
+    }
+    throw new Error('Only ElevenLabs may be requested')
+  }
+
+  const res = response()
+  await speakElevenLabs({ body: { text: 'Hello there', voice: 'marin', accent: 'american' } }, res)
+
+  assert.equal(requested.length, 1)
+  assert.match(requested[0], /api\\.elevenlabs\\.io\\/v1\\/text-to-speech/)
+  assert.equal(res.statusCode, 503)
+  assert.match(JSON.parse(res.output).error, /No alternate voice/i)
 })
