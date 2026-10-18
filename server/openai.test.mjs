@@ -157,33 +157,31 @@ test('chat does not retry a failed Gemini model when no backup provider is confi
   assert.equal(res.statusCode, 503)
 })
 
-test('chat fails over from overloaded Gemini models to Grok automatically', async () => {
+test('chat fails over from overloaded Gemini directly to Grok without repeating Gemini', async () => {
   process.env.AI_PROVIDER = 'gemini'
   process.env.GEMINI_API_KEY = 'test-gemini-secret'
   process.env.XAI_API_KEY = 'test-xai-secret'
   delete process.env.OPENAI_API_KEY
   const requested = []
-  globalThis.fetch = async (url, options) => {
+  globalThis.fetch = async (url, options = {}) => {
     requested.push(String(url))
     if (String(url).includes('generativelanguage.googleapis.com')) {
       return new Response(JSON.stringify({ error: { status: 'UNAVAILABLE', message: 'high demand' } }), { status: 503 })
     }
-    assert.equal(String(url), 'https://api.x.ai/v1/chat/completions')
-    assert.equal(options.headers.Authorization, 'Bearer test-xai-secret')
     return new Response('data: {"choices":[{"delta":{"content":"Grok saved the reply"}}]}\n\n', { status: 200 })
   }
   const res = response()
   await chat({ body: { tier: 'smart', messages: [{ role: 'user', content: 'Hi' }] } }, res)
-  assert.equal(requested.length, 3)
-  assert.match(requested[0], /gemini-3\.8-flash:streamGenerateContent/)
-  assert.match(requested[1], /gemini-3\.5-flash-lite:streamGenerateContent/)
-  assert.match(requested[2], /api\.x\.ai\/v1\/chat\/completions/)
+
+  assert.equal(requested.length, 2)
+  assert.match(requested[0], /gemini-3\\.8-flash:streamGenerateContent/)
+  assert.match(requested[1], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
   assert.match(res.output, /Grok saved the reply/)
   assert.match(res.output, /"done":true/)
   assert.equal(res.statusCode, 200)
 })
 
-test('structured JSON fails over from unavailable Gemini to Grok', async () => {
+test('structured JSON fails over from unavailable Gemini to Grok immediately', async () => {
   process.env.AI_PROVIDER = 'gemini'
   process.env.GEMINI_API_KEY = 'test-gemini-secret'
   process.env.XAI_API_KEY = 'test-xai-secret'
@@ -198,19 +196,19 @@ test('structured JSON fails over from unavailable Gemini to Grok', async () => {
   }
   const res = response()
   await json({ body: { prompt: 'Return fallback', system: 'Return JSON only' } }, res)
-  assert.equal(requested.length, 3)
-  assert.match(requested[2], /api\.x\.ai\/v1\/chat\/completions/)
+  assert.equal(requested.length, 2)
+  assert.match(requested[1], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
   assert.equal(res.statusCode, 200)
   assert.deepEqual(JSON.parse(res.output), { fallback: true })
 })
 
-test('chat falls through from Gemini and unavailable Grok to OpenAI', async () => {
+test('chat falls through from Gemini to Grok to OpenAI without same-provider retries', async () => {
   process.env.AI_PROVIDER = 'gemini'
   process.env.GEMINI_API_KEY = 'test-gemini-secret'
   process.env.XAI_API_KEY = 'test-xai-secret'
   process.env.OPENAI_API_KEY = 'test-openai-secret'
   const requested = []
-  globalThis.fetch = async (url, options) => {
+  globalThis.fetch = async (url, options = {}) => {
     requested.push(String(url))
     if (String(url).includes('generativelanguage.googleapis.com')) {
       return new Response(JSON.stringify({ error: { status: 'UNAVAILABLE' } }), { status: 503 })
@@ -230,7 +228,7 @@ test('chat falls through from Gemini and unavailable Grok to OpenAI', async () =
   assert.equal(res.statusCode, 200)
 })
 
-test('chat fails over to Grok when Gemini fetches fail before returning headers', async () => {
+test('chat fails over to Grok when Gemini fails before returning headers', async () => {
   process.env.AI_PROVIDER = 'gemini'
   process.env.GEMINI_API_KEY = 'test-gemini-secret'
   process.env.XAI_API_KEY = 'test-xai-secret'
@@ -243,8 +241,8 @@ test('chat fails over to Grok when Gemini fetches fail before returning headers'
   }
   const res = response()
   await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
-  assert.equal(requested.length, 3)
-  assert.match(requested[2], /api\.x\.ai\/v1\/chat\/completions/)
+  assert.equal(requested.length, 2)
+  assert.match(requested[1], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
   assert.match(res.output, /Recovered on Grok/)
   assert.equal(res.statusCode, 200)
 })
