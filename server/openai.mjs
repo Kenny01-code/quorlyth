@@ -199,7 +199,7 @@ async function geminiError(r) {
 }
 
 const TRANSIENT_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
-const PROVIDER_FALLBACK_STATUSES = new Set([401, 403, 404, ...TRANSIENT_STATUSES])
+const PROVIDER_FALLBACK_STATUSES = new Set([401, 402, 403, 404, ...TRANSIENT_STATUSES])
 
 function isTransientResponse(response) {
   return TRANSIENT_STATUSES.has(response.status) || response.status >= 500
