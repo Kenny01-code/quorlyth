@@ -724,7 +724,7 @@ async function requestElevenLabsSpeech(text, voiceId) {
   const model = ['eleven_multilingual_v2', 'eleven_flash_v2_5'].includes(process.env.ELEVENLABS_TTS_MODEL)
     ? process.env.ELEVENLABS_TTS_MODEL
     : 'eleven_multilingual_v2'
-  return fetchWithHeaderTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+  return requestTtsWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -742,11 +742,11 @@ async function requestElevenLabsSpeech(text, voiceId) {
         speed: 1,
       },
     }),
-  })
+  }, 'audio')
 }
 
 async function requestOpenAISpeech(text, voice, accent) {
-  return fetchWithHeaderTimeout('https://api.openai.com/v1/audio/speech', {
+  return requestTtsWithTimeout('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEY()}` },
     body: JSON.stringify({
@@ -757,7 +757,7 @@ async function requestOpenAISpeech(text, voice, accent) {
       response_format: 'mp3',
       speed: 1,
     }),
-  })
+  }, 'audio')
 }
 
 // Provider-specific voices preserve the selected Studio persona as closely as possible.
@@ -776,7 +776,7 @@ const GEMINI_TTS_VOICES = {
 
 async function requestGrokSpeech(text, voice, accent) {
   const language = accent === 'british' ? 'en-GB' : accent === 'american' ? 'en-US' : 'en'
-  return fetchWithHeaderTimeout('https://api.x.ai/v1/tts', {
+  return requestTtsWithTimeout('https://api.x.ai/v1/tts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + XAI_KEY() },
     body: JSON.stringify({
@@ -785,12 +785,12 @@ async function requestGrokSpeech(text, voice, accent) {
       language,
       optimize_streaming_latency: 2,
     }),
-  })
+  }, 'audio')
 }
 
 async function requestGeminiSpeech(text, voice, accent) {
   const model = process.env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-tts'
-  return fetchWithHeaderTimeout('https://generativelanguage.googleapis.com/v1beta/interactions', {
+  return requestTtsWithTimeout('https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY() },
     body: JSON.stringify({
@@ -806,7 +806,7 @@ async function requestGeminiSpeech(text, voice, accent) {
       response_format: { type: 'audio' },
       generation_config: { speech_config: [{ voice: GEMINI_TTS_VOICES[voice] || 'Kore' }] },
     }),
-  })
+  }, 'json')
 }
 
 // Record only non-sensitive provider diagnostics to help fix broken server-side TTS
@@ -818,6 +818,25 @@ async function safeTtsErrorCode(response) {
     return typeof code === 'string' && /^[a-z0-9_.-]{1,80}$/i.test(code) ? code : undefined
   } catch {
     return undefined
+  }
+}
+
+async function requestTtsWithTimeout(url, options, responseType = 'audio') {
+  const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
+  const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
+    ? Math.min(configuredTimeout, 30000)
+    : 8000
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(new Error('TTS provider timed out')), timeoutMs)
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal })
+    if (!response.ok) {
+      return { response, data: null, code: await safeTtsErrorCode(response) }
+    }
+    const data = responseType === 'json' ? await response.json() : await response.arrayBuffer()
+    return { response, data }
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -846,9 +865,10 @@ export async function speak(req, res) {
     for (const provider of order) {
       if (provider === 'grok' && XAI_KEY()) {
         try {
-          const response = await requestGrokSpeech(text, voice, accent)
-          if (response.ok) return audioResponse(res, await response.arrayBuffer(), 'grok')
-          logTtsProviderFailure('grok', { status: response.status, code: await safeTtsErrorCode(response) })
+          const result = await requestGrokSpeech(text, voice, accent)
+          const response = result.response
+          if (response.ok) return audioResponse(res, result.data, 'grok')
+          logTtsProviderFailure('grok', { status: response.status, code: result.code })
           await discardResponse(response)
         } catch (error) {
           logTtsProviderFailure('grok', { error: error instanceof Error ? error.name : 'UnknownError' })
@@ -857,16 +877,17 @@ export async function speak(req, res) {
 
       if (provider === 'gemini' && GEMINI_KEY()) {
         try {
-          const response = await requestGeminiSpeech(text, voice, accent)
+          const result = await requestGeminiSpeech(text, voice, accent)
+          const response = result.response
           if (response.ok) {
-            const payload = await response.json()
+            const payload = result.data
             const parts = Array.isArray(payload.steps) ? payload.steps.flatMap(step => Array.isArray(step.content) ? step.content : []) : []
             const audioPart = [...parts].reverse().find(part => part?.type === 'audio' && typeof part.data === 'string')
             const audioBase64 = payload.output_audio?.data || audioPart?.data
             if (audioBase64) return audioResponse(res, Buffer.from(audioBase64, 'base64'), 'gemini', 'audio/wav')
             logTtsProviderFailure('gemini', { reason: 'no_audio_payload' })
           } else {
-            logTtsProviderFailure('gemini', { status: response.status, code: await safeTtsErrorCode(response) })
+            logTtsProviderFailure('gemini', { status: response.status, code: result.code })
             await discardResponse(response)
           }
         } catch (error) {
@@ -881,9 +902,10 @@ export async function speak(req, res) {
           continue
         }
         try {
-          const response = await requestElevenLabsSpeech(text, voiceId)
-          if (response.ok) return audioResponse(res, await response.arrayBuffer(), 'elevenlabs')
-          logTtsProviderFailure('elevenlabs', { status: response.status, code: await safeTtsErrorCode(response) })
+          const result = await requestElevenLabsSpeech(text, voiceId)
+          const response = result.response
+          if (response.ok) return audioResponse(res, result.data, 'elevenlabs')
+          logTtsProviderFailure('elevenlabs', { status: response.status, code: result.code })
           await discardResponse(response)
         } catch (error) {
           logTtsProviderFailure('elevenlabs', { error: error instanceof Error ? error.name : 'UnknownError' })
@@ -892,9 +914,10 @@ export async function speak(req, res) {
 
       if (provider === 'openai' && KEY()) {
         try {
-          const response = await requestOpenAISpeech(text, voice, accent)
-          if (response.ok) return audioResponse(res, await response.arrayBuffer(), 'openai')
-          logTtsProviderFailure('openai', { status: response.status, code: await safeTtsErrorCode(response) })
+          const result = await requestOpenAISpeech(text, voice, accent)
+          const response = result.response
+          if (response.ok) return audioResponse(res, result.data, 'openai')
+          logTtsProviderFailure('openai', { status: response.status, code: result.code })
           await discardResponse(response)
         } catch (error) {
           logTtsProviderFailure('openai', { error: error instanceof Error ? error.name : 'UnknownError' })
