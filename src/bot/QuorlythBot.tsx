@@ -807,7 +807,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           speechFailed = true
           if (!speechFailureToastShown && liveFallback.current) {
             speechFailureToastShown = true
-            a.toast('ElevenLabs could not play the selected voice. No basic device voice was substituted; check the ElevenLabs account and try again.')
+            a.toast('The selected natural voice could not start on this device. Please try again.')
           }
         }
       })
@@ -840,7 +840,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       const session = await startRealtime({
         instructions: buildContext(a, bs, loc.pathname, project)
           + '\nBrowser/device context: ' + browserContext()
-          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected ElevenLabs Studio voice.',
+          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected QuorlythBot voice profile using the device’s best available natural voice.',
         voice: v.ai,
         accent: bs.accent || 'auto',
         textOnly: true,
@@ -884,7 +884,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
             const greeting = quickGreeting(spoken)
             if (greeting) {
-              // Simple greetings bypass model generation, then use only the selected ElevenLabs voice.
+              // Simple greetings bypass model generation, then start the selected natural device voice immediately.
               const reply = greeting
               c = { ...c, msgs: [...c.msgs, { r: 'a', t: reply }] }
               persist(c)
@@ -965,7 +965,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         responseBeforeSessionReady = false
         rt.current.respond?.()
       }
-      a.toast('Live Talk is active. The microphone indicator stays visible while I listen; replies use only your selected ElevenLabs voice.')
+      a.toast('Live Talk is active. The microphone indicator stays visible while I listen; replies use your selected QuorlythBot voice profile.')
     } catch (error: any) {
       liveFallback.current = false
       setLive(null)
@@ -1451,7 +1451,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
                   <div className="blc">{live.state === 'listening' ? (live.user ? <><span className="dim">You · live transcript</span><br />{live.user}</> : <span className="dim">Listening to you… start speaking whenever you’re ready.</span>) : live.state === 'thinking' ? (live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Thinking…</span>) : live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : <span className="dim">Connecting your conversation…</span>}</div>
                   <div className="acts" style={{ justifyContent: 'center', margin: 0, alignItems: 'center' }}>
-                    <span className="dim" style={{ fontSize: 12 }}>Microphone on · replies use your selected ElevenLabs voice · Click Stop listening to end</span>
+                    <span className="dim" style={{ fontSize: 12 }}>Microphone on · natural voice replies · Click Stop listening to end</span>
                     <button className="chip" onClick={stopLive} aria-label="Stop Live Talk and microphone"><Icon name="stop" size={13} />Stop listening</button>
                   </div>
                 </div>
