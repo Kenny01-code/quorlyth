@@ -522,6 +522,11 @@ export async function speakText(
       assertCurrent()
     }
 
+    if (response && !response.ok) {
+      // Surface quota/payment errors from ElevenLabs without ever switching to a device voice.
+      throw new Error(await readError(response))
+    }
+
     if (response?.ok) {
       const blob = await response.blob()
       assertCurrent()
