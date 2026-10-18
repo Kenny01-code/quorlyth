@@ -729,6 +729,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     let speechFailed = false
     let speechFailureToastShown = false
     let currentBotText = ''
+    let currentBotHadDelta = false
     let currentUserTranscript = ''
     let responseBeforeSessionReady = false
     let sessionReady = false
@@ -876,12 +877,12 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             c = add(c, { r: 'u', t: spoken }, 'Live conversation')
             persist(c)
             currentBotText = ''
+            currentBotHadDelta = false
             speechTail = ''
             setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
             const greeting = quickGreeting(spoken)
             if (greeting) {
               // Simple greetings bypass model generation, then use only the selected ElevenLabs voice.
-              rt.current?.interrupt?.()
               const reply = greeting
               c = { ...c, msgs: [...c.msgs, { r: 'a', t: reply }] }
               persist(c)
@@ -905,6 +906,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             if (event.delta) {
               const controller = ensureSpeechController()
               currentBotText = event.text
+              currentBotHadDelta = true
               setLive(l => l ? { ...l, state: 'thinking', bot: event.text } : l)
               queueSpeechFromDelta(event.delta, controller)
             }
@@ -912,7 +914,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               const answer = event.text.trim() || currentBotText.trim()
               currentBotText = answer
               const controller = ensureSpeechController()
-              if (!event.delta && answer) queueSpeechFromDelta(answer, controller)
+              if (!currentBotHadDelta && answer) queueSpeechFromDelta(answer, controller)
               c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }] }
               persist(c)
               setLive(l => l ? { ...l, state: 'thinking', bot: answer } : l)
@@ -926,10 +928,17 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                 robot.current?.listen(true)
               })
               currentBotText = ''
+              currentBotHadDelta = false
             }
             return
           }
-          if (event.type === 'response_done') return
+          if (event.type === 'response_done') {
+            if (!speechController) {
+              setLive(l => l ? { ...l, state: 'listening' } : l)
+              robot.current?.listen(true)
+            }
+            return
+          }
           if (event.type === 'tool') {
             a.toast('This live response requested an in-app action, but the action needs to be completed from the chat composer.')
             return
@@ -1435,7 +1444,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
                   <div className="blc">{live.state === 'listening' ? (live.user ? <><span className="dim">You · live transcript</span><br />{live.user}</> : <span className="dim">Listening to you… start speaking whenever you’re ready.</span>) : live.state === 'thinking' ? (live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Thinking…</span>) : live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : <span className="dim">Connecting your conversation…</span>}</div>
                   <div className="acts" style={{ justifyContent: 'center', margin: 0 }}>
-                    <span className="dim" style={{ fontSize: 12 }}>Studio voice · {VOICES.find(item => item.id === bs.vid)?.n || 'Aria'} · Talk live again to end</span>
+                    <span className="dim" style={{ fontSize: 12 }}>Microphone active · ElevenLabs {VOICES.find(item => item.id === bs.vid)?.n || 'Aria'} · Click stop to end</span>
                   </div>
                 </div>
               )}
@@ -1503,7 +1512,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                     <textarea rows={1} value={input} placeholder={ph} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
                     <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
-                    <button className={cn('btn', live && 'rec')} aria-label={live ? 'End live talk' : 'Talk live'} title={live ? 'End live talk' : 'Start live talk'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'stop' : 'live'} size={18} /></button>
+                    <button className={cn('btn', live && 'rec')} aria-label={live ? 'End live talk' : 'Start live talk — microphone active until ended'} title={live ? 'End live talk' : 'Start Live Talk; your microphone stays active until you stop it'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'stop' : 'live'} size={18} /></button>
                     <button className="btn p" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
                   </div>
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
