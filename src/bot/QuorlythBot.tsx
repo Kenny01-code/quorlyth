@@ -916,8 +916,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               currentBotText = answer
               const controller = ensureSpeechController()
               if (!currentBotHadDelta && answer) queueSpeechFromDelta(answer, controller)
-              c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }] }
-              persist(c)
+              const baseChat: Chat = c || {
+                id: 'c_' + slug(), title: 'Live conversation', pj, at: Date.now(), upd: Date.now(), msgs: [],
+              }
+              const liveMessage: ChatMsg = { r: 'a', t: answer }
+              const nextChat: Chat = { ...baseChat, msgs: [...baseChat.msgs, liveMessage].slice(-100) }
+              c = nextChat
+              persist(nextChat)
               setLive(l => l ? { ...l, state: 'thinking', bot: answer } : l)
               if (speechTail.trim()) enqueueSpeech(speechTail, controller)
               speechTail = ''
