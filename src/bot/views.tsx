@@ -133,7 +133,7 @@ export function BotViews(p: P) {
           <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Plays only your selected ElevenLabs voice.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
             <div className="acts" style={{ margin: 0 }}>
-              <button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: false }).catch((e: Error) => a.toast(e.message || 'ElevenLabs voice is unavailable. No basic device voice will be used.'))}><Icon name="voice" size={16} />Hear a hello</button>
+              <button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: false, elevenLabsOnly: true }).catch((e: Error) => a.toast(e.message || 'ElevenLabs voice is unavailable. No basic device voice will be used.'))}><Icon name="voice" size={16} />Hear a hello</button>
               <button className="btn" onClick={p.startLive}><Icon name="live" size={16} />Talk to Quorlyth</button>
             </div></div>
         </div>
