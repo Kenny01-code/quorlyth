@@ -232,39 +232,9 @@ async function discardResponse(response) {
   try { await response.body?.cancel() } catch {}
 }
 
-async function retryTransientRequest(makeRequest) {
-  let response
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    response = await makeRequest()
-    if (response.ok || !isTransientResponse(response) || attempt === 1) return response
-    await discardResponse(response)
-    await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)))
-  }
-  return response
-}
-
-async function shouldFallbackGemini(r) {
-  if (shouldTryAnotherProvider(r)) return true
-  try {
-    const payload = await r.clone().json()
-    return ['RESOURCE_EXHAUSTED', 'UNAVAILABLE'].includes(payload.error?.status)
-  } catch { return false }
-}
-
+// One request per provider: let the outer router switch providers instead of retrying a failing API.
 async function fetchGeminiWithFallback(tier, makeRequest) {
-  const primary = GEMINI_MODEL(tier)
-  const backup = GEMINI_MODEL(tier === 'quick' ? 'smart' : 'quick')
-  let response
-  try {
-    response = await makeRequest(primary)
-  } catch (primaryError) {
-    if (backup === primary) throw primaryError
-    try { return await makeRequest(backup) } catch { throw primaryError }
-  }
-  if (!response.ok && backup !== primary && await shouldFallbackGemini(response)) {
-    try { return await makeRequest(backup) } catch { return response }
-  }
-  return response
+  return makeRequest(GEMINI_MODEL(tier))
 }
 
 function geminiContents(messages) {
@@ -336,12 +306,12 @@ function openAICompatibleRequest(provider, body, structured = false) {
 
 async function requestProviderChat(provider, body) {
   if (provider === 'gemini') return requestGeminiChat(body)
-  return retryTransientRequest(openAICompatibleRequest(provider, body))
+  return openAICompatibleRequest(provider, body)()
 }
 
 async function requestProviderJson(provider, body) {
   if (provider === 'gemini') return requestGeminiJson(body)
-  return retryTransientRequest(openAICompatibleRequest(provider, body, true))
+  return openAICompatibleRequest(provider, body, true)()
 }
 
 async function chooseProvider(providers, request, requireStream = false) {
