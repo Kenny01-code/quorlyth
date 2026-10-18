@@ -2,14 +2,14 @@ export interface BotContextRequest { route?: string; projectId?: string; tone?: 
 export interface StreamOpts { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal; onText?: (full: string, piece: string) => void; accessToken?: string; context?: BotContextRequest }
 
 const SPEECH_PRESETS: Record<string, { gender: 'female' | 'male'; rate: number; pitch: number; names: RegExp }> = {
-  marin: { gender: 'female', rate: 0.98, pitch: 1.04, names: /jenny|samantha|aria|ava|allison|siri.*female/i },
-  cedar: { gender: 'male', rate: 0.97, pitch: 0.96, names: /guy|david|mark|daniel|james|ryan|alex|fred|tom|siri.*male/i },
-  coral: { gender: 'female', rate: 0.96, pitch: 1.08, names: /aria|jenny|zira|samantha|victoria|karen|susan|ava|allison|siri.*female/i },
-  sage: { gender: 'female', rate: 0.9, pitch: 1.02, names: /samantha|karen|susan|serena|siri.*female/i },
-  shimmer: { gender: 'female', rate: 1.05, pitch: 1.16, names: /jenny|zira|ava|siri.*female/i },
-  ash: { gender: 'male', rate: 0.9, pitch: 0.86, names: /guy|david|mark|daniel|james|ryan|alex|fred|tom|siri.*male/i },
-  echo: { gender: 'male', rate: 0.97, pitch: 0.94, names: /daniel|alex|ryan|mark|siri.*male/i },
-  ballad: { gender: 'male', rate: 1.02, pitch: 1, names: /guy|james|david|fred|tom|siri.*male/i },
+  marin: { gender: 'female', rate: 0.97, pitch: 1.02, names: /jenny|samantha|aria|ava|allison|siri.*female/i },
+  cedar: { gender: 'male', rate: 0.97, pitch: 0.98, names: /guy|david|mark|daniel|james|ryan|alex|fred|tom|siri.*male/i },
+  coral: { gender: 'female', rate: 0.97, pitch: 1.03, names: /aria|jenny|zira|samantha|victoria|karen|susan|ava|allison|siri.*female/i },
+  sage: { gender: 'female', rate: 0.94, pitch: 1.00, names: /samantha|karen|susan|serena|siri.*female/i },
+  shimmer: { gender: 'female', rate: 1.00, pitch: 1.06, names: /jenny|zira|ava|siri.*female/i },
+  ash: { gender: 'male', rate: 0.94, pitch: 0.93, names: /guy|david|mark|daniel|james|ryan|alex|fred|tom|siri.*male/i },
+  echo: { gender: 'male', rate: 0.97, pitch: 0.97, names: /daniel|alex|ryan|mark|siri.*male/i },
+  ballad: { gender: 'male', rate: 0.99, pitch: 1.00, names: /guy|james|david|fred|tom|siri.*male/i },
 }
 
 export type VoiceAccent = 'auto' | 'nigerian' | 'american' | 'british' | 'international'
