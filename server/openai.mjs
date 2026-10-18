@@ -1173,7 +1173,17 @@ export async function speakElevenLabs(req, res) {
     const result = await requestElevenLabsSpeech(text, voiceId)
     if (result.response.ok) return audioResponse(res, result.data, 'elevenlabs')
     logTtsProviderFailure('elevenlabs_buffered', { status: result.response.status, code: result.code })
+    const status = result.response.status
     await discardResponse(result.response)
+    if (status === 402) {
+      return send(res, 503, { error: 'ElevenLabs returned Payment Required (402). Check your ElevenLabs plan, billing, and available credits. No alternate voice was used.' })
+    }
+    if (status === 401 || status === 403) {
+      return send(res, 503, { error: 'ElevenLabs rejected the API key or its permissions. Check the ElevenLabs API key configured for Quorlyth. No alternate voice was used.' })
+    }
+    if (status === 429) {
+      return send(res, 503, { error: 'ElevenLabs rate limit reached. Wait briefly or check your ElevenLabs usage limits. No alternate voice was used.' })
+    }
     return send(res, 503, { error: 'ElevenLabs voice is unavailable right now. Check the ElevenLabs API key and account quota. No alternate voice will be used.' })
   } catch (error) {
     logTtsProviderFailure('elevenlabs_buffered', { error: error instanceof Error ? error.name : 'UnknownError' })
