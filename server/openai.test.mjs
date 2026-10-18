@@ -178,8 +178,8 @@ test('chat switches to Grok when Gemini returns headers but stalls before its fi
   await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
 
   assert.equal(requested.length, 2)
-  assert.match(requested[0], /gemini-3\\.8-flash:streamGenerateContent/)
-  assert.match(requested[1], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
+  assert.match(requested[0], /gemini-3\.8-flash:streamGenerateContent/)
+  assert.match(requested[1], /api\.x\.ai\/v1\/chat\/completions/)
   assert.match(res.output, /Grok recovered quickly/)
   assert.equal(res.statusCode, 200)
 })
