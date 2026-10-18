@@ -31,11 +31,151 @@ export function WritingAssistant() {
   const [options, setOptions] = useState<string[]>([])
   const [error, setError] = useState('')
   const generation = useRef<AbortController | null>(null)
+  const positionRef = useRef<((el: HTMLTextAreaElement | null) => void) | null>(null)
 
-  // Keep textarea discovery global and independent from the field-specific
-  // overlay lifecycle. The overlay effect intentionally has no listeners when
-  // no textarea is selected, so this listener must always remain mounted.
+  // Always discover focused textareas, even when no writing overlay currently exists.
+  // The positioning effect below is mounted only while a textarea is selected.
   useEffect(() => {
+    const onFocusIn = (event: FocusEvent) => {
+      const node = event.target as HTMLElement | null
+      if (!node || node.closest('.q-writing-assistant-ui')) return
+
+      if (node instanceof HTMLTextAreaElement) {
+        if (node === target) {
+          positionRef.current?.(node)
+          return
+        }
+        generation.current?.abort()
+        generation.current = null
+        setLoading(false)
+        setTarget(node)
+        setAnchorVisible(false)
+        setOpen(false)
+        setPreview('')
+        setOptions([])
+        setError('')
+        return
+      }
+
+      generation.current?.abort()
+      generation.current = null
+      setLoading(false)
+      setTarget(null)
+      setAnchorVisible(false)
+      setOpen(false)
+      setPreview('')
+      setOptions([])
+      setError('')
+    }
+    document.addEventListener('focusin', onFocusIn, true)
+    return () => document.removeEventListener('focusin', onFocusIn, true)
+  }, [target])
+
+  useEffect(() => {
+    let frame = 0
+    const host = target?.parentElement || null
+    if (!target || !host) {
+      setAnchorRoot(null)
+      setAnchorVisible(false)
+      return
+    }
+
+    // Mount the robot into the textarea's own parent. Its positioning is now
+    // local to the field, so page scroll and nested scroll containers move it
+    // naturally instead of relying on a viewport-fixed element chasing the field.
+    const oldPosition = host.style.getPropertyValue('position')
+    const oldPositionPriority = host.style.getPropertyPriority('position')
+    const addedPositioning = window.getComputedStyle(host).position === 'static'
+    if (addedPositioning) host.style.setProperty('position', 'relative')
+
+    const layer = document.createElement('div')
+    layer.className = 'q-writing-assistant-anchor-layer'
+    host.appendChild(layer)
+    setAnchorRoot(layer)
+
+    const hideForUnavailableField = () => {
+      setAnchorVisible(false)
+      setOpen(false)
+      generation.current?.abort()
+      generation.current = null
+      setLoading(false)
+    }
+
+    const position = (el: HTMLTextAreaElement | null) => {
+      if (!el?.isConnected || el.parentElement !== host || !layer.isConnected) {
+        setAnchorVisible(false)
+        return
+      }
+
+      const rect = el.getBoundingClientRect()
+      if (rect.width < 24 || rect.height < 24) {
+        hideForUnavailableField()
+        return
+      }
+
+      // Work out how much of this field is visible through the viewport and
+      // clipping ancestors. This controls the floating suggestion panel only;
+      // the robot itself follows the field because it lives in the field's DOM.
+      let clipLeft = 0
+      let clipTop = 0
+      let clipRight = window.innerWidth
+      let clipBottom = window.innerHeight
+      for (let parent: HTMLElement | null = el.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
+        const style = window.getComputedStyle(parent)
+        if (style.display === 'none' || style.visibility === 'hidden' || parent.hasAttribute('hidden')) {
+          hideForUnavailableField()
+          return
+        }
+        const parentRect = parent.getBoundingClientRect()
+        if (style.overflowX !== 'visible' || style.overflow === 'clip') {
+          clipLeft = Math.max(clipLeft, parentRect.left)
+          clipRight = Math.min(clipRight, parentRect.right)
+        }
+        if (style.overflowY !== 'visible' || style.overflow === 'clip') {
+          clipTop = Math.max(clipTop, parentRect.top)
+          clipBottom = Math.min(clipBottom, parentRect.bottom)
+        }
+      }
+
+      const visibleLeft = Math.max(rect.left, clipLeft, 0)
+      const visibleRight = Math.min(rect.right, clipRight, window.innerWidth)
+      const visibleTop = Math.max(rect.top, clipTop, 0)
+      const visibleBottom = Math.min(rect.bottom, clipBottom, window.innerHeight)
+      if (visibleRight - visibleLeft < 24 || visibleBottom - visibleTop < 24) {
+        hideForUnavailableField()
+        return
+      }
+
+      const layerRect = layer.getBoundingClientRect()
+      const nextAnchor = {
+        x: Math.round(rect.right - layerRect.left - 42),
+        y: Math.round(rect.bottom - layerRect.top - 42),
+      }
+      setAnchor(current => current.x === nextAnchor.x && current.y === nextAnchor.y ? current : nextAnchor)
+      setAnchorVisible(true)
+
+      // The expanded assistant panel is intentionally a body-level fixed layer
+      // so ancestor overflow never cuts it off. It still follows the visible
+      // textarea, and closes if that field scrolls out of view.
+      const panelWidth = Math.min(336, Math.max(0, window.innerWidth - 24))
+      const panelHeight = Math.min(420, Math.max(0, window.innerHeight * 0.76))
+      const above = visibleTop - 12 >= Math.min(panelHeight, 280)
+      const preferredTop = above ? visibleTop - panelHeight - 10 : visibleBottom + 10
+      const nextPanel = {
+        x: Math.round(Math.max(12, Math.min(window.innerWidth - panelWidth - 12, visibleRight - panelWidth))),
+        y: Math.round(Math.max(12, Math.min(window.innerHeight - panelHeight - 12, preferredTop))),
+      }
+      setPanel(current => current.x === nextPanel.x && current.y === nextPanel.y ? current : nextPanel)
+    }
+
+    const schedulePosition = () => {
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        position(target)
+      })
+    }
+    positionRef.current = position
     const observer = new MutationObserver(() => {
       if (!target.isConnected || target.parentElement !== host) {
         setTarget(null)
@@ -70,6 +210,7 @@ export function WritingAssistant() {
       resizeObserver.disconnect()
       observer.disconnect()
       layer.remove()
+      if (positionRef.current === position) positionRef.current = null
       if (addedPositioning) {
         if (oldPosition) host.style.setProperty('position', oldPosition, oldPositionPriority)
         else host.style.removeProperty('position')
