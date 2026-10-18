@@ -718,6 +718,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     if (!a.me) return a.toast('Sign in to talk live')
 
     stopVoice()
+    setView('chat')
     liveFallback.current = true
     liveTurnBusy.current = false
     setLive({ state: 'connecting', user: '', bot: '' })
@@ -1443,8 +1444,9 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                 <div className="blive" aria-live="polite">
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
                   <div className="blc">{live.state === 'listening' ? (live.user ? <><span className="dim">You · live transcript</span><br />{live.user}</> : <span className="dim">Listening to you… start speaking whenever you’re ready.</span>) : live.state === 'thinking' ? (live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Thinking…</span>) : live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : <span className="dim">Connecting your conversation…</span>}</div>
-                  <div className="acts" style={{ justifyContent: 'center', margin: 0 }}>
-                    <span className="dim" style={{ fontSize: 12 }}>Microphone active · ElevenLabs {VOICES.find(item => item.id === bs.vid)?.n || 'Aria'} · Click stop to end</span>
+                  <div className="acts" style={{ justifyContent: 'center', margin: 0, alignItems: 'center' }}>
+                    <span className="dim" style={{ fontSize: 12 }}>Microphone active · ElevenLabs {VOICES.find(item => item.id === bs.vid)?.n || 'Aria'} · Audio is not recorded by Quorlyth as a file</span>
+                    <button className="chip" onClick={stopLive} aria-label="Stop Live Talk and microphone"><Icon name="stop" size={13} />Stop listening</button>
                   </div>
                 </div>
               )}
@@ -1501,7 +1503,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                         </div>}
                     </div>
                   )
-                ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
+                ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} startLive={startLive} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
                 {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style', deleteCommunity: 'Delete community' } as any)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity' ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.' : 'Review the details, then confirm. QuorlythBot will use your signed-in account permissions.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
