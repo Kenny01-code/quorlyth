@@ -3,7 +3,7 @@ import { BotIcon as Icon } from './BotIcon'
 import { Chip } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { cn, slug, when } from '../lib/util'
-import { speakText } from '../ai/client'
+import { speakText, stopSpeechPlayback, type SpeechPlayback } from '../ai/client'
 import { RobotApi } from './Robot'
 import { SKILLS, THEMES, VOICES, VOICE_ACCENTS } from './config'
 import { useBotData } from './useBotData'
@@ -32,78 +32,53 @@ export function BotViews(p: P) {
   const [del, setDel] = useState('')
   const [vm, setVm] = useState<{ state: 'idle' | 'rec' | 'done' | 'err'; msg: string }>({ state: 'idle', msg: '' })
   const [hello, setHello] = useState<{ state: 'idle' | 'loading' | 'playing' | 'error'; message: string }>({ state: 'idle', message: '' })
-  const helloAudio = useRef<HTMLAudioElement | null>(null)
-  const helloUrl = useRef<string | null>(null)
+  const helloPlayback = useRef<SpeechPlayback | null>(null)
+  const helloRun = useRef(0)
 
-  function clearHelloPlayback(audio?: HTMLAudioElement) {
-    if (audio && helloAudio.current !== audio) return
-    const current = helloAudio.current
-    helloAudio.current = null
-    if (current) {
-      current.onended = null
-      current.onerror = null
-      current.onplay = null
-      current.pause()
-      current.removeAttribute('src')
-      current.load()
-    }
-    if (helloUrl.current) URL.revokeObjectURL(helloUrl.current)
-    helloUrl.current = null
+  function clearHelloPlayback() {
+    helloRun.current += 1
+    helloPlayback.current?.stop()
+    helloPlayback.current = null
+    stopSpeechPlayback()
     p.robot.current?.talk(false)
   }
 
-  async function playElevenLabsHello(voice: string) {
+  async function playNaturalVoicePreview(voice: string) {
     clearHelloPlayback()
-    if (!sample.trim()) {
+    const run = helloRun.current
+    const clean = sample.trim()
+    if (!clean) {
       setHello({ state: 'error', message: 'Enter something to preview first.' })
       return
     }
-    setHello({ state: 'loading', message: 'Requesting speech directly from ElevenLabs…' })
+
+    setHello({ state: 'loading', message: 'Starting your natural voice…' })
     try {
-      const response = await fetch('/api/speak-eleven', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        body: JSON.stringify({ text: sample, voice, accent: s.accent || 'auto' }),
-      })
-      if (!response.ok) {
-        let reason = `ElevenLabs voice request failed (${response.status}).`
-        try {
-          const payload = await response.json()
-          if (typeof payload?.error === 'string') reason = payload.error
-        } catch { /* Preserve the HTTP status message if the server returns no JSON. */ }
-        throw new Error(reason)
+      const playback = await speakText(
+        clean,
+        voice,
+        () => {
+          if (run !== helloRun.current) return
+          p.robot.current?.talk(true)
+          setHello({ state: 'playing', message: 'Speaking with your selected QuorlythBot voice profile.' })
+        },
+        () => {
+          if (run !== helloRun.current) return
+          helloPlayback.current = null
+          p.robot.current?.talk(false)
+          setHello({ state: 'idle', message: 'Voice preview finished.' })
+        },
+        { accent: s.accent || 'auto', allowBrowserFallback: true, preferBrowserVoice: true },
+      )
+      if (run !== helloRun.current) {
+        playback.stop()
+        return
       }
-      const provider = response.headers.get('X-Quorlyth-Voice-Provider')
-      if (provider !== 'elevenlabs') {
-        throw new Error('Playback blocked: the server did not confirm that this audio came from ElevenLabs.')
-      }
-      const contentType = response.headers.get('Content-Type') || ''
-      if (!contentType.startsWith('audio/')) {
-        throw new Error('ElevenLabs did not return an audio file. No other voice was used.')
-      }
-      const audioBlob = await response.blob()
-      if (!audioBlob.size) throw new Error('ElevenLabs returned an empty audio file. Please retry.')
-      const url = URL.createObjectURL(audioBlob)
-      const audio = new Audio(url)
-      helloAudio.current = audio
-      helloUrl.current = url
-      audio.onplay = () => {
-        p.robot.current?.talk(true)
-        setHello({ state: 'playing', message: 'Playing confirmed ElevenLabs audio.' })
-      }
-      audio.onended = () => {
-        clearHelloPlayback(audio)
-        setHello({ state: 'idle', message: 'ElevenLabs preview finished.' })
-      }
-      audio.onerror = () => {
-        clearHelloPlayback(audio)
-        setHello({ state: 'error', message: 'The ElevenLabs audio arrived, but your browser could not play it. No basic voice was substituted.' })
-      }
-      await audio.play()
+      helloPlayback.current = playback
+      setHello({ state: 'playing', message: 'Your device’s best available natural voice is playing.' })
     } catch (error) {
-      clearHelloPlayback()
-      const message = error instanceof Error ? error.message : 'ElevenLabs voice is unavailable. No alternate voice was used.'
+      if (run !== helloRun.current) return
+      const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
       setHello({ state: 'error', message })
       a.toast(message)
     }
@@ -132,7 +107,7 @@ export function BotViews(p: P) {
       const m = f[Math.floor(f.length / 2)], g = m < 165 ? 'm' : 'f', v = VOICES.find(x => x.g === g)!
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: false }).catch(() => a.toast('ElevenLabs is unavailable. No basic device voice was substituted.'))
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: true, preferBrowserVoice: true }).catch(() => a.toast('Natural voice playback is unavailable on this device.'))
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
@@ -207,10 +182,10 @@ export function BotViews(p: P) {
         <div className="glass pad" style={{ padding: '6px 18px', marginBottom: 12 }}>
           <div className="csr" style={{ alignItems: 'flex-start' }}><span><b style={{ fontWeight: 400 }}>Finish</b><br /><span className="dim">The look of your robot</span></span>
             <div className="acts" style={{ margin: 0, gap: 6, justifyContent: 'flex-end' }}>{Object.keys(THEMES).map(k => { const T = (THEMES as any)[k]; return <Chip key={k} on={s.theme === k} onClick={() => { bd.saveSettings({ theme: k }); p.robot.current?.theme(k); p.robot.current?.spin() }}><i className="sw" style={{ background: `radial-gradient(circle at 30% 30%,${T.g1},${T.g2})` }} />{T.n}</Chip> })}</div></div>
-          <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Plays only your selected ElevenLabs voice.</span></span>
+          <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Uses your selected voice profile with the best natural voice available on this device.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
             <div className="acts" style={{ margin: 0 }}>
-              <button className="btn p" disabled={hello.state === 'loading'} onClick={() => void playElevenLabsHello(cur.ai)}><Icon name="voice" size={16} />{hello.state === 'loading' ? 'Loading ElevenLabs…' : hello.state === 'playing' ? 'Playing ElevenLabs' : 'Hear a hello'}</button>
+              <button className="btn p" disabled={hello.state === 'loading'} onClick={() => void playNaturalVoicePreview(cur.ai)}><Icon name="voice" size={16} />{hello.state === 'loading' ? 'Starting voice…' : hello.state === 'playing' ? 'Playing voice' : 'Hear a hello'}</button>
               {hello.message && <p role="status" aria-live="polite" className={hello.state === 'error' ? 'err' : 'dim'} style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>{hello.message}</p>}
               <button className="btn" onClick={p.startLive}><Icon name="live" size={16} />Talk to Quorlyth</button>
             </div></div>
