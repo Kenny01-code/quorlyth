@@ -789,7 +789,7 @@ async function requestGrokSpeech(text, voice, accent) {
 }
 
 async function requestGeminiSpeech(text, voice, accent) {
-  const model = process.env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts'
+  const model = process.env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-tts'
   return fetchWithHeaderTimeout('https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY() },
