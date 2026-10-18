@@ -1,0 +1,1538 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { BotIcon as Icon } from './BotIcon'
+import { Logo } from '../lib/Logo'
+import { Av } from '../components/ui'
+import { useApp } from '../data/AppProvider'
+import { Chat, ChatMsg } from '../lib/types'
+import { cn, slug, when } from '../lib/util'
+import { askJson, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
+import type { SpeechPlayback } from '../ai/client'
+import { Robot, RobotApi } from './Robot'
+import { ChatMenu } from './ChatMenu'
+import { BotViews } from './views'
+import { SKILLS, THEMES, TOUR_MEMBER, TOUR_OWNER, VOICES } from './config'
+import { buildContext } from './context'
+import { useBotData } from './useBotData'
+import { reviewIdeas } from '../ai/review'
+
+const PHRASES = {
+  owner: ['Ask QuorlythBot anything', 'Summarize what my community is saying', 'Draft a post for my best idea', 'Which ideas should I pick this week?', 'Explain my analytics', 'Plan my week', 'Type / for skills'],
+  member: ['Ask QuorlythBot anything', 'How do I get my idea noticed?', 'Improve my idea before I post it', 'Find ideas about live shows', 'What can I do here?', 'Type / for skills'],
+  visitor: ['Ask QuorlythBot anything', 'How do I get access?', 'Show me around', 'What is Quorlyth?', 'Type / for skills'],
+}
+
+function usePlaceholder(role: 'owner' | 'member' | 'visitor', active: boolean) {
+  const [index, setIndex] = useState(0)
+  useEffect(() => {
+    if (!active) { setIndex(0); return }
+    // Rotate a complete suggestion periodically instead of typing/deleting each
+    // character. The old 16–66ms updates re-rendered the entire bot subtree
+    // repeatedly even when the user was not interacting with it.
+    const timer = window.setInterval(() => {
+      setIndex(current => (current + 1) % PHRASES[role].length)
+    }, 4600)
+    return () => window.clearInterval(timer)
+  }, [role, active])
+  return active ? PHRASES[role][index % PHRASES[role].length] : 'Message QuorlythBot'
+}
+
+
+function friendlyBotError(error: unknown): string {
+  const value = error && typeof error === 'object' ? error as { name?: unknown; message?: unknown } : null
+  const name = typeof value?.name === 'string' ? value.name : ''
+  const message = typeof value?.message === 'string' ? value.message : typeof error === 'string' ? error : ''
+  if (name === 'AbortError') return 'I stopped that response. Send another message whenever you’re ready.'
+  if (/credit_balance_exhausted|insufficient_quota|no credits remaining/i.test(message)) return 'I’m temporarily unable to generate a reply because the AI service needs attention. Please try again later.'
+  if (/session could not be verified|session.*expired|sign-in session/i.test(message)) return 'Your Quorlyth session needs a refresh. Reload the page, then try your message again.'
+  if (/securely load the app context|context.*unavailable/i.test(message)) return 'I couldn’t securely load the latest Quorlyth context just now. Please try again in a moment.'
+  if (/failed to fetch|networkerror|network request failed|offline|load failed/i.test(message)) return 'I couldn’t reach QuorlythBot just now. Check your connection and try again.'
+  if (/timed out|stalled|interrupted before it finished/i.test(message)) return 'That reply didn’t finish coming through. Please try again and I’ll take another run at it.'
+  if (/temporarily unavailable|available ai services/i.test(message)) return 'I’m having trouble reaching the AI service right now. Please try again shortly.'
+  return 'I hit a temporary snag while preparing that answer. Your message is still here; please try again in a moment.'
+}
+
+type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
+type Live = null | { state: string; user: string; bot: string }
+type PendingAction =
+  | { type: 'community'; name: string; purpose: string; cover: string; vis: 'listed' | 'unlisted'; post: 'anyone' | 'members' | 'owner' }
+  | { type: 'idea'; title: string; body: string; cid: string; tags: string[] }
+  | { type: 'promote'; ideaId: string; text: string; credits: string[] }
+  | { type: 'cover'; cid: string; cover: string }
+  | { type: 'deleteCommunity'; cid: string; name: string; ideaCount: number }
+
+function pendingActionDetail(action: PendingAction, communities: { id: string; name: string }[], ideas: { id: string; title: string }[]): string {
+  switch (action.type) {
+    case 'community': return action.name + (action.purpose ? ' · ' + action.purpose : '') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
+    case 'idea': return action.title + ' · ' + (communities.find(x => x.id === action.cid)?.name || 'Community')
+    case 'promote': return ideas.find(x => x.id === action.ideaId)?.title || 'Selected idea'
+    case 'cover': return (communities.find(x => x.id === action.cid)?.name || 'Community') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
+    case 'deleteCommunity': return action.name + ' · ' + action.ideaCount + ' linked idea' + (action.ideaCount === 1 ? '' : 's')
+  }
+}
+
+export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) {
+  const a = useApp()
+  const nav = useNavigate()
+  const loc = useLocation()
+  const bd = useBotData()
+  const { settings: bs } = bd
+  const role = !a.me ? 'visitor' : a.owner ? 'owner' : 'member'
+  const communityOwner = !!a.me && a.data.communities.some(c => a.ownsCommunity(c.id))
+  const robot = useRef<RobotApi | null>(null)
+  const log = useRef<HTMLDivElement>(null)
+  const ctl = useRef<AbortController | null>(null)
+  const rt = useRef<{ stop: () => void; respond?: () => void; interrupt?: () => void } | null>(null)
+  const liveFallback = useRef(false)
+  const liveRecognition = useRef<any>(null)
+  const liveAbortRef = useRef<AbortController | null>(null)
+  const liveRestartTimer = useRef<number | null>(null)
+  const liveTurnBusy = useRef(false)
+  const audio = useRef<SpeechPlayback | null>(null)
+  const speechRequest = useRef<AbortController | null>(null)
+  const speechMessageKeyRef = useRef('')
+  const [speechMessageKey, setSpeechMessageKey] = useState('')
+  const [speechState, setSpeechState] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle')
+  const [thinkingPhase, setThinkingPhase] = useState<'off' | 'thinking' | 'leaving'>('off')
+  const thinkingExitTimer = useRef<number | null>(null)
+  const [open, setOpen] = useState(initialOpen)
+  const [minimized, setMinimized] = useState(false)
+  const [launcherHidden, setLauncherHidden] = useState(false)
+  const [showLauncherRestore, setShowLauncherRestore] = useState(false)
+  const launcherHoldTimer = useRef<number | null>(null)
+  const launcherRestoreTimer = useRef<number | null>(null)
+  const launcherHoldOrigin = useRef<{ x: number; y: number } | null>(null)
+  const launcherLongPressTriggered = useRef(false)
+  const [mode, setMode] = useState<'compact' | 'large' | 'full' | 'custom'>('full')
+  const [viewportNarrow, setViewportNarrow] = useState(() => window.innerWidth <= 980)
+  const [side, setSide] = useState(() => window.innerWidth > 980)
+  const [view, setView] = useState<View>('chat')
+  const [cur, setCur] = useState<Chat | null>(null)
+  const [pj, setPj] = useState('')
+  const [input, setInput] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [stage, setStage] = useState<'std' | 'big' | 'off'>('std')
+  const [caption, setCaption] = useState('')
+  const [status, setStatus] = useState('Online')
+  const [thinkingTask, setThinkingTask] = useState('')
+  const [q, setQ] = useState('')
+  const [menu, setMenu] = useState<null | { id: string | null; x: number; y: number; leftBound?: number; rightBound?: number; anchor: HTMLElement; offsetX: number; offsetY: number }>(null)
+  const [ren, setRen] = useState('')
+  const [showArch, setShowArch] = useState(false)
+  const [live, setLive] = useState<Live>(null)
+  const [pend, setPend] = useState('')
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const [tour, setTour] = useState(-1)
+  const [greet, setGreet] = useState('')
+  const [size, setSize] = useState<null | { w: number; h: number }>(null)
+  const [position, setPosition] = useState<null | { x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('qbot-panel-position-v1')
+      if (!saved) return null
+      const parsed = JSON.parse(saved)
+      return Number.isFinite(parsed?.x) && Number.isFinite(parsed?.y) ? { x: parsed.x, y: parsed.y } : null
+    } catch { return null }
+  })
+  const panel = useRef<HTMLDivElement>(null)
+  const initialOpenHandled = useRef(false)
+  const ph = usePlaceholder(role, open && view === 'chat' && !input)
+  const project = bd.projects.find(p => p.id === pj) || null
+  const theme = bs.theme
+  const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
+  const wide = !narrow
+
+  useEffect(() => {
+    const resize = () => {
+      const isNarrow = window.innerWidth <= 980
+      setViewportNarrow(isNarrow)
+      setSize(current => {
+        if (!current) return current
+        const maxW = Math.max(240, window.innerWidth - 24)
+        const maxH = Math.max(300, window.innerHeight - 24)
+        return { w: Math.min(current.w, maxW), h: Math.min(current.h, maxH) }
+      })
+      setPosition(current => {
+        if (!current || mode === 'full') return current
+        const el = panel.current
+        const w = el?.offsetWidth || 1180
+        const h = el?.offsetHeight || 860
+        return {
+          x: Math.max(8, Math.min(current.x, window.innerWidth - Math.min(w, window.innerWidth) - 8)),
+          y: Math.max(8, Math.min(current.y, window.innerHeight - Math.min(h, window.innerHeight) - 8)),
+        }
+      })
+    }
+    window.addEventListener('resize', resize)
+    return () => window.removeEventListener('resize', resize)
+  }, [mode])
+
+  useEffect(() => {
+    try {
+      if (position) localStorage.setItem('qbot-panel-position-v1', JSON.stringify(position))
+    } catch { /* Position still works for this session if storage is unavailable. */ }
+  }, [position])
+
+  useEffect(() => {
+    if (narrow) setSide(false)
+  }, [narrow])
+
+  useEffect(() => {
+    if (!a.me || !bd.doc('botset')) return
+    const themeKey = 'qbot-onyx-default-v1:' + a.me.id
+    const modelKey = 'qbot-smart-default-v1:' + a.me.id
+    const updates: any = {}
+    if (!localStorage.getItem(themeKey)) {
+      if (bs.theme === 'pearl') updates.theme = 'onyx'
+      localStorage.setItem(themeKey, '1')
+    }
+    if (!localStorage.getItem(modelKey)) {
+      if (bs.model === 'quick') updates.model = 'smart'
+      localStorage.setItem(modelKey, '1')
+    }
+    if (Object.keys(updates).length) bd.saveSettings(updates)
+  }, [a.me?.id, bd.doc('botset')?.theme, bd.doc('botset')?.model])
+
+  // greeting bubble on the launcher, first time visitors get a wave when opened
+  useEffect(() => {
+    if (!a.ready) return
+    const first = !localStorage.getItem('qseen')
+    setGreet(first ? 'Hi, I am QuorlythBot' : a.me ? `Welcome back, ${a.me.name.split(' ')[0]}` : '')
+    const t = setTimeout(() => setGreet(''), 7000)
+    return () => clearTimeout(t)
+  }, [a.ready, a.me?.id])
+  const latestMessageText = cur ? cur.msgs[cur.msgs.length - 1]?.t : undefined
+  useEffect(() => {
+    const scroller = log.current
+    if (!scroller) return
+    const last = cur ? cur.msgs[cur.msgs.length - 1] : undefined
+    const distanceFromBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
+    // Keep following the conversation only if the user is already at the bottom
+    // or just submitted a message. One frame per stream update prevents layout thrash.
+    if (last?.r !== 'u' && distanceFromBottom >= 160) return
+    const frame = window.requestAnimationFrame(() => {
+      if (!log.current) return
+      log.current.scrollTo({ top: log.current.scrollHeight, behavior: 'auto' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [cur?.msgs.length, latestMessageText, busy])
+  useEffect(() => {
+    const restoreWithShortcut = (event: KeyboardEvent) => {
+      if (event.altKey && event.shiftKey && event.code === 'KeyB') {
+        event.preventDefault()
+        setLauncherHidden(false)
+        setShowLauncherRestore(false)
+        if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
+        launcherRestoreTimer.current = null
+      }
+    }
+    window.addEventListener('keydown', restoreWithShortcut)
+    return () => window.removeEventListener('keydown', restoreWithShortcut)
+  }, [])
+  useEffect(() => () => {
+    if (launcherHoldTimer.current !== null) window.clearTimeout(launcherHoldTimer.current)
+    if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
+  }, [])
+
+  const accent = (cur?.color && (THEMES as any)[cur.color]) || null
+  const style = accent ? ({ ['--ac1' as any]: accent.g1, ['--ac2' as any]: accent.g2, ['--acr' as any]: accent.cr } as React.CSSProperties) : undefined
+
+  function openPanel() {
+    setOpen(true)
+    if (minimized) {
+      // Restore the existing window and transcript without replaying the welcome greeting.
+      setMinimized(false)
+      return
+    }
+    const first = !localStorage.getItem('qseen')
+    localStorage.setItem('qseen', '1')
+    const name = a.me?.name.split(' ')[0]
+    const msg = !a.me ? 'Welcome to Quorlyth. Sign in to enter your space.' : first ? `Welcome, ${name}. I am QuorlythBot, your concierge. Ask me anything, or let me show you around.` : `Welcome back, ${name}.`
+    setCaption(msg)
+    first ? robot.current?.welcome() : robot.current?.wave()
+    say(msg)
+    window.setTimeout(() => setCaption(''), 6000)
+  }
+
+  // The app defers loading this module until the lightweight launcher is clicked.
+  // On that first click, open directly and preserve the normal welcome interaction.
+  useEffect(() => {
+    if (!initialOpen || initialOpenHandled.current) return
+    initialOpenHandled.current = true
+    openPanel()
+  }, [initialOpen])
+
+  function clearLauncherHold() {
+    if (launcherHoldTimer.current !== null) window.clearTimeout(launcherHoldTimer.current)
+    launcherHoldTimer.current = null
+    launcherHoldOrigin.current = null
+  }
+
+  function hideLauncher() {
+    if (open) return
+    setLauncherHidden(true)
+    setGreet('')
+    setShowLauncherRestore(true)
+    if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
+    launcherRestoreTimer.current = window.setTimeout(() => {
+      setShowLauncherRestore(false)
+      launcherRestoreTimer.current = null
+    }, 10000)
+  }
+
+  function restoreLauncher() {
+    setLauncherHidden(false)
+    setShowLauncherRestore(false)
+    if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
+    launcherRestoreTimer.current = null
+  }
+
+  function startLauncherHold(event: React.PointerEvent<HTMLButtonElement>) {
+    if (event.pointerType !== 'touch') return
+    clearLauncherHold()
+    launcherLongPressTriggered.current = false
+    launcherHoldOrigin.current = { x: event.clientX, y: event.clientY }
+    launcherHoldTimer.current = window.setTimeout(() => {
+      launcherLongPressTriggered.current = true
+      launcherHoldTimer.current = null
+      hideLauncher()
+      window.setTimeout(() => { launcherLongPressTriggered.current = false }, 900)
+    }, 650)
+  }
+
+  function moveLauncherHold(event: React.PointerEvent<HTMLButtonElement>) {
+    const origin = launcherHoldOrigin.current
+    if (!origin) return
+    if (Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 12) clearLauncherHold()
+  }
+
+  async function requestLiveContext(text: string) {
+    const asksLocalWeather = /\b(weather|forecast|temperature)\b/i.test(text) && !/\b(?:in|at|for)\s+[A-Z][a-z]+/i.test(text)
+    const asksLocation = /\b(near me|my location|where am i|weather here|forecast here|temperature here|local weather|nearby)\b/i.test(text)
+    if (!asksLocalWeather && !asksLocation) return ''
+    if (!navigator.geolocation) return 'The browser does not support geolocation. Ask the user to name their city for local weather or nearby results.'
+    try {
+      const position: GeolocationPosition = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 }))
+      if (asksLocalWeather) {
+        const { latitude, longitude } = position.coords
+        const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(String(latitude)) + '&longitude=' + encodeURIComponent(String(longitude)) + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto'
+        const controller = new AbortController()
+        const timer = window.setTimeout(() => controller.abort(), 3500)
+        let response: Response
+        try { response = await fetch(url, { signal: controller.signal }) }
+        finally { window.clearTimeout(timer) }
+        if (!response.ok) return 'Location permission was granted, but the live weather service is unavailable. Do not invent weather; ask the user to try again or name a city.'
+        const weather = await response.json()
+        return 'The user explicitly requested local weather and granted browser location permission. Live weather data from Open-Meteo for their approximate current coordinates: ' + JSON.stringify({ timezone: weather.timezone, current: weather.current, units: weather.current_units }) + '. Use these values as current weather, state that they are approximate to the browser location, and do not claim a more precise address.'
+      }
+      return 'The user explicitly requested location-based results and granted browser location permission. Approximate current coordinates: latitude ' + position.coords.latitude.toFixed(3) + ', longitude ' + position.coords.longitude.toFixed(3) + '. Use these only for the requested nearby/location task; do not infer a street address.'
+    } catch {
+      return 'The user did not share browser location or the location request timed out. Do not guess their location; ask them for a city or permission if location-based results are needed.'
+    }
+  }
+
+  function browserContext() {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown timezone'
+    const lang = navigator.language || 'unknown language'
+    const localTime = new Date().toLocaleString(lang, { dateStyle: 'full', timeStyle: 'long' })
+    const speech = 'speechSynthesis' in window
+    const recognition = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+    return `Browser language: ${lang}. Device time zone: ${zone}. Current local date and time: ${localTime}. Browser online: ${navigator.onLine ? 'yes' : 'no'}. Browser speech output: ${speech ? 'available' : 'unavailable'}. Browser speech recognition: ${recognition ? 'available' : 'unavailable'}. Precise device location has not been read; ask before requesting location permission and never pretend to know GPS coordinates.`
+  }
+
+  useEffect(() => {
+    if (thinkingExitTimer.current !== null) {
+      window.clearTimeout(thinkingExitTimer.current)
+      thinkingExitTimer.current = null
+    }
+    if (busy) {
+      setThinkingPhase('thinking')
+      return
+    }
+    if (thinkingPhase === 'off') return
+    setThinkingPhase('leaving')
+    thinkingExitTimer.current = window.setTimeout(() => {
+      thinkingExitTimer.current = null
+      setThinkingPhase('off')
+      setThinkingTask('')
+    }, 190)
+    return () => {
+      if (thinkingExitTimer.current !== null) {
+        window.clearTimeout(thinkingExitTimer.current)
+        thinkingExitTimer.current = null
+      }
+    }
+  }, [busy])
+
+  useEffect(() => () => {
+    speechRequest.current?.abort()
+    audio.current?.stop()
+    if (thinkingExitTimer.current !== null) window.clearTimeout(thinkingExitTimer.current)
+  }, [])
+
+  function transitionThinkingOut() {
+    if (thinkingExitTimer.current !== null) window.clearTimeout(thinkingExitTimer.current)
+    setThinkingPhase('leaving')
+    thinkingExitTimer.current = window.setTimeout(() => {
+      thinkingExitTimer.current = null
+      setThinkingPhase('off')
+      setThinkingTask('')
+    }, 190)
+  }
+
+  function stopVoice() {
+    speechMessageKeyRef.current = ''
+    speechRequest.current?.abort()
+    speechRequest.current = null
+    const playback = audio.current
+    audio.current = null
+    playback?.stop()
+    stopSpeechPlayback()
+    setSpeechMessageKey('')
+    setSpeechState('idle')
+    robot.current?.talk(false)
+    setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
+  }
+
+  async function playSpeech(text: string, key: string, showError: boolean) {
+    const clean = text.replace(/\[\[.*?\]\]/g, '').trim().slice(0, 1500)
+    if (!clean) return
+    speechRequest.current?.abort()
+    const oldPlayback = audio.current
+    audio.current = null
+    speechMessageKeyRef.current = key
+    setSpeechMessageKey(key)
+    setSpeechState('loading')
+    setStatus('Preparing voice')
+    oldPlayback?.stop()
+    const controller = new AbortController()
+    speechRequest.current = controller
+    const voice = VOICES.find(item => item.id === bs.vid) || VOICES[0]
+    try {
+      const playback = await speakText(
+        clean,
+        voice.ai,
+        () => {
+          if (speechMessageKeyRef.current !== key || controller.signal.aborted) return
+          setSpeechState('playing')
+          setStatus('Speaking')
+          robot.current?.talk(true)
+        },
+        () => {
+          if (speechMessageKeyRef.current !== key) return
+          audio.current = null
+          speechMessageKeyRef.current = ''
+          setSpeechMessageKey('')
+          setSpeechState('idle')
+          robot.current?.talk(false)
+          setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
+        },
+        {
+          accent: bs.accent || 'auto',
+          signal: controller.signal,
+          onBrowserFallback: () => {
+            if (showError && !controller.signal.aborted) {
+              a.toast("Natural voice audio couldn't be reached, so your device's built-in voice is playing. This isn't a QuorlythBot Studio voice.");
+            }
+          },
+        },
+      )
+      if (controller.signal.aborted || speechMessageKeyRef.current !== key) {
+        playback.stop()
+        return
+      }
+      audio.current = playback
+    } catch (error) {
+      const aborted = controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')
+      if (speechMessageKeyRef.current === key) {
+        audio.current = null
+        speechMessageKeyRef.current = ''
+        setSpeechMessageKey('')
+        setSpeechState('idle')
+        robot.current?.talk(false)
+        setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
+      }
+      if (showError && !aborted) {
+        a.toast('Voice playback is unavailable right now. The written reply is still here.')
+      }
+    } finally {
+      if (speechRequest.current === controller) speechRequest.current = null
+    }
+  }
+
+  function toggleReplySpeech(key: string, text: string) {
+    if (speechMessageKeyRef.current === key) {
+      if (speechState === 'loading') {
+        stopVoice()
+      } else if (speechState === 'playing') {
+        audio.current?.pause()
+        setSpeechState('paused')
+        setStatus('Paused')
+        robot.current?.talk(false)
+      } else if (speechState === 'paused') {
+        audio.current?.resume()
+        setSpeechState('playing')
+        setStatus('Speaking')
+        robot.current?.talk(true)
+      } else {
+        void playSpeech(text, key, true)
+      }
+      return
+    }
+    void playSpeech(text, key, true)
+  }
+
+  function say(text: string, messageKey?: string) {
+    const clean = text.replace(/\[\[.*?\]\]/g, '').trim()
+    if (!clean || !bs.voice) return
+    const key = messageKey || 'announcement:' + Date.now()
+    void playSpeech(clean, key, false)
+  }
+
+  function persist(c: Chat) {
+    const next = { ...c, upd: Date.now() }
+    setCur(next)
+    if (a.me && next.msgs.length) bd.put(next.id, { title: next.title, pj: next.pj || '', at: next.at, upd: next.upd, pin: !!next.pin, color: next.color || '', arch: !!next.arch, unread: !!next.unread, msgs: next.msgs.slice(-40).map(m => ({ ...m, t: m.t.slice(0, 3000) })) })
+  }
+  const add = (c: Chat | null, m: ChatMsg, title?: string): Chat => {
+    const base = c || { id: 'c_' + slug(), title: (title || m.t).slice(0, 44), pj, at: Date.now(), upd: Date.now(), msgs: [] }
+    const next = { ...base, msgs: [...base.msgs, m].slice(-100) }
+    setCur(next); return next
+  }
+
+  function responseTierForRequest(text: string, preference: 'quick' | 'smart'): 'quick' | 'smart' {
+    if (preference === 'quick') return 'quick'
+    const normalized = text.trim()
+    const complexTask = /\b(plan|roadmap|research|compare|analysis|analy[sz]e|review|rank|score|audit|architecture|implement|debug|latest|current|today|tonight|live|weather|forecast|news|sources|citations|multiple|all ideas|entire|comprehensive|step[- ]by[- ]step)\b/i.test(normalized)
+      || normalized.length > 520
+      || normalized.split(/\s+/).length > 55
+    return complexTask ? 'smart' : 'quick'
+  }
+
+  function taskPreview(text: string) {
+    if (/\b(delete|remove|destroy)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Preparing a deletion confirmation'
+    if (/\b(create|make|start|set up)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Creating your community'
+    if (/\b(add|create|write|submit|post)\b/i.test(text) && /\bidea\b/i.test(text)) return 'Preparing your idea'
+    if (/\b(open|show|take me to|go to|view|enter)\b/i.test(text)) return 'Opening the right place'
+    if (/\b(weather|forecast|temperature|latest|current|today|right now|live|news|search|look up|source)\b/i.test(text)) return 'Checking current information'
+    if (/\b(review|score|rank|analy[sz]e|analytics|summari[sz]e|compare)\b/i.test(text)) return 'Reviewing the available information'
+    if (/\b(write|draft|rewrite|improve|generate|design|plan)\b/i.test(text)) return 'Working on your request'
+    return 'Finding the most useful answer'
+  }
+
+  async function send(text?: string, raw = false) {
+    const t = (text ?? input).trim()
+    if (!t || busy) return
+    setInput('')
+    if (!raw && t.startsWith('/')) { const m = t.match(/^\/(\w+)\s*(.*)$/s); if (m && SKILLS.some(s => s.id === m[1])) return skill(m[1], m[2]) }
+    if (!raw && a.owner && /^(please\s+)?(can you\s+)?(run|start|do|perform|review|score)\b/i.test(t) && /\b(review|score|ideas?|queue)\b/i.test(t)) return skill('review')
+    if (!raw) {
+      const direct = handleDirectNavigation(t)
+      if (direct) return
+      if (/\b(create|make|start|set up)\b/i.test(t) && /\bcommunity\b/i.test(t) && !a.owner) {
+        const draft = add(cur, { r: 'u', t })
+        const msg = !a.me ? 'Sign in first. Creating a community requires the space owner account.' : 'Your current account is not recognized as the space owner, so I cannot create a community from this session. Sign in with the owner account, then ask me again. I can still open communities and help draft ideas where you have permission.'
+        persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: msg }] })
+        return
+      }
+      const action = planAction(t)
+      if (action) {
+        stopVoice(); setView('chat')
+        if (action.type === 'deleteCommunity') {
+          const draft = add(cur, { r: 'u', t })
+          const prompt = `I found ${action.name}. It has ${action.ideaCount} linked idea${action.ideaCount === 1 ? '' : 's'}. Review the confirmation below before I delete the community.`
+          persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+          setPendingAction(action)
+          return
+        }
+        if (action.type === 'community' || action.type === 'idea' || action.type === 'cover') {
+          const draft = add(cur, { r: 'u', t })
+          setBusy(true); setStatus('Applying action'); setThinkingTask(taskPreview(t)); robot.current?.think(true)
+          try {
+            let ok = false
+            let message = ''
+            if (action.type === 'community') {
+              if (!a.owner) throw new Error('Only the space owner can create a community. Sign in with the owner account and try again.')
+              const result = await a.createCommunityDetailed(action)
+              ok = result.ok
+              message = ok ? `Created ${action.name}. Opening your communities now so you can enter it and add ideas.` : `I couldn't save ${action.name}: ${result.error || 'The save failed for an unknown reason.'}`
+            } else if (action.type === 'idea') {
+              const community = a.data.communities.find(x => x.id === action.cid)
+              if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
+              const result = await a.postIdeaDetailed({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
+              ok = result.ok
+              message = ok ? `Submitted “${action.title}”. Opening ${community.name} now.` : `I couldn't submit “${action.title}”: ${result.error || 'The database rejected the write.'}`
+            } else {
+              if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can change its cover.')
+              ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
+              message = ok ? 'Community cover updated.' : 'I could not update that cover.'
+            }
+            if (ok) {
+              const next = { ...draft, msgs: [...draft.msgs, { r: 'a' as const, t: message }] }
+              persist(next)
+              if (action.type === 'community') nav('/communities')
+              if (action.type === 'idea') nav('/communities/' + action.cid)
+            } else {
+              persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+            }
+          } catch (e: any) {
+            persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: e?.message || 'That action could not be completed.' }] })
+          } finally { setBusy(false); setThinkingTask(''); setStatus('Online'); robot.current?.think(false) }
+          return
+        }
+        let draft = add(cur, { r: 'u', t })
+        const summary = `I have prepared this in-app promotion for review. It will not be posted to an external social network. Confirm to mark the idea as promoted inside Quorlyth.`
+        draft = { ...draft, msgs: [...draft.msgs, { r: 'a', t: summary }] }
+        persist(draft); setPendingAction(action); return
+      }
+    }
+    // Greetings are deterministic, so do not pay an API round trip just to say hello.
+    if (!raw && /^(?:hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\s]*$/i.test(t)) {
+      stopVoice(); setView('chat')
+      const draft = add(cur, { r: 'u', t })
+      const firstName = a.me?.name?.trim().split(/\s+/)[0]
+      const reply = firstName ? `Hey ${firstName}, I'm here. What's on your mind?` : "Hey! I'm here. What would you like to talk about?"
+      const next = { ...draft, msgs: [...draft.msgs, { r: 'a' as const, t: reply }] }
+      persist(next)
+      robot.current?.wave()
+      say(reply, next.id + ':' + (next.msgs.length - 1))
+      return
+    }
+    stopVoice(); setView('chat')
+    let c = add(cur, { r: 'u', t })
+    setBusy(true); robot.current?.think(true); setStatus('Thinking'); setThinkingTask(taskPreview(t)); setCaption('')
+    ctl.current = new AbortController()
+    let renderTimer: number | null = null
+    let latestClean = ''
+    try {
+      // Short, recent context reduces token latency while retaining enough conversational continuity.
+      const recentTurns = c.msgs.filter(m => !(m as any).live).slice(-10)
+      const turns = recentTurns.map((m, index) => ({
+        role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.t.slice(-(index === recentTurns.length - 1 ? 4200 : 1400)),
+      }))
+      const liveContext = await requestLiveContext(t)
+      const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
+      const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
+      if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
+      const botContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveContext }
+      let first = true
+      const full = await streamChat(turns, {
+        ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
+        ...(accessToken ? { accessToken, context: botContext } : {}), tier: responseTierForRequest(t, bs.model), signal: ctl.current.signal,
+        onText: f => {
+          if (first) { first = false; transitionThinkingOut(); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
+          latestClean = f.replace(/\[\[[\s\S]*$/, '').trim()
+          if (renderTimer === null) {
+            renderTimer = window.setTimeout(() => {
+              renderTimer = null
+              setCaption(latestClean.slice(-140))
+              setCur(prev => prev ? { ...prev, msgs: prev.msgs.filter(m => !(m as any).live).concat([{ r: 'a', t: latestClean, live: true } as any]) } : prev)
+            }, 32)
+          }
+        },
+      })
+      if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
+      const btns: ChatMsg['btns'] = []
+      const g = full.match(/\[\[go:([^\]]+)\]\]/), o = full.match(/\[\[open:([\w-]+)\]\]/)
+      if (g) btns.push({ a: 'go', id: g[1], l: 'Open ' + g[1].replace('/', '') || 'home' })
+      if (o && a.data.ideas.some(i => i.id === o[1])) btns.push({ a: 'idea', id: o[1], l: 'Open that idea' })
+      const clean = full.replace(/\[\[[\s\S]*?\]\]/g, '').trim() || 'I couldn’t put together a complete answer that time. Could you try asking again?'
+      c = { ...c, msgs: [...c.msgs, { r: 'a', t: clean, btns }] }
+      persist(c)
+      robot.current?.talk(false); say(clean, c.id + ':' + (c.msgs.length - 1))
+      setTimeout(() => setCaption(''), 1500)
+    } catch (e: any) {
+      if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
+      robot.current?.think(false); robot.current?.talk(false)
+      if (e?.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: friendlyBotError(e) }] }; persist(c) }
+      else setCur(c)
+    }
+    setBusy(false); setThinkingTask(''); setStatus('Online'); ctl.current = null
+  }
+
+  async function skill(id: string, arg = '') {
+    setView('chat')
+    if (SKILLS.find(s => s.id === id)?.own && !a.owner && !(id === 'analytics' && communityOwner)) { setCur(add(cur, { r: 'a', t: 'That skill is for the owner of the space.' })); return }
+    if (id === 'tour') return startTour()
+    if ((id === 'find' || id === 'improve') && !arg) { setInput('/' + id + ' '); return }
+    if (id === 'review') {
+      const pending = a.data.ideas.filter(i => a.statusOf(i.id) === 'review')
+      if (!pending.length) { setCur(add(cur, { r: 'a', t: 'The review queue is clear. There are no ideas waiting for review.' })); return }
+      let n = add(cur, { r: 'u', t: `Run an AI review on ${pending.length} pending idea${pending.length === 1 ? '' : 's'}.` })
+      setBusy(true); setStatus('Reviewing ideas'); robot.current?.think(true)
+      try {
+        const count = await reviewIdeas(a, pending, { onProgress: setStatus })
+        n = { ...n, msgs: [...n.msgs, { r: 'a', t: `Review complete. I scored ${count} idea${count === 1 ? '' : 's'} for originality, feasibility, and audience relevance.`, btns: [{ a: 'go', id: '/queue', l: 'Open review queue' }] }] }
+        persist(n); robot.current?.cheer(); say(`Review complete. I scored ${count} idea${count === 1 ? '' : 's'} for originality, feasibility, and audience relevance.`)
+      } catch (e: any) {
+        const message = friendlyBotError(e)
+        n = { ...n, msgs: [...n.msgs, { r: 'a', t: message }] }; persist(n); say(message)
+      }
+      setBusy(false); setStatus('Online'); return
+    }
+    if (id === 'welcome') {
+      const c = a.data.communities[0]
+      if (!c) { setCur(add(cur, { r: 'a', t: 'Create a community first, then I can write its welcome and guidelines.' })); return }
+      let n = add(cur, { r: 'u', t: 'Write a welcome message and guidelines for ' + c.name }); setBusy(true)
+      try {
+        const o = await askJson<{ welcome: string; rules: string }>(`Write a welcome message (two warm sentences) and four short community guidelines (one line each, joined with newlines) for this fan community. Reply with only JSON: {"welcome":"text","rules":"line one\\nline two\\nline three\\nline four"}\nCommunity: ${c.name}. Purpose: ${c.purpose || 'share ideas'}. Tone: ${bs.tone}.`)
+        setPend(JSON.stringify({ cid: c.id, ...o }))
+        n = { ...n, msgs: [...n.msgs, { r: 'a', t: `Here is a welcome message:\n${o.welcome}\n\nAnd guidelines:\n${o.rules}`, btns: [{ a: 'apply', id: c.id, l: 'Apply to ' + c.name }] }] }; persist(n); say(n.msgs[n.msgs.length - 1].t)
+      } catch (e: any) { const message = friendlyBotError(e); n = { ...n, msgs: [...n.msgs, { r: 'a', t: message }] }; setCur(n); say(message) }
+      setBusy(false); return
+    }
+    if (id === 'find') {
+      let n = add(cur, { r: 'u', t: 'Find ideas about: ' + arg }); setBusy(true)
+      try {
+        const o = await askJson<{ matches: { id: string; why: string }[] }>(`Find up to five ideas that best match the request. Reply with only JSON: {"matches":[{"id":"idea id","why":"one short sentence"}]}. Use only ids from the list.\nRequest: ${arg}\nIdeas: ${JSON.stringify(a.data.ideas.slice(0, 60).map(i => ({ id: i.id, title: i.title, details: (i.body || '').slice(0, 160) })))}`, { tier: 'quick' })
+        const m = (o.matches || []).filter(x => a.data.ideas.some(i => i.id === x.id)).slice(0, 5)
+        n = { ...n, msgs: [...n.msgs, { r: 'a', t: m.length ? 'Here is what I found:\n' + m.map(x => a.data.ideas.find(i => i.id === x.id)!.title + ': ' + String(x.why).slice(0, 120)).join('\n') : 'I did not find a close match.', btns: m.map(x => ({ a: 'idea', id: x.id, l: a.data.ideas.find(i => i.id === x.id)!.title.slice(0, 28) })) }] }; persist(n); say(n.msgs[n.msgs.length - 1].t)
+      } catch (e: any) { n = { ...n, msgs: [...n.msgs, { r: 'a', t: e.message }] }; setCur(n); say(e.message) }
+      setBusy(false); return
+    }
+    const best = [...a.data.ideas].sort((x, y) => ((a.data.reviews[y.id]?.score || 0) + a.votesOf(y.id)) - ((a.data.reviews[x.id]?.score || 0) + a.votesOf(x.id)))[0]
+    const P: Record<string, string> = {
+      brief: 'Give me a briefing on my community: the top themes, what people want most, and three concrete next steps.',
+      post: best ? `Draft a short social post (under 60 words) announcing that I am acting on this idea from my community: "${best.title}". ${best.body || ''} Credit the community and do not name individuals.` : 'I have no ideas yet. Tell me how to get my first ideas flowing.',
+      ideas: 'Suggest five fresh discussion prompts I could post in my community to get members sharing ideas. One line each.',
+      analytics: 'Explain what my numbers mean, what is working and what I should do about it.',
+      plan: 'Plan my week as the owner of this space in five short steps based on what is waiting.',
+      improve: 'Improve this idea so it is clearer and more likely to get backed. Give a sharper title, a tighter description and up to three tags:\n' + arg,
+      reply: loc.pathname.startsWith('/idea/') ? 'Suggest two thoughtful replies I could post on the idea I am viewing.' : 'Open an idea first, then ask me for a reply and I will suggest two.',
+    }
+    if (P[id]) send(P[id], true)
+  }
+
+  function startTour() {
+    setTour(0); const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; step(steps, 0)
+  }
+  function step(steps: [string, string][], i: number) {
+    const s = steps[i]
+    if (!s) { setTour(-1); setCur(c => add(c, { r: 'a', t: 'That is the tour. Ask me anything whenever you like.' })); robot.current?.cheer(); return }
+    nav(s[0]); setCur(c => add(c, { r: 'a', t: s[1] })); setCaption(s[1]); robot.current?.set('point'); setTimeout(() => robot.current?.set('explain'), 900); say(s[1])
+  }
+
+  // ----- live voice -----
+  async function startLive() {
+    if (live) return stopLive()
+    if (!a.me) return a.toast('Sign in to talk live')
+
+    stopVoice()
+    setView('chat')
+    liveFallback.current = true
+    liveTurnBusy.current = false
+    setLive({ state: 'connecting', user: '', bot: '' })
+    const v = VOICES.find(item => item.id === bs.vid) || VOICES[0]
+    let c = cur
+    let speechTail = ''
+    let speechQueue = Promise.resolve()
+    let speechController: AbortController | null = null
+    let speechFailed = false
+    let speechFailureToastShown = false
+    let currentBotText = ''
+    let currentBotHadDelta = false
+    let currentUserTranscript = ''
+    let responseBeforeSessionReady = false
+    let sessionReady = false
+
+    const quickGreeting = (text: string): string | null => {
+      const trimmed = text.trim()
+      const lower = trimmed.toLocaleLowerCase()
+      const firstName = a.me?.name?.trim().split(/\s+/)[0]
+      if (/^(?:hello|hi|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\s]*$/i.test(trimmed)) {
+        return firstName ? `Hey ${firstName}, I'm here and listening. What's on your mind?` : "Hey! I'm here and listening. What's on your mind?"
+      }
+      if (/^(?:hola|buenos días|buenas tardes|buenas noches|buenas)[.!?,\s]*$/i.test(lower)) return '¡Hola! Estoy aquí. ¿De qué te gustaría hablar?'
+      if (/^(?:bonjour|salut|bonsoir)[.!?,\s]*$/i.test(lower)) return 'Bonjour ! Je suis là. De quoi aimeriez-vous parler ?'
+      if (/^(?:olá|ola|oi|bom dia|boa tarde|boa noite)[.!?,\s]*$/i.test(lower)) return 'Olá! Estou aqui e ouvindo. Sobre o que você gostaria de conversar?'
+      if (/^(?:你好|您好|嗨|早上好|晚上好)[。！!，,\s]*$/u.test(trimmed)) return '你好！我在这里听着。你想聊些什么？'
+      if (/^(?:こんにちは|こんばんは|おはようございます|やあ)[。！!，,\s]*$/u.test(trimmed)) return 'こんにちは！ここにいます。何について話しましょうか？'
+      if (/^(?:안녕하세요|안녕|좋은 아침)[.!?。\s]*$/u.test(trimmed)) return '안녕하세요! 듣고 있어요. 무엇에 대해 이야기할까요?'
+      if (/^(?:привет|здравствуйте|добрый день)[.!?,\s]*$/i.test(lower)) return 'Привет! Я здесь и слушаю. О чём поговорим?'
+      if (/^(?:مرحبا|أهلا|السلام عليكم)[،.!?\s]*$/u.test(trimmed)) return 'أهلاً! أنا هنا وأستمع إليك. عمّ تحب أن نتحدث؟'
+      if (/^(?:báwo|bawo|ẹ káàárọ̀|e kaaro)[.!?,\s]*$/i.test(lower)) return 'Báwo! Mo wà níbí. Kí lo fẹ́ bá mi sọ̀rọ̀ nípa rẹ?'
+      if (/^(?:how far|wetin dey|how you dey)[.!?,\s]*$/i.test(lower)) return 'I dey here! Wetin you wan yarn about?'
+      return null
+    }
+
+    const ensureSpeechController = () => {
+      if (!speechController || speechController.signal.aborted) {
+        speechController = new AbortController()
+        liveAbortRef.current = speechController
+        speechFailed = false
+        speechFailureToastShown = false
+      }
+      return speechController
+    }
+
+    const enqueueSpeech = (raw: string, controller: AbortController) => {
+      const chunk = raw.trim().replace(/\s+/g, ' ')
+      if (!chunk) return
+      speechQueue = speechQueue.then(async () => {
+        if (!liveFallback.current || speechFailed || controller.signal.aborted) return
+        let finishPlayback: () => void = () => {}
+        let finished = false
+        let playback: SpeechPlayback | null = null
+        const ended = new Promise<void>(resolve => { finishPlayback = resolve })
+        const finish = () => {
+          if (finished) return
+          finished = true
+          if (audio.current === playback) audio.current = null
+          robot.current?.talk(false)
+          finishPlayback()
+        }
+        try {
+          playback = await speakText(
+            chunk,
+            v.ai,
+            () => {
+              if (!liveFallback.current || controller.signal.aborted) return
+              setLive(l => l ? { ...l, state: 'speaking' } : l)
+              robot.current?.talk(true)
+            },
+            finish,
+            { accent: bs.accent || 'auto', signal: controller.signal, allowBrowserFallback: false },
+          )
+          if (!liveFallback.current || controller.signal.aborted) {
+            playback.stop()
+            finish()
+            return
+          }
+          audio.current = playback
+          await ended
+        } catch (error) {
+          finish()
+          if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
+          speechFailed = true
+          if (!speechFailureToastShown && liveFallback.current) {
+            speechFailureToastShown = true
+            a.toast('ElevenLabs could not play the selected voice. No basic device voice was substituted; check the ElevenLabs account and try again.')
+          }
+        }
+      })
+    }
+
+    const queueSpeechFromDelta = (piece: string, controller: AbortController) => {
+      speechTail += piece || ''
+      while (true) {
+        const match = /[.!?](?:["'’”\)\]]*)\s+/.exec(speechTail)
+        if (!match) break
+        const endAt = match.index + match[0].trimEnd().length
+        enqueueSpeech(speechTail.slice(0, endAt), controller)
+        speechTail = speechTail.slice(match.index + match[0].length)
+      }
+      if (speechTail.length > 72) {
+        const cut = Math.max(speechTail.lastIndexOf(' ', 58), speechTail.lastIndexOf(',', 58))
+        if (cut > 36) {
+          const phrase = speechTail.slice(0, cut).trim()
+          enqueueSpeech(/[,.!?]$/.test(phrase) ? phrase : phrase + ',', controller)
+          speechTail = speechTail.slice(cut + 1)
+        }
+      }
+    }
+
+    try {
+      const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
+      const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
+      if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
+      const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
+      const session = await startRealtime({
+        instructions: buildContext(a, bs, loc.pathname, project)
+          + '\nBrowser/device context: ' + browserContext()
+          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected ElevenLabs Studio voice.',
+        voice: v.ai,
+        accent: bs.accent || 'auto',
+        textOnly: true,
+        ...(accessToken ? { accessToken, context: voiceContext } : {}),
+        onEvent: event => {
+          if (!liveFallback.current) return
+          if (event.type === 'speech_started') {
+            currentUserTranscript = ''
+            if (speechController && !speechController.signal.aborted) {
+              speechController.abort()
+              if (liveAbortRef.current === speechController) liveAbortRef.current = null
+              speechController = null
+              speechTail = ''
+              rt.current?.interrupt?.()
+              robot.current?.talk(false)
+            }
+            setLive(l => l ? { ...l, state: 'listening', user: '', bot: '' } : l)
+            return
+          }
+          if (event.type === 'state') {
+            setLive(l => l ? { ...l, state: event.state } : l)
+            robot.current?.think(event.state === 'thinking')
+            if (event.state === 'listening') robot.current?.listen(true)
+            if (event.state === 'closed') robot.current?.listen(false)
+            return
+          }
+          if (event.type === 'user_preview') {
+            currentUserTranscript = event.text
+            setLive(l => l ? { ...l, state: 'listening', user: event.text } : l)
+            return
+          }
+          if (event.type === 'user') {
+            const spoken = event.text.trim()
+            if (!spoken) return
+            currentUserTranscript = spoken
+            c = add(c, { r: 'u', t: spoken }, 'Live conversation')
+            persist(c)
+            currentBotText = ''
+            currentBotHadDelta = false
+            speechTail = ''
+            setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
+            const greeting = quickGreeting(spoken)
+            if (greeting) {
+              // Simple greetings bypass model generation, then use only the selected ElevenLabs voice.
+              const reply = greeting
+              c = { ...c, msgs: [...c.msgs, { r: 'a', t: reply }] }
+              persist(c)
+              setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: reply } : l)
+              const controller = ensureSpeechController()
+              enqueueSpeech(reply, controller)
+              void speechQueue.then(() => {
+                if (!liveFallback.current || controller.signal.aborted || speechController !== controller) return
+                speechController = null
+                if (liveAbortRef.current === controller) liveAbortRef.current = null
+                setLive(l => l ? { ...l, state: 'listening' } : l)
+                robot.current?.listen(true)
+              })
+              return
+            }
+            if (sessionReady) rt.current?.respond?.()
+            else responseBeforeSessionReady = true
+            return
+          }
+          if (event.type === 'bot') {
+            if (event.delta) {
+              const controller = ensureSpeechController()
+              currentBotText = event.text
+              currentBotHadDelta = true
+              setLive(l => l ? { ...l, state: 'thinking', bot: event.text } : l)
+              queueSpeechFromDelta(event.delta, controller)
+            }
+            if (event.done) {
+              const answer = event.text.trim() || currentBotText.trim()
+              currentBotText = answer
+              const controller = ensureSpeechController()
+              if (!currentBotHadDelta && answer) queueSpeechFromDelta(answer, controller)
+              const baseChat: Chat = c || {
+                id: 'c_' + slug(), title: 'Live conversation', pj, at: Date.now(), upd: Date.now(), msgs: [],
+              }
+              const nextChat: Chat = { ...baseChat, msgs: [...baseChat.msgs, { r: 'a', t: answer }].slice(-100) }
+              c = nextChat
+              persist(nextChat)
+              setLive(l => l ? { ...l, state: 'thinking', bot: answer } : l)
+              if (speechTail.trim()) enqueueSpeech(speechTail, controller)
+              speechTail = ''
+              void speechQueue.then(() => {
+                if (!liveFallback.current || controller.signal.aborted || speechController !== controller) return
+                speechController = null
+                if (liveAbortRef.current === controller) liveAbortRef.current = null
+                setLive(l => l ? { ...l, state: 'listening' } : l)
+                robot.current?.listen(true)
+              })
+              currentBotText = ''
+              currentBotHadDelta = false
+            }
+            return
+          }
+          if (event.type === 'response_done') {
+            if (!speechController) {
+              setLive(l => l ? { ...l, state: 'listening' } : l)
+              robot.current?.listen(true)
+            }
+            return
+          }
+          if (event.type === 'tool') {
+            a.toast('This live response requested an in-app action, but the action needs to be completed from the chat composer.')
+            return
+          }
+          if (event.type === 'error') {
+            a.toast(event.message || 'The live conversation hit a temporary error.')
+          }
+        },
+      })
+      if (!liveFallback.current) {
+        session.stop()
+        return
+      }
+      rt.current = session
+      sessionReady = true
+      if (responseBeforeSessionReady) {
+        responseBeforeSessionReady = false
+        rt.current.respond?.()
+      }
+      a.toast('Live Talk is active. The microphone indicator stays visible while I listen; replies use only your selected ElevenLabs voice.')
+    } catch (error: any) {
+      liveFallback.current = false
+      setLive(null)
+      robot.current?.listen(false)
+      a.toast(friendlyBotError(error))
+    }
+  }
+  function stopLive() {
+    liveFallback.current = false
+    liveAbortRef.current?.abort()
+    liveAbortRef.current = null
+    liveTurnBusy.current = false
+    if (liveRestartTimer.current !== null) {
+      window.clearTimeout(liveRestartTimer.current)
+      liveRestartTimer.current = null
+    }
+    try { liveRecognition.current?.stop() } catch {}
+    liveRecognition.current = null
+    rt.current?.stop()
+    rt.current = null
+    audio.current?.stop()
+    audio.current = null
+    stopSpeechPlayback()
+    try { window.speechSynthesis?.cancel() } catch {}
+    setLive(null)
+    setCaption('')
+    robot.current?.talk(false)
+  }
+  useEffect(() => () => {
+    liveAbortRef.current?.abort()
+    if (liveRestartTimer.current !== null) window.clearTimeout(liveRestartTimer.current)
+    rt.current?.stop()
+  }, [])
+
+  // ----- dictation -----
+  const recRef = useRef<any>(null)
+  const dictationText = useRef('')
+  const noteSilenceTimer = useRef<number | null>(null)
+  const restartNote = useRef(false)
+  const [recordingNote, setRecordingNote] = useState(false)
+  function dictate() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) return a.toast('Voice notes need speech recognition. Try Chrome or Edge and allow microphone access.')
+    if (recRef.current) {
+      // If the previous browser session is still closing, queue the next start.
+      if (!recordingNote) {
+        restartNote.current = true
+        setStatus('Restarting voice note')
+      } else {
+        restartNote.current = false
+        setRecordingNote(false)
+        setStatus('Finishing voice note')
+      }
+      window.clearTimeout(noteSilenceTimer.current || undefined)
+      try { recRef.current.stop() } catch {
+        recRef.current = null
+        if (restartNote.current) { restartNote.current = false; window.setTimeout(() => dictate(), 0) }
+        else setStatus('Online')
+      }
+      return
+    }
+    const r = new SR()
+    recRef.current = r
+    dictationText.current = ''
+    r.lang = navigator.language || 'en-US'
+    r.interimResults = true
+    r.continuous = true
+    const armSilenceStop = (delay: number) => {
+      window.clearTimeout(noteSilenceTimer.current || undefined)
+      noteSilenceTimer.current = window.setTimeout(() => {
+        try { recRef.current?.stop() } catch {}
+      }, delay)
+    }
+    r.onresult = (e: any) => {
+      const pieces: string[] = []
+      for (let i = 0; i < e.results.length; i++) {
+        const item = e.results[i]
+        if (item?.[0]?.transcript) pieces.push(String(item[0].transcript))
+      }
+      dictationText.current = pieces.join(' ').replace(/\s+/g, ' ').trim()
+      setInput(dictationText.current)
+      armSilenceStop(1900)
+    }
+    r.onend = () => {
+      window.clearTimeout(noteSilenceTimer.current || undefined)
+      noteSilenceTimer.current = null
+      if (recRef.current === r) recRef.current = null
+      setRecordingNote(false)
+      robot.current?.listen(false)
+      const transcript = dictationText.current.trim()
+      if (transcript && !busy) {
+        setStatus('Sending voice note')
+        setInput('')
+        void send(transcript)
+      } else if (transcript) {
+        setInput(transcript)
+        a.toast('QuorlythBot is busy. Your voice note is ready in the composer.')
+      } else {
+        setStatus('Online')
+      }
+      if (restartNote.current) {
+        restartNote.current = false
+        window.setTimeout(() => dictate(), 0)
+      }
+    }
+    r.onerror = (e: any) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        restartNote.current = false
+        window.clearTimeout(noteSilenceTimer.current || undefined)
+        if (recRef.current === r) recRef.current = null
+        setRecordingNote(false)
+        setStatus('Online')
+        a.toast('Microphone permission was denied. Allow microphone access in your browser settings.')
+      } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        if (recRef.current === r) recRef.current = null
+        setRecordingNote(false)
+        setStatus('Online')
+        a.toast('Voice note stopped. Try recording again.')
+      }
+    }
+    setRecordingNote(true)
+    setStatus('Recording voice note')
+    robot.current?.listen(true)
+    armSilenceStop(5000)
+    try { r.start() } catch {
+      window.clearTimeout(noteSilenceTimer.current || undefined)
+      recRef.current = null
+      setRecordingNote(false)
+      setStatus('Online')
+      a.toast('Could not start recording. Check microphone permission and try again.')
+    }
+  }
+
+  // ----- chat list actions -----
+  const chat = (id: string) => bd.chats.find(c => c.id === id) || null
+  const patch = (id: string, p: Partial<Chat>, message = 'Chat updated') => {
+    const c = chat(id)
+    if (!c) return
+    const n = { ...c, ...p, upd: Date.now() }
+    if (cur?.id === id) setCur(n)
+    void bd.put(id, n).then(ok => {
+      if (!ok && cur?.id === id) setCur(c)
+      a.toast(ok ? message : 'Could not save that chat change. Please try again.')
+    })
+  }
+  const menuChat = menu?.id ? chat(menu.id) : null
+  const actions = useMemo(() => ({
+    pin: () => patch(menu!.id!, { pin: !menuChat?.pin }, menuChat?.pin ? 'Chat unpinned' : 'Chat pinned'),
+    rename: () => setRen(menu!.id!),
+    color: (k: string) => { if (menu?.id) patch(menu.id, { color: k }, 'Chat colour updated'); else setCur(c => c ? { ...c, color: k } : ({ id: 'c_' + slug(), title: 'New chat', pj, at: Date.now(), upd: Date.now(), msgs: [], color: k })) },
+    move: (p: string) => patch(menu!.id!, { pj: p }, p ? 'Chat moved to project' : 'Chat removed from project'),
+    unread: () => patch(menu!.id!, { unread: !menuChat?.unread }, menuChat?.unread ? 'Chat marked as read' : 'Chat marked as unread'),
+    archive: () => patch(menu!.id!, { arch: !menuChat?.arch }, menuChat?.arch ? 'Chat unarchived' : 'Chat archived'),
+    duplicate: () => { const c = menuChat!; const id = 'c_' + slug(); const { id: _oldId, ...data } = c; void bd.put(id, { ...data, title: c.title.slice(0, 40) + ' copy', at: Date.now(), upd: Date.now(), pin: false, unread: false }).then(ok => a.toast(ok ? 'Chat duplicated' : 'Could not duplicate this chat. Please try again.')) },
+    exportChat: () => { const c = menuChat!; const u = URL.createObjectURL(new Blob([`${c.title}\n${new Date(c.at).toLocaleString()}\n\n` + c.msgs.map(m => (m.r === 'u' ? 'You' : 'QuorlythBot') + ': ' + m.t).join('\n\n')], { type: 'text/plain' })); const l = document.createElement('a'); l.href = u; l.download = 'quorlyth-chat.txt'; l.click(); URL.revokeObjectURL(u); a.toast('Chat exported') },
+    clear: () => { patch(menu!.id!, { msgs: [] }, 'Messages cleared') },
+    remove: () => { const id = menu!.id!; void bd.remove(id).then(ok => a.toast(ok ? 'Chat deleted' : 'Could not delete this chat. Please try again.')); if (cur?.id === id) setCur(null) },
+  }), [menu, menuChat, cur, bd.chats])
+
+  const query = q.trim().toLowerCase()
+  const shown = bd.chats.filter(c => {
+    if (pj && c.pj !== pj) return false
+    if (!query) return true
+    return c.title.toLowerCase().includes(query) || c.msgs.some(m => m.t.toLowerCase().includes(query))
+  })
+  const searchResults = [...new Map(shown.map(c => [c.id, c])).values()]
+  const active = shown.filter(c => !c.arch), pinned = active.filter(c => c.pin), recent = active.filter(c => !c.pin), arch = shown.filter(c => c.arch)
+  const item = (c: Chat) => {
+    const T = (THEMES as any)[c.color || '']
+    return (
+      <div key={c.id} className={cn('bci', cur?.id === c.id && view === 'chat' && 'on', T && 'tint', c.unread && 'unread')} tabIndex={0} role="button" aria-label={'Open chat: ' + c.title}
+        style={T ? ({ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any) : undefined}
+        onClick={() => { if (busy) return; setCur(c); setView('chat'); if (c.pj) setPj(c.pj); if (c.unread) patch(c.id, { unread: false }); if (narrow) setSide(false) }}
+        onContextMenu={e => { e.preventDefault(); const row = e.currentTarget as HTMLElement; const rowRect = row.getBoundingClientRect(); const bounds = row.closest('.bs')?.getBoundingClientRect(); setMenu({ id: c.id, x: e.clientX, y: e.clientY, leftBound: bounds?.left, rightBound: bounds?.right, anchor: row, offsetX: e.clientX - rowRect.left, offsetY: e.clientY - rowRect.top }) }}
+        onKeyDown={e => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCur(c); setView('chat'); if (narrow) setSide(false) } }}>
+        <span className={cn('cd', !T && 'none')} />
+        {ren === c.id ? <input autoFocus defaultValue={c.title} maxLength={60} aria-label="Rename chat" onClick={e => e.stopPropagation()}
+          onBlur={e => { patch(c.id, { title: e.target.value.trim() || c.title }); setRen('') }}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setRen('') }} /> : <span className="bct">{c.title}</span>}
+        {c.pin && <span className="bpn"><Icon name="pin" size={12} /></span>}{c.unread && <i className="bud" />}
+        <button className="bcm" aria-label={'Options for ' + c.title} title="Chat options" onClick={e => { e.stopPropagation(); const button = e.currentTarget as HTMLElement; const r = button.getBoundingClientRect(); const bounds = button.closest('.bs')?.getBoundingClientRect(); setMenu({ id: c.id, x: r.right, y: r.top, leftBound: bounds?.left, rightBound: bounds?.right, anchor: button, offsetX: r.width, offsetY: 0 }) }}><Icon name="more" size={18} /></button>
+      </div>
+    )
+  }
+
+  const [slashSel, setSlashSel] = useState(0)
+  const slash = input.startsWith('/') && !input.includes(' ') ? SKILLS.filter(s => (a.owner || !s.own || (communityOwner && s.id === 'analytics')) && (s.id.startsWith(input.slice(1).toLowerCase()) || s.n.toLowerCase().includes(input.slice(1).toLowerCase()))).slice(0, 6) : []
+  const msgs = cur?.msgs || []
+  const sideShown = side
+
+  function handleDirectNavigation(text: string): boolean {
+    const s = text.trim()
+    const lower = s.toLowerCase()
+    const go = (path: string, reply: string) => {
+      nav(path)
+      const draft = add(cur, { r: 'u', t: s })
+      persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: reply }] })
+      setView('chat')
+      return true
+    }
+    const openList = /\b(open|show|take me to|go to|view|browse)\b/i.test(s) && /\b(communities|all communities|community list)\b/i.test(s) && !/\bcommunity\s+(?:called|named)\b/i.test(s)
+    if (openList) return go('/communities', 'Opening the communities page now.')
+    const wantsOpen = /\b(open|show|take me to|go to|view|enter|visit)\b/i.test(s)
+    const matchedNamedCommunity = wantsOpen ? a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x,y) => y.name.length-x.name.length)[0] : undefined
+    if (matchedNamedCommunity && !/\b(community list|all communities)\b/i.test(s)) return go('/communities/' + matchedNamedCommunity.id, 'Opening ' + matchedNamedCommunity.name + ' now.')
+    const askedToOpen = wantsOpen && /\bcommunity\b/i.test(s)
+    if (askedToOpen) {
+      const explicit = s.match(/\b(?:community|called|named)\s+["“]?(.+?)["”]?\s*$/i)
+      const byName = explicit?.[1] ? a.data.communities.find(x => x.name.toLowerCase() === explicit[1].trim().replace(/["“”]+$/g, '').toLowerCase()) : undefined
+      const included = a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x,y) => y.name.length-x.name.length)[0]
+      const community = byName || included
+      if (community) return go('/communities/' + community.id, 'Opening ' + community.name + ' now.')
+      return go('/communities', 'I opened the communities list. Choose the community you want, or tell me its exact name and I will open it if it is available to your account.')
+    }
+    const routeRules: [RegExp,string,string][] = [
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(dashboard|home)\b/i, '/dashboard', 'Opening your dashboard.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(review queue|queue|ideas to review)\b/i, '/queue', 'Opening the review queue.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(analytics|insights)\b/i, '/analytics', 'Opening analytics.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(profile|my profile)\b/i, '/me', 'Opening your profile.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(settings)\b/i, '/settings', 'Opening settings.'],
+      [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(promote|promotion)\b/i, '/promote', 'Opening the promotion workspace.'],
+    ]
+    for (const [pattern, path, reply] of routeRules) if (pattern.test(s)) return go(path, reply)
+    return false
+  }
+
+  function planAction(text: string): PendingAction | null {
+    const s = text.trim()
+    const lower = s.toLowerCase()
+
+    // Destructive actions are always previewed and require an explicit confirmation click.
+    if (a.me && /\b(delete|remove|permanently delete|destroy)\b/i.test(s) && /\bcommunity\b/i.test(s)) {
+      const community = a.data.communities
+        .filter(x => lower.includes(x.name.toLowerCase()))
+        .sort((x, y) => y.name.length - x.name.length)[0]
+      if (community && a.canManageCommunity(community.id)) {
+        return { type: 'deleteCommunity', cid: community.id, name: community.name, ideaCount: a.data.ideas.filter(i => i.cid === community.id).length }
+      }
+    }
+
+    const createCommunity = /\b(create|make|start|set up)\b/i.test(s) && /\bcommunity\b/i.test(s) && !!a.me
+    if (createCommunity) {
+      const quoted = s.match(/\b(?:called|named)\s+["“]([^"”]+)["”]/i)
+      const named = s.match(/\b(?:called|named)\s+(.+?)(?=\s+(?:about|for)\b|[,;]|$)/i)
+      const plain = s.match(/\bcommunity\s+(?!called\b|named\b)(.+?)\s*$/i)
+      const rawName = quoted?.[1] || named?.[1] || plain?.[1]
+      if (rawName?.trim()) {
+        const name = rawName.trim().replace(/^['"“]|['"”]$/g, '').replace(/\s+(?:about|for)\s+[\s\S]+$/i, '').slice(0, 60)
+        if (name) return { type: 'community', name, purpose: '', cover: 'a', vis: 'listed', post: 'anyone' }
+      }
+    }
+
+    const coverMatch = s.match(/\b(?:change|set|switch|update)\b[\s\S]*?\bcover\b[\s\S]*?\b(?:to|style)\s+(aurora|halo|grid|dusk)\b/i)
+    if (coverMatch && a.me) {
+      const pathId = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1]
+      const nameMention = a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x, y) => y.name.length - x.name.length)[0]
+      const community = a.data.communities.find(x => x.id === pathId) || nameMention
+      if (community && a.canManageCommunity(community.id)) return { type: 'cover', cid: community.id, cover: ({ aurora: 'a', halo: 'b', grid: 'c', dusk: 'd' } as Record<string, string>)[coverMatch[1].toLowerCase()] }
+    }
+
+    const wantsIdea = /\b(create|write|submit|post|add)\b/i.test(s) && /\bidea\b/i.test(s)
+    if (wantsIdea && a.me) {
+      const pathIdeaId = loc.pathname.match(/^\/idea\/([^/]+)/)?.[1]
+      const pathIdeaCommunity = a.data.ideas.find(i => i.id === pathIdeaId)?.cid
+      const pathCid = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1] || pathIdeaCommunity || project?.cid
+      const mentioned = a.data.communities
+        .filter(x => lower.includes(x.name.toLowerCase()))
+        .sort((x, y) => y.name.length - x.name.length)[0]
+      const community = (pathCid && a.data.communities.find(x => x.id === pathCid)) || mentioned
+
+      // Keep the title separate from its destination and the description instructions.
+      const titleMatch = s.match(/\bidea\s+(?:called|named)\s+["“]?([\s\S]+?)(?=["”]?\s+(?:in|for|to)\s+|[,;]\s*(?:with|and)\s+(?:a\s+)?description\b|\s+with\s+(?:a\s+)?description\b|\s+describing\b|$)/i)
+      let title = titleMatch?.[1]?.trim().replace(/^['"“]|['"”]$/g, '') || ''
+      if (!title && /\bidea\s*:/i.test(s)) title = s.split(/\bidea\s*:/i)[1]?.trim().split(/[,;]\s*(?:with|and)\s+(?:a\s+)?description\b/i)[0] || ''
+
+      const descriptionMatch = s.match(/\b(?:with|and)\s+(?:a\s+)?description\s+(?:explaining|describing|saying|about|that\s+says)?\s*([\s\S]+)$/i)
+        || s.match(/\bdescribing\s+([\s\S]+)$/i)
+      const body = (descriptionMatch?.[1] || '').trim().replace(/[.\s]+$/, '')
+
+      const allowed = !!community && !community.arch && a.canPost() &&
+        (a.owner || (community.post !== 'owner' && (community.post !== 'members' || a.joined(community.id))))
+      if (community && allowed && title) {
+        return { type: 'idea', title: title.slice(0, 120), body: body.slice(0, 2000), cid: community.id, tags: [] }
+      }
+    }
+
+    if (a.owner && /\b(publish|promote|push)\b/i.test(s) && /\bidea\b/i.test(s)) {
+      const requested = a.data.ideas.find(x => lower.includes(x.title.toLowerCase()))
+      const best = requested || [...a.data.ideas].filter(x => a.statusOf(x.id) === 'selected').sort((x, y) => (a.data.reviews[y.id]?.score || 0) - (a.data.reviews[x.id]?.score || 0))[0]
+      if (best && a.statusOf(best.id) !== 'declined') return { type: 'promote', ideaId: best.id, text: [best.title, best.body || '', 'Shared from the Quorlyth community.'].filter(Boolean).join('\n\n'), credits: [best.authorId] }
+    }
+    return null
+  }
+
+  async function confirmPendingAction() {
+    const action = pendingAction
+    if (!action) return
+    setBusy(true); setStatus('Applying action')
+    let ok = false
+    try {
+      if (action.type === 'community') {
+        if (!a.me) throw new Error('Sign in before creating a community.')
+        const result = await a.createCommunityDetailed(action)
+        ok = result.ok
+        if (!ok) throw new Error(result.error || 'Community creation failed.')
+      } else if (action.type === 'idea') {
+        const community = a.data.communities.find(x => x.id === action.cid)
+        if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
+        const result = await a.postIdeaDetailed({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
+        ok = result.ok
+        if (!ok) throw new Error(result.error || 'Idea submission failed.')
+      } else if (action.type === 'promote') {
+        if (!a.owner) throw new Error('Only the space owner can promote ideas.')
+        const idea = a.data.ideas.find(x => x.id === action.ideaId)
+        if (!idea || a.statusOf(idea.id) === 'declined') throw new Error('That idea is no longer available to promote.')
+        ok = await a.publish(action.ideaId, action.text, action.credits)
+      } else if (action.type === 'cover') {
+        if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can change its cover.')
+        ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
+      } else if (action.type === 'deleteCommunity') {
+        if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can delete it.')
+        if (!a.data.communities.some(c => c.id === action.cid)) throw new Error('That community no longer exists.')
+        ok = await a.deleteCommunity(action.cid)
+      }
+      if (ok) {
+        const labels: Record<PendingAction['type'], string> = {
+          community: 'Community created successfully.',
+          idea: 'Idea submitted successfully.',
+          promote: 'Idea marked as promoted in Quorlyth. It has not been posted to an external platform.',
+          cover: 'Community cover updated successfully.',
+          deleteCommunity: 'Community and its linked ideas deleted successfully.'
+        }
+        const next = add(cur, { r: 'a', t: labels[action.type] })
+        persist(next); setPendingAction(null)
+        if (action.type === 'community' || action.type === 'deleteCommunity') nav('/communities')
+        if (action.type === 'idea') nav('/communities/' + action.cid)
+      }
+    } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
+    finally { setBusy(false); setStatus('Online') }
+  }
+
+  function act(b: { a: string; id?: string }) {
+    if (b.a === 'go') nav(b.id || '/'); else if (b.a === 'idea') nav('/idea/' + b.id)
+    else if (b.a === 'apply') { const p = JSON.parse(pend || '{}'); a.saveCommunity(p.cid, { welcome: p.welcome, rules: p.rules }) }
+  }
+
+  // Portal narrow sidebar outside the centered bot panel to anchor it to the viewport.
+  const sidebar = (
+            <aside className={cn("bs", narrow && "qbot-sidebar-drawer")}>
+              <div className="bs-t"><span className="astm2"><Logo size={24} /></span><b className="bwm">{wm('Quorlyth')}</b><button className="bib" aria-label="Close sidebar" onClick={() => setSide(false)}><Icon name="panel" size={18} /></button></div>
+              <div className="bs-n">
+                <button className="bsb p" onClick={() => { if (busy) return; stopLive(); stopVoice(); setCur(null); setView('chat') }}><Icon name="plus" size={18} />New chat</button>
+                {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
+              </div>
+              <div className="bs-s"><div className="iw"><Icon name="search" size={18} /><input placeholder="Search chats" aria-label="Search chats" value={q} onChange={e => setQ(e.target.value)} /></div></div>
+              <div className="bs-l">
+                {project && <div className="bpj"><span><Icon name="folder" size={14} />{project.name}</span><button className="chip" onClick={() => setPj('')}>Clear</button></div>}
+                {query ? <><p className="bgh">Results</p>{searchResults.length ? searchResults.map(item) : <p className="dim" style={{ padding: '8px 10px' }}>No chats match.</p>}</> : <>
+                  {pinned.length > 0 && <><p className="bgh">Pinned</p>{pinned.map(item)}</>}
+                  <p className="bgh">Recents</p>
+                  {recent.length ? recent.map(item) : <p className="dim" style={{ padding: '8px 10px' }}>No chats yet. Start one.</p>}
+                  {arch.length > 0 && <><button className="bgh bga" onClick={() => setShowArch(!showArch)}><Icon name="book" size={13} />Archived ({arch.length})<span>{showArch ? 'Hide' : 'Show'}</span></button>{showArch && arch.map(item)}</>}
+                </>}
+              </div>
+              <div className="bs-f">
+                <button className={cn('bsb', view === 'settings' && 'on')} onClick={() => { stopLive(); stopVoice(); setView('settings'); if (narrow) setSide(false) }}><Icon name="settings" size={18} />Settings</button>
+                <button className="bsu" onClick={() => { nav('/me'); if (narrow) setSide(false) }}>{a.me ? <Av id={a.me.id} size={34} /> : <Icon name="member" size={18} />}<span><b>{a.me ? a.nm(a.me.id) : 'Visitor'}</b><i>{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Signed out'}</i></span></button>
+              </div>
+            </aside>
+  )
+
+  return (
+    <>
+      {!launcherHidden && <button
+        id="astl"
+        className={cn('astl', open && 'hide')}
+        aria-label="Open QuorlythBot"
+        title="Right-click to hide · Press and hold on mobile to hide"
+        onClick={() => {
+          if (launcherLongPressTriggered.current) {
+            launcherLongPressTriggered.current = false
+            return
+          }
+          openPanel()
+        }}
+        onContextMenu={event => {
+          event.preventDefault()
+          hideLauncher()
+        }}
+        onPointerDown={startLauncherHold}
+        onPointerMove={moveLauncherHold}
+        onPointerUp={clearLauncherHold}
+        onPointerCancel={clearLauncherHold}
+        onPointerLeave={clearLauncherHold}
+      >
+        <span className="astm"><Logo size={30} /></span>{greet && <span className="astb">{greet}</span>}
+      </button>}
+      {launcherHidden && showLauncherRestore && <div className="qbot-launcher-hidden-notice" role="status">
+        <span>QuorlythBot hidden</span>
+        <button type="button" onClick={restoreLauncher}>Undo</button>
+        <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
+      </div>}
+      {open && (
+        <div id="ast">
+          <div id="bot" className={cn('astp glass bot qbot-sidebar-compact-v2', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
+            {mode !== 'full' && <div className="bresz" title="Drag to resize" role="separator" aria-label="Resize QuorlythBot" onPointerDown={e => {
+              if (e.button !== 0) return
+              e.preventDefault()
+              const el = panel.current
+              if (!el) return
+              const sx = e.clientX, sy = e.clientY
+              const rect = el.getBoundingClientRect()
+              const sw = rect.width, sh = rect.height
+              const originX = Math.max(0, rect.left), originY = Math.max(0, rect.top)
+              setPosition({ x: originX, y: originY })
+              setSize({ w: sw, h: sh })
+              setMode('custom')
+              try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* Window listeners remain as a fallback. */ }
+              const mv = (ev: PointerEvent) => {
+                if (ev.pointerId !== e.pointerId) return
+                const maxW = Math.max(240, window.innerWidth - originX - 8)
+                const maxH = Math.max(300, window.innerHeight - originY - 8)
+                setSize({
+                  w: Math.max(Math.min(340, maxW), Math.min(maxW, sw + (ev.clientX - sx))),
+                  h: Math.max(Math.min(420, maxH), Math.min(maxH, sh + (ev.clientY - sy))),
+                })
+              }
+              const up = (ev: PointerEvent) => {
+                if (ev.pointerId !== e.pointerId) return
+                removeEventListener('pointermove', mv)
+                removeEventListener('pointerup', up)
+                removeEventListener('pointercancel', up)
+              }
+              addEventListener('pointermove', mv)
+              addEventListener('pointerup', up)
+              addEventListener('pointercancel', up)
+            }} />}
+            {sideShown && sidebar}
+            <section className="bm">
+              <header className="bh" onPointerDown={e => {
+                if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
+                const el = panel.current
+                if (!el) return
+                e.preventDefault()
+                const rect = el.getBoundingClientRect()
+                const offsetX = e.clientX - rect.left
+                const offsetY = e.clientY - rect.top
+                try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* Window listeners remain as a fallback. */ }
+                const move = (ev: PointerEvent) => {
+                  if (ev.pointerId !== e.pointerId) return
+                  const w = el.offsetWidth, h = el.offsetHeight
+                  setPosition({
+                    x: Math.max(8, Math.min(ev.clientX - offsetX, window.innerWidth - Math.min(w, window.innerWidth) - 8)),
+                    y: Math.max(8, Math.min(ev.clientY - offsetY, window.innerHeight - Math.min(h, window.innerHeight) - 8)),
+                  })
+                }
+                const end = (ev: PointerEvent) => {
+                  if (ev.pointerId !== e.pointerId) return
+                  window.removeEventListener('pointermove', move)
+                  window.removeEventListener('pointerup', end)
+                  window.removeEventListener('pointercancel', end)
+                }
+                window.addEventListener('pointermove', move)
+                window.addEventListener('pointerup', end)
+                window.addEventListener('pointercancel', end)
+              }}>
+                <button className="bib" aria-label="Sidebar" onClick={e => { e.stopPropagation(); setSide(!side) }}><Icon name="menu" size={18} /></button>
+                <div className="bht"><b className="bwm big">{wm('QuorlythBot')}</b><span className="bst"><i />{live ? ({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live' : status}</span></div>
+                <div className="bha">
+                  <button className="bib" aria-label="Robot size" title="Robot size" onClick={() => setStage(stage === 'std' ? 'big' : stage === 'big' ? 'off' : 'std')}><Icon name="stage" size={18} /></button>
+                  <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>
+                  <button className="bib" aria-label="Minimize QuorlythBot" title="Minimize to launcher" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
+                  <button className="bib" aria-label="Resize" title="Expand" onClick={() => { const next = mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact'; setSize(null); setPosition(null); setMode(next) }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
+                  <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); stopVoice(); setOpen(false) }}><Icon name="decline" size={18} /></button>
+                </div>
+              </header>
+              <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
+                <Robot ref={robot} theme={theme} calm={bs.calm} drag />
+                <div className={cn('ast-cap', caption && 'on')}>{caption}</div><div className="bnm">QuorlythBot</div>
+              </div>
+              {live && (
+                <div className="blive" aria-live="polite">
+                  <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
+                  <div className="blc">{live.state === 'listening' ? (live.user ? <><span className="dim">You · live transcript</span><br />{live.user}</> : <span className="dim">Listening to you… start speaking whenever you’re ready.</span>) : live.state === 'thinking' ? (live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Thinking…</span>) : live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : <span className="dim">Connecting your conversation…</span>}</div>
+                  <div className="acts" style={{ justifyContent: 'center', margin: 0, alignItems: 'center' }}>
+                    <span className="dim" style={{ fontSize: 12 }}>Microphone on · replies use your selected ElevenLabs voice · Click Stop listening to end</span>
+                    <button className="chip" onClick={stopLive} aria-label="Stop Live Talk and microphone"><Icon name="stop" size={13} />Stop listening</button>
+                  </div>
+                </div>
+              )}
+              <div
+                className="qbot-conversation"
+                ref={log}
+                onWheel={event => {
+                  // The transcript has one scroll owner; handle mouse wheels directly
+                  // so trackpad and wheel input work even across message children.
+                  if (view !== 'chat' || event.ctrlKey || event.deltaY === 0) return
+                  const scroller = event.currentTarget
+                  const maxScroll = scroller.scrollHeight - scroller.clientHeight
+                  if (maxScroll <= 1) return
+                  const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? scroller.clientHeight : 1
+                  const previous = scroller.scrollTop
+                  scroller.scrollTop = Math.max(0, Math.min(maxScroll, previous + event.deltaY * unit))
+                  if (scroller.scrollTop !== previous) event.preventDefault()
+                }}
+                style={view === 'chat' ? undefined : { padding: '6px 4px' }}
+              >
+                {view === 'chat' ? (
+                  !msgs.length ? (
+                    <div className="bhero"><p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p><h3>{project ? project.name : 'How can I help?'}</h3><p className="mut">Ask anything about your space, or pick a skill.</p>
+                      <div className="bgrid sm">{SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map(s => <button key={s.id} className="bsk" onClick={() => skill(s.id)}><span className="bski"><Icon name={s.icon} size={20} /></span><b>{s.n}</b></button>)}</div></div>
+                  ) : (
+                    <div className="ast-log" aria-live="polite">
+                      {msgs.map((m, i) => {
+                        if (m.r === 'u') return <div key={i} className="am mu">{m.t}</div>
+                        const speechKey = (cur?.id || 'active') + ':' + i
+                        const activeSpeech = speechMessageKey === speechKey && speechState !== 'idle'
+                        const speechIcon = activeSpeech
+                          ? speechState === 'paused' ? 'play' : speechState === 'loading' ? 'loader-circle' : 'pause'
+                          : 'play'
+                        const speechLabel = (m as any).live ? 'Reply is still being prepared' : activeSpeech
+                          ? speechState === 'paused' ? 'Resume voice playback' : speechState === 'loading' ? 'Cancel voice preparation' : 'Pause voice playback'
+                          : 'Play reply aloud'
+                        return (
+                          <div key={i} className="am ma"><div className="mt">{m.t}{(m as any).live && <span className="btyping" aria-label="QuorlythBot is typing"><i /><i /><i /></span>}</div>
+                            {m.btns?.length ? <div style={{ marginTop: 8 }}>{m.btns.map((b, k) => <button key={k} className="chip on" onClick={() => act(b)}>{b.l}</button>)}</div> : null}
+                            <div className="mact">
+                              <button disabled={!!(m as any).live} aria-label={speechLabel} title={speechLabel} aria-pressed={activeSpeech && speechState === 'playing'} onClick={() => toggleReplySpeech(speechKey, m.t)}><Icon name={speechIcon} size={14} /></button>
+                              {activeSpeech && <button aria-label="Stop voice playback" title="Stop voice playback" onClick={stopVoice}><Icon name="stop" size={14} /></button>}
+                              <button aria-label="Copy" title="Copy reply" onClick={() => navigator.clipboard.writeText(m.t).then(() => a.toast('Copied'))}><Icon name="copy" size={14} /></button>
+                              <button aria-label="Save" title="Save reply" onClick={() => { bd.put('l_' + slug(), { title: m.t.slice(0, 48), text: m.t, at: Date.now() }); a.toast('Saved to your library') }}><Icon name="star" size={14} /></button>
+                              {i === msgs.length - 1 && !busy && <button aria-label="Try again" title="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /></button>}
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {thinkingPhase !== 'off' && <div className={cn('am', 'ma', 'qbot-thinking-panel', thinkingPhase === 'leaving' && 'is-leaving')} role="status" aria-live="polite" aria-label="QuorlythBot is thinking">
+                          <span className="qbot-thinking-orbit" aria-hidden="true"><i /><i /><Icon name="message" size={16} /></span>
+                          <span className="qbot-thinking-copy"><strong>Thinking…</strong><small>{thinkingTask || 'Putting together a useful answer'}</small></span>
+                          <span className="qbot-thinking-signal" aria-hidden="true"><i /><i /><i /></span>
+                        </div>}
+                    </div>
+                  )
+                ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} startLive={startLive} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
+                {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({ community: 'Create community', idea: 'Submit idea', promote: 'Promote idea', cover: 'Change cover style', deleteCommunity: 'Delete community' } as any)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity' ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.' : 'Review the details, then confirm. QuorlythBot will use your signed-in account permissions.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+              </div>
+              {view === 'chat' && !live && (
+                <div className="bc">
+                  {slash.length > 0 && <div className="bsl">{slash.map((s, i) => <button key={s.id} className={cn('bsi', i === slashSel && 'on')} onClick={() => { setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) }}><Icon name={s.icon} size={16} /><b>/{s.id}</b><span className="dim">{s.d}</span></button>)}</div>}
+                  <div className="ast-q">{tour >= 0 && <><button className="chip on" onClick={() => { const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; setTour(tour + 1); step(steps, tour + 1) }}>Next</button><button className="chip" onClick={() => { setTour(-1); robot.current?.set('rest') }}>End tour</button></>}</div>
+                  <div className="ast-in">
+                    <textarea rows={1} value={input} placeholder={ph} aria-label="Message" onChange={e => setInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
+                    <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
+                    <button className={cn('btn', live && 'rec')} aria-label={live ? 'End live talk' : 'Start live talk — microphone active until ended'} title={live ? 'End live talk' : 'Start Live Talk; your microphone stays active until you stop it'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'stop' : 'live'} size={18} /></button>
+                    <button className="btn p" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
+                  </div>
+                  <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
+                </div>
+              )}
+            </section>
+          </div>
+          {menu && <ChatMenu chat={menuChat} x={menu.x} y={menu.y} leftBound={menu.leftBound} rightBound={menu.rightBound} anchor={menu.anchor} offsetX={menu.offsetX} offsetY={menu.offsetY} projects={bd.projects} act={actions as any} onClose={() => setMenu(null)} />}
+        </div>
+      )}
+    </>
+  )
+}
+
+function wm(t: string) {
+  return t.split('').map((c, i) => <span key={i} style={{ ['--i' as any]: i }}>{c}</span>)
+}
