@@ -257,6 +257,135 @@ export function stopSpeechPlayback(): void {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel()
 }
 
+type StreamSpeechOwnership = {
+  isCurrent: () => boolean
+  onStart?: () => void
+  onEnd?: () => void
+  register: (playback: SpeechPlayback) => void
+  release: () => void
+}
+
+/** Play streamed MP3 chunks through MediaSource; resolves as soon as the first audio begins. */
+function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner: StreamSpeechOwnership): Promise<SpeechPlayback> {
+  if (!response.body || typeof MediaSource === 'undefined' || !MediaSource.isTypeSupported('audio/mpeg')) {
+    return Promise.reject(new Error('Streaming playback is not supported by this browser.'))
+  }
+
+  const mediaSource = new MediaSource()
+  const objectUrl = URL.createObjectURL(mediaSource)
+  const audio = new Audio()
+  audio.preload = 'auto'
+  audio.src = objectUrl
+  let sourceBuffer: SourceBuffer | null = null
+  let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+  let started = false
+  let finished = false
+  let openTimer = 0
+  let resolveStart: (playback: SpeechPlayback) => void = () => {}
+  let rejectStart: (error: unknown) => void = () => {}
+  const startedPromise = new Promise<SpeechPlayback>((resolve, reject) => { resolveStart = resolve; rejectStart = reject })
+
+  const clearUrl = () => {
+    if (openTimer) window.clearTimeout(openTimer)
+    URL.revokeObjectURL(objectUrl)
+  }
+  const finish = (notify = true) => {
+    if (finished) return
+    finished = true
+    signal.removeEventListener('abort', abortAudio)
+    clearUrl()
+    try { reader?.cancel() } catch {}
+    owner.release()
+    if (notify) owner.onEnd?.()
+  }
+  const abortAudio = () => {
+    try {
+      audio.pause()
+      audio.currentTime = 0
+      audio.removeAttribute('src')
+      audio.load()
+    } catch { /* The media element may not have started yet. */ }
+    if (!started) rejectStart(new DOMException('Speech cancelled', 'AbortError'))
+    finish()
+  }
+  const playback: SpeechPlayback = {
+    pause: () => { if (owner.isCurrent() && !finished) audio.pause() },
+    resume: () => { if (owner.isCurrent() && !finished) void audio.play().catch(() => finish()) },
+    stop: abortAudio,
+  }
+  owner.register(playback)
+  signal.addEventListener('abort', abortAudio, { once: true })
+
+  const waitForOpen = () => new Promise<void>((resolve, reject) => {
+    if (mediaSource.readyState === 'open') { resolve(); return }
+    const opened = () => { window.clearTimeout(openTimer); resolve() }
+    const closed = () => { window.clearTimeout(openTimer); reject(new Error('The streamed audio source closed before playback.')) }
+    mediaSource.addEventListener('sourceopen', opened, { once: true })
+    mediaSource.addEventListener('sourceclose', closed, { once: true })
+    openTimer = window.setTimeout(() => reject(new Error('Timed out opening the streamed audio source.')), 8000)
+  })
+  const waitForUpdate = () => new Promise<void>((resolve, reject) => {
+    if (!sourceBuffer) { reject(new Error('The audio buffer is not ready.')); return }
+    const current = sourceBuffer
+    const updated = () => { current.removeEventListener('error', failed); resolve() }
+    const failed = () => { current.removeEventListener('updateend', updated); reject(new Error('The streamed audio buffer failed.')) }
+    current.addEventListener('updateend', updated, { once: true })
+    current.addEventListener('error', failed, { once: true })
+  })
+
+  audio.onplay = () => {
+    if (!owner.isCurrent()) { abortAudio(); return }
+    if (started) return
+    started = true
+    owner.onStart?.()
+    resolveStart(playback)
+  }
+  audio.onended = () => finish()
+  audio.onerror = () => {
+    const error = new Error('The streamed voice could not be played.')
+    if (!started) rejectStart(error)
+    finish()
+  }
+
+  void (async () => {
+    try {
+      await waitForOpen()
+      if (!owner.isCurrent()) throw new DOMException('Speech cancelled', 'AbortError')
+      sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg')
+      reader = response.body!.getReader()
+      let receivedAudio = false
+      while (true) {
+        const next = await reader.read()
+        if (!owner.isCurrent()) throw new DOMException('Speech cancelled', 'AbortError')
+        if (next.done) break
+        if (!next.value?.byteLength) continue
+        if (sourceBuffer.updating) await waitForUpdate()
+        const chunk = next.value.slice()
+        sourceBuffer.appendBuffer(chunk.buffer as ArrayBuffer)
+        await waitForUpdate()
+        receivedAudio = true
+        if (!started) {
+          await audio.play()
+          if (!owner.isCurrent()) throw new DOMException('Speech cancelled', 'AbortError')
+          if (!started) {
+            started = true
+            owner.onStart?.()
+            resolveStart(playback)
+          }
+        }
+      }
+      if (!receivedAudio) throw new Error('The speech stream returned no audio.')
+      if (sourceBuffer.updating) await waitForUpdate()
+      if (mediaSource.readyState === 'open') mediaSource.endOfStream()
+    } catch (error) {
+      if (!started) rejectStart(error)
+      finish(started)
+    }
+  })()
+
+  return startedPromise
+}
+
 /** Uses the selected Studio persona through server-side provider fallback, then device speech as a last resort. Only one speech run may play at a time. Set allowBrowserFallback:false to disable the device fallback. */
 export async function speakText(
   text: string,
@@ -305,7 +434,7 @@ export async function speakText(
   try {
     let response: Response | null = null
     try {
-      response = await fetch('/api/speak', {
+      response = await fetch('/api/speak-stream', {
         method: 'POST',
         signal,
         headers: { 'Content-Type': 'application/json' },
@@ -316,6 +445,32 @@ export async function speakText(
     }
 
     assertCurrent()
+
+    if (response?.ok && response.headers.get('X-Quorlyth-Voice-Stream') === '1' && typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported('audio/mpeg') && response.body) {
+      try {
+        const playback = await streamMediaSourceSpeech(response, signal, {
+          isCurrent: () => !isSuperseded(),
+          onStart,
+          onEnd,
+          register: next => { ownedPlayback = next; activeSpeechPlayback = next },
+          release: releaseOwner,
+        })
+        assertCurrent()
+        handedOff = true
+        return playback
+      } catch (error) {
+        const wasReplaced = isSuperseded() || (error instanceof Error && error.name === 'AbortError')
+        if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
+        if (options.allowBrowserFallback === false) {
+          throw new Error('The selected QuorlythBot Studio voice could not start streaming. Your written reply is still available; please retry in a moment.')
+        }
+        notifyBrowserFallback()
+        externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
+        activeSpeechController = controller
+        response = null
+        if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
+      }
+    }
 
     if (response?.ok) {
       const blob = await response.blob()
