@@ -3,7 +3,7 @@
 --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;margin:0}
-html{scroll-padding-top:env(safe-area-inset-top,0px);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px);color-scheme:dark;scroll-behavior:smooth}
 body{background:var(--k);color:var(--w);font:300 15px/1.6 Inter,"SF Pro Display",-apple-system,"Helvetica Neue",Arial,sans-serif;letter-spacing:.005em;min-height:100vh;overflow-x:hidden}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 45% at 78% -5%,rgba(255,255,255,.16),transparent 70%),radial-gradient(ellipse 50% 40% at 8% 105%,rgba(255,255,255,.1),transparent 70%),radial-gradient(ellipse 30% 25% at 50% 55%,rgba(255,255,255,.04),transparent 70%)}
 .ic{width:var(--s,20px);height:var(--s,20px);fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -18,8 +18,8 @@ nav button:hover{color:var(--w)}
 nav button.on{color:var(--k);background:var(--w);box-shadow:0 0 30px rgba(255,255,255,.35)}
 :focus-visible{outline:1px solid var(--w);outline-offset:2px}
 main{max-width:1180px;margin:0 auto;padding:56px 20px 120px;position:relative}
-#main>section.on{display:block;animation:in .7s cubic-bezier(.2,.7,.2,1)}
-@keyframes in{from{opacity:0;filter:blur(8px)}to{opacity:1;filter:none}}
+#main>section.on{display:block;animation:in .16s cubic-bezier(.2,.7,.2,1)}
+@keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 h1{font-weight:200;font-size:clamp(40px,8vw,92px);line-height:1;letter-spacing:-.045em}
 h2{font-weight:200;font-size:clamp(28px,4vw,44px);letter-spacing:-.03em;line-height:1.1}
 h3{font-weight:400;font-size:17px;letter-spacing:-.01em}
@@ -2418,4 +2418,13 @@ html {
   .promotion-preview-footer { align-items: stretch; }
   .promotion-preview-actions { width: 100%; }
   .promotion-preview-actions .btn { flex: 1 1 0; justify-content: center; white-space: nowrap; }
+}
+
+
+/* Fast feedback: keep the liquid-glass look without sluggish hover and entry transitions. */
+.btn, nav button, button.chip, .chip, .row, .glass, .lift { transition-duration: .16s !important; }
+button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  #main>section.on { animation: none !important; }
 }
