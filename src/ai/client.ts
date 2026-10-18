@@ -186,7 +186,11 @@ export async function startRealtime(opts: {
   const dc = pc.createDataChannel('oai-events')
   let botText = ''
   let userText = ''
-  const send = (o: any) => dc.readyState === 'open' && dc.send(JSON.stringify(o))
+  const pendingEvents: any[] = []
+  const send = (o: any) => {
+    if (dc.readyState === 'open') dc.send(JSON.stringify(o))
+    else if (dc.readyState === 'connecting') pendingEvents.push(o)
+  }
 
   dc.onmessage = async ev => {
     let m: any
@@ -238,7 +242,10 @@ export async function startRealtime(opts: {
         opts.onEvent({ type: 'error', message: m.error?.message || 'Realtime error' }); break
     }
   }
-  dc.onopen = () => opts.onEvent({ type: 'state', state: 'listening' })
+  dc.onopen = () => {
+    while (pendingEvents.length) dc.send(JSON.stringify(pendingEvents.shift()))
+    opts.onEvent({ type: 'state', state: 'listening' })
+  }
 
   try {
     const offer = await pc.createOffer()
