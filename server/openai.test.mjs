@@ -139,20 +139,22 @@ test('structured JSON requests use Gemini JSON output mode', async () => {
   assert.deepEqual(JSON.parse(res.output), { ok: true })
 })
 
-test('chat retries the lighter Gemini model when the primary is overloaded', async () => {
+test('chat does not retry a failed Gemini model when no backup provider is configured', async () => {
+  process.env.AI_PROVIDER = 'gemini'
   process.env.GEMINI_API_KEY = 'test-secret'
+  delete process.env.XAI_API_KEY
+  delete process.env.OPENAI_API_KEY
   const requested = []
   globalThis.fetch = async url => {
     requested.push(String(url))
-    if (requested.length === 1) return new Response(JSON.stringify({ error: { status: 'UNAVAILABLE', message: 'high demand' } }), { status: 503 })
-    return new Response('data: {"candidates":[{"content":{"parts":[{"text":"Backup reply"}]}}]}\n\n', { status: 200 })
+    return new Response(JSON.stringify({ error: { status: 'UNAVAILABLE', message: 'high demand' } }), { status: 503 })
   }
   const res = response()
   await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
 
-  assert.match(requested[0], /gemini-3\.8-flash:streamGenerateContent/)
-  assert.match(requested[1], /gemini-3\.5-flash-lite:streamGenerateContent/)
-  assert.match(res.output, /Backup reply/)
+  assert.equal(requested.length, 1)
+  assert.match(requested[0], /gemini-3\\.8-flash:streamGenerateContent/)
+  assert.equal(res.statusCode, 503)
 })
 
 test('chat fails over from overloaded Gemini models to Grok automatically', async () => {
@@ -222,7 +224,7 @@ test('chat falls through from Gemini and unavailable Grok to OpenAI', async () =
   }
   const res = response()
   await chat({ body: { tier: 'smart', messages: [{ role: 'user', content: 'Hi' }] } }, res)
-  assert.equal(requested.length, 5)
+  assert.equal(requested.length, 3)
   assert.match(res.output, /OpenAI backup reply/)
   assert.match(res.output, /"done":true/)
   assert.equal(res.statusCode, 200)
@@ -371,7 +373,83 @@ test('returns a 400 for malformed JSON instead of silently treating it as an emp
   assert.match(JSON.parse(res.output).error, /valid JSON/i)
 })
 
+test('natural voice uses Grok first when Grok is selected', async () => {
+  process.env.AI_PROVIDER = 'grok'
+  process.env.XAI_API_KEY = 'test-xai-tts-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-tts-key'
+  delete process.env.ELEVENLABS_API_KEY
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push({ url: String(url), options })
+    return new Response(Buffer.from([1, 2, 3, 4]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+  const res = response()
+  await speak({ body: { text: 'Hello from Quorlyth', voice: 'marin', accent: 'american' } }, res)
+
+  assert.equal(requested.length, 1)
+  assert.equal(requested[0].url, 'https://api.x.ai/v1/tts')
+  assert.equal(requested[0].options.headers.Authorization, 'Bearer test-xai-tts-key')
+  assert.equal(JSON.parse(requested[0].options.body).voice_id, 'carina')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'grok')
+  assert.equal(res.headers['Content-Type'], 'audio/mpeg')
+})
+
+test('natural voice falls through from Grok payment errors to Gemini TTS immediately', async () => {
+  process.env.AI_PROVIDER = 'grok'
+  process.env.XAI_API_KEY = 'test-xai-tts-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-tts-key'
+  delete process.env.ELEVENLABS_API_KEY
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push({ url: String(url), options })
+    if (String(url).includes('api.x.ai')) {
+      return new Response(JSON.stringify({ error: { code: 'payment_required' } }), { status: 402 })
+    }
+    return new Response(JSON.stringify({ output_audio: { data: Buffer.from([5, 6, 7, 8]).toString('base64') } }), { status: 200 })
+  }
+  const res = response()
+  await speak({ body: { text: 'Hello from Quorlyth', voice: 'coral', accent: 'american' } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.equal(requested[0].url, 'https://api.x.ai/v1/tts')
+  assert.equal(requested[1].url, 'https://generativelanguage.googleapis.com/v1beta/interactions')
+  assert.equal(JSON.parse(requested[1].options.body).model, 'gemini-3.8-flash-tts')
+  assert.equal(JSON.parse(requested[1].options.body).generation_config.speech_config[0].voice, 'Kore')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'gemini')
+  assert.equal(res.headers['Content-Type'], 'audio/wav')
+})
+
+test('chat switches to Gemini when Grok requires payment instead of retrying Grok', async () => {
+  process.env.AI_PROVIDER = 'grok'
+  process.env.XAI_API_KEY = 'test-xai-secret'
+  process.env.GEMINI_API_KEY = 'test-gemini-secret'
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push(String(url))
+    if (String(url).includes('api.x.ai')) {
+      return new Response(JSON.stringify({ error: { code: 'payment_required' } }), { status: 402 })
+    }
+    return new Response('data: {"candidates":[{"content":{"parts":[{"text":"Gemini backup"}]}}]}\\n\\n', { status: 200 })
+  }
+  const res = response()
+  await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.match(requested[0], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
+  assert.match(requested[1], /generativelanguage\\.googleapis\\.com/)
+  assert.match(res.output, /Gemini backup/)
+  assert.equal(res.statusCode, 200)
+})
+
 test('natural voice endpoint applies the selected accent using server-side OpenAI fallback', async () => {
+  process.env.AI_PROVIDER = 'openai'
+  delete process.env.XAI_API_KEY
+  delete process.env.GEMINI_API_KEY
   delete process.env.ELEVENLABS_API_KEY
   process.env.OPENAI_API_KEY = 'server-only-test-key'
   let requestUrl = ''
@@ -400,6 +478,9 @@ test('natural voice endpoint applies the selected accent using server-side OpenA
 })
 
 test('ElevenLabs is preferred for natural American voice and never exposes its key to the browser', async () => {
+  process.env.AI_PROVIDER = 'auto'
+  delete process.env.XAI_API_KEY
+  delete process.env.GEMINI_API_KEY
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
   delete process.env.OPENAI_API_KEY
   let requestUrl = ''
@@ -427,6 +508,9 @@ test('ElevenLabs is preferred for natural American voice and never exposes its k
 })
 
 test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
+  process.env.AI_PROVIDER = 'auto'
+  delete process.env.XAI_API_KEY
+  delete process.env.GEMINI_API_KEY
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
   process.env.OPENAI_API_KEY = 'server-only-openai-test-key'
   const requested = []
@@ -448,6 +532,9 @@ test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
 })
 
 test('a configured Nigerian ElevenLabs voice ID is used instead of a mismatched default accent', async () => {
+  process.env.AI_PROVIDER = 'auto'
+  delete process.env.XAI_API_KEY
+  delete process.env.GEMINI_API_KEY
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
   process.env.ELEVENLABS_VOICE_NIGERIAN_ID = 'user-owned-nigerian-voice-id'
   delete process.env.OPENAI_API_KEY
@@ -468,6 +555,9 @@ test('a configured Nigerian ElevenLabs voice ID is used instead of a mismatched 
 })
 
 test('a Nigerian accent never silently uses an American ElevenLabs voice', async () => {
+  process.env.AI_PROVIDER = 'auto'
+  delete process.env.XAI_API_KEY
+  delete process.env.GEMINI_API_KEY
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
   process.env.OPENAI_API_KEY = 'server-only-openai-test-key'
   const requested = []
