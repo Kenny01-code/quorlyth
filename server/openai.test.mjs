@@ -735,7 +735,7 @@ test('buffered ElevenLabs retry never falls back to another voice provider', asy
   await speakElevenLabs({ body: { text: 'Hello there', voice: 'marin', accent: 'american' } }, res)
 
   assert.equal(requested.length, 1)
-  assert.match(requested[0], /api\\.elevenlabs\\.io\\/v1\\/text-to-speech/)
+  assert.match(requested[0], /api\.elevenlabs\.io\/v1\/text-to-speech/)
   assert.equal(res.statusCode, 503)
   assert.match(JSON.parse(res.output).error, /No alternate voice/i)
 })
