@@ -153,7 +153,7 @@ test('chat does not retry a failed Gemini model when no backup provider is confi
   await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
 
   assert.equal(requested.length, 1)
-  assert.match(requested[0], /gemini-3\\.8-flash:streamGenerateContent/)
+  assert.match(requested[0], /gemini-3\.8-flash:streamGenerateContent/)
   assert.equal(res.statusCode, 503)
 })
 
@@ -174,8 +174,8 @@ test('chat fails over from overloaded Gemini directly to Grok without repeating 
   await chat({ body: { tier: 'smart', messages: [{ role: 'user', content: 'Hi' }] } }, res)
 
   assert.equal(requested.length, 2)
-  assert.match(requested[0], /gemini-3\\.8-flash:streamGenerateContent/)
-  assert.match(requested[1], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
+  assert.match(requested[0], /gemini-3\.8-flash:streamGenerateContent/)
+  assert.match(requested[1], /api\.x\.ai\/v1\/chat\/completions/)
   assert.match(res.output, /Grok saved the reply/)
   assert.match(res.output, /"done":true/)
   assert.equal(res.statusCode, 200)
@@ -197,7 +197,7 @@ test('structured JSON fails over from unavailable Gemini to Grok immediately', a
   const res = response()
   await json({ body: { prompt: 'Return fallback', system: 'Return JSON only' } }, res)
   assert.equal(requested.length, 2)
-  assert.match(requested[1], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
+  assert.match(requested[1], /api\.x\.ai\/v1\/chat\/completions/)
   assert.equal(res.statusCode, 200)
   assert.deepEqual(JSON.parse(res.output), { fallback: true })
 })
@@ -242,7 +242,7 @@ test('chat fails over to Grok when Gemini fails before returning headers', async
   const res = response()
   await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
   assert.equal(requested.length, 2)
-  assert.match(requested[1], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
+  assert.match(requested[1], /api\.x\.ai\/v1\/chat\/completions/)
   assert.match(res.output, /Recovered on Grok/)
   assert.equal(res.statusCode, 200)
 })
@@ -438,8 +438,8 @@ test('chat switches to Gemini when Grok requires payment instead of retrying Gro
   await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
 
   assert.equal(requested.length, 2)
-  assert.match(requested[0], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
-  assert.match(requested[1], /generativelanguage\\.googleapis\\.com/)
+  assert.match(requested[0], /api\.x\.ai\/v1\/chat\/completions/)
+  assert.match(requested[1], /generativelanguage\.googleapis\.com/)
   assert.match(res.output, /Gemini backup/)
   assert.equal(res.statusCode, 200)
 })
