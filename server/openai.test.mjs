@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { chat, json, realtimeSession, speak } from './openai.mjs'
+import { chat, json, realtimeSession, speak, speakStream } from './openai.mjs'
 
 const originalFetch = globalThis.fetch
 const originalGeminiKey = process.env.GEMINI_API_KEY
@@ -638,3 +638,62 @@ test('speech endpoint refuses to silently substitute a default Studio voice', as
   assert.match(JSON.parse(res.output).error, /choose a voice.*Voice Studio/i)
 })
 
+
+test('streaming ElevenLabs voice begins sending MP3 before the full clip is generated', async () => {
+  process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-stream-test-key'
+  delete process.env.XAI_API_KEY
+  delete process.env.GEMINI_API_KEY
+  delete process.env.OPENAI_API_KEY
+  let requestUrl = ''
+  let requestOptions
+  globalThis.fetch = async (url, options = {}) => {
+    requestUrl = String(url)
+    requestOptions = options
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array([4, 3, 2]))
+        controller.close()
+      },
+    }), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speakStream({ body: { text: 'Hello, I am here.', voice: 'marin', accent: 'american' } }, res)
+
+  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x/stream?output_format=mp3_22050_32')
+  assert.equal(requestOptions.headers['xi-api-key'], 'server-only-elevenlabs-stream-test-key')
+  assert.equal(JSON.parse(requestOptions.body).model_id, 'eleven_flash_v2_5')
+  assert.equal(res.headers['Content-Type'], 'audio/mpeg')
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
+  assert.equal(res.headers['X-Quorlyth-Voice-Stream'], '1')
+  assert.ok(res.output.length > 0)
+})
+
+test('streaming voice falls back to Grok when ElevenLabs requires payment', async () => {
+  process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-stream-test-key'
+  process.env.XAI_API_KEY = 'test-xai-stream-fallback-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-stream-fallback-key'
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push(String(url))
+    if (String(url).includes('api.elevenlabs.io')) {
+      return new Response(JSON.stringify({ detail: { status: 'payment_required' } }), { status: 402 })
+    }
+    if (String(url).includes('api.x.ai')) {
+      return new Response(Buffer.from([7, 6, 5]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+    }
+    throw new Error('Unexpected provider should not be reached')
+  }
+
+  const res = response()
+  await speakStream({ body: { text: 'Hello there', voice: 'marin', accent: 'american' } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.match(requested[0], /api\.elevenlabs\.io\/v1\/text-to-speech\/.*\/stream/)
+  assert.equal(requested[1], 'https://api.x.ai/v1/tts')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'grok')
+})
