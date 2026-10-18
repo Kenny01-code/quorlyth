@@ -754,7 +754,7 @@ async function requestElevenLabsSpeech(text, voiceId) {
   const model = ['eleven_multilingual_v2', 'eleven_flash_v2_5'].includes(process.env.ELEVENLABS_TTS_MODEL)
     ? process.env.ELEVENLABS_TTS_MODEL
     : 'eleven_multilingual_v2'
-  return fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+  return fetchWithHeaderTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -776,7 +776,7 @@ async function requestElevenLabsSpeech(text, voiceId) {
 }
 
 async function requestOpenAISpeech(text, voice, accent) {
-  return fetch('https://api.openai.com/v1/audio/speech', {
+  return fetchWithHeaderTimeout('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEY()}` },
     body: JSON.stringify({
