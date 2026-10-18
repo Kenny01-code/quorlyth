@@ -436,6 +436,7 @@ export async function speakText(
 
   try {
     let response: Response | null = null
+    let retryBufferedSpeech = false
     try {
       response = await fetch('/api/speak-stream', {
         method: 'POST',
@@ -445,6 +446,8 @@ export async function speakText(
       })
     } catch (error) {
       if (isSuperseded() || (error instanceof Error && error.name === 'AbortError')) throw error
+      // Older routes, network intermediaries, or deployments may not support the streaming endpoint.
+      retryBufferedSpeech = true
     }
 
     assertCurrent()
@@ -464,15 +467,27 @@ export async function speakText(
       } catch (error) {
         const wasReplaced = isSuperseded() || (error instanceof Error && error.name === 'AbortError')
         if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
-        if (options.allowBrowserFallback === false) {
-          throw new Error('The selected QuorlythBot Studio voice could not start streaming. Your written reply is still available; please retry in a moment.')
-        }
-        notifyBrowserFallback()
+        // Re-attempt with the same selected persona using the original buffered endpoint.
+        retryBufferedSpeech = true
+        response = null
         externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
         activeSpeechController = controller
-        response = null
         if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
       }
+    }
+
+    if (!response && retryBufferedSpeech) {
+      try {
+        response = await fetch('/api/speak', {
+          method: 'POST',
+          signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: source, voice, accent }),
+        })
+      } catch (error) {
+        if (isSuperseded() || (error instanceof Error && error.name === 'AbortError')) throw error
+      }
+      assertCurrent()
     }
 
     if (response?.ok) {
