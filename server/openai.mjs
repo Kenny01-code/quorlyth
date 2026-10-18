@@ -695,7 +695,7 @@ export async function realtimeSession(req, res) {
             input: {
               // No language is pinned: let the transcription model identify each spoken language.
               transcription: { model: 'gpt-4o-mini-transcribe' },
-              turn_detection: { type: 'server_vad', threshold: 0.5, silence_duration_ms: 300, create_response: true },
+              turn_detection: { type: 'server_vad', threshold: 0.5, silence_duration_ms: 300, create_response: !textOnly },
             },
             ...(textOnly ? {} : { output: { voice } }),
           },
