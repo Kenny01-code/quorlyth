@@ -1445,7 +1445,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
                   <div className="blc">{live.state === 'listening' ? (live.user ? <><span className="dim">You · live transcript</span><br />{live.user}</> : <span className="dim">Listening to you… start speaking whenever you’re ready.</span>) : live.state === 'thinking' ? (live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Thinking…</span>) : live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : <span className="dim">Connecting your conversation…</span>}</div>
                   <div className="acts" style={{ justifyContent: 'center', margin: 0, alignItems: 'center' }}>
-                    <span className="dim" style={{ fontSize: 12 }}>Microphone active · ElevenLabs {VOICES.find(item => item.id === bs.vid)?.n || 'Aria'} · Audio is not recorded by Quorlyth as a file</span>
+                    <span className="dim" style={{ fontSize: 12 }}>Microphone on · replies use your selected ElevenLabs voice · Click Stop listening to end</span>
                     <button className="chip" onClick={stopLive} aria-label="Stop Live Talk and microphone"><Icon name="stop" size={13} />Stop listening</button>
                   </div>
                 </div>
