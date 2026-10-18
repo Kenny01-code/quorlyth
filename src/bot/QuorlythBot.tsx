@@ -967,6 +967,198 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       }
       a.toast('Live Talk is active. The microphone indicator stays visible while I listen; replies use your selected QuorlythBot voice profile.')
     } catch (error: any) {
+      // The Realtime API currently needs OPENAI_API_KEY. If that service is
+      // unavailable, keep Live Talk usable with browser speech recognition,
+      // the app's normal multi-provider chat endpoint, and native speech output.
+      const BrowserRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (BrowserRecognition && liveFallback.current) {
+        let browserTurnBusy = false
+        let browserFallbackEnabled = true
+        let browserRecognition: any = null
+        let browserTurnNumber = 0
+
+        const restartBrowserRecognition = () => {
+          if (!browserFallbackEnabled || !liveFallback.current || browserTurnBusy) return
+          if (liveRestartTimer.current !== null) window.clearTimeout(liveRestartTimer.current)
+          liveRestartTimer.current = window.setTimeout(() => {
+            liveRestartTimer.current = null
+            if (!browserFallbackEnabled || !liveFallback.current || browserTurnBusy) return
+            try {
+              const recognition = new BrowserRecognition()
+              browserRecognition = recognition
+              liveRecognition.current = recognition
+              const chosenAccent = bs.accent || 'auto'
+              recognition.lang = chosenAccent === 'nigerian' ? 'en-NG'
+                : chosenAccent === 'british' ? 'en-GB'
+                : chosenAccent === 'international' ? (navigator.language || 'en-US')
+                : chosenAccent === 'american' ? 'en-US'
+                : (navigator.language || 'en-US')
+              recognition.continuous = false
+              recognition.interimResults = true
+              recognition.maxAlternatives = 1
+
+              recognition.onresult = (event: any) => {
+                let finalText = ''
+                let interimText = ''
+                const results = event.results
+                for (let i = event.resultIndex || 0; i < results.length; i += 1) {
+                  const transcript = String(results[i]?.[0]?.transcript || '')
+                  if (results[i]?.isFinal) finalText += transcript + ' '
+                  else interimText += transcript
+                }
+                if (interimText.trim()) {
+                  setLive(current => current ? { ...current, state: 'listening', user: interimText.trim() } : current)
+                }
+                const spoken = finalText.trim()
+                if (!spoken || browserTurnBusy || !liveFallback.current) return
+
+                browserTurnBusy = true
+                browserTurnNumber += 1
+                const thisTurn = browserTurnNumber
+                setLive(current => current ? { ...current, state: 'thinking', user: spoken, bot: '' } : current)
+                try { recognition.stop() } catch {}
+                void handleBrowserVoiceTurn(spoken, thisTurn).finally(() => {
+                  if (thisTurn !== browserTurnNumber) return
+                  browserTurnBusy = false
+                  if (browserFallbackEnabled && liveFallback.current) restartBrowserRecognition()
+                })
+              }
+
+              recognition.onerror = (event: any) => {
+                const code = String(event?.error || '')
+                if (code === 'aborted' || code === 'no-speech') return
+                if (code === 'not-allowed' || code === 'service-not-allowed') {
+                  browserFallbackEnabled = false
+                  liveFallback.current = false
+                  setLive(null)
+                  robot.current?.listen(false)
+                  a.toast('Microphone access is blocked. Allow microphone access in your browser settings, then start Live Talk again.')
+                  return
+                }
+                if (code === 'network') {
+                  browserFallbackEnabled = false
+                  liveFallback.current = false
+                  setLive(null)
+                  robot.current?.listen(false)
+                  a.toast('Your browser speech-recognition service is unavailable. Check your connection and microphone permissions, then try Live Talk again.')
+                }
+              }
+
+              recognition.onend = () => {
+                if (liveRecognition.current === recognition) liveRecognition.current = null
+                if (browserFallbackEnabled && liveFallback.current && !browserTurnBusy) restartBrowserRecognition()
+              }
+              recognition.start()
+              setLive(current => current ? { ...current, state: 'listening' } : current)
+              robot.current?.listen(true)
+            } catch {
+              browserFallbackEnabled = false
+              liveFallback.current = false
+              setLive(null)
+              robot.current?.listen(false)
+              a.toast(friendlyBotError(error))
+            }
+          }, 220)
+        }
+
+        const handleBrowserVoiceTurn = async (spoken: string, turnNumber: number) => {
+          if (!liveFallback.current) return
+          speechTail = ''
+          const greeting = quickGreeting(spoken)
+          c = add(c, { r: 'u', t: spoken }, 'Live conversation')
+          persist(c)
+          setLive(current => current ? { ...current, state: 'thinking', user: spoken, bot: '' } : current)
+          robot.current?.think(true)
+
+          const controller = ensureSpeechController()
+          try {
+            let answer = ''
+            if (greeting) {
+              answer = greeting
+              c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }].slice(-100) }
+              persist(c)
+              setLive(current => current ? { ...current, state: 'speaking', bot: answer } : current)
+              enqueueSpeech(answer, controller)
+            } else {
+              const recentTurns = c.msgs.filter(message => !(message as any).live).slice(-10)
+              const turns = recentTurns.map((message, index) => ({
+                role: (message.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant',
+                content: message.t.slice(-(index === recentTurns.length - 1 ? 4200 : 1400)),
+              }))
+              const liveContext = await requestLiveContext(spoken)
+              if (!liveFallback.current || turnNumber !== browserTurnNumber || controller.signal.aborted) return
+              const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
+              const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
+              if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
+              const botContext = {
+                route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len,
+                emojis: bs.emo, browserContext: browserContext(), liveContext,
+              }
+              let spokenCharacters = 0
+              const full = await streamChat(turns, {
+                ...(!accessToken ? {
+                  system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext()
+                    + (liveContext ? '\nLocation and live weather context: ' + liveContext : ''),
+                } : {}),
+                ...(accessToken ? { accessToken, context: botContext } : {}),
+                tier: bs.model === 'quick' ? 'quick' : 'smart',
+                signal: controller.signal,
+                onText: fullText => {
+                  if (!liveFallback.current || turnNumber !== browserTurnNumber || controller.signal.aborted) return
+                  const speakablePrefix = fullText.replace(/\[\[[\s\S]*$/, '')
+                  const newSpeech = speakablePrefix.slice(spokenCharacters)
+                  if (newSpeech) queueSpeechFromDelta(newSpeech, controller)
+                  spokenCharacters = speakablePrefix.length
+                  setLive(current => current ? { ...current, state: 'thinking', bot: speakablePrefix.trim() } : current)
+                },
+              })
+              answer = full.replace(/\[\[[\s\S]*?\]\]/g, '').trim()
+                || 'I could not complete that answer. Please try asking me again.'
+              const remaining = answer.slice(Math.min(spokenCharacters, answer.length))
+              if (remaining) queueSpeechFromDelta(remaining, controller)
+              if (speechTail.trim()) {
+                enqueueSpeech(speechTail, controller)
+                speechTail = ''
+              }
+              c = { ...c, msgs: [...c.msgs, { r: 'a', t: answer }].slice(-100) }
+              persist(c)
+              setLive(current => current ? { ...current, state: 'thinking', bot: answer } : current)
+            }
+
+            if (speechTail.trim()) {
+              enqueueSpeech(speechTail, controller)
+              speechTail = ''
+            }
+            await speechQueue
+          } catch (voiceError) {
+            if (!liveFallback.current || turnNumber !== browserTurnNumber || (voiceError instanceof Error && voiceError.name === 'AbortError')) return
+            const message = friendlyBotError(voiceError)
+            c = { ...c, msgs: [...c.msgs, { r: 'a', t: message }].slice(-100) }
+            persist(c)
+            setLive(current => current ? { ...current, state: 'thinking', bot: message } : current)
+            enqueueSpeech(message, controller)
+            await speechQueue
+          } finally {
+            if (turnNumber === browserTurnNumber && liveFallback.current) {
+              speechController = null
+              if (liveAbortRef.current === controller) liveAbortRef.current = null
+              robot.current?.think(false)
+              robot.current?.talk(false)
+              setLive(current => current ? { ...current, state: 'listening' } : current)
+              robot.current?.listen(true)
+            }
+          }
+        }
+
+        // Don't make the user restart manually after Realtime fails. Switch to the
+        // browser microphone immediately and keep the normal Quorlyth AI reply path.
+        setLive(current => current ? { ...current, state: 'listening', bot: '' } : current)
+        robot.current?.think(false)
+        a.toast('Live Talk is using your browser microphone and natural voice. Your configured Quorlyth AI chat provider will answer.')
+        restartBrowserRecognition()
+        return
+      }
+
       liveFallback.current = false
       setLive(null)
       robot.current?.listen(false)
