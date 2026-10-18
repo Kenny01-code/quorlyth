@@ -257,7 +257,7 @@ export function stopSpeechPlayback(): void {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel()
 }
 
-/** Uses the selected Studio persona through server-side TTS. Only one speech run may play at a time. */
+/** Uses the selected Studio persona through server-side provider fallback, then device speech as a last resort. Only one speech run may play at a time. Set allowBrowserFallback:false to disable the device fallback. */
 export async function speakText(
   text: string,
   voice: string,
@@ -387,7 +387,7 @@ export async function speakText(
           finish(false)
         }
         if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
-        if (options.allowBrowserFallback !== true) {
+        if (options.allowBrowserFallback === false) {
           throw new Error('The selected QuorlythBot Studio voice could not play. Your written reply is still available; please retry in a moment.')
         }
         notifyBrowserFallback()
@@ -399,7 +399,7 @@ export async function speakText(
     }
 
     assertCurrent()
-    if (options.allowBrowserFallback !== true) {
+    if (options.allowBrowserFallback === false) {
       throw new Error('The selected QuorlythBot Studio voice is temporarily unavailable. Your written reply is still available.')
     }
     if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
