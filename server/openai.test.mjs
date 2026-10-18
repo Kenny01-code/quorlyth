@@ -12,6 +12,7 @@ const originalXaiKey = process.env.XAI_API_KEY
 const originalXaiModel = process.env.XAI_MODEL
 const originalXaiQuickModel = process.env.XAI_QUICK_MODEL
 const originalAiProvider = process.env.AI_PROVIDER
+const originalAiTtsProvider = process.env.AI_TTS_PROVIDER
 const originalFirstTokenTimeout = process.env.AI_FIRST_TOKEN_TIMEOUT_MS
 const originalYoutubeKey = process.env.YOUTUBE_API_KEY
 
@@ -46,6 +47,8 @@ afterEach(() => {
   else process.env.XAI_QUICK_MODEL = originalXaiQuickModel
   if (originalAiProvider === undefined) delete process.env.AI_PROVIDER
   else process.env.AI_PROVIDER = originalAiProvider
+  if (originalAiTtsProvider === undefined) delete process.env.AI_TTS_PROVIDER
+  else process.env.AI_TTS_PROVIDER = originalAiTtsProvider
   if (originalFirstTokenTimeout === undefined) delete process.env.AI_FIRST_TOKEN_TIMEOUT_MS
   else process.env.AI_FIRST_TOKEN_TIMEOUT_MS = originalFirstTokenTimeout
   if (originalYoutubeKey === undefined) delete process.env.YOUTUBE_API_KEY
@@ -502,26 +505,26 @@ test('natural voice endpoint applies the selected accent using server-side OpenA
   assert.ok(res.output.length > 0)
 })
 
-test('ElevenLabs is preferred for natural American voice and never exposes its key to the browser', async () => {
-  process.env.AI_PROVIDER = 'auto'
-  delete process.env.XAI_API_KEY
-  delete process.env.GEMINI_API_KEY
+test('ElevenLabs is preferred for natural voice even when Grok is selected for chat', async () => {
+  process.env.AI_PROVIDER = 'grok'
+  process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  process.env.XAI_API_KEY = 'test-xai-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-key'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
   delete process.env.OPENAI_API_KEY
-  let requestUrl = ''
-  let requestOptions
+  const requested = []
   globalThis.fetch = async (url, options = {}) => {
-    requestUrl = String(url)
-    requestOptions = options
+    requested.push({ url: String(url), options })
     return new Response(Buffer.from([4, 3, 2, 1]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
   }
 
   const res = response()
   await speak({ body: { text: 'Hey, how are you doing?', voice: 'marin', accent: 'american' } }, res)
 
-  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x?output_format=mp3_44100_128')
-  assert.equal(requestOptions.headers['xi-api-key'], 'server-only-elevenlabs-test-key')
-  const payload = JSON.parse(requestOptions.body)
+  assert.equal(requested.length, 1)
+  assert.equal(requested[0].url, 'https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x?output_format=mp3_44100_128')
+  assert.equal(requested[0].options.headers['xi-api-key'], 'server-only-elevenlabs-test-key')
+  const payload = JSON.parse(requested[0].options.body)
   assert.equal(payload.model_id, 'eleven_multilingual_v2')
   assert.equal(payload.text, 'Hey, how are you doing?')
   assert.equal(payload.voice_settings.stability, 0.45)
@@ -530,6 +533,35 @@ test('ElevenLabs is preferred for natural American voice and never exposes its k
   assert.equal(res.headers['Content-Type'], 'audio/mpeg')
   assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
   assert.ok(res.output.length > 0)
+})
+
+test('voice falls back from ElevenLabs payment errors to Grok without trying Gemini first', async () => {
+  process.env.AI_PROVIDER = 'gemini'
+  process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
+  process.env.XAI_API_KEY = 'test-xai-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-key'
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push({ url: String(url), options })
+    if (String(url).includes('api.elevenlabs.io')) {
+      return new Response(JSON.stringify({ detail: { status: 'payment_required' } }), { status: 402 })
+    }
+    if (String(url).includes('api.x.ai')) {
+      return new Response(Buffer.from([3, 2, 1]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+    }
+    throw new Error('Unexpected provider should not be reached')
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Hello there', voice: 'marin', accent: 'american' } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.match(requested[0].url, /api\.elevenlabs\.io\/v1\/text-to-speech/)
+  assert.equal(requested[1].url, 'https://api.x.ai/v1/tts')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'grok')
 })
 
 test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
