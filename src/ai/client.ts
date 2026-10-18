@@ -294,6 +294,9 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
     finished = true
     signal.removeEventListener('abort', abortAudio)
     clearUrl()
+    if (!started) {
+      try { audio.pause(); audio.removeAttribute('src'); audio.load() } catch {}
+    }
     try { reader?.cancel() } catch {}
     owner.release()
     if (notify) owner.onEnd?.()
@@ -344,7 +347,7 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
   audio.onerror = () => {
     const error = new Error('The streamed voice could not be played.')
     if (!started) rejectStart(error)
-    finish()
+    finish(started)
   }
 
   void (async () => {
