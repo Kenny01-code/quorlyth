@@ -22,7 +22,7 @@ export interface SpeechPlayback {
 function detectAccent(preference: VoiceAccent = 'auto'): Exclude<VoiceAccent, 'auto'> {
   if (preference !== 'auto') return preference
   const locales = [navigator.language, ...(navigator.languages || [])].filter(Boolean).map(value => value.replace('_', '-').toLowerCase())
-  if (locales.some(value => value === 'en-ng' || value.startsWith('en-ng-'))) return 'nigerian'
+  // Auto mode must not force the Nigerian-only custom voice path; users can still select Nigerian explicitly.
   if (locales.some(value => value === 'en-gb' || value.startsWith('en-gb-') || value === 'en-ie' || value.startsWith('en-ie-'))) return 'british'
   if (locales.some(value => value === 'en-us' || value.startsWith('en-us-') || value === 'en-ca' || value.startsWith('en-ca-'))) return 'american'
   return 'international'
@@ -145,9 +145,11 @@ export async function askJson<T = any>(prompt: string, o: {
 
 export type RealtimeEvent =
   | { type: 'state'; state: 'connecting' | 'listening' | 'thinking' | 'speaking' | 'closed' }
+  | { type: 'speech_started' }
   | { type: 'user_preview'; text: string }
   | { type: 'user'; text: string }
-  | { type: 'bot'; text: string; done: boolean }
+  | { type: 'bot'; text: string; delta?: string; done: boolean }
+  | { type: 'response_done' }
   | { type: 'tool'; name: string; args: any }
   | { type: 'error'; message: string }
 
@@ -158,13 +160,13 @@ export interface RealtimeTool { type: 'function'; name: string; description: str
  * The browser sends your microphone, the model answers with audio instantly, and you can interrupt it.
  */
 export async function startRealtime(opts: {
-  instructions: string; voice?: string; accent?: VoiceAccent; tools?: RealtimeTool[]; accessToken?: string; context?: BotContextRequest
+  instructions: string; voice?: string; accent?: VoiceAccent; tools?: RealtimeTool[]; accessToken?: string; context?: BotContextRequest; textOnly?: boolean
   onEvent: (e: RealtimeEvent) => void
   onTool?: (name: string, args: any) => Promise<any> | any
 }) {
   opts.onEvent({ type: 'state', state: 'connecting' })
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  const body: Record<string, unknown> = { voice: opts.voice || 'coral', accent: detectAccent(opts.accent || 'auto'), tools: opts.tools || [] }
+  const body: Record<string, unknown> = { voice: opts.voice || 'coral', accent: detectAccent(opts.accent || 'auto'), tools: opts.tools || [], textOnly: opts.textOnly === true }
   if (opts.accessToken) { headers.Authorization = 'Bearer ' + opts.accessToken; body.context = opts.context || {} }
   else body.instructions = opts.instructions
   const s = await fetch('/api/realtime-session', { method: 'POST', headers, body: JSON.stringify(body) })
@@ -173,8 +175,10 @@ export async function startRealtime(opts: {
 
   const pc = new RTCPeerConnection()
   const audio = document.createElement('audio')
-  audio.autoplay = true
-  pc.ontrack = e => { audio.srcObject = e.streams[0] }
+  // In strict ElevenLabs mode the Realtime model emits text only; it must never play its own built-in voice.
+  audio.autoplay = !opts.textOnly
+  audio.muted = opts.textOnly === true
+  pc.ontrack = e => { if (!opts.textOnly) audio.srcObject = e.streams[0] }
   const mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
   pc.addTrack(mic.getTracks()[0], mic)
   const dc = pc.createDataChannel('oai-events')
@@ -188,6 +192,7 @@ export async function startRealtime(opts: {
     switch (m.type) {
       case 'input_audio_buffer.speech_started':
         userText = ''
+        opts.onEvent({ type: 'speech_started' })
         opts.onEvent({ type: 'state', state: 'listening' }); break
       case 'input_audio_buffer.speech_stopped':
         opts.onEvent({ type: 'state', state: 'thinking' }); break
@@ -205,8 +210,17 @@ export async function startRealtime(opts: {
         opts.onEvent({ type: 'bot', text: botText, done: false }); break
       case 'response.audio_transcript.done':
         opts.onEvent({ type: 'bot', text: m.transcript || botText, done: true }); botText = ''; break
+      case 'response.output_text.delta': {
+        const delta = String(m.delta || '')
+        botText += delta
+        opts.onEvent({ type: 'bot', text: botText, delta, done: false })
+        break
+      }
+      case 'response.output_text.done':
+        opts.onEvent({ type: 'bot', text: m.text || botText, delta: '', done: true }); botText = ''; break
       case 'response.done':
-        opts.onEvent({ type: 'state', state: 'listening' })
+        if (!opts.textOnly) opts.onEvent({ type: 'state', state: 'listening' })
+        opts.onEvent({ type: 'response_done' })
         for (const out of m.response?.output || []) {
           if (out.type === 'function_call') {
             let args: any = {}
@@ -233,8 +247,14 @@ export async function startRealtime(opts: {
   await pc.setRemoteDescription({ type: 'answer', sdp: await r.text() })
 
   return {
-    say: (text: string) => { send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } }); send({ type: 'response.create' }) },
-    interrupt: () => { send({ type: 'response.cancel' }); send({ type: 'output_audio_buffer.clear' }) },
+    say: (text: string) => {
+      send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } })
+      send({ type: 'response.create', ...(opts.textOnly ? { response: { output_modalities: ['text'] } } : {}) })
+    },
+    interrupt: () => {
+      send({ type: 'response.cancel' })
+      if (!opts.textOnly) send({ type: 'output_audio_buffer.clear' })
+    },
     mute: (m: boolean) => mic.getAudioTracks().forEach(t => (t.enabled = !m)),
     stop: () => { try { dc.close() } catch {} ; try { pc.close() } catch {}; mic.getTracks().forEach(t => t.stop()); audio.srcObject = null; opts.onEvent({ type: 'state', state: 'closed' }) },
   }
@@ -357,6 +377,7 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
       sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg')
       reader = response.body!.getReader()
       let receivedAudio = false
+      let playRequested = false
       while (true) {
         const next = await reader.read()
         if (!owner.isCurrent()) throw new DOMException('Speech cancelled', 'AbortError')
@@ -367,14 +388,14 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
         sourceBuffer.appendBuffer(chunk.buffer as ArrayBuffer)
         await waitForUpdate()
         receivedAudio = true
-        if (!started) {
-          await audio.play()
-          if (!owner.isCurrent()) throw new DOMException('Speech cancelled', 'AbortError')
-          if (!started) {
-            started = true
-            owner.onStart?.()
-            resolveStart(playback)
-          }
+        if (!started && !playRequested) {
+          playRequested = true
+          // Do not wait for audio.play() before reading the next chunk: some browsers
+          // need more than one MP3 fragment buffered before playback can begin.
+          void audio.play().catch(error => {
+            if (!started) rejectStart(error)
+            finish(false)
+          })
         }
       }
       if (!receivedAudio) throw new Error('The speech stream returned no audio.')
@@ -478,7 +499,7 @@ export async function speakText(
 
     if (!response && retryBufferedSpeech) {
       try {
-        response = await fetch('/api/speak', {
+        response = await fetch('/api/speak-eleven', {
           method: 'POST',
           signal,
           headers: { 'Content-Type': 'application/json' },
@@ -560,7 +581,7 @@ export async function speakText(
           finish(false)
         }
         if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
-        if (options.allowBrowserFallback === false) {
+        if (options.allowBrowserFallback !== true) {
           throw new Error('The selected QuorlythBot Studio voice could not play. Your written reply is still available; please retry in a moment.')
         }
         notifyBrowserFallback()
@@ -572,7 +593,7 @@ export async function speakText(
     }
 
     assertCurrent()
-    if (options.allowBrowserFallback === false) {
+    if (options.allowBrowserFallback !== true) {
       throw new Error('The selected QuorlythBot Studio voice is temporarily unavailable. Your written reply is still available.')
     }
     if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
