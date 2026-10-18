@@ -3358,3 +3358,27 @@ main:has(.chat-page) > .on { width: 100%; min-width: 0; }
 .q-writing-option-text { min-width:0; font-size:11px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
 .q-writing-option-use { align-self:center; padding:4px 7px; border:1px solid rgba(255,255,255,.16); border-radius:7px; color:rgba(255,255,255,.76); font-size:9px; }
 @media (prefers-reduced-motion: reduce) { .q-writing-option { transition:none !important; } .q-writing-option:hover { transform:none; } }
+
+
+/* The robot belongs to the focused field's parent, not the scrolling viewport. */
+.q-writing-assistant-anchor-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 240;
+}
+.q-writing-assistant-anchor {
+  position: absolute;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+.q-writing-assistant-anchor .q-writing-robot-button {
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .q-writing-assistant-anchor { transform: none; }
+}

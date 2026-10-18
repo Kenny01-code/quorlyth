@@ -23,6 +23,7 @@ export function WritingAssistant() {
   const [anchor, setAnchor] = useState<Point>({ x: 0, y: 0 })
   const [panel, setPanel] = useState<Point>({ x: 12, y: 12 })
   const [anchorVisible, setAnchorVisible] = useState(false)
+  const [anchorRoot, setAnchorRoot] = useState<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<WritingMode>(MODES[0])
@@ -33,21 +34,49 @@ export function WritingAssistant() {
 
   useEffect(() => {
     let frame = 0
+    const host = target?.parentElement || null
+    if (!target || !host) {
+      setAnchorRoot(null)
+      setAnchorVisible(false)
+      return
+    }
+
+    // Mount the robot into the textarea's own parent. Its positioning is now
+    // local to the field, so page scroll and nested scroll containers move it
+    // naturally instead of relying on a viewport-fixed element chasing the field.
+    const oldPosition = host.style.getPropertyValue('position')
+    const oldPositionPriority = host.style.getPropertyPriority('position')
+    const addedPositioning = window.getComputedStyle(host).position === 'static'
+    if (addedPositioning) host.style.setProperty('position', 'relative')
+
+    const layer = document.createElement('div')
+    layer.className = 'q-writing-assistant-anchor-layer'
+    host.appendChild(layer)
+    setAnchorRoot(layer)
+
+    const hideForUnavailableField = () => {
+      setAnchorVisible(false)
+      setOpen(false)
+      generation.current?.abort()
+      generation.current = null
+      setLoading(false)
+    }
+
     const position = (el: HTMLTextAreaElement | null) => {
-      if (!el?.isConnected) {
+      if (!el?.isConnected || el.parentElement !== host || !layer.isConnected) {
         setAnchorVisible(false)
         return
       }
 
       const rect = el.getBoundingClientRect()
-      if (rect.width < 44 || rect.height < 44) {
-        setAnchorVisible(false)
+      if (rect.width < 24 || rect.height < 24) {
+        hideForUnavailableField()
         return
       }
 
-      // Intersect the textarea with the viewport and each ancestor that clips
-      // content. The robot must follow the visible typing area, never stick to
-      // a viewport edge after its field has scrolled out of view.
+      // Work out how much of this field is visible through the viewport and
+      // clipping ancestors. This controls the floating suggestion panel only;
+      // the robot itself follows the field because it lives in the field's DOM.
       let clipLeft = 0
       let clipTop = 0
       let clipRight = window.innerWidth
@@ -55,52 +84,46 @@ export function WritingAssistant() {
       for (let parent = el.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
         const style = window.getComputedStyle(parent)
         if (style.display === 'none' || style.visibility === 'hidden' || parent.hasAttribute('hidden')) {
-          setAnchorVisible(false)
-          setOpen(current => current ? false : current)
-          generation.current?.abort()
-          generation.current = null
-          setLoading(false)
+          hideForUnavailableField()
           return
         }
         const parentRect = parent.getBoundingClientRect()
-        if (style.overflowX !== 'visible') {
+        if (style.overflowX !== 'visible' || style.overflow === 'clip') {
           clipLeft = Math.max(clipLeft, parentRect.left)
           clipRight = Math.min(clipRight, parentRect.right)
         }
-        if (style.overflowY !== 'visible') {
+        if (style.overflowY !== 'visible' || style.overflow === 'clip') {
           clipTop = Math.max(clipTop, parentRect.top)
           clipBottom = Math.min(clipBottom, parentRect.bottom)
         }
       }
 
-      const left = Math.max(8, rect.left, clipLeft)
-      const right = Math.min(window.innerWidth - 8, rect.right, clipRight)
-      const top = Math.max(8, rect.top, clipTop)
-      const bottom = Math.min(window.innerHeight - 8, rect.bottom, clipBottom)
-      if (right - left < 44 || bottom - top < 44) {
-        setAnchorVisible(false)
-        setOpen(current => current ? false : current)
-        generation.current?.abort()
-        generation.current = null
-        setLoading(false)
+      const visibleLeft = Math.max(rect.left, clipLeft, 0)
+      const visibleRight = Math.min(rect.right, clipRight, window.innerWidth)
+      const visibleTop = Math.max(rect.top, clipTop, 0)
+      const visibleBottom = Math.min(rect.bottom, clipBottom, window.innerHeight)
+      if (visibleRight - visibleLeft < 24 || visibleBottom - visibleTop < 24) {
+        hideForUnavailableField()
         return
       }
 
-      setAnchorVisible(true)
+      const layerRect = layer.getBoundingClientRect()
       const nextAnchor = {
-        x: Math.round(Math.max(left, right - 42)),
-        y: Math.round(Math.max(top, bottom - 42)),
+        x: Math.round(rect.right - layerRect.left - 42),
+        y: Math.round(rect.bottom - layerRect.top - 42),
       }
       setAnchor(current => current.x === nextAnchor.x && current.y === nextAnchor.y ? current : nextAnchor)
+      setAnchorVisible(true)
 
-      // Keep the tool close to this textarea while fitting the panel inside the
-      // viewport. Recalculate after scroll, resize, and textarea growth.
+      // The expanded assistant panel is intentionally a body-level fixed layer
+      // so ancestor overflow never cuts it off. It still follows the visible
+      // textarea, and closes if that field scrolls out of view.
       const panelWidth = Math.min(336, Math.max(0, window.innerWidth - 24))
       const panelHeight = Math.min(420, Math.max(0, window.innerHeight * 0.76))
-      const above = top - 12 >= Math.min(panelHeight, 280)
-      const preferredTop = above ? top - panelHeight - 10 : bottom + 10
+      const above = visibleTop - 12 >= Math.min(panelHeight, 280)
+      const preferredTop = above ? visibleTop - panelHeight - 10 : visibleBottom + 10
       const nextPanel = {
-        x: Math.round(Math.max(12, Math.min(window.innerWidth - panelWidth - 12, right - panelWidth))),
+        x: Math.round(Math.max(12, Math.min(window.innerWidth - panelWidth - 12, visibleRight - panelWidth))),
         y: Math.round(Math.max(12, Math.min(window.innerHeight - panelHeight - 12, preferredTop))),
       }
       setPanel(current => current.x === nextPanel.x && current.y === nextPanel.y ? current : nextPanel)
@@ -115,16 +138,19 @@ export function WritingAssistant() {
     }
     const onFocusIn = (event: FocusEvent) => {
       const node = event.target as HTMLElement | null
-      if (!node) return
-      if (node.closest('.q-writing-assistant-ui')) return
+      if (!node || node.closest('.q-writing-assistant-ui')) return
       if (node instanceof HTMLTextAreaElement) {
+        generation.current?.abort()
+        generation.current = null
         setLoading(false)
         setTarget(node)
         setOpen(false)
         setPreview('')
         setOptions([])
         setError('')
-        position(node)
+        // This effect owns one textarea parent. A different target will get its
+        // own local layer in the next effect; never position it in the old host.
+        if (node === target) position(node)
       } else {
         generation.current?.abort()
         generation.current = null
@@ -138,7 +164,7 @@ export function WritingAssistant() {
       }
     }
     const observer = new MutationObserver(() => {
-      if (target && !target.isConnected) {
+      if (!target.isConnected || target.parentElement !== host) {
         setTarget(null)
         setAnchorVisible(false)
         setOpen(false)
@@ -146,16 +172,16 @@ export function WritingAssistant() {
         generation.current = null
       }
     })
-    const resizeObserver = target ? new ResizeObserver(schedulePosition) : null
+    const resizeObserver = new ResizeObserver(schedulePosition)
 
     document.addEventListener('focusin', onFocusIn, true)
     window.addEventListener('resize', schedulePosition)
     window.addEventListener('scroll', schedulePosition, true)
     window.visualViewport?.addEventListener('resize', schedulePosition)
     window.visualViewport?.addEventListener('scroll', schedulePosition)
-    target?.addEventListener('input', schedulePosition)
-    target?.addEventListener('change', schedulePosition)
-    if (target) resizeObserver?.observe(target)
+    target.addEventListener('input', schedulePosition)
+    target.addEventListener('change', schedulePosition)
+    resizeObserver.observe(target)
     if (document.body) observer.observe(document.body, { childList: true, subtree: true })
     schedulePosition()
 
@@ -168,10 +194,15 @@ export function WritingAssistant() {
       window.removeEventListener('scroll', schedulePosition, true)
       window.visualViewport?.removeEventListener('resize', schedulePosition)
       window.visualViewport?.removeEventListener('scroll', schedulePosition)
-      target?.removeEventListener('input', schedulePosition)
-      target?.removeEventListener('change', schedulePosition)
-      resizeObserver?.disconnect()
+      target.removeEventListener('input', schedulePosition)
+      target.removeEventListener('change', schedulePosition)
+      resizeObserver.disconnect()
       observer.disconnect()
+      layer.remove()
+      if (addedPositioning) {
+        if (oldPosition) host.style.setProperty('position', oldPosition, oldPositionPriority)
+        else host.style.removeProperty('position')
+      }
     }
   }, [target])
 
@@ -269,18 +300,27 @@ export function WritingAssistant() {
     applyText(preview)
   }
 
-  if (!target?.isConnected || !anchorVisible) return null
+  if (!target?.isConnected) return null
 
-  return createPortal((
-    <>
-      <div className="q-writing-assistant-anchor q-writing-assistant-ui" style={{ left: anchor.x, top: anchor.y }}>
-        <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else { generation.current?.abort(); setLoading(false); setOptions([]) } }}>
+  const anchorPortal = anchorRoot
+    && anchorRoot.isConnected
+    && anchorRoot.parentElement === target.parentElement
+    && anchorVisible
+    ? createPortal(
+      <div className="q-writing-assistant-anchor q-writing-assistant-ui" style={{ left: anchor.x, top: anchor.y, position: 'absolute' }}>
+        <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else { generation.current?.abort(); generation.current = null; setLoading(false); setOptions([]) } }}>
           <span className="q-writing-robot-head" aria-hidden="true"><span className="q-writing-robot-antenna" /><span className="q-writing-robot-eye eye-left" /><span className="q-writing-robot-eye eye-right" /><span className="q-writing-robot-mouth" /></span>
           <span className="q-writing-robot-glint" />
         </button>
-      </div>
-      {open && <section className="q-writing-panel q-writing-assistant-ui" style={{ left: panel.x, top: panel.y }} aria-label="QuorlythBot writing assistant">
-        <header className="q-writing-panel-head"><span className="q-writing-panel-symbol"><span className="q-writing-robot-head tiny"><span className="q-writing-robot-antenna" /><span className="q-writing-robot-eye eye-left" /><span className="q-writing-robot-eye eye-right" /><span className="q-writing-robot-mouth" /></span></span><div><b>QuorlythBot</b><small>WRITING ASSISTANT · STAYS HERE</small></div><button type="button" aria-label="Close writing assistant" onClick={() => { generation.current?.abort(); setLoading(false); setOpen(false) }}>×</button></header>
+      </div>,
+      anchorRoot,
+    )
+    : null
+
+  const panelPortal = open && anchorVisible
+    ? createPortal(
+      <section className="q-writing-panel q-writing-assistant-ui" style={{ left: panel.x, top: panel.y, position: 'fixed' }} aria-label="QuorlythBot writing assistant">
+        <header className="q-writing-panel-head"><span className="q-writing-panel-symbol"><span className="q-writing-robot-head tiny"><span className="q-writing-robot-antenna" /><span className="q-writing-robot-eye eye-left" /><span className="q-writing-robot-eye eye-right" /><span className="q-writing-robot-mouth" /></span></span><div><b>QuorlythBot</b><small>WRITING ASSISTANT · STAYS HERE</small></div><button type="button" aria-label="Close writing assistant" onClick={() => { generation.current?.abort(); generation.current = null; setLoading(false); setOpen(false) }}>×</button></header>
         <div className="q-writing-modes">{MODES.map(item => <button type="button" key={item.id} className={mode.id === item.id ? 'on' : ''} disabled={loading} onClick={() => void improve(item)}>{item.label}</button>)}</div>
         {loading && <div className="q-writing-status"><span className="q-writing-pulse" />Refining your text…</div>}
         {error && <p className="q-writing-error" role="alert">{error}</p>}
@@ -292,7 +332,10 @@ export function WritingAssistant() {
         </div>}
         {preview && <div className="q-writing-preview"><p className="q-writing-preview-label">PREVIEW · {mode.label.toUpperCase()}</p><div>{preview}</div></div>}
         <footer className="q-writing-panel-footer"><span>{loading ? 'Preparing a focused suggestion' : options.length ? 'Choose one to use it' : preview ? 'Review before applying' : 'AI help adapts to this field'}</span>{preview && !loading && <><button type="button" className="q-writing-secondary" onClick={() => { setPreview(''); setError('') }}>Discard</button><button type="button" className="q-writing-apply" onClick={applyPreview}>Apply text</button></>}</footer>
-      </section>}
-    </>
-  ), document.body)
+      </section>,
+      document.body,
+    )
+    : null
+
+  return <>{anchorPortal}{panelPortal}</>
 }
