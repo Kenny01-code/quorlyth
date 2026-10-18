@@ -218,7 +218,7 @@ async function fetchWithHeaderTimeout(url, options = {}) {
     : process.env.AI_PROVIDER_TIMEOUT_MS)
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
     ? Math.min(configuredTimeout, 30000)
-    : isTtsRequest ? 8000 : 10000
+    : isTtsRequest ? 8000 : 7000
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(new Error('AI provider timed out before returning headers')), timeoutMs)
   try {
@@ -314,21 +314,92 @@ async function requestProviderJson(provider, body) {
   return openAICompatibleRequest(provider, body, true)()
 }
 
+function firstStreamChunkTimeoutMs() {
+  const configured = Number(process.env.AI_FIRST_TOKEN_TIMEOUT_MS)
+  return Number.isFinite(configured) && configured >= 1000
+    ? Math.min(configured, 15000)
+    : 5000
+}
+
+// Buffer the first chunk before returning a stream to the client. A provider
+// that returns HTTP 200 but never starts its stream is treated as unavailable,
+// so the router can move on before the user is left waiting.
+async function primeStreamResponse(response) {
+  if (!response.body) throw new Error('The provider returned no response stream.')
+  const reader = response.body.getReader()
+  let timer
+  try {
+    const first = await Promise.race([
+      reader.read(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('AI provider did not start its stream in time.')), firstStreamChunkTimeoutMs())
+      }),
+    ])
+    if (first.done || !first.value?.byteLength) {
+      throw new Error('The provider ended its stream before sending data.')
+    }
+
+    let firstChunk = first.value
+    const replayStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(firstChunk)
+        firstChunk = undefined
+      },
+      async pull(controller) {
+        try {
+          const next = await reader.read()
+          if (next.done) {
+            controller.close()
+            try { reader.releaseLock() } catch {}
+            return
+          }
+          controller.enqueue(next.value)
+        } catch (error) {
+          try { controller.error(error) } catch {}
+          try { reader.releaseLock() } catch {}
+        }
+      },
+      async cancel(reason) {
+        try { await reader.cancel(reason) } catch {}
+        try { reader.releaseLock() } catch {}
+      },
+    })
+    return new Response(replayStream, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    })
+  } catch (error) {
+    try { await reader.cancel(error) } catch {}
+    try { reader.releaseLock() } catch {}
+    throw error
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 async function chooseProvider(providers, request, requireStream = false) {
   let lastFailure = null
   for (const provider of providers) {
+    let response
     try {
-      const response = await request(provider)
+      response = await request(provider)
       if (response.ok) {
-        if (!requireStream || response.body) return { provider, response }
-        lastFailure = { provider, error: new Error('The provider returned no response stream.') }
-        continue
+        if (!requireStream) return { provider, response }
+        try {
+          return { provider, response: await primeStreamResponse(response) }
+        } catch (error) {
+          lastFailure = { provider, error }
+          await discardResponse(response)
+          continue
+        }
       }
       lastFailure = { provider, response }
       if (!shouldTryAnotherProvider(response)) return lastFailure
       await discardResponse(response)
     } catch (error) {
       lastFailure = { provider, error }
+      if (response) await discardResponse(response)
     }
   }
   return lastFailure
@@ -355,7 +426,7 @@ function streamIdleTimeoutMs() {
   const configured = Number(process.env.AI_STREAM_IDLE_TIMEOUT_MS)
   return Number.isFinite(configured) && configured >= 5000
     ? Math.min(configured, 90000)
-    : 45000
+    : 15000
 }
 
 async function forEachChunkWithIdleTimeout(body, onChunk) {
