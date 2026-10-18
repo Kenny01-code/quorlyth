@@ -786,6 +786,22 @@ async function requestOpenAISpeech(text, voice, accent) {
   })
 }
 
+// Record only non-sensitive provider diagnostics to help fix broken server-side TTS
+// without exposing credentials, text, voice IDs, or raw upstream error messages.
+async function safeTtsErrorCode(response) {
+  try {
+    const payload = await response.clone().json()
+    const code = payload?.error?.code || payload?.error?.type || payload?.detail?.status || payload?.detail?.code
+    return typeof code === 'string' && /^[a-z0-9_.-]{1,80}$/i.test(code) ? code : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function logTtsProviderFailure(provider, details) {
+  console.warn('[Quorlyth voice] TTS provider failed', { provider, ...details })
+}
+
 /** Natural voice: ElevenLabs first for supported configured voices, with OpenAI as the accent-aware failover. */
 export async function speak(req, res) {
   try {
@@ -809,9 +825,13 @@ export async function speak(req, res) {
         try {
           const eleven = await requestElevenLabsSpeech(text, voiceId)
           if (eleven.ok) return audioResponse(res, await eleven.arrayBuffer(), 'elevenlabs')
-        } catch {
-          // Fall through to OpenAI when ElevenLabs is rate-limited or unreachable.
+          logTtsProviderFailure('elevenlabs', { status: eleven.status, code: await safeTtsErrorCode(eleven) })
+        } catch (error) {
+          // Keep raw provider error details out of logs and preserve the OpenAI fallback.
+          logTtsProviderFailure('elevenlabs', { error: error instanceof Error ? error.name : 'UnknownError' })
         }
+      } else {
+        logTtsProviderFailure('elevenlabs', { reason: 'no_matching_voice_id', accent })
       }
     }
 
@@ -819,8 +839,10 @@ export async function speak(req, res) {
       try {
         const openai = await requestOpenAISpeech(text, voice, accent)
         if (openai.ok) return audioResponse(res, await openai.arrayBuffer(), 'openai')
-      } catch {
-        // Return one stable user-facing message below; never expose provider details.
+        logTtsProviderFailure('openai', { status: openai.status, code: await safeTtsErrorCode(openai) })
+      } catch (error) {
+        // Keep raw provider error details out of logs; the public response remains stable.
+        logTtsProviderFailure('openai', { error: error instanceof Error ? error.name : 'UnknownError' })
       }
     }
 
