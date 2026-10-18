@@ -70,6 +70,8 @@ async function readError(r: Response) {
       'Each chat message must have a valid role and text content.',
       'This conversation is too long to send in one request. Shorten the recent messages and retry.',
       'Request body must be valid JSON.',
+      'ElevenLabs voice is unavailable right now. Check the ElevenLabs API key and account quota. No alternate voice will be used.',
+      'The selected ElevenLabs accent needs a matching voice ID in your ElevenLabs account. No alternate voice will be used.',
     ]
     if (typeof error === 'string' && safeClientMessages.includes(error)) return error
     return fallback
@@ -238,13 +240,21 @@ export async function startRealtime(opts: {
   }
   dc.onopen = () => opts.onEvent({ type: 'state', state: 'listening' })
 
-  const offer = await pc.createOffer()
-  await pc.setLocalDescription(offer)
-  const r = await fetch('https://api.openai.com/v1/realtime/calls', {
-    method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/sdp' },
-  })
-  if (!r.ok) throw new Error((await r.text()).slice(0, 500) || 'Could not connect to the live voice service')
-  await pc.setRemoteDescription({ type: 'answer', sdp: await r.text() })
+  try {
+    const offer = await pc.createOffer()
+    await pc.setLocalDescription(offer)
+    const r = await fetch('https://api.openai.com/v1/realtime/calls', {
+      method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/sdp' },
+    })
+    if (!r.ok) throw new Error((await r.text()).slice(0, 500) || 'Could not connect to the live voice service')
+    await pc.setRemoteDescription({ type: 'answer', sdp: await r.text() })
+  } catch (error) {
+    try { dc.close() } catch {}
+    try { pc.close() } catch {}
+    mic.getTracks().forEach(track => track.stop())
+    audio.srcObject = null
+    throw error
+  }
 
   return {
     say: (text: string) => {
