@@ -1,4 +1,4 @@
-import { RefObject, useState } from 'react'
+import { RefObject, useRef, useState } from 'react'
 import { BotIcon as Icon } from './BotIcon'
 import { Chip } from '../components/ui'
 import { useApp } from '../data/AppProvider'
@@ -31,6 +31,83 @@ export function BotViews(p: P) {
   const [sample, setSample] = useState("Hello! I'm QuorlythBot. I'm here and listening. What would you like to talk about?")
   const [del, setDel] = useState('')
   const [vm, setVm] = useState<{ state: 'idle' | 'rec' | 'done' | 'err'; msg: string }>({ state: 'idle', msg: '' })
+  const [hello, setHello] = useState<{ state: 'idle' | 'loading' | 'playing' | 'error'; message: string }>({ state: 'idle', message: '' })
+  const helloAudio = useRef<HTMLAudioElement | null>(null)
+  const helloUrl = useRef<string | null>(null)
+
+  function clearHelloPlayback(audio?: HTMLAudioElement) {
+    if (audio && helloAudio.current !== audio) return
+    const current = helloAudio.current
+    helloAudio.current = null
+    if (current) {
+      current.onended = null
+      current.onerror = null
+      current.onplay = null
+      current.pause()
+      current.removeAttribute('src')
+      current.load()
+    }
+    if (helloUrl.current) URL.revokeObjectURL(helloUrl.current)
+    helloUrl.current = null
+    p.robot.current?.talk(false)
+  }
+
+  async function playElevenLabsHello(voice: string) {
+    clearHelloPlayback()
+    if (!sample.trim()) {
+      setHello({ state: 'error', message: 'Enter something to preview first.' })
+      return
+    }
+    setHello({ state: 'loading', message: 'Requesting speech directly from ElevenLabs…' })
+    try {
+      const response = await fetch('/api/speak-eleven', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ text: sample, voice, accent: s.accent || 'auto' }),
+      })
+      if (!response.ok) {
+        let reason = `ElevenLabs voice request failed (${response.status}).`
+        try {
+          const payload = await response.json()
+          if (typeof payload?.error === 'string') reason = payload.error
+        } catch { /* Preserve the HTTP status message if the server returns no JSON. */ }
+        throw new Error(reason)
+      }
+      const provider = response.headers.get('X-Quorlyth-Voice-Provider')
+      if (provider !== 'elevenlabs') {
+        throw new Error('Playback blocked: the server did not confirm that this audio came from ElevenLabs.')
+      }
+      const contentType = response.headers.get('Content-Type') || ''
+      if (!contentType.startsWith('audio/')) {
+        throw new Error('ElevenLabs did not return an audio file. No other voice was used.')
+      }
+      const audioBlob = await response.blob()
+      if (!audioBlob.size) throw new Error('ElevenLabs returned an empty audio file. Please retry.')
+      const url = URL.createObjectURL(audioBlob)
+      const audio = new Audio(url)
+      helloAudio.current = audio
+      helloUrl.current = url
+      audio.onplay = () => {
+        p.robot.current?.talk(true)
+        setHello({ state: 'playing', message: 'Playing confirmed ElevenLabs audio.' })
+      }
+      audio.onended = () => {
+        clearHelloPlayback(audio)
+        setHello({ state: 'idle', message: 'ElevenLabs preview finished.' })
+      }
+      audio.onerror = () => {
+        clearHelloPlayback(audio)
+        setHello({ state: 'error', message: 'The ElevenLabs audio arrived, but your browser could not play it. No basic voice was substituted.' })
+      }
+      await audio.play()
+    } catch (error) {
+      clearHelloPlayback()
+      const message = error instanceof Error ? error.message : 'ElevenLabs voice is unavailable. No alternate voice was used.'
+      setHello({ state: 'error', message })
+      a.toast(message)
+    }
+  }
 
   async function matchVoice() {
     setVm({ state: 'rec', msg: '' })
@@ -133,7 +210,8 @@ export function BotViews(p: P) {
           <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Plays only your selected ElevenLabs voice.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
             <div className="acts" style={{ margin: 0 }}>
-              <button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: false, elevenLabsOnly: true }).catch((e: Error) => a.toast(e.message || 'ElevenLabs voice is unavailable. No basic device voice will be used.'))}><Icon name="voice" size={16} />Hear a hello</button>
+              <button className="btn p" disabled={hello.state === 'loading'} onClick={() => void playElevenLabsHello(cur.ai)}><Icon name="voice" size={16} />{hello.state === 'loading' ? 'Loading ElevenLabs…' : hello.state === 'playing' ? 'Playing ElevenLabs' : 'Hear a hello'}</button>
+              {hello.message && <p role="status" aria-live="polite" className={hello.state === 'error' ? 'err' : 'dim'} style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>{hello.message}</p>}
               <button className="btn" onClick={p.startLive}><Icon name="live" size={16} />Talk to Quorlyth</button>
             </div></div>
         </div>
