@@ -13,7 +13,7 @@ const XAI_KEY = () => process.env.XAI_API_KEY
 const XAI_MODEL = (tier) => tier === 'quick'
   ? process.env.XAI_QUICK_MODEL || process.env.XAI_MODEL || 'grok-4.7'
   : process.env.XAI_MODEL || 'grok-4.7'
-const TEXT_PROVIDER_ORDER = ['gemini', 'grok', 'openai']
+const TEXT_PROVIDER_ORDER = ['grok', 'gemini', 'openai']
 
 function hasTextProviderKey(provider) {
   if (provider === 'gemini') return Boolean(GEMINI_KEY())
@@ -210,11 +210,15 @@ function shouldTryAnotherProvider(response) {
 }
 
 async function fetchWithHeaderTimeout(url, options = {}) {
+  // TTS uses a shorter header deadline so a stalled provider falls through quickly.
   // Timeout only the wait for response headers, never a healthy streaming body.
-  const configuredTimeout = Number(process.env.AI_PROVIDER_TIMEOUT_MS)
+  const isTtsRequest = /\/v1\/tts|\/v1beta\/interactions/.test(url)
+  const configuredTimeout = Number(isTtsRequest
+    ? process.env.AI_TTS_PROVIDER_TIMEOUT_MS
+    : process.env.AI_PROVIDER_TIMEOUT_MS)
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
     ? Math.min(configuredTimeout, 30000)
-    : 10000
+    : isTtsRequest ? 8000 : 10000
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(new Error('AI provider timed out before returning headers')), timeoutMs)
   try {
@@ -737,9 +741,9 @@ function elevenLabsVoiceId(voice, accent) {
   return genericPersonaOverride || accentVoices[voice] || null
 }
 
-function audioResponse(res, audio, provider) {
+function audioResponse(res, audio, provider, contentType = 'audio/mpeg') {
   res.statusCode = 200
-  res.setHeader('Content-Type', 'audio/mpeg')
+  res.setHeader('Content-Type', contentType)
   res.setHeader('Cache-Control', 'no-store')
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Quorlyth-Voice-Provider', provider)
@@ -786,6 +790,55 @@ async function requestOpenAISpeech(text, voice, accent) {
   })
 }
 
+// Provider-specific voices preserve the selected Studio persona as closely as possible.
+const GROK_TTS_VOICES = {
+  marin: 'carina', sage: 'lux', shimmer: 'iris',
+  cedar: 'atlas', echo: 'orion', ballad: 'ursa',
+  coral: 'celeste', alloy: 'sal', ash: 'zagan',
+  nova: 'luna', onyx: 'orion', fable: 'sirius', verse: 'altair',
+}
+const GEMINI_TTS_VOICES = {
+  marin: 'Kore', sage: 'Aoede', shimmer: 'Leda',
+  cedar: 'Charon', echo: 'Puck', ballad: 'Fenrir',
+  coral: 'Kore', alloy: 'Zephyr', ash: 'Orus',
+  nova: 'Leda', onyx: 'Charon', fable: 'Puck', verse: 'Rasalgethi',
+}
+
+async function requestGrokSpeech(text, voice, accent) {
+  const language = accent === 'british' ? 'en-GB' : accent === 'american' ? 'en-US' : 'en'
+  return fetchWithHeaderTimeout('https://api.x.ai/v1/tts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + XAI_KEY() },
+    body: JSON.stringify({
+      text,
+      voice_id: GROK_TTS_VOICES[voice] || 'eve',
+      language,
+      optimize_streaming_latency: 2,
+    }),
+  })
+}
+
+async function requestGeminiSpeech(text, voice, accent) {
+  const model = process.env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts'
+  return fetchWithHeaderTimeout('https://generativelanguage.googleapis.com/v1beta/interactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY() },
+    body: JSON.stringify({
+      model,
+      input: [{
+        type: 'user_input',
+        content: [{
+          type: 'text',
+          text,
+          annotations: [{ type: 'speech_metadata', style: speechStyleInstructions(accent) }],
+        }],
+      }],
+      response_format: { type: 'audio' },
+      generation_config: { speech_config: [{ voice: GEMINI_TTS_VOICES[voice] || 'Kore' }] },
+    }),
+  })
+}
+
 // Record only non-sensitive provider diagnostics to help fix broken server-side TTS
 // without exposing credentials, text, voice IDs, or raw upstream error messages.
 async function safeTtsErrorCode(response) {
@@ -802,57 +855,92 @@ function logTtsProviderFailure(provider, details) {
   console.warn('[Quorlyth voice] TTS provider failed', { provider, ...details })
 }
 
-/** Natural voice: ElevenLabs first for supported configured voices, with OpenAI as the accent-aware failover. */
+/** Voice fallback chain: preferred Grok/Gemini first, then optional legacy TTS providers. */
 export async function speak(req, res) {
   try {
     const body = await readBody(req)
     const text = typeof body.text === 'string' ? body.text.trim().slice(0, 1500) : ''
     const accent = speechAccent(body.accent)
     if (!text) return send(res, 400, { error: 'Add a reply before playing its voice.' })
-    // A missing/invalid Studio selection is an error, never a reason to silently
-    // substitute a server default persona.
     if (!SPEECH_VOICES.has(body.voice)) {
       return send(res, 400, { error: 'Choose a voice in QuorlythBot Voice Studio before playing audio.' })
     }
     const voice = body.voice
+    const selected = (process.env.AI_PROVIDER || 'auto').trim().toLowerCase()
+    const order = selected === 'gemini'
+      ? ['gemini', 'grok', 'elevenlabs', 'openai']
+      : selected === 'openai'
+        ? ['openai', 'grok', 'gemini', 'elevenlabs']
+        : ['grok', 'gemini', 'elevenlabs', 'openai']
 
-    // ElevenLabs provides the premium voice track; voice IDs and credentials stay
-    // on the server. Nigerian/British voices must be real accent-matched IDs set
-    // in Vercel rather than a misleading American voice with an accent label.
-    if (ELEVENLABS_KEY()) {
-      const voiceId = elevenLabsVoiceId(voice, accent)
-      if (voiceId) {
+    for (const provider of order) {
+      if (provider === 'grok' && XAI_KEY()) {
         try {
-          const eleven = await requestElevenLabsSpeech(text, voiceId)
-          if (eleven.ok) return audioResponse(res, await eleven.arrayBuffer(), 'elevenlabs')
-          logTtsProviderFailure('elevenlabs', { status: eleven.status, code: await safeTtsErrorCode(eleven) })
+          const response = await requestGrokSpeech(text, voice, accent)
+          if (response.ok) return audioResponse(res, await response.arrayBuffer(), 'grok')
+          logTtsProviderFailure('grok', { status: response.status, code: await safeTtsErrorCode(response) })
+          await discardResponse(response)
         } catch (error) {
-          // Keep raw provider error details out of logs and preserve the OpenAI fallback.
+          logTtsProviderFailure('grok', { error: error instanceof Error ? error.name : 'UnknownError' })
+        }
+      }
+
+      if (provider === 'gemini' && GEMINI_KEY()) {
+        try {
+          const response = await requestGeminiSpeech(text, voice, accent)
+          if (response.ok) {
+            const payload = await response.json()
+            const parts = Array.isArray(payload.steps) ? payload.steps.flatMap(step => Array.isArray(step.content) ? step.content : []) : []
+            const audioPart = [...parts].reverse().find(part => part?.type === 'audio' && typeof part.data === 'string')
+            const audioBase64 = payload.output_audio?.data || audioPart?.data
+            if (audioBase64) return audioResponse(res, Buffer.from(audioBase64, 'base64'), 'gemini', 'audio/wav')
+            logTtsProviderFailure('gemini', { reason: 'no_audio_payload' })
+          } else {
+            logTtsProviderFailure('gemini', { status: response.status, code: await safeTtsErrorCode(response) })
+            await discardResponse(response)
+          }
+        } catch (error) {
+          logTtsProviderFailure('gemini', { error: error instanceof Error ? error.name : 'UnknownError' })
+        }
+      }
+
+      if (provider === 'elevenlabs' && ELEVENLABS_KEY()) {
+        const voiceId = elevenLabsVoiceId(voice, accent)
+        if (!voiceId) {
+          logTtsProviderFailure('elevenlabs', { reason: 'no_matching_voice_id', accent })
+          continue
+        }
+        try {
+          const response = await requestElevenLabsSpeech(text, voiceId)
+          if (response.ok) return audioResponse(res, await response.arrayBuffer(), 'elevenlabs')
+          logTtsProviderFailure('elevenlabs', { status: response.status, code: await safeTtsErrorCode(response) })
+          await discardResponse(response)
+        } catch (error) {
           logTtsProviderFailure('elevenlabs', { error: error instanceof Error ? error.name : 'UnknownError' })
         }
-      } else {
-        logTtsProviderFailure('elevenlabs', { reason: 'no_matching_voice_id', accent })
+      }
+
+      if (provider === 'openai' && KEY()) {
+        try {
+          const response = await requestOpenAISpeech(text, voice, accent)
+          if (response.ok) return audioResponse(res, await response.arrayBuffer(), 'openai')
+          logTtsProviderFailure('openai', { status: response.status, code: await safeTtsErrorCode(response) })
+          await discardResponse(response)
+        } catch (error) {
+          logTtsProviderFailure('openai', { error: error instanceof Error ? error.name : 'UnknownError' })
+        }
       }
     }
 
-    if (KEY()) {
-      try {
-        const openai = await requestOpenAISpeech(text, voice, accent)
-        if (openai.ok) return audioResponse(res, await openai.arrayBuffer(), 'openai')
-        logTtsProviderFailure('openai', { status: openai.status, code: await safeTtsErrorCode(openai) })
-      } catch (error) {
-        // Keep raw provider error details out of logs; the public response remains stable.
-        logTtsProviderFailure('openai', { error: error instanceof Error ? error.name : 'UnknownError' })
-      }
+    if (!XAI_KEY() && !GEMINI_KEY() && !ELEVENLABS_KEY() && !KEY()) {
+      return send(res, 503, { error: 'Natural voice is not configured. Add XAI_API_KEY or GEMINI_API_KEY to enable automatic voice failover.' })
     }
-
-    if (!ELEVENLABS_KEY() && !KEY()) {
-      return send(res, 503, { error: 'Natural voice is not configured. Add ELEVENLABS_API_KEY or OPENAI_API_KEY to the server environment.' })
-    }
-    if (ELEVENLABS_KEY() && (accent === 'nigerian' || accent === 'british') && !KEY()
-      && !process.env[`ELEVENLABS_VOICE_${accent.toUpperCase()}_ID`]?.trim()) {
-      return send(res, 503, { error: `Add a real accent-matched voice ID as ELEVENLABS_VOICE_${accent.toUpperCase()}_ID to enable this accent without the OpenAI fallback.` })
-    }
-    return send(res, 503, { error: 'QuorlythBot could not prepare natural voice audio just now. Please try again shortly.' })
-  } catch (e) { const safe = safeHandlerError(e, 'QuorlythBot'); send(res, safe.status, { error: safe.message, retryable: safe.status >= 500 }) }
+    return send(res, 503, {
+      error: 'QuorlythBot could not prepare voice audio. Each configured speech provider was tried; check the provider quota or retry shortly.',
+      retryable: true,
+    })
+  } catch (e) {
+    const safe = safeHandlerError(e, 'QuorlythBot')
+    send(res, safe.status, { error: safe.message, retryable: safe.status >= 500 })
+  }
 }
