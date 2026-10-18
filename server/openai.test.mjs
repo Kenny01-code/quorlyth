@@ -12,6 +12,7 @@ const originalXaiKey = process.env.XAI_API_KEY
 const originalXaiModel = process.env.XAI_MODEL
 const originalXaiQuickModel = process.env.XAI_QUICK_MODEL
 const originalAiProvider = process.env.AI_PROVIDER
+const originalFirstTokenTimeout = process.env.AI_FIRST_TOKEN_TIMEOUT_MS
 const originalYoutubeKey = process.env.YOUTUBE_API_KEY
 
 function response() {
@@ -45,6 +46,8 @@ afterEach(() => {
   else process.env.XAI_QUICK_MODEL = originalXaiQuickModel
   if (originalAiProvider === undefined) delete process.env.AI_PROVIDER
   else process.env.AI_PROVIDER = originalAiProvider
+  if (originalFirstTokenTimeout === undefined) delete process.env.AI_FIRST_TOKEN_TIMEOUT_MS
+  else process.env.AI_FIRST_TOKEN_TIMEOUT_MS = originalFirstTokenTimeout
   if (originalYoutubeKey === undefined) delete process.env.YOUTUBE_API_KEY
   else process.env.YOUTUBE_API_KEY = originalYoutubeKey
 })
@@ -155,6 +158,30 @@ test('chat does not retry a failed Gemini model when no backup provider is confi
   assert.equal(requested.length, 1)
   assert.match(requested[0], /gemini-3\.8-flash:streamGenerateContent/)
   assert.equal(res.statusCode, 503)
+})
+
+test('chat switches to Grok when Gemini returns headers but stalls before its first chunk', async () => {
+  process.env.AI_PROVIDER = 'gemini'
+  process.env.GEMINI_API_KEY = 'test-gemini-secret'
+  process.env.XAI_API_KEY = 'test-xai-secret'
+  process.env.AI_FIRST_TOKEN_TIMEOUT_MS = '1000'
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url) => {
+    requested.push(String(url))
+    if (String(url).includes('generativelanguage.googleapis.com')) {
+      return new Response(new ReadableStream({ start() {} }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+    }
+    return new Response('data: {"choices":[{"delta":{"content":"Grok recovered quickly"}}]}\n\n', { status: 200 })
+  }
+  const res = response()
+  await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.match(requested[0], /gemini-3\\.8-flash:streamGenerateContent/)
+  assert.match(requested[1], /api\\.x\\.ai\\/v1\\/chat\\/completions/)
+  assert.match(res.output, /Grok recovered quickly/)
+  assert.equal(res.statusCode, 200)
 })
 
 test('chat fails over from overloaded Gemini directly to Grok without repeating Gemini', async () => {
