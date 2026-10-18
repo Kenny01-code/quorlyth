@@ -27,7 +27,7 @@ export function BotViews(p: P) {
   const s = bd.settings
   const [pf, setPf] = useState<{ id?: string; name: string; ins: string; cid: string }>({ name: '', ins: '', cid: '' })
   const [about, setAbout] = useState(s.about)
-  const [sample, setSample] = useState('Hi, I am QuorlythBot. This is how I sound when we talk.')
+  const [sample, setSample] = useState("Hello! I'm QuorlythBot. I'm here and listening. What would you like to talk about?")
   const [del, setDel] = useState('')
   const [vm, setVm] = useState<{ state: 'idle' | 'rec' | 'done' | 'err'; msg: string }>({ state: 'idle', msg: '' })
 
@@ -54,7 +54,7 @@ export function BotViews(p: P) {
       const m = f[Math.floor(f.length / 2)], g = m < 165 ? 'm' : 'f', v = VOICES.find(x => x.g === g)!
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto' }).catch(() => {})
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: false }).catch(() => a.toast('ElevenLabs is unavailable. No basic device voice was substituted.'))
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
@@ -116,12 +116,12 @@ export function BotViews(p: P) {
 
   if (p.view === 'voice') {
     const cur = VOICES.find(v => v.id === s.vid) || VOICES[0]
-    const pick = (v: typeof VOICES[number]) => { bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin(); speakText('Hi, I am ' + v.n + '. ' + v.d + ', and ready when you are.', v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto' }).catch(() => a.toast('Voice preview is unavailable right now.')) }
+    const pick = (v: typeof VOICES[number]) => { bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin() }
     return (
       <><h3 className="bvt">Voice studio</h3><p className="mut" style={{ margin: '6px 0 4px' }}>Choose how QuorlythBot sounds and looks. Drag the robot above to turn it all the way round.</p>
         <div className="glass pad qbot-accent-picker" style={{ padding: '6px 18px', margin: '12px 0 14px' }}>
           <Chips label="Speech accent" desc="Auto-detect uses your browser language. You can choose a style any time." value={s.accent || 'auto'} onPick={value => bd.saveSettings({ accent: value as any })} list={VOICE_ACCENTS.map(accent => [accent.id, accent.name])} />
-          <p className="dim" style={{ fontSize: 11, lineHeight: 1.5, margin: '0 0 8px' }}>Voice accent is steered by the speech model. Browser fallback voices vary by device and may not offer every regional accent.</p>
+          <p className="dim" style={{ fontSize: 11, lineHeight: 1.5, margin: '0 0 8px' }}>Auto uses a neutral international voice. Live Talk detects the language you speak; voice output uses ElevenLabs only.</p>
         </div>
         <div className="bvgrid">{VOICES.map(v => { const T = (THEMES as any)[v.theme]; return (
           <button key={v.id} className={cn('bvc', cur.id === v.id && 'on')} style={{ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any} aria-pressed={cur.id === v.id} onClick={() => pick(v)}>
@@ -129,9 +129,9 @@ export function BotViews(p: P) {
         <div className="glass pad" style={{ padding: '6px 18px', marginBottom: 12 }}>
           <div className="csr" style={{ alignItems: 'flex-start' }}><span><b style={{ fontWeight: 400 }}>Finish</b><br /><span className="dim">The look of your robot</span></span>
             <div className="acts" style={{ margin: 0, gap: 6, justifyContent: 'flex-end' }}>{Object.keys(THEMES).map(k => { const T = (THEMES as any)[k]; return <Chip key={k} on={s.theme === k} onClick={() => { bd.saveSettings({ theme: k }); p.robot.current?.theme(k); p.robot.current?.spin() }}><i className="sw" style={{ background: `radial-gradient(circle at 30% 30%,${T.g1},${T.g2})` }} />{T.n}</Chip> })}</div></div>
-          <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear it</b></span>
+          <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Plays only your selected ElevenLabs voice.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
-            <div className="acts" style={{ margin: 0 }}><button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto' }).catch((e: Error) => a.toast(e.message || 'Voice playback is unavailable'))}><Icon name="voice" size={16} />Preview voice</button></div></div>
+            <div className="acts" style={{ margin: 0 }}><button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: false }).catch((e: Error) => a.toast(e.message || 'ElevenLabs voice is unavailable. No basic device voice will be used.'))}><Icon name="voice" size={16} />Hear a hello</button></div></div>
         </div>
         <div className="glass pad" style={{ padding: 18, marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}><span className="aiic"><Icon name="spark" size={20} /></span><h3 style={{ fontSize: 16 }}>Match my voice</h3></div>
@@ -141,7 +141,7 @@ export function BotViews(p: P) {
           <div className="acts"><button className="btn" disabled={vm.state === 'rec'} onClick={matchVoice}><Icon name="mic" size={16} />{vm.state === 'rec' ? 'Listening' : 'Start'}</button></div>
           <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>This tunes a studio voice to feel like yours. It is not a clone. Cloning a real voice needs a dedicated voice service and that person's consent.</p>
         </div>
-        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Accent guidance helps shape pronunciation and cadence, but exact regional delivery can vary. If studio speech is unavailable, QuorlythBot falls back to a voice your browser provides. Voice cloning is not included.</p></>
+        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Live Talk is activated by the Talk live button, shows a listening status while the microphone is active, and responds in the language you speak where supported. If ElevenLabs is unavailable, QuorlythBot keeps the written reply and will not substitute a basic device voice. Voice cloning is not included.</p></>
     )
   }
 
