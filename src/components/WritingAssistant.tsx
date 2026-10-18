@@ -81,7 +81,7 @@ export function WritingAssistant() {
       let clipTop = 0
       let clipRight = window.innerWidth
       let clipBottom = window.innerHeight
-      for (let parent = el.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
+      for (let parent: HTMLElement | null = el.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
         const style = window.getComputedStyle(parent)
         if (style.display === 'none' || style.visibility === 'hidden' || parent.hasAttribute('hidden')) {
           hideForUnavailableField()
