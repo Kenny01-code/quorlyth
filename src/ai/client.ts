@@ -35,17 +35,36 @@ function accentLocale(accent: Exclude<VoiceAccent, 'auto'>) {
 function browserVoice(voice: string, accent: Exclude<VoiceAccent, 'auto'>) {
   const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
   const choices = window.speechSynthesis.getVoices().filter(v => /^en(-|$)/i.test(v.lang))
+  if (!choices.length) return null
+
   const locale = accentLocale(accent).toLowerCase()
-  const exact = choices.find(v => v.lang.toLowerCase() === locale)
-  if (exact) return exact
-  const regional = choices.find(v => accent === 'nigerian'
-    ? /nigeria|nigerian|en-ng/i.test(v.name + ' ' + v.lang)
-    : accent === 'british'
-      ? /united kingdom|british|english \(uk\)|en-gb/i.test(v.name + ' ' + v.lang)
-      : accent === 'american'
-        ? /united states|american|english \(us\)|en-us/i.test(v.name + ' ' + v.lang)
-        : /international|english \(world\)|en-001/i.test(v.name + ' ' + v.lang))
-  return regional || choices.find(v => preset.names.test(v.name)) || choices.find(v => /google us english/i.test(v.name)) || choices[0] || null
+  const language = locale.split('-')[0]
+  const scoreVoice = (candidate: SpeechSynthesisVoice) => {
+    const lang = candidate.lang.toLowerCase()
+    const identity = candidate.name + ' ' + candidate.lang
+    let score = 0
+
+    // Prefer natural voices when the browser exposes them (such as Microsoft Online/Natural voices).
+    if (/online|natural|neural|premium|enhanced/i.test(identity)) score += 70
+    if (/microsoft|google|apple/i.test(candidate.name)) score += 8
+    if (preset.names.test(candidate.name)) score += 42
+    if (/compact|robotic|espeak/i.test(identity)) score -= 50
+
+    if (lang === locale) score += 65
+    else if (lang.startsWith(language + '-')) score += 22
+
+    if (accent === 'american' && /en-us|united states|american/i.test(identity)) score += 26
+    if (accent === 'british' && /en-gb|united kingdom|british|english.*uk/i.test(identity)) score += 26
+    if (accent === 'nigerian') {
+      if (/en-ng|nigeria|nigerian/i.test(identity)) score += 70
+      else if (/en-gb|british|south africa|en-za/i.test(identity)) score += 12
+    }
+    if (accent === 'international' && /en-001|international|english.*world/i.test(identity)) score += 24
+    if (candidate.default) score += 2
+    return score
+  }
+
+  return [...choices].sort((a, b) => scoreVoice(b) - scoreVoice(a))[0] || null
 }
 
 
@@ -434,7 +453,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; elevenLabsOnly?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; elevenLabsOnly?: boolean; preferBrowserVoice?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const source = text.trim().slice(0, 1500)
@@ -474,11 +493,59 @@ export async function speakText(
   }
 
   try {
+    // Browser-first mode begins speech in the click gesture itself, avoiding a provider round trip.
+    if (options.preferBrowserVoice === true) {
+      if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+        throw new Error('Natural voice playback is unavailable in this browser. Your written reply is still available.')
+      }
+
+      window.speechSynthesis.cancel()
+      const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
+      const utterance = new SpeechSynthesisUtterance(source)
+      utterance.lang = accentLocale(accent)
+      utterance.rate = preset.rate
+      utterance.pitch = preset.pitch
+      const selectedVoice = browserVoice(voice, accent)
+      if (selectedVoice) utterance.voice = selectedVoice
+
+      let finished = false
+      const finishNative = (notify = true) => {
+        if (finished) return
+        finished = true
+        signal.removeEventListener('abort', stopNative)
+        releaseOwner()
+        if (notify) onEnd?.()
+      }
+      const stopNative = () => {
+        window.speechSynthesis.cancel()
+        finishNative()
+      }
+      utterance.onstart = () => {
+        if (isSuperseded()) {
+          stopNative()
+          return
+        }
+        onStart?.()
+      }
+      utterance.onend = () => finishNative()
+      utterance.onerror = () => finishNative()
+
+      ownedPlayback = {
+        pause: () => { if (!isSuperseded()) window.speechSynthesis.pause() },
+        resume: () => { if (!isSuperseded()) window.speechSynthesis.resume() },
+        stop: stopNative,
+      }
+      activeSpeechPlayback = ownedPlayback
+      signal.addEventListener('abort', stopNative, { once: true })
+      window.speechSynthesis.speak(utterance)
+      handedOff = true
+      return ownedPlayback
+    }
+
     let response: Response | null = null
     let retryBufferedSpeech = false
     try {
-      // Voice Studio's "Hear a hello" must use ElevenLabs directly, never the
-      // general multi-provider route. Other callers may still use streaming mode.
+      // Server speech remains available for callers that do not choose browser-first mode.
       response = await fetch(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream', {
         method: 'POST',
         signal,
