@@ -429,6 +429,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         {
           accent: bs.accent || 'auto',
           signal: controller.signal,
+          preferBrowserVoice: true,
           onBrowserFallback: () => {
             if (showError && !controller.signal.aborted) {
               a.toast("Natural voice audio couldn't be reached, so your device's built-in voice is playing. This isn't a QuorlythBot Studio voice.");
@@ -791,7 +792,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               robot.current?.talk(true)
             },
             finish,
-            { accent: bs.accent || 'auto', signal: controller.signal, allowBrowserFallback: false },
+            { accent: bs.accent || 'auto', signal: controller.signal, allowBrowserFallback: true, preferBrowserVoice: true },
           )
           if (!liveFallback.current || controller.signal.aborted) {
             playback.stop()
