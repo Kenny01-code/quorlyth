@@ -11,6 +11,7 @@ import { useBotData } from './useBotData'
 interface P {
   view: string; bd: ReturnType<typeof useBotData>; role: string; skill: (id: string) => void
   pj: string; setPj: (id: string) => void; theme: string; robot: RefObject<RobotApi | null>
+  startLive: () => void
   stage: string; setStage: (s: any) => void; mode: string; setMode: (m: any) => void
 }
 
@@ -131,7 +132,10 @@ export function BotViews(p: P) {
             <div className="acts" style={{ margin: 0, gap: 6, justifyContent: 'flex-end' }}>{Object.keys(THEMES).map(k => { const T = (THEMES as any)[k]; return <Chip key={k} on={s.theme === k} onClick={() => { bd.saveSettings({ theme: k }); p.robot.current?.theme(k); p.robot.current?.spin() }}><i className="sw" style={{ background: `radial-gradient(circle at 30% 30%,${T.g1},${T.g2})` }} />{T.n}</Chip> })}</div></div>
           <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Plays only your selected ElevenLabs voice.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
-            <div className="acts" style={{ margin: 0 }}><button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: false }).catch((e: Error) => a.toast(e.message || 'ElevenLabs voice is unavailable. No basic device voice will be used.'))}><Icon name="voice" size={16} />Hear a hello</button></div></div>
+            <div className="acts" style={{ margin: 0 }}>
+              <button className="btn p" onClick={() => speakText(sample, cur.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: false }).catch((e: Error) => a.toast(e.message || 'ElevenLabs voice is unavailable. No basic device voice will be used.'))}><Icon name="voice" size={16} />Hear a hello</button>
+              <button className="btn" onClick={p.startLive}><Icon name="live" size={16} />Talk to Quorlyth</button>
+            </div></div>
         </div>
         <div className="glass pad" style={{ padding: 18, marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}><span className="aiic"><Icon name="spark" size={20} /></span><h3 style={{ fontSize: 16 }}>Match my voice</h3></div>
