@@ -1,7 +1,7 @@
 // Local AI server for development. Run:  npm run dev:ai   (needs Node 20.6 or newer)
 import http from 'node:http'
 import fs from 'node:fs'
-import { chat, json, realtimeSession, speak, speakStream } from './openai.mjs'
+import { chat, json, realtimeSession, speak, speakElevenLabs, speakStream } from './openai.mjs'
 
 // load .env without any extra package
 if (fs.existsSync('.env')) {
@@ -11,7 +11,7 @@ if (fs.existsSync('.env')) {
   }
 }
 
-const routes = { '/api/chat': chat, '/api/json': json, '/api/realtime-session': realtimeSession, '/api/speak': speak, '/api/speak-stream': speakStream }
+const routes = { '/api/chat': chat, '/api/json': json, '/api/realtime-session': realtimeSession, '/api/speak': speak, '/api/speak-eleven': speakElevenLabs, '/api/speak-stream': speakStream }
 http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
