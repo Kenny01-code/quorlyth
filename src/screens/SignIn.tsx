@@ -163,7 +163,7 @@ export function SignIn() {
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (mode !== 'recovery' && !/^\S+@\S+\.\S+$/.test(email)) return toast('Enter a valid email address')
-    if (mode === 'otp' && !/^\\d{6}$/.test(otp.trim())) return toast('Enter the 6-digit code from your email')
+    if (mode === 'otp' && !/^\d{6}$/.test(otp.trim())) return toast('Enter the 6-digit code from your email')
     setBusy(true)
     try {
       if (mode === 'reset') {
