@@ -35,6 +35,15 @@ export function BotViews(p: P) {
   const helloPlayback = useRef<SpeechPlayback | null>(null)
   const helloRun = useRef(0)
 
+  function rememberWelcomeVoice(voice: string, accent = s.accent || 'auto') {
+    // Remember only harmless voice preferences so the sign-in greeting can use
+    // the same persona even before the private account settings are loaded.
+    try {
+      localStorage.setItem('quorlyth:welcome-voice', voice)
+      localStorage.setItem('quorlyth:welcome-accent', accent)
+    } catch { /* Storage may be unavailable in a restricted browser context. */ }
+  }
+
   function clearHelloPlayback() {
     helloRun.current += 1
     helloPlayback.current?.stop()
@@ -46,6 +55,7 @@ export function BotViews(p: P) {
   async function playNaturalVoicePreview(voice: string) {
     clearHelloPlayback()
     const run = helloRun.current
+    rememberWelcomeVoice(voice)
     const clean = sample.trim()
     if (!clean) {
       setHello({ state: 'error', message: 'Enter something to preview first.' })
@@ -79,6 +89,7 @@ export function BotViews(p: P) {
           allowBrowserFallback: true,
           onBrowserFallback: () => { usedBrowserFallback = true },
           preferElevenLabsVoice: true,
+          liveTalk: true,
         },
       )
       if (run !== helloRun.current) {
@@ -116,6 +127,7 @@ export function BotViews(p: P) {
       if (f.length < 8) return setVm({ state: 'err', msg: 'I did not hear enough. Try again a little closer to the microphone.' })
       f.sort((x, y) => x - y)
       const m = f[Math.floor(f.length / 2)], g = m < 165 ? 'm' : 'f', v = VOICES.find(x => x.g === g)!
+      rememberWelcomeVoice(v.ai)
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
       speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: true, allowBrowserFallback: true, preferElevenLabsVoice: true }).catch(() => a.toast('Neither ElevenLabs nor your browser speech voice is available on this device.'))
@@ -180,11 +192,11 @@ export function BotViews(p: P) {
 
   if (p.view === 'voice') {
     const cur = VOICES.find(v => v.id === s.vid) || VOICES[0]
-    const pick = (v: typeof VOICES[number]) => { bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin() }
+    const pick = (v: typeof VOICES[number]) => { rememberWelcomeVoice(v.ai); bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin() }
     return (
       <><h3 className="bvt">Voice studio</h3><p className="mut" style={{ margin: '6px 0 4px' }}>Choose how QuorlythBot sounds and looks. Drag the robot above to turn it all the way round.</p>
         <div className="glass pad qbot-accent-picker" style={{ padding: '6px 18px', margin: '12px 0 14px' }}>
-          <Chips label="Speech accent" desc="Auto-detect uses your browser language. You can choose a style any time." value={s.accent || 'auto'} onPick={value => bd.saveSettings({ accent: value as any })} list={VOICE_ACCENTS.map(accent => [accent.id, accent.name])} />
+          <Chips label="Speech accent" desc="Auto-detect uses your browser language. You can choose a style any time." value={s.accent || 'auto'} onPick={value => { rememberWelcomeVoice(cur.ai, value); bd.saveSettings({ accent: value as any }) }} list={VOICE_ACCENTS.map(accent => [accent.id, accent.name])} />
           <p className="dim" style={{ fontSize: 11, lineHeight: 1.5, margin: '0 0 8px' }}>Auto uses a neutral international voice. Live Talk detects your spoken language. ElevenLabs is the primary voice; your device's speech is only the fallback.</p>
         </div>
         <div className="bvgrid">{VOICES.map(v => { const T = (THEMES as any)[v.theme]; return (
