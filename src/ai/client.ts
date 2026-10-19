@@ -1,3 +1,10 @@
+// If a dedicated cloud AI service is configured, route AI requests there. An empty value
+// preserves the current same-origin Vercel endpoints so deployment can be staged safely.
+const AI_API_BASE_URL = (import.meta.env.VITE_AI_API_BASE_URL || '').trim().replace(/\/+$/, '')
+function aiApiUrl(path: string): string {
+  return AI_API_BASE_URL ? `${AI_API_BASE_URL}${path}` : path
+}
+
 export interface BotContextRequest { route?: string; projectId?: string; tone?: string; length?: string; emojis?: boolean; browserContext?: string; liveContext?: string }
 export interface StreamOpts { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal; onText?: (full: string, piece: string) => void; accessToken?: string; context?: BotContextRequest }
 
@@ -114,7 +121,7 @@ export async function streamChat(messages: { role: 'user' | 'assistant'; content
     // Supabase chats never send browser-composed privileged context to the model.
     body.system = o.system
   }
-  const r = await fetch('/api/chat', { method: 'POST', signal: o.signal, headers, body: JSON.stringify(body) })
+  const r = await fetch(aiApiUrl('/api/chat'), { method: 'POST', signal: o.signal, headers, body: JSON.stringify(body) })
   if (!r.ok || !r.body) throw new Error(await readError(r))
   const reader = r.body.getReader()
   const dec = new TextDecoder()
@@ -153,7 +160,7 @@ export async function askJson<T = any>(prompt: string, o: {
   // Fast-by-default for compact utility tasks, writing help, and small structured actions.
   // Requests with richer evidence payloads stay on the smart tier unless the caller explicitly opts in to quick.
   const tier = o.tier || (prompt.length <= 4200 && !o.youtubeIdeas ? 'quick' : 'smart')
-  const r = await fetch('/api/json', {
+  const r = await fetch(aiApiUrl('/api/json'), {
     method: 'POST', signal: o.signal, headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       prompt,
@@ -193,7 +200,7 @@ export async function startRealtime(opts: {
   const body: Record<string, unknown> = { voice: opts.voice || 'coral', accent: detectAccent(opts.accent || 'auto'), tools: opts.tools || [], textOnly: opts.textOnly === true }
   if (opts.accessToken) { headers.Authorization = 'Bearer ' + opts.accessToken; body.context = opts.context || {} }
   else body.instructions = opts.instructions
-  const s = await fetch('/api/realtime-session', { method: 'POST', headers, body: JSON.stringify(body) })
+  const s = await fetch(aiApiUrl('/api/realtime-session'), { method: 'POST', headers, body: JSON.stringify(body) })
   if (!s.ok) throw new Error(await readError(s))
   const { token, model } = await s.json()
 
@@ -511,7 +518,7 @@ export async function speakText(
       providerRequestTimer = window.setTimeout(() => providerRequest.abort(), 7500)
     }
     try {
-      response = await fetch(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream', {
+      response = await fetch(aiApiUrl(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream'), {
         method: 'POST',
         signal: providerRequest.signal,
         headers: { 'Content-Type': 'application/json' },
@@ -566,7 +573,7 @@ export async function speakText(
 
     if (!forceBrowserFallback && !response && retryBufferedSpeech) {
       try {
-        response = await fetch('/api/speak-eleven', {
+        response = await fetch(aiApiUrl('/api/speak-eleven'), {
           method: 'POST',
           signal,
           headers: { 'Content-Type': 'application/json' },
