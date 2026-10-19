@@ -294,7 +294,7 @@ function Inner() {
     }
     return (
       <div className="glass pad" key={g}>
-        <div className="head" style={{ marginBottom: 6 }}><div className={g === 'area' ? 'chart-heading-animated' : undefined}><h3>{TITLES[g]}</h3><p className="dim">{sub}</p></div>{settingsButton}</div>
+        <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES[g]}</h3><p className="dim">{sub}</p></div>{settingsButton}</div>
         {body(g)}
       </div>
     )
@@ -510,7 +510,7 @@ function MemberAnalyticsView() {
     return (
       <div className="glass pad" key={g}>
         <div className="head" style={{ marginBottom: 6 }}>
-          <div className={g === 'area' ? 'chart-heading-animated' : undefined}><h3>{titles[g]}</h3><p className="dim">{sub}</p></div>
+          <div><h3>{titles[g]}</h3><p className="dim">{sub}</p></div>
           {settingsButton}
         </div>
         {body(g)}
