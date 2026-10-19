@@ -690,7 +690,7 @@ test('streaming ElevenLabs voice begins sending MP3 before the full clip is gene
   assert.ok(res.output.length > 0)
 })
 
-test('streaming voice never switches away from ElevenLabs when the account requires payment', async () => {
+test('streaming voice falls back from ElevenLabs payment errors to Grok before other providers', async () => {
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-stream-test-key'
   process.env.XAI_API_KEY = 'test-xai-stream-fallback-key'
@@ -702,18 +702,44 @@ test('streaming voice never switches away from ElevenLabs when the account requi
     if (String(url).includes('api.elevenlabs.io')) {
       return new Response(JSON.stringify({ detail: { status: 'payment_required' } }), { status: 402 })
     }
-    throw new Error('A different voice provider must never be requested')
+    if (String(url) === 'https://api.x.ai/v1/tts') {
+      return new Response(new Uint8Array([73, 68, 51, 4]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+    }
+    throw new Error('Grok should be the first configured fallback')
+  }
+
+  const res = response()
+  await speakStream({ body: { text: 'Hello there', voice: 'marin', accent: 'american' } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.match(requested[0], /api\.elevenlabs\.io\/v1\/text-to-speech\/.*\/stream/)
+  assert.equal(requested[1], 'https://api.x.ai/v1/tts')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'grok')
+})
+
+test('streaming voice uses Grok when the ElevenLabs key is missing', async () => {
+  process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  delete process.env.ELEVENLABS_API_KEY
+  process.env.XAI_API_KEY = 'test-xai-stream-fallback-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-stream-fallback-key'
+  process.env.OPENAI_API_KEY = 'test-openai-stream-fallback-key'
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push(String(url))
+    if (String(url) === 'https://api.x.ai/v1/tts') {
+      return new Response(new Uint8Array([73, 68, 51, 4]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+    }
+    throw new Error('Only the first available alternative should be requested')
   }
 
   const res = response()
   await speakStream({ body: { text: 'Hello there', voice: 'marin', accent: 'american' } }, res)
 
   assert.equal(requested.length, 1)
-  assert.match(requested[0], /api\.elevenlabs\.io\/v1\/text-to-speech\/.*\/stream/)
-  assert.equal(res.statusCode, 503)
-  assert.match(JSON.parse(res.output).error, /ElevenLabs voice is unavailable/i)
-  assert.match(JSON.parse(res.output).error, /No alternate voice/i)
-  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], undefined)
+  assert.equal(requested[0], 'https://api.x.ai/v1/tts')
+  assert.equal(res.statusCode, 200)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'grok')
 })
 
 
