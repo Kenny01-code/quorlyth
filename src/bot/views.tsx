@@ -61,7 +61,7 @@ export function BotViews(p: P) {
         () => {
           if (run !== helloRun.current) return
           p.robot.current?.talk(true)
-          setHello({ state: 'playing', message: usedBrowserFallback ? 'AI voice providers were unavailable, so your device voice is playing.' : 'Speaking with your selected ElevenLabs voice profile.' })
+          setHello({ state: 'playing', message: usedBrowserFallback ? 'ElevenLabs is unavailable, so your browser voice is speaking.' : 'Speaking with your selected ElevenLabs voice profile.' })
         },
         () => {
           if (run !== helloRun.current) return
@@ -71,10 +71,13 @@ export function BotViews(p: P) {
         },
         {
           accent: s.accent || 'auto',
-          // "Hear a hello" is an explicit ElevenLabs preview: never silently
-          // substitute device speech or another AI provider if this call fails.
+          // Prefer the selected ElevenLabs voice, but never leave the preview silent:
+          // if ElevenLabs fails, speak with the browser's built-in Web Speech API.
+          // Keep this preview ElevenLabs-only on the server; do not substitute Grok,
+          // Gemini, or OpenAI voices before the built-in voice fallback.
           elevenLabsOnly: true,
-          allowBrowserFallback: false,
+          allowBrowserFallback: true,
+          onBrowserFallback: () => { usedBrowserFallback = true },
           preferElevenLabsVoice: true,
         },
       )
@@ -83,7 +86,7 @@ export function BotViews(p: P) {
         return
       }
       helloPlayback.current = playback
-      setHello({ state: 'playing', message: usedBrowserFallback ? 'AI voice providers were unavailable, so your device voice is playing.' : 'Your selected ElevenLabs voice is playing.' })
+      setHello({ state: 'playing', message: usedBrowserFallback ? 'ElevenLabs is unavailable, so your browser voice is speaking.' : 'Your selected ElevenLabs voice is playing.' })
     } catch (error) {
       if (run !== helloRun.current) return
       const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
@@ -190,7 +193,7 @@ export function BotViews(p: P) {
         <div className="glass pad" style={{ padding: '6px 18px', marginBottom: 12 }}>
           <div className="csr" style={{ alignItems: 'flex-start' }}><span><b style={{ fontWeight: 400 }}>Finish</b><br /><span className="dim">The look of your robot</span></span>
             <div className="acts" style={{ margin: 0, gap: 6, justifyContent: 'flex-end' }}>{Object.keys(THEMES).map(k => { const T = (THEMES as any)[k]; return <Chip key={k} on={s.theme === k} onClick={() => { bd.saveSettings({ theme: k }); p.robot.current?.theme(k); p.robot.current?.spin() }}><i className="sw" style={{ background: `radial-gradient(circle at 30% 30%,${T.g1},${T.g2})` }} />{T.n}</Chip> })}</div></div>
-          <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Uses ElevenLabs first for a human-sounding voice, then switches to your device voice only if ElevenLabs is unavailable.</span></span>
+          <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Uses your selected ElevenLabs voice first. If it fails, it switches to your browser's built-in speech voice.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
             <div className="acts" style={{ margin: 0 }}>
               <button className="btn p" disabled={hello.state === 'loading'} onClick={() => void playNaturalVoicePreview(cur.ai)}><Icon name="voice" size={16} />{hello.state === 'loading' ? 'Starting voice…' : hello.state === 'playing' ? 'Playing voice' : 'Hear a hello'}</button>
