@@ -39,7 +39,7 @@ export interface App {
   applyToCollaborate: (ideaId: string, message: string) => Promise<boolean>
   decideVolunteer: (applicationId: string, status: VolunteerStatus) => Promise<boolean>
   createProject: (ideaId: string, summary: string, dueAt?: number | null) => Promise<boolean>
-  updateProject: (projectId: string, patch: Partial<Pick<Project, 'summary' | 'status' | 'dueAt'>>) => Promise<boolean>
+  updateProject: (projectId: string, patch: Partial<Pick<Project, 'summary' | 'status' | 'dueAt' | 'aiOrganizerGenerated'>>) => Promise<boolean>
   addMilestone: (projectId: string, title: string, description: string, details?: MilestoneDetails) => Promise<boolean>
   updateMilestone: (milestoneId: string, patch: MilestonePatch) => Promise<boolean>
   submitMilestoneWork: (milestoneId: string, summary: string, attachments: WorkAttachment[]) => Promise<boolean>
