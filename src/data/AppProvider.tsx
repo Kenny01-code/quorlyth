@@ -355,12 +355,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!me) return false
       const idea = data.ideas.find(item => item.id === ideaId)
       if (!idea) return false
-      // Only the actual community owner gets automatic AI organizer access.
-      // Platform owners/admins must request approval just like other non-owners.
-      if (ownsCommunity(idea.cid)) return true
+      // Platform owners have automatic platform-wide AI organizer access.
+      // Community owners have automatic access only inside their own communities.
+      if (platformOwner || ownsCommunity(idea.cid)) return true
       const eligibleWorkspaceParticipant = idea.authorId === me.id
         || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted')
-        || platformAdmin || platformOwner
+        || platformAdmin
       return eligibleWorkspaceParticipant && data.aiOrganizerRequests.some(request => request.cid === idea.cid && request.userId === me.id && request.status === 'approved')
     }
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
@@ -846,8 +846,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!idea || !community || community.arch) throw new Error('This collaboration is no longer available for AI organizer approval.')
         const isEligible = idea.authorId === me.id
           || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted')
-          || platformAdmin || platformOwner
-        if (!isEligible) throw new Error('Only the idea creator or an accepted collaborator can request AI organizer approval.')
+          || platformAdmin
+        if (platformOwner) throw new Error('Platform owners already have automatic AI organizer access across communities.')
+        if (!isEligible) throw new Error('Only the idea creator, an accepted collaborator, or a platform admin can request AI organizer approval.')
         if (ownsCommunity(community.id)) throw new Error('The community owner already has AI organizer access.')
         if (canOrganizeIdeaWithAI(ideaId)) throw new Error('Your AI organizer access is already approved.')
         const path = 'communityAiOrganizerRequests/' + community.id + '__' + me.id
