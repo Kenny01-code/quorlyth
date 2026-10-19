@@ -5,7 +5,7 @@ function aiApiUrl(path: string): string {
   return AI_API_BASE_URL ? `${AI_API_BASE_URL}${path}` : path
 }
 
-export interface BotContextRequest { route?: string; projectId?: string; tone?: string; length?: string; emojis?: boolean; browserContext?: string; liveContext?: string }
+export interface BotContextRequest { route?: string; projectId?: string; tone?: string; length?: string; emojis?: boolean; browserContext?: string; liveContext?: string; /** Marks requests as part of continuous Live Talk, never as a privileged role. */ liveTalk?: boolean }
 export interface StreamOpts { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal; onText?: (full: string, piece: string) => void; accessToken?: string; context?: BotContextRequest }
 
 const SPEECH_PRESETS: Record<string, { gender: 'female' | 'male'; rate: number; pitch: number; names: RegExp }> = {
@@ -466,7 +466,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; liveTalk?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const source = text.trim().slice(0, 1500)
@@ -525,7 +525,7 @@ export async function speakText(
         method: 'POST',
         signal: providerRequest.signal,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: source, voice, accent }),
+        body: JSON.stringify({ text: source, voice, accent, liveTalk: options.liveTalk === true }),
       })
     } catch (error) {
       if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
@@ -580,7 +580,7 @@ export async function speakText(
           method: 'POST',
           signal,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: source, voice, accent }),
+          body: JSON.stringify({ text: source, voice, accent, liveTalk: options.liveTalk === true }),
         })
       } catch (error) {
         if (isSuperseded() || (error instanceof Error && error.name === 'AbortError')) throw error
