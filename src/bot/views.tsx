@@ -69,7 +69,14 @@ export function BotViews(p: P) {
           p.robot.current?.talk(false)
           setHello({ state: 'idle', message: 'Voice preview finished.' })
         },
-        { accent: s.accent || 'auto', allowBrowserFallback: true, preferElevenLabsVoice: true, onBrowserFallback: () => { usedBrowserFallback = true } },
+        {
+          accent: s.accent || 'auto',
+          // "Hear a hello" is an explicit ElevenLabs preview: never silently
+          // substitute device speech or another AI provider if this call fails.
+          elevenLabsOnly: true,
+          allowBrowserFallback: false,
+          preferElevenLabsVoice: true,
+        },
       )
       if (run !== helloRun.current) {
         playback.stop()
