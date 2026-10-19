@@ -429,7 +429,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         {
           accent: bs.accent || 'auto',
           signal: controller.signal,
-          preferBrowserVoice: true,
+          preferElevenLabsVoice: true,
           onBrowserFallback: () => {
             if (showError && !controller.signal.aborted) {
               a.toast("Natural voice audio couldn't be reached, so your device's built-in voice is playing. This isn't a QuorlythBot Studio voice.");
@@ -792,7 +792,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               robot.current?.talk(true)
             },
             finish,
-            { accent: bs.accent || 'auto', signal: controller.signal, allowBrowserFallback: true, preferBrowserVoice: true },
+            { accent: bs.accent || 'auto', signal: controller.signal, allowBrowserFallback: true, preferElevenLabsVoice: true },
           )
           if (!liveFallback.current || controller.signal.aborted) {
             playback.stop()
@@ -833,6 +833,12 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     }
 
     try {
+      // Live Talk should not depend on OpenAI Realtime when browser speech recognition is
+      // available. The selected voice is synthesized by ElevenLabs below; the normal
+      // Quorlyth chat router supplies the answer, so no separate OpenAI voice key is needed.
+      if ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) {
+        throw new Error('Switch to browser speech recognition for ElevenLabs-first Live Talk.')
+      }
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
@@ -1056,7 +1062,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               liveFallback.current = false
               setLive(null)
               robot.current?.listen(false)
-              a.toast(friendlyBotError(error))
+              a.toast('Live Talk could not start the microphone. Check microphone permission and try again.')
             }
           }, 220)
         }
