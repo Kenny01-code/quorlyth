@@ -30,6 +30,21 @@ function configuredOrigins() {
   return origins
 }
 
+// Vercel creates immutable per-deployment URLs in addition to the stable alias.
+// Keep these scoped to this exact project/account hostname pattern so a preview
+// deployment of Quorlyth can call the same AI service without allowing arbitrary
+// *.vercel.app origins.
+function isAllowedOrigin(normalizedOrigin, allowedOrigins) {
+  if (allowedOrigins.has(normalizedOrigin)) return true
+  try {
+    const url = new URL(normalizedOrigin)
+    return url.protocol === 'https:' &&
+      /^quorlyth-[a-z0-9-]+-ighiledivine77-5079s-projects\\.vercel\\.app$/i.test(url.hostname)
+  } catch {
+    return false
+  }
+}
+
 function jsonResponse(res, statusCode, payload) {
   if (res.writableEnded) return
   res.statusCode = statusCode
@@ -77,7 +92,9 @@ export function createAiServer(options = {}) {
     if (origin) {
       let normalizedOrigin = ''
       try { normalizedOrigin = new URL(origin).origin } catch {}
-      if (!normalizedOrigin || !allowedOrigins.has(normalizedOrigin)) {
+      if (!normalizedOrigin || !isAllowedOrigin(normalizedOrigin, allowedOrigins)) {
+        // Origin is useful for diagnosing production CORS mismatches and is not a secret.
+        console.warn('[Quorlyth AI] Rejected browser origin:', normalizedOrigin || '(invalid origin)')
         return jsonResponse(res, 403, { error: 'This origin is not allowed to use the Quorlyth AI service.' })
       }
       res.setHeader('Access-Control-Allow-Origin', normalizedOrigin)
