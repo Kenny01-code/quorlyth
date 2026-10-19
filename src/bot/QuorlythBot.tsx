@@ -46,7 +46,21 @@ function friendlyBotError(error: unknown): string {
   if (/credit_balance_exhausted|insufficient_quota|no credits remaining/i.test(message)) return 'I’m temporarily unable to generate a reply because the AI service needs attention. Please try again later.'
   if (/session could not be verified|session.*expired|sign-in session/i.test(message)) return 'Your Quorlyth session needs a refresh. Reload the page, then try your message again.'
   if (/securely load the app context|context.*unavailable/i.test(message)) return 'I couldn’t securely load the latest Quorlyth context just now. Please try again in a moment.'
-  if (/failed to fetch|networkerror|network request failed|offline|load failed/i.test(message)) return 'I couldn’t reach QuorlythBot just now. Check your connection and try again.'
+  if (/no text AI provider is configured|no AI speech provider is configured|natural voice is not configured/i.test(message)) {
+    return 'Quorlyth’s AI service needs a valid provider key. In Vercel Production, check that XAI_API_KEY or GEMINI_API_KEY is set for answers and ELEVENLABS_API_KEY is set for the primary voice, then redeploy.'
+  }
+  if (/AI server.*running|needs the AI server/i.test(message)) {
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    return isLocal
+      ? 'The local AI service was not reachable. Start Quorlyth with “npm run dev”; it now launches both the app and its AI service.'
+      : 'The hosted Quorlyth AI endpoint could not be reached. Refresh once; if it persists, check the Vercel /api routes and server-side provider keys.'
+  }
+  if (/failed to fetch|networkerror|network request failed|offline|load failed/i.test(message)) {
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    return isLocal
+      ? 'The local AI service was not reachable. Start Quorlyth with “npm run dev”; it now launches both the app and its AI service.'
+      : 'I couldn’t reach Quorlyth’s hosted AI endpoint. Check your connection and try again.'
+  }
   if (/timed out|stalled|interrupted before it finished/i.test(message)) return 'That reply didn’t finish coming through. Please try again and I’ll take another run at it.'
   if (/temporarily unavailable|available ai services/i.test(message)) return 'I’m having trouble reaching the AI service right now. Please try again shortly.'
   return 'I hit a temporary snag while preparing that answer. Your message is still here; please try again in a moment.'
