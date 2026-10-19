@@ -1039,7 +1039,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   if (results[i]?.isFinal) finalText += (finalText ? ' ' : '') + transcript
                   else interimText += (interimText ? ' ' : '') + transcript
                 }
-                const liveTranscript = [finalText, interimText].filter(Boolean).join(' ').replace(/\\s+/g, ' ').trim()
+                const liveTranscript = [finalText, interimText].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
                 if (liveTranscript) {
                   setLive(current => current ? { ...current, state: 'listening', user: liveTranscript } : current)
                 }
