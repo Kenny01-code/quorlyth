@@ -453,7 +453,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; elevenLabsOnly?: boolean; preferBrowserVoice?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const source = text.trim().slice(0, 1500)
@@ -491,74 +491,42 @@ export async function speakText(
     browserFallbackNotified = true
     options.onBrowserFallback?.()
   }
+  const preferElevenLabsVoice = options.preferElevenLabsVoice === true || options.preferBrowserVoice === true
 
   try {
-    // Browser-first mode begins speech in the click gesture itself, avoiding a provider round trip.
-    if (options.preferBrowserVoice === true) {
-      if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
-        throw new Error('Natural voice playback is unavailable in this browser. Your written reply is still available.')
-      }
-
-      window.speechSynthesis.cancel()
-      const preset = SPEECH_PRESETS[voice] || SPEECH_PRESETS.coral
-      const utterance = new SpeechSynthesisUtterance(source)
-      utterance.lang = accentLocale(accent)
-      utterance.rate = preset.rate
-      utterance.pitch = preset.pitch
-      const selectedVoice = browserVoice(voice, accent)
-      if (selectedVoice) utterance.voice = selectedVoice
-
-      let finished = false
-      const finishNative = (notify = true) => {
-        if (finished) return
-        finished = true
-        signal.removeEventListener('abort', stopNative)
-        releaseOwner()
-        if (notify) onEnd?.()
-      }
-      const stopNative = () => {
-        window.speechSynthesis.cancel()
-        finishNative()
-      }
-      utterance.onstart = () => {
-        if (isSuperseded()) {
-          stopNative()
-          return
-        }
-        onStart?.()
-      }
-      utterance.onend = () => finishNative()
-      utterance.onerror = () => finishNative()
-
-      ownedPlayback = {
-        pause: () => { if (!isSuperseded()) window.speechSynthesis.pause() },
-        resume: () => { if (!isSuperseded()) window.speechSynthesis.resume() },
-        stop: stopNative,
-      }
-      activeSpeechPlayback = ownedPlayback
-      signal.addEventListener('abort', stopNative, { once: true })
-      window.speechSynthesis.speak(utterance)
-      handedOff = true
-      return ownedPlayback
-    }
-
+    // ElevenLabs is the primary voice. Browser speech is reserved for a quick fallback.
     let response: Response | null = null
     let retryBufferedSpeech = false
+    let forceBrowserFallback = false
+    const providerRequest = new AbortController()
+    const abortProviderRequest = () => providerRequest.abort()
+    signal.addEventListener('abort', abortProviderRequest, { once: true })
+    let providerRequestTimer: number | null = null
+    // Don't leave the user waiting on a broken ElevenLabs connection. If its first
+    // audio bytes don't arrive promptly, use the device voice for this utterance.
+    if (preferElevenLabsVoice && !options.elevenLabsOnly) {
+      providerRequestTimer = window.setTimeout(() => providerRequest.abort(), 3000)
+    }
     try {
-      // Server speech remains available for callers that do not choose browser-first mode.
       response = await fetch(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream', {
         method: 'POST',
-        signal,
+        signal: providerRequest.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: source, voice, accent }),
       })
     } catch (error) {
-      if (isSuperseded() || (error instanceof Error && error.name === 'AbortError')) throw error
-      if (options.elevenLabsOnly) {
+      if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
+      if (preferElevenLabsVoice && options.allowBrowserFallback === true) {
+        forceBrowserFallback = true
+      } else if (options.elevenLabsOnly) {
         throw new Error('ElevenLabs is temporarily unavailable. No alternate voice will be used.')
+      } else {
+        // Older routes, network intermediaries, or deployments may not support the streaming endpoint.
+        retryBufferedSpeech = true
       }
-      // Older routes, network intermediaries, or deployments may not support the streaming endpoint.
-      retryBufferedSpeech = true
+    } finally {
+      if (providerRequestTimer !== null) window.clearTimeout(providerRequestTimer)
+      signal.removeEventListener('abort', abortProviderRequest)
     }
 
     assertCurrent()
@@ -578,16 +546,22 @@ export async function speakText(
       } catch (error) {
         const wasReplaced = isSuperseded() || (error instanceof Error && error.name === 'AbortError')
         if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
-        // Re-attempt with the same selected persona using the original buffered endpoint.
-        retryBufferedSpeech = true
-        response = null
-        externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
-        activeSpeechController = controller
+        if (preferElevenLabsVoice && options.allowBrowserFallback === true) {
+          // Don't wait through a second network request after the primary voice stalls.
+          forceBrowserFallback = true
+          response = null
+        } else {
+          // Re-attempt with the same selected persona using the original buffered endpoint.
+          retryBufferedSpeech = true
+          response = null
+          externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
+          activeSpeechController = controller
+        }
         if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
       }
     }
 
-    if (!response && retryBufferedSpeech) {
+    if (!forceBrowserFallback && !response && retryBufferedSpeech) {
       try {
         response = await fetch('/api/speak-eleven', {
           method: 'POST',
@@ -601,12 +575,15 @@ export async function speakText(
       assertCurrent()
     }
 
-    if (response && !response.ok) {
-      // Surface quota/payment errors from ElevenLabs without ever switching to a device voice.
-      throw new Error(await readError(response))
+    if (!forceBrowserFallback && response && !response.ok) {
+      if (preferElevenLabsVoice && options.allowBrowserFallback === true) {
+        forceBrowserFallback = true
+      } else {
+        throw new Error(await readError(response))
+      }
     }
 
-    if (response?.ok) {
+    if (!forceBrowserFallback && response?.ok) {
       const blob = await response.blob()
       assertCurrent()
       const url = URL.createObjectURL(blob)
