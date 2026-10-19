@@ -22,6 +22,8 @@ const PHRASES = {
   visitor: ['Ask QuorlythBot anything', 'How do I get access?', 'Show me around', 'What is Quorlyth?', 'Type / for skills'],
 }
 
+const LIVE_TALK_SPEECH_STYLE = `LIVE TALK SPEECH STYLE: This is an ongoing voice conversation, not a written essay. Speak naturally with contractions, varied sentence lengths, small acknowledgements, and occasional genuine thinking phrases like “Hmm...” or “well...” when they fit. Use pauses and light hesitation when gathering a thought, but never fill every silence or repeat the same mannerism each turn. Sound warm and expressive when the context merits it, quiet and careful for sensitive topics, curious when you truly need to ask a question, and lightly playful when the user is playful. Do not output bracketed audio tags, stage directions, or markdown. The voice layer will add appropriate human-sounding vocal reactions to the audio while keeping the visible transcript clean. Do not invent personal experiences or claim to be human.`
+
 function usePlaceholder(role: 'owner' | 'member' | 'visitor', active: boolean) {
   const [index, setIndex] = useState(0)
   useEffect(() => {
@@ -810,7 +812,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               robot.current?.talk(true)
             },
             finish,
-            { accent: bs.accent || 'auto', signal: controller.signal, elevenLabsOnly: true, allowBrowserFallback: true, preferElevenLabsVoice: true },
+            { accent: bs.accent || 'auto', signal: controller.signal, elevenLabsOnly: true, allowBrowserFallback: true, preferElevenLabsVoice: true, liveTalk: true },
           )
           if (!liveFallback.current || controller.signal.aborted) {
             playback.stop()
@@ -860,11 +862,11 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
-      const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext() }
+      const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveTalk: true }
       const session = await startRealtime({
         instructions: buildContext(a, bs, loc.pathname, project)
           + '\nBrowser/device context: ' + browserContext()
-          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected QuorlythBot voice profile using the device’s best available natural voice.',
+          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected QuorlythBot voice profile using ElevenLabs first and the browser speech voice if it fails.\n' + LIVE_TALK_SPEECH_STYLE,
         voice: v.ai,
         accent: bs.accent || 'auto',
         textOnly: true,
@@ -1118,13 +1120,14 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
               const botContext = {
                 route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len,
-                emojis: bs.emo, browserContext: browserContext(), liveContext,
+                emojis: bs.emo, browserContext: browserContext(), liveContext, liveTalk: true,
               }
               let spokenCharacters = 0
               const full = await streamChat(turns, {
                 ...(!accessToken ? {
                   system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext()
-                    + (liveContext ? '\nLocation and live weather context: ' + liveContext : ''),
+                    + (liveContext ? '\nLocation and live weather context: ' + liveContext : '')
+                    + '\n' + LIVE_TALK_SPEECH_STYLE,
                 } : {}),
                 ...(accessToken ? { accessToken, context: botContext } : {}),
                 tier: bs.model === 'quick' ? 'quick' : 'smart',
