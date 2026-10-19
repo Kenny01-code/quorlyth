@@ -121,11 +121,20 @@ export function SignIn() {
   const [params] = useSearchParams()
   const requested = params.get('next') || ''
   const next = requested.startsWith('/') && !requested.startsWith('//') ? requested : '/dashboard'
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() => {
+    try {
+      return params.get('recovery') === '1' && params.get('otp') === '1'
+        ? sessionStorage.getItem('quorlyth:recovery-email') || ''
+        : ''
+    } catch { return '' }
+  })
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
-  const [mode, setMode] = useState<'signin' | 'signup' | 'reset' | 'otp' | 'recovery'>(params.get('recovery') === '1' ? 'recovery' : 'signin')
+  const [mode, setMode] = useState<'signin' | 'signup' | 'reset' | 'otp' | 'recovery'>(() => {
+    if (params.get('recovery') !== '1') return 'signin'
+    return params.get('otp') === '1' ? 'otp' : 'recovery'
+  })
   const [firstWelcome] = useState(() => {
     try { return localStorage.getItem('qseen') !== '1' } catch { return true }
   })
@@ -169,8 +178,10 @@ export function SignIn() {
       if (mode === 'reset') {
         await backend!.auth.resetPassword(email.trim())
         if (resetMethod === 'otp') {
+          try { sessionStorage.setItem('quorlyth:recovery-email', email.trim()) } catch {}
           setOtp('')
           setMode('otp')
+          nav('/signin?recovery=1&otp=1', { replace: true })
           toast('Check your inbox for the 6-digit recovery code.')
         } else {
           setNotice('reset')
@@ -181,6 +192,7 @@ export function SignIn() {
         setPassword('')
         setConfirm('')
         setMode('recovery')
+        nav('/signin?recovery=1', { replace: true })
         toast('Code verified. Choose a new password.')
       } else if (mode === 'signup') {
         if (password.length < 8) throw new Error('Use a password with at least 8 characters.')
@@ -196,6 +208,7 @@ export function SignIn() {
         setMode('signin')
         setPassword('')
         setConfirm('')
+        try { sessionStorage.removeItem('quorlyth:recovery-email') } catch {}
         nav(dest(), { replace: true })
       } else {
         if (password.length < 8) throw new Error('Use a password with at least 8 characters.')
@@ -281,7 +294,7 @@ export function SignIn() {
               {mode === 'signin' && <><button type="button" className="chip" onClick={() => { setMode('signup'); setNotice('') }}>Create account</button>{!local && <button type="button" className="chip" onClick={() => setMode('reset')}>Forgot password?</button>}<button type="button" className="chip" onClick={continueAfterEmail}>I have signed in</button></>}
               {mode === 'signup' && <button type="button" className="chip" onClick={() => setMode('signin')}>Already have an account? Sign in</button>}
               {mode === 'otp' && <button type="button" className="chip" disabled={busy} onClick={() => void resendRecoveryCode()}>Resend code</button>}
-              {(mode === 'reset' || mode === 'otp' || mode === 'recovery') && <button type="button" className="chip" onClick={() => { setMode('signin'); setPassword(''); setConfirm(''); setOtp(''); setNotice('') }}>Back to sign in</button>}
+              {(mode === 'reset' || mode === 'otp' || mode === 'recovery') && <button type="button" className="chip" onClick={() => { setMode('signin'); setPassword(''); setConfirm(''); setOtp(''); setNotice(''); try { sessionStorage.removeItem('quorlyth:recovery-email') } catch {}; nav('/signin', { replace: true }) }}>Back to sign in</button>}
               <button type="button" className="chip" onClick={copyPageLink}>Copy page link</button>
             </div>
           </form>
