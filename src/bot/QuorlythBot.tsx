@@ -450,6 +450,9 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           elevenLabsOnly: true,
           allowBrowserFallback: true,
           preferElevenLabsVoice: true,
+          // Keep the same expressive ElevenLabs delivery in ordinary read-aloud
+          // replies as in Live Talk. Browser speech remains the failure fallback.
+          liveTalk: true,
           onBrowserFallback: () => {
             if (showError && !controller.signal.aborted) {
               a.toast("ElevenLabs is unavailable, so your browser's built-in speech voice is playing.");
@@ -1672,7 +1675,17 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               {live && (
                 <div className="blive" aria-live="polite">
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
-                  <div className="blc">{live.state === 'listening' ? (live.user ? <><span className="dim">You · live transcript</span><br />{live.user}</> : <span className="dim">Listening to you… start speaking whenever you’re ready.</span>) : live.state === 'thinking' ? (live.user ? <><span className="dim">You</span><br />{live.user}</> : <span className="dim">Thinking…</span>) : live.bot ? <><span className="dim">QuorlythBot</span><br />{live.bot.slice(-220)}</> : <span className="dim">Connecting your conversation…</span>}</div>
+                  <div className="blc">
+                    {live.user && <div className="blc-line blc-user" style={{ marginBottom: live.bot ? 10 : 0 }}>
+                      <span className="dim">{live.state === 'listening' ? 'You · live transcript' : 'You'}</span><br />
+                      <span>{live.user}</span>
+                    </div>}
+                    {live.bot && <div className="blc-line blc-bot">
+                      <span className="dim">QuorlythBot{live.state === 'speaking' ? ' · speaking' : ''}</span><br />
+                      <span>{live.bot.slice(-360)}</span>
+                    </div>}
+                    {!live.user && !live.bot && <span className="dim">{live.state === 'listening' ? 'Listening to you… start speaking whenever you’re ready.' : live.state === 'thinking' ? 'Thinking…' : 'Connecting your conversation…'}</span>}
+                  </div>
                   <div className="acts" style={{ justifyContent: 'center', margin: 0, alignItems: 'center' }}>
                     <span className="dim" style={{ fontSize: 12 }}>Microphone on · natural voice replies · Click Stop listening to end</span>
                     <button className="chip" onClick={stopLive} aria-label="Stop Live Talk and microphone"><Icon name="stop" size={13} />Stop listening</button>
