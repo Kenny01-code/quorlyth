@@ -299,5 +299,11 @@ export async function buildAuthenticatedBotContext({ authorization, context = {}
     browser: text(supplied.browserContext, 650),
     live: text(supplied.liveContext, 2200),
   }
-  return buildSystem({ user, records, userDocs, route, projectId, preferences, isOwner, isAdmin, external })
+  const system = buildSystem({ user, records, userDocs, route, projectId, preferences, isOwner, isAdmin, external })
+  if (supplied.liveTalk === true) {
+    // This is a voice-delivery preference, not a role or permission. Keep it short
+    // so the authenticated, RLS-built context remains within the chat system limit.
+    return system + '\n\nLIVE TALK DELIVERY: Speak as a relaxed, spontaneous conversation, with contractions, varied sentence lengths, short natural acknowledgements, and occasional genuine thinking phrases such as “Hmm” or “well”. Match the emotion of the actual conversation without overacting. Never repeat fillers, invent personal experiences, or output bracketed audio tags/stage directions. Keep the spoken answer concise, then let the voice layer perform suitable vocal reactions.'
+  }
+  return system
 }
