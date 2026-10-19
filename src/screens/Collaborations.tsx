@@ -218,7 +218,7 @@ function Workspace() {
   const [mentionOpen, setMentionOpen] = useState(false)
   const [mentionQuery, setMentionQuery] = useState('')
   const [mentionStart, setMentionStart] = useState(0)
-  const [communityMemberIds, setCommunityMemberIds] = useState<string[]>([])
+  const [mentionPeople, setMentionPeople] = useState<{ id: string; name: string }[]>([])
   const [mentionLoading, setMentionLoading] = useState(false)
   const [discussionMode, setDiscussionMode] = useState<'inline' | 'expanded' | 'minimized'>('inline')
   const [workspaceSummary, setWorkspaceSummary] = useState('Collaboration workspace ready. Add a project plan and milestones to coordinate the work.')
@@ -252,29 +252,68 @@ function Workspace() {
     ...a.data.volunteers.filter(application => communityIdeaIds.has(application.ideaId) && application.status === 'accepted').map(application => application.applicantId),
     ...Object.entries(a.data.votes).filter(([, votes]) => [...communityIdeaIds].some(communityIdeaId => !!votes?.[communityIdeaId])).map(([userId]) => userId),
   ].filter((uid): uid is string => !!uid))]
-  const matchingDiscussionMembers = discussionParticipantIds
-    .filter(userId => userId !== a.me?.id)
-    .map(userId => ({ id: userId, name: a.nm(userId) }))
-    .filter(person => person.name && person.name.toLowerCase().includes(mentionQuery.trim().toLowerCase()))
+  const participantKey = discussionParticipantIds.join('|')
+  const matchingDiscussionMembers = mentionPeople
+    .filter(person => person.name.toLowerCase().includes(mentionQuery.trim().toLowerCase()))
     .sort((first, second) => first.name.localeCompare(second.name))
-    .slice(0, 12)
+    .slice(0, 20)
 
   useEffect(() => {
-    if (!mentionOpen || !idea || !a.backend) return
+    if (!mentionOpen || !idea) return
     let active = true
-    setCommunityMemberIds([])
     setMentionLoading(true)
-    a.backend.store.listCommunityMembers(idea.cid)
-      .then(ids => { if (active) setCommunityMemberIds(ids) })
-      .catch(error => {
-        if (active) {
-          setCommunityMemberIds([])
-          console.warn('Could not load community members for team discussion mentions:', error)
+
+    const loadMentionPeople = async () => {
+      const candidates = new Set<string>(discussionParticipantIds)
+      // Use the database membership RPC as a source of truth when available, but
+      // keep the picker useful if that optional RPC is missing or temporarily fails.
+      try {
+        const ids = await a.backend?.store.listCommunityMembers(idea.cid)
+        for (const userId of ids || []) if (userId) candidates.add(userId)
+      } catch (error) {
+        console.warn('Could not fetch community member IDs for mentions; using visible collaboration participants instead.', error)
+      }
+
+      const people = await Promise.all([...candidates].map(async userId => {
+        let profile = a.data.profiles[userId]
+        if ((!profile?.name?.trim() && !profile?.authName?.trim()) && a.backend?.store) {
+          try {
+            const savedProfile = await a.backend.store.get('profiles/' + userId)
+            if (savedProfile && typeof savedProfile === 'object') profile = savedProfile
+          } catch {
+            // The name fallback below keeps this person selectable when a profile is private.
+          }
         }
-      })
-      .finally(() => { if (active) setMentionLoading(false) })
+        const name = profile?.name?.trim()
+          || profile?.authName?.trim()
+          || (a.me?.id === userId ? a.me.name.trim() : '')
+          || ('Member · ' + userId.slice(-6))
+        return { id: userId, name }
+      }))
+
+      if (active) {
+        setMentionPeople(people.sort((first, second) => first.name.localeCompare(second.name)))
+        setMentionLoading(false)
+      }
+    }
+
+    void loadMentionPeople().catch(error => {
+      console.warn('Could not build the team mention list:', error)
+      if (active) {
+        const fallback = [...discussionParticipantIds].map(userId => ({
+          id: userId,
+          name: a.data.profiles[userId]?.name?.trim()
+            || a.data.profiles[userId]?.authName?.trim()
+            || (a.me?.id === userId ? a.me.name.trim() : '')
+            || ('Member · ' + userId.slice(-6)),
+        }))
+        setMentionPeople(fallback.sort((first, second) => first.name.localeCompare(second.name)))
+        setMentionLoading(false)
+      }
+    })
+
     return () => { active = false }
-  }, [mentionOpen, idea?.cid, a.backend])
+  }, [mentionOpen, idea?.cid, a.backend, a.data.profiles, a.me?.id, a.me?.name, participantKey])
 
   if (!idea) return <div className="glass cent ql-workspace-empty"><span className="ql-empty-mark"><QuorlythGlyph name="workspace" size={30} /></span><p className="ql-eyebrow">QUORLYTH WORKSPACE</p><h3>Collaboration not found</h3><p className="mut">This idea may have been removed, or you may not have access to it.</p><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} />Back to collaborations</button></div>
   if (!canAccess) {
@@ -511,17 +550,19 @@ function Workspace() {
           aria-label="Team discussion"
           style={discussionMode === 'inline' ? undefined : {
             position: 'fixed',
-            right: discussionMode === 'expanded' ? 'max(16px, calc((100vw - 760px) / 2))' : '16px',
-            bottom: '16px',
-            width: discussionMode === 'expanded' ? 'min(760px, calc(100vw - 32px))' : 'min(350px, calc(100vw - 24px))',
-            height: discussionMode === 'expanded' ? 'min(760px, 78vh)' : undefined,
-            maxHeight: discussionMode === 'expanded' ? '78vh' : 'calc(100vh - 32px)',
+            left: discussionMode === 'expanded' ? '50%' : 'auto',
+            right: discussionMode === 'expanded' ? 'auto' : '12px',
+            transform: discussionMode === 'expanded' ? 'translateX(-50%)' : undefined,
+            bottom: discussionMode === 'expanded' ? '18px' : '12px',
+            width: discussionMode === 'expanded' ? 'min(920px, calc(100vw - 32px))' : 'min(360px, calc(100vw - 24px))',
+            height: discussionMode === 'expanded' ? 'min(820px, 82dvh)' : undefined,
+            maxHeight: discussionMode === 'expanded' ? '82dvh' : 'calc(100dvh - 24px)',
             zIndex: 120,
             display: 'flex',
             flexDirection: 'column',
             gap: 0,
             overflow: 'hidden',
-            padding: 16,
+            padding: discussionMode === 'expanded' ? 20 : 16,
             background: 'var(--glass, rgba(12,12,14,.96))',
             backdropFilter: 'blur(24px)',
             border: '1px solid var(--line, rgba(255,255,255,.16))',
@@ -568,30 +609,39 @@ function Workspace() {
                 Replying to {a.nm(comments.find(comment => comment.id === replyTo)?.authorId || '')}
                 <button type="button" className="lk" aria-label="Cancel reply" onClick={() => setReplyTo(null)}><QuorlythGlyph name="close" size={12} /></button>
               </div>}
-              <label className="field"><span>Message the team</span><textarea
-                id="team-discussion-reply"
-                value={reply}
-                onChange={event => updateDiscussionReply(event.target.value, event.currentTarget.selectionStart ?? event.target.value.length)}
-                maxLength={1000}
-                rows={discussionMode === 'expanded' ? 3 : 2}
-                required
-                placeholder="Write a reply or update. Type @ to mention someone…"
-              /></label>
-              {mentionOpen && <div className="discussion-mention-menu" role="listbox" aria-label="Mention people in this collaboration" style={{
+              <div className="discussion-reply-compose" style={{ position: 'relative', minWidth: 0 }}>
+                <label className="field"><span>Message the team</span><textarea
+                  id="team-discussion-reply"
+                  value={reply}
+                  onChange={event => updateDiscussionReply(event.target.value, event.currentTarget.selectionStart ?? event.target.value.length)}
+                  onKeyDown={event => {
+                    if (event.key === 'Escape' && mentionOpen) { setMentionOpen(false); setMentionQuery('') }
+                  }}
+                  maxLength={1000}
+                  rows={discussionMode === 'expanded' ? 3 : 2}
+                  required
+                  placeholder="Write a reply or update. Type @ to mention someone…"
+                /></label>
+                {mentionOpen && <div className="discussion-mention-menu" role="listbox" aria-label="Mention people in this collaboration" style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 'calc(100% + 8px)',
+                zIndex: 140,
                 display: 'grid',
                 gap: 2,
-                maxHeight: 210,
+                maxHeight: 'min(320px, 40dvh)',
                 overflowY: 'auto',
+                overscrollBehavior: 'contain',
                 padding: 6,
-                marginTop: -4,
-                marginBottom: 10,
                 border: '1px solid var(--line, rgba(255,255,255,.12))',
                 borderRadius: 12,
-                background: 'var(--panel, rgba(18,18,20,.98))',
-                boxShadow: '0 12px 34px rgba(0,0,0,.24)',
+                background: 'rgba(12,12,14,.98)',
+                backdropFilter: 'blur(24px)',
+                boxShadow: '0 18px 48px rgba(0,0,0,.55)',
               }}>
                 {mentionLoading
-                  ? <p className="dim" style={{ padding: 8, fontSize: 12 }}>Loading people…</p>
+                  ? <p className="dim" style={{ padding: 8, fontSize: 12 }}>Loading community and collaboration people…</p>
                   : matchingDiscussionMembers.length
                     ? matchingDiscussionMembers.map(person => <button
                       key={person.id}
@@ -607,9 +657,10 @@ function Workspace() {
                       <span style={{ minWidth: 0, flex: 1 }}><strong style={{ display: 'block', fontSize: 13 }}>{person.name}</strong><span className="dim" style={{ fontSize: 11 }}>Community or collaboration participant</span></span>
                       <span className="dim" style={{ fontSize: 12 }}>@</span>
                     </button>)
-                    : <p className="dim" style={{ padding: 8, fontSize: 12 }}>No matching people. Try another name.</p>}
-              </div>}
-              <p className="dim" style={{ fontSize: 11, margin: '-2px 0 10px' }}>Replies stay connected to the idea. Mentioned people are recorded with the message.</p>
+                    : <p className="dim" style={{ padding: 8, fontSize: 12 }}>{mentionPeople.length ? 'No matching people. Try another name.' : 'No participants are visible yet. Refresh the workspace and try again.'}</p>}
+                </div>}
+              </div>
+              <p className="dim" style={{ fontSize: 11, margin: '8px 0 10px' }}>Replies stay connected to the idea. Mentioned people are recorded with the message.</p>
               <div className="acts" style={{ margin: 0 }}>
                 <button className="btn p" disabled={busy || !reply.trim()}><QuorlythGlyph name="send" size={14} />{busy ? 'Posting…' : replyTo ? 'Post reply' : 'Post update'}</button>
                 {replyTo && <button type="button" className="chip" onClick={() => setReplyTo(null)}>Cancel reply</button>}
