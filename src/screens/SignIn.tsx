@@ -4,20 +4,113 @@ import { Icon, GoogleG } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
 import { useApp } from '../data/AppProvider'
 import { Robot, RobotApi } from '../bot/Robot'
-import { speakText } from '../ai/client'
+import { speakText, type SpeechPlayback } from '../ai/client'
 import { useRef } from 'react'
 
 function Stage({ greeting }: { greeting: string }) {
   const r = useRef<RobotApi | null>(null)
   const { toast } = useApp()
-  const first = !localStorage.getItem('qseen')
-  const hello = () => { r.current?.welcome(); speakText(greeting, 'coral', () => r.current?.talk(true), () => r.current?.talk(false)).catch(() => toast('Voice needs the AI server running')) }
+  const [first] = useState(() => {
+    try { return localStorage.getItem('qseen') !== '1' } catch { return true }
+  })
+  const [helloStatus, setHelloStatus] = useState('')
+  const helloController = useRef<AbortController | null>(null)
+  const helloPlayback = useRef<SpeechPlayback | null>(null)
+  const helloRun = useRef(0)
+
+  function preferredVoice() {
+    try {
+      const saved = localStorage.getItem('quorlyth:welcome-voice') || 'shimmer'
+      return ['marin', 'sage', 'shimmer', 'cedar', 'echo', 'ballad', 'coral', 'alloy', 'ash', 'nova', 'onyx', 'fable', 'verse'].includes(saved)
+        ? saved
+        : 'shimmer'
+    } catch { return 'shimmer' }
+  }
+
+  function preferredAccent() {
+    try {
+      const saved = localStorage.getItem('quorlyth:welcome-accent') || 'auto'
+      return ['auto', 'nigerian', 'american', 'british', 'international'].includes(saved) ? saved as any : 'auto'
+    } catch { return 'auto' }
+  }
+
+  async function hello(automatic = false) {
+    helloController.current?.abort()
+    helloController.current = null
+    helloPlayback.current?.stop()
+    helloPlayback.current = null
+    const run = ++helloRun.current
+    const controller = new AbortController()
+    helloController.current = controller
+    let usedBrowserFallback = false
+    setHelloStatus(automatic ? 'Starting your welcome…' : 'Starting voice…')
+    r.current?.welcome()
+    try {
+      const playback = await speakText(
+        greeting,
+        preferredVoice(),
+        () => {
+          if (run !== helloRun.current || controller.signal.aborted) return
+          r.current?.talk(true)
+          setHelloStatus(usedBrowserFallback ? 'Speaking with your device voice.' : 'Your selected expressive voice is speaking.')
+          try { localStorage.setItem('qseen', '1') } catch {}
+        },
+        () => {
+          if (run !== helloRun.current) return
+          helloPlayback.current = null
+          r.current?.talk(false)
+          setHelloStatus('')
+        },
+        {
+          accent: preferredAccent(),
+          signal: controller.signal,
+          elevenLabsOnly: true,
+          allowBrowserFallback: true,
+          preferElevenLabsVoice: true,
+          liveTalk: true,
+          onBrowserFallback: () => {
+            usedBrowserFallback = true
+            if (run === helloRun.current) setHelloStatus('ElevenLabs is unavailable; switching to your device voice.')
+          },
+        },
+      )
+      if (run !== helloRun.current || controller.signal.aborted) {
+        playback.stop()
+        return
+      }
+      helloPlayback.current = playback
+    } catch (error) {
+      if (run !== helloRun.current || controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
+      const message = error instanceof Error ? error.message : 'Voice playback is unavailable.'
+      setHelloStatus(automatic
+        ? 'Automatic audio could not start. Tap “Hear a hello” to retry if your browser blocked playback.'
+        : message)
+      if (!automatic) toast(message)
+    }
+  }
+
+  useEffect(() => {
+    // Try the greeting as soon as the sign-in stage opens. Some browsers block
+    // audible autoplay until the visitor interacts, so keep the retry button.
+    const timer = window.setTimeout(() => { void hello(true) }, 500)
+    return () => {
+      window.clearTimeout(timer)
+      helloRun.current += 1
+      helloController.current?.abort()
+      helloController.current = null
+      helloPlayback.current?.stop()
+      helloPlayback.current = null
+      r.current?.talk(false)
+    }
+  }, [greeting])
+
   return (
     <div className="glass stage ok" id="stg">
       <Robot ref={r} onReady={() => { setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400) }} />
       <div className="c1 glass"><span className="chip"><Icon name="private" size={12} />Private session</span></div>
-      <button className="chip hello" onClick={hello}><Icon name="voice" size={14} />Hear a hello</button>
-      <div className="cap"><p className="dim">QuorlythBot</p><h3 style={{ fontSize: 22, fontWeight: 200, marginTop: 4 }}>Your room is ready.</h3></div>
+      <button className="chip hello" onClick={() => void hello(false)}><Icon name="voice" size={14} />Hear a hello</button>
+      {helloStatus && <p className="dim" role="status" aria-live="polite" style={{ position: 'absolute', left: 12, right: 12, bottom: 48, fontSize: 11, textAlign: 'center' }}>{helloStatus}</p>}
+      <div className="cap"><p className="dim">QuorlythBot</p><h3 style={{ fontSize: 22, fontWeight: 200, marginTop: 4 }}>{first ? 'Your room is ready.' : 'Welcome back to your room.'}</h3></div>
     </div>
   )
 }
@@ -33,6 +126,9 @@ export function SignIn() {
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset' | 'otp' | 'recovery'>(params.get('recovery') === '1' ? 'recovery' : 'signin')
+  const [firstWelcome] = useState(() => {
+    try { return localStorage.getItem('qseen') !== '1' } catch { return true }
+  })
   const [resetMethod, setResetMethod] = useState<'link' | 'otp'>('link')
   const [otp, setOtp] = useState('')
   const [notice, setNotice] = useState<'verify' | 'reset' | ''>('')
@@ -57,7 +153,7 @@ export function SignIn() {
 
   if (me && mode !== 'recovery' && mode !== 'otp') {
     return (
-      <div className="lg"><Stage greeting={`Hello, ${me.name.split(' ')[0]}. Welcome back to Quorlyth.`} />
+      <div className="lg"><Stage greeting={`Welcome back, ${me.name.split(' ')[0]}. Your Quorlyth space is ready.`} />
         <div className="glass fm"><h2 style={{ fontSize: 40 }}>Welcome back, {me.name.split(' ')[0]}.</h2>
           <div className="acts"><button className="btn p" onClick={() => nav('/dashboard')}><Icon name="home" />Open dashboard</button>
             <button className="btn" disabled={busy} onClick={async () => { setBusy(true); try { await signOut(); sessionStorage.removeItem('qreturn'); nav('/signin', { replace: true }); toast('Signed out. You can sign in again below.') } catch (error: any) { toast(error?.message || 'Could not sign out. Please try again.') } finally { setBusy(false) } }}>{busy ? 'Signing out…' : 'Sign out'}</button></div></div></div>
@@ -129,7 +225,9 @@ export function SignIn() {
 
   return (
     <div className="lg">
-      <Stage greeting="Hello and welcome to Quorlyth, where your fans, in order, become a community." />
+      <Stage greeting={firstWelcome
+        ? "Hello and welcome to Quorlyth, where your fans, in order, become a community."
+        : "Welcome back to Quorlyth. Your space is ready whenever you are."} />
       <div className="glass fm">
         {notice ? (
           <div className="done"><div className="score"><Icon name="mail" size={30} /></div>
