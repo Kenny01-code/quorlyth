@@ -53,6 +53,7 @@ export function BotViews(p: P) {
     }
 
     setHello({ state: 'loading', message: 'Starting your natural voice…' })
+    let usedBrowserFallback = false
     try {
       const playback = await speakText(
         clean,
@@ -60,7 +61,7 @@ export function BotViews(p: P) {
         () => {
           if (run !== helloRun.current) return
           p.robot.current?.talk(true)
-          setHello({ state: 'playing', message: 'Speaking with your selected QuorlythBot voice profile.' })
+          setHello({ state: 'playing', message: usedBrowserFallback ? 'AI voice providers were unavailable, so your device voice is playing.' : 'Speaking with your selected ElevenLabs voice profile.' })
         },
         () => {
           if (run !== helloRun.current) return
@@ -68,14 +69,14 @@ export function BotViews(p: P) {
           p.robot.current?.talk(false)
           setHello({ state: 'idle', message: 'Voice preview finished.' })
         },
-        { accent: s.accent || 'auto', allowBrowserFallback: true, preferElevenLabsVoice: true },
+        { accent: s.accent || 'auto', allowBrowserFallback: true, preferElevenLabsVoice: true, onBrowserFallback: () => { usedBrowserFallback = true } },
       )
       if (run !== helloRun.current) {
         playback.stop()
         return
       }
       helloPlayback.current = playback
-      setHello({ state: 'playing', message: 'Your selected ElevenLabs voice is playing.' })
+      setHello({ state: 'playing', message: usedBrowserFallback ? 'AI voice providers were unavailable, so your device voice is playing.' : 'Your selected ElevenLabs voice is playing.' })
     } catch (error) {
       if (run !== helloRun.current) return
       const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
@@ -198,7 +199,7 @@ export function BotViews(p: P) {
           <div className="acts"><button className="btn" disabled={vm.state === 'rec'} onClick={matchVoice}><Icon name="mic" size={16} />{vm.state === 'rec' ? 'Listening' : 'Start'}</button></div>
           <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>This tunes a studio voice to feel like yours. It is not a clone. Cloning a real voice needs a dedicated voice service and that person's consent.</p>
         </div>
-        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Live Talk is activated by the Talk live button, shows a listening status while the microphone is active, and responds in the language you speak where supported. If ElevenLabs is unavailable, QuorlythBot keeps the written reply and will not substitute a basic device voice. Voice cloning is not included.</p></>
+        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Live Talk is activated by the Talk live button, shows a listening status while the microphone is active, and responds in the language you speak where supported. If ElevenLabs is unavailable, QuorlythBot tries its configured alternate AI speech providers; device speech is the final fallback. Voice cloning is not included.</p></>
     )
   }
 
