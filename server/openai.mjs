@@ -831,10 +831,11 @@ async function requestElevenLabsSpeechStream(text, voiceId) {
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32`
   const controller = new AbortController()
   const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
-  // Put a short upper bound on a stalled speech provider so fallback stays conversational.
+  // Respect the configured provider deadline. A 1.8s hard cap aborted healthy
+  // Gemini TTS responses before audio was ready, defeating the fallback chain.
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
-    ? Math.min(configuredTimeout, 1800)
-    : 1800
+    ? Math.min(configuredTimeout, 10000)
+    : 8000
   const timer = setTimeout(() => controller.abort(new Error('TTS provider timed out before streaming audio')), timeoutMs)
   try {
     const response = await fetch(url, {
@@ -1025,10 +1026,11 @@ async function safeTtsErrorCode(response) {
 
 async function requestTtsWithTimeout(url, options, responseType = 'audio') {
   const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
-  // Put a short upper bound on a stalled speech provider so fallback stays conversational.
+  // Respect the configured provider deadline. A 1.8s hard cap aborted healthy
+  // Gemini TTS responses before audio was ready, defeating the fallback chain.
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
-    ? Math.min(configuredTimeout, 1800)
-    : 1800
+    ? Math.min(configuredTimeout, 10000)
+    : 8000
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(new Error('TTS provider timed out')), timeoutMs)
   try {
