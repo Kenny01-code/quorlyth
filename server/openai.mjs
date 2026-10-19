@@ -740,15 +740,16 @@ function speechStyleInstructions(value, liveTalk = false) {
 
 /** Allow expressive ElevenLabs models while keeping model selection configurable. */
 function elevenLabsTtsModel(liveTalk = false) {
-  // Live Talk prefers the faster expressive v4 Turbo model; studio previews keep
-  // the higher-fidelity v4 model. Both model families support audio tags.
+  // This server uses ElevenLabs' HTTP Create/Stream Speech endpoints. Use v4
+  // for expressive reactions here; v4 Turbo's documented realtime path is the
+  // Text-to-Dialogue WebSocket, which this HTTP adapter does not implement.
   const configured = String(
     liveTalk
-      ? (process.env.ELEVENLABS_LIVE_TTS_MODEL || 'eleven_v4_turbo')
+      ? (process.env.ELEVENLABS_LIVE_TTS_MODEL || process.env.ELEVENLABS_TTS_MODEL || 'eleven_v4')
       : (process.env.ELEVENLABS_TTS_MODEL || 'eleven_v4'),
   ).trim()
-  const supported = ['eleven_v4_turbo', 'eleven_v4', 'eleven_v3', 'eleven_multilingual_v2', 'eleven_flash_v2_5']
-  return supported.includes(configured) ? configured : (liveTalk ? 'eleven_v4_turbo' : 'eleven_v4')
+  const supported = ['eleven_v4', 'eleven_v3', 'eleven_multilingual_v2', 'eleven_flash_v2_5']
+  return supported.includes(configured) ? configured : 'eleven_v4'
 }
 
 /**
@@ -766,7 +767,7 @@ function stableVoiceCueHash(value) {
 }
 
 /**
- * Add context-aware vocal performance cues only to Live Talk's audio payload.
+ * Add context-aware vocal performance cues to explicitly expressive audio requests.
  * The transcript stays clean. There is no per-session cue cap; the voice can
  * continue expressing each utterance for as long as the conversation continues.
  */
