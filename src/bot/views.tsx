@@ -118,7 +118,7 @@ export function BotViews(p: P) {
       const m = f[Math.floor(f.length / 2)], g = m < 165 ? 'm' : 'f', v = VOICES.find(x => x.g === g)!
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: true, preferElevenLabsVoice: true }).catch(() => a.toast('Natural voice playback is unavailable on this device.'))
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: true, allowBrowserFallback: true, preferElevenLabsVoice: true }).catch(() => a.toast('Neither ElevenLabs nor your browser speech voice is available on this device.'))
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
