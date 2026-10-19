@@ -39,7 +39,7 @@ function isAllowedOrigin(normalizedOrigin, allowedOrigins) {
   try {
     const url = new URL(normalizedOrigin)
     return url.protocol === 'https:' &&
-      /^quorlyth-[a-z0-9-]+-ighiledivine77-5079s-projects\\.vercel\\.app$/i.test(url.hostname)
+      /^quorlyth-[a-z0-9-]+-ighiledivine77-5079s-projects\.vercel\.app$/i.test(url.hostname)
   } catch {
     return false
   }
