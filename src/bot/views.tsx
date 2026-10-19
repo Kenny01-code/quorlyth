@@ -35,7 +35,7 @@ export function BotViews(p: P) {
   const helloPlayback = useRef<SpeechPlayback | null>(null)
   const helloRun = useRef(0)
 
-  function rememberWelcomeVoice(voice: string, accent = s.accent || 'auto') {
+  function rememberWelcomeVoice(voice: string, accent: string = s.accent || 'auto') {
     // Remember only harmless voice preferences so the sign-in greeting can use
     // the same persona even before the private account settings are loaded.
     try {
