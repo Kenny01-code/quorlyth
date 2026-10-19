@@ -764,44 +764,61 @@ function expressiveElevenLabsText(text, model, liveTalk = false) {
   const source = text.trim()
   if (!source) return source
 
-  // Respect explicit cues from a trusted in-app caller rather than stacking more.
-  if (/\[(?:laughs?|laughing|chuckles|sniffs?|sniffles?|sighs|exhales?|inhales?|clears throat|coughs?|gasps?|thoughtful|curious|softly|sad|happy|excited|surprised|whispers?|quietly|playful|amazed|peaceful|confused|proud)\]/i.test(source)) return source
+  // Keep any carefully-authored cue as-is instead of piling reactions on top.
+  if (/\[[^\]]{1,64}\]/.test(source)) return source
 
   const hash = stableVoiceCueHash(source.toLowerCase())
-  const laughter = /\b(?:haha+|lmao|lol|that(?:'|’)s funny|good one|made me laugh|i(?:'|’)m joking|just kidding|kidding)\b/i.test(source)
-  if (laughter) return '[laughs] ' + source
+  const laughter = /\b(?:haha+|lmao|lol|that(?:'|’)s funny|good one|made me laugh|i(?:'|’)m joking|just kidding|kidding|you got me|nice try)\b/i.test(source)
+  if (laughter) return hash % 2 === 0 ? '[chuckles] ' + source : '[laughs] ' + source
 
-  const surprise = /^(?:wait,?\s|what\?!|really\?!|no way\b|oh wow\b|wow[!,\s]|seriously\?!|you(?:'|’)re kidding\b)/i.test(source)
+  const surprise = /^(?:wait,?\s|what\?!|really\?!|no way\b|oh wow\b|wow[!,\s]|seriously\?!|you(?:'|’)re kidding\b|that(?:'|’)s unbelievable\b)/i.test(source)
   if (surprise) return '[gasps] ' + source
 
-  const happy = /\b(?:congratulations|congrats|great news|you did it|so proud of you|that(?:'|’)s amazing|that(?:'|’)s wonderful|fantastic|brilliant|well done|i knew you could|you nailed it)\b/i.test(source)
-  if (happy) return '[excited] ' + source
+  const happy = /\b(?:congratulations|congrats|great news|you did it|so proud of you|that(?:'|’)s amazing|that(?:'|’)s wonderful|fantastic|brilliant|well done|i knew you could|you nailed it|that worked perfectly)\b/i.test(source)
+  if (happy) return hash % 4 === 0 ? '[laughs] [excited] ' + source : '[excited] ' + source
 
-  const griefOrTears = /\b(?:grief|grieving|crying|tears|sniffling|sobbing|passed away|your loss|my condolences|lost someone|miss (?:him|her|them)|heartbroken|devastated)\b/i.test(source)
-  const empathy = griefOrTears || /\b(?:i(?:'|’)m sorry|i am sorry|that sounds (?:hard|rough|painful|difficult|exhausting)|you(?:'|’)ve been through a lot|you must be feeling|i can imagine how|that can be overwhelming|take a breath)\b/i.test(source)
+  const teasing = /\b(?:you(?:'|’)re trouble|nice try|you little|i see what you did|that was sneaky|you caught me|i(?:'|’)ll give you that|you win this round|i can(?:not|'t) even with you)\b/i.test(source)
+  if (teasing) return '[playful] ' + source
+
+  const griefOrTears = /\b(?:grief|grieving|crying|tears|sniffling|sobbing|passed away|your loss|my condolences|lost someone|miss (?:him|her|them)|heartbroken|devastated|still hurting|at the funeral)\b/i.test(source)
+  const empathy = griefOrTears || /\b(?:i(?:'|’)m sorry|i am sorry|that sounds (?:hard|rough|painful|difficult|exhausting)|you(?:'|’)ve been through a lot|you must be feeling|i can imagine how|that can be overwhelming|take a breath|no wonder you feel|that must have hurt)\b/i.test(source)
   if (empathy) {
     if (griefOrTears && hash % 3 === 0) return '[sniffs softly] ' + source
     if (hash % 4 === 0) return '[exhales] ' + source
-    return '[sighs] ' + source
+    return hash % 5 === 0 ? '[softly] ' + source : '[sighs] ' + source
   }
 
-  if (/^(?:hmm+\b|well,?\s+let me think\b|let me think\b|i(?:'|’)d say\b|i would say\b|that(?:'|’)s interesting\b|honestly,?\s+i(?:'|’)m not sure\b|i need to think\b)/i.test(source)) {
-    return '[thoughtful] ' + source
-  }
+  const relief = /\b(?:what a relief|glad that worked|we made it|finally,? done|you can breathe now|that is a weight off|that went better than expected)\b/i.test(source)
+  if (relief) return '[exhales] ' + source
+
+  const soothing = /\b(?:take your time|no rush|one step at a time|we can work through this|you do not have to decide now|you have options|i am here to help|we will figure it out)\b/i.test(source)
+  if (soothing) return '[softly] ' + source
+
+  const confidence = /\b(?:you(?:'|’)ve got this|solid plan|good call|smart move|that is a strong idea|this can work|you nailed the important part|trust your preparation)\b/i.test(source)
+  if (confidence) return '[confident] ' + source
+
+  const thoughtful = /^(?:hmm+\b|well,?\s+let me think\b|let me think\b|i(?:'|’)d say\b|i would say\b|that(?:'|’)s interesting\b|honestly,?\s+i(?:'|’)m not sure\b|i need to think\b|let(?:'|’)s reason this through\b|if i look at it carefully\b)/i.test(source)
+  if (thoughtful) return hash % 4 === 0 ? '[inhales softly] [thoughtful] ' + source : '[thoughtful] ' + source
 
   if (/^(?:i wonder\b|what if\b|how would you\b|have you ever\b)/i.test(source) && source.length <= 360) {
     return '[curious] ' + source
   }
   if (source.length <= 240 && /\?\s*$/.test(source) && hash % 2 === 0) return '[curious] ' + source
 
-  // Human imperfections should be occasional and conversational, never a loop.
+  const apologetic = /\b(?:my mistake|i got that wrong|you(?:'|’)re right,? i missed|good catch|thanks for correcting me|i stand corrected)\b/i.test(source)
+  if (apologetic) return '[sheepish] ' + source
+
+  const uncertainty = /\b(?:i(?:'|’)m not certain|hard to tell from this|i do not have enough information|we would need to check|it could be either|i may be missing something)\b/i.test(source)
+  if (uncertainty) return '[thoughtful, slightly hesitant] ' + source
+
+  // Occasional physical-sounding imperfections, never on every response.
   if (/^(?:well,?\s|okay,?\s|right,?\s|so,?\s|excuse me\b)/i.test(source) && hash % 7 === 0) {
     return /\bexcuse me\b/i.test(source) ? '[coughs softly] ' + source : '[clears throat] ' + source
   }
   if (/\b(?:dry throat|need to cough|i(?:'|’)ve been coughing|ahem)\b/i.test(source)) return '[coughs softly] ' + source
-  if (/\b(?:relieved|what a relief|glad that worked|we made it|finally,? done)\b/i.test(source) && hash % 3 === 0) return '[exhales] ' + source
+  if (/\b(?:quietly|in a whisper|keep your voice down|let me say this softly)\b/i.test(source)) return '[whispers] ' + source
 
-  // Let the model's punctuation preserve natural pauses in every other line.
+  // Let text punctuation preserve pauses when no overt reaction fits.
   return source
 }
 
