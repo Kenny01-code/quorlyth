@@ -174,7 +174,7 @@ export function BotViews(p: P) {
       <><h3 className="bvt">Voice studio</h3><p className="mut" style={{ margin: '6px 0 4px' }}>Choose how QuorlythBot sounds and looks. Drag the robot above to turn it all the way round.</p>
         <div className="glass pad qbot-accent-picker" style={{ padding: '6px 18px', margin: '12px 0 14px' }}>
           <Chips label="Speech accent" desc="Auto-detect uses your browser language. You can choose a style any time." value={s.accent || 'auto'} onPick={value => bd.saveSettings({ accent: value as any })} list={VOICE_ACCENTS.map(accent => [accent.id, accent.name])} />
-          <p className="dim" style={{ fontSize: 11, lineHeight: 1.5, margin: '0 0 8px' }}>Auto uses a neutral international voice. Live Talk detects the language you speak; voice output uses ElevenLabs only.</p>
+          <p className="dim" style={{ fontSize: 11, lineHeight: 1.5, margin: '0 0 8px' }}>Auto uses a neutral international voice. Live Talk detects your spoken language. ElevenLabs is the primary voice; your device's speech is only the fallback.</p>
         </div>
         <div className="bvgrid">{VOICES.map(v => { const T = (THEMES as any)[v.theme]; return (
           <button key={v.id} className={cn('bvc', cur.id === v.id && 'on')} style={{ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any} aria-pressed={cur.id === v.id} onClick={() => pick(v)}>
