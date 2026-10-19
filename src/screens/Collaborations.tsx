@@ -242,7 +242,7 @@ function Workspace() {
   const workspaceTeamIds = [...new Set([idea?.authorId, community?.ownerId, community?.createdBy, ...acceptedApplications.map(application => application.applicantId)].filter((uid): uid is string => !!uid))]
   const communityIdeaIds = new Set(a.data.ideas.filter(item => item.cid === idea?.cid).map(item => item.id))
   const discussionParticipantIds = [...new Set([
-    ...communityMemberIds,
+    ...mentionPeople.map(person => person.id),
     idea?.authorId,
     community?.ownerId,
     community?.createdBy,
