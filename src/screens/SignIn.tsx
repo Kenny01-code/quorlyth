@@ -138,7 +138,7 @@ export function SignIn() {
   const [firstWelcome] = useState(() => {
     try { return localStorage.getItem('qseen') !== '1' } catch { return true }
   })
-  const [resetMethod, setResetMethod] = useState<'link' | 'otp'>('link')
+  const [resetMethod, setResetMethod] = useState<'link' | 'otp'>('otp')
   const [otp, setOtp] = useState('')
   const [notice, setNotice] = useState<'verify' | 'reset' | ''>('')
   const [showPassword, setShowPassword] = useState(false)
