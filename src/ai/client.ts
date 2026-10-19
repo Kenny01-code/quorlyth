@@ -505,7 +505,7 @@ export async function speakText(
     // Don't leave the user waiting on a broken ElevenLabs connection. If its first
     // audio bytes don't arrive promptly, use the device voice for this utterance.
     if (preferElevenLabsVoice && !options.elevenLabsOnly) {
-      providerRequestTimer = window.setTimeout(() => providerRequest.abort(), 3000)
+      providerRequestTimer = window.setTimeout(() => providerRequest.abort(), 1800)
     }
     try {
       response = await fetch(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream', {
