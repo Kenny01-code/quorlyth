@@ -232,7 +232,6 @@ function Workspace() {
   useEffect(() => setProjectDueDate(dateInput(project?.dueAt)), [project?.dueAt])
   const community = idea ? a.data.communities.find(c => c.id === idea.cid) : undefined
   const canManage = !!idea && a.canManageCommunity(idea.cid)
-  const isCommunityOwner = !!idea && a.ownsCommunity(idea.cid)
   const canOrganizeWithAI = !!idea && a.canOrganizeIdeaWithAI(id)
   const organizerRequest = community && a.me ? a.data.aiOrganizerRequests.find(request => request.cid === community.id && request.userId === a.me!.id) : undefined
   const acceptedApplications = a.data.volunteers.filter(v => v.ideaId === id && v.status === 'accepted')
@@ -519,7 +518,7 @@ function Workspace() {
               <span className="chip"><QuorlythGlyph name="plan" size={14} />Quorlyth Signal Engine</span>
               <h3 style={{ fontSize: 19, marginTop: 12 }}>Turn discussion into a buildable plan</h3>
               <p className="mut" style={{ marginTop: 6 }}>AI filters duplicate or off-topic discussion, identifies actionable signals, and drafts milestones with clear definitions of done. Review everything before it changes your workspace.</p>
-              {!isCommunityOwner && <p className="mut" style={{ marginTop: 8 }}>AI organizer access is community-specific. The community owner or a platform administrator must approve your request before a plan can be generated or applied.</p>}
+              {!canOrganizeWithAI && <p className="mut" style={{ marginTop: 8 }}>AI organizer access is community-specific. Platform owners have automatic access across communities, community owners have automatic access in their own communities, and other eligible users need approval from the community owner or a platform admin.</p>}
             </div>
             <button className="btn p" disabled={aiBusy || applyingPlan || (!canOrganizeWithAI && organizerRequest?.status === 'pending')} onClick={organizeWithAI}>
               <QuorlythGlyph name="idea" size={15} />
