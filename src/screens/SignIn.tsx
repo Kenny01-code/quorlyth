@@ -209,7 +209,7 @@ export function SignIn() {
     }
   }
   async function resendRecoveryCode() {
-    if (!/^\\S+@\\S+\\.\\S+$/.test(email.trim())) return toast('Enter the email address you used for your account')
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return toast('Enter the email address you used for your account')
     setBusy(true)
     try {
       await backend!.auth.resetPassword(email.trim())
