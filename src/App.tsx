@@ -70,8 +70,15 @@ export default function App() {
   const [palette, setPalette] = useState(false)
   const [keys, setKeys] = useState(false)
   const [bell, setBell] = useState(false)
-  // The cinematic intro is opt-in, and the signature loader is reserved for real page-to-page navigation.
-  const [intro, setIntro] = useState(false)
+  // Play the branded welcome animation once per browser, then remember it across sessions.
+  // Existing returning visitors who already heard the sign-in hello also skip the intro.
+  const [intro, setIntro] = useState(() => {
+    try {
+      return localStorage.getItem('qintro') !== '1'
+        && localStorage.getItem('qseen') !== '1'
+        && sessionStorage.getItem('qintro') !== '1'
+    } catch { return false }
+  })
   const [replay, setReplay] = useState(0)
   const skipNextPageTransition = useRef(false)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
@@ -298,7 +305,11 @@ export default function App() {
   return (
     <>
       <div id="sp" />
-      {intro && <Intro replay={replay} onDone={() => { setIntro(false); sessionStorage.setItem('qintro', '1') }} />}
+      {intro && <Intro replay={replay} onDone={() => {
+        setIntro(false)
+        try { localStorage.setItem('qintro', '1') } catch {}
+        try { sessionStorage.setItem('qintro', '1') } catch {}
+      }} />}
       <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main">
