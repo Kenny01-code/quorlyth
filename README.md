@@ -112,6 +112,19 @@ npm run build
 
 The latest local verification recorded for the reliability/collaboration change set was **6 tests passing** and a successful production build. Bundle-size warnings were reported for some chunks; this is not the same as a live production smoke test. Re-run the commands above against the current checkout before release.
 
+## Dedicated cloud AI service
+
+The persistent AI API can run separately from the static website:
+
+- Start command: `npm start` (or `npm run start:ai`)
+- Health check: `/healthz`
+- The service binds to Railway's assigned `PORT` and listens on `0.0.0.0`.
+- Configure `AI_ALLOWED_ORIGINS=https://quorlyth.vercel.app` and `AI_RATE_LIMIT_PER_MINUTE=120` as Railway variables.
+- Set provider secrets directly in the cloud host's secret-variable UI. Never commit keys or expose them in a `VITE_*` variable.
+- Once the service has a public HTTPS URL, set `VITE_AI_API_BASE_URL` to that origin in the Vercel production environment and redeploy the frontend. Leave it unset until the AI service is live; the frontend then continues using the existing same-origin Vercel API routes.
+
+Required provider variables depend on features in use: one or more of `GEMINI_API_KEY`, `XAI_API_KEY`, `OPENAI_API_KEY`; `ELEVENLABS_API_KEY` for selected ElevenLabs speech; `YOUTUBE_API_KEY` for YouTube enrichment; and `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (or their `SUPABASE_URL` / `SUPABASE_ANON_KEY` aliases) for authenticated server-side bot context. Keep the site's existing Vercel AI routes in place as the safe fallback during rollout.
+
 ## Deployment
 
 The production domain is https://quorlyth.vercel.app. A successful Vercel build only proves that the built artifact was created; it does not prove authentication, Supabase policies, AI provider keys, or every collaboration flow works in production.
