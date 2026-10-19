@@ -1029,14 +1029,19 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               recognition.onresult = (event: any) => {
                 let finalText = ''
                 let interimText = ''
+                // Rebuild the whole current utterance on every callback, not only
+                // the changed result index; otherwise earlier words can disappear
+                // from the live preview while the user is still speaking.
                 const results = event.results
-                for (let i = event.resultIndex || 0; i < results.length; i += 1) {
-                  const transcript = String(results[i]?.[0]?.transcript || '')
-                  if (results[i]?.isFinal) finalText += transcript + ' '
-                  else interimText += transcript
+                for (let i = 0; i < results.length; i += 1) {
+                  const transcript = String(results[i]?.[0]?.transcript || '').trim()
+                  if (!transcript) continue
+                  if (results[i]?.isFinal) finalText += (finalText ? ' ' : '') + transcript
+                  else interimText += (interimText ? ' ' : '') + transcript
                 }
-                if (interimText.trim()) {
-                  setLive(current => current ? { ...current, state: 'listening', user: interimText.trim() } : current)
+                const liveTranscript = [finalText, interimText].filter(Boolean).join(' ').replace(/\\s+/g, ' ').trim()
+                if (liveTranscript) {
+                  setLive(current => current ? { ...current, state: 'listening', user: liveTranscript } : current)
                 }
                 const spoken = finalText.trim()
                 if (!spoken || browserTurnBusy || !liveFallback.current) return
