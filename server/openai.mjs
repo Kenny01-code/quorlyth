@@ -771,67 +771,74 @@ function stableVoiceCueHash(value) {
  * The transcript stays clean. There is no per-session cue cap; the voice can
  * continue expressing each utterance for as long as the conversation continues.
  */
-function expressiveElevenLabsText(text, model, liveTalk = false) {
+function expressiveElevenLabsText(text, model, liveTalk = false, voice = '') {
   if (!liveTalk || !['eleven_v4_turbo', 'eleven_v4', 'eleven_v3'].includes(model)) return text
   const source = text.trim()
   if (!source) return source
 
-  // Keep any carefully-authored cue as-is instead of piling reactions on top.
+  // Carefully authored cues take priority over persona-level directions.
   if (/\[[^\]]{1,64}\]/.test(source)) return source
+
+  const voiceDirection = voice === 'shimmer'
+    ? '[bright, lively, naturally upbeat delivery]'
+    : voice === 'sage'
+      ? '[calm, warm, gently measured delivery]'
+      : ''
+  const perform = (spoken, cue = '') => [cue, voiceDirection, spoken].filter(Boolean).join(' ')
 
   const hash = stableVoiceCueHash(source.toLowerCase())
   const laughter = /\b(?:haha+|lmao|lol|that(?:'|’)s funny|good one|made me laugh|i(?:'|’)m joking|just kidding|kidding|you got me|nice try)\b/i.test(source)
-  if (laughter) return hash % 2 === 0 ? '[chuckles] ' + source : '[laughs] ' + source
+  if (laughter) return perform(source, hash % 2 === 0 ? '[chuckles]' : '[laughs]')
 
   const surprise = /^(?:wait,?\s|what\?!|really\?!|no way\b|oh wow\b|wow[!,\s]|seriously\?!|you(?:'|’)re kidding\b|that(?:'|’)s unbelievable\b)/i.test(source)
-  if (surprise) return '[gasps] ' + source
+  if (surprise) return perform(source, '[gasps]')
 
   const happy = /\b(?:congratulations|congrats|great news|you did it|so proud of you|that(?:'|’)s amazing|that(?:'|’)s wonderful|fantastic|brilliant|well done|i knew you could|you nailed it|that worked perfectly)\b/i.test(source)
-  if (happy) return hash % 4 === 0 ? '[laughs] [excited] ' + source : '[excited] ' + source
+  if (happy) return perform(source, hash % 4 === 0 ? '[laughs] [excited]' : '[excited]')
 
   const teasing = /\b(?:you(?:'|’)re trouble|nice try|you little|i see what you did|that was sneaky|you caught me|i(?:'|’)ll give you that|you win this round|i can(?:not|'t) even with you)\b/i.test(source)
-  if (teasing) return '[playful] ' + source
+  if (teasing) return perform(source, '[playful]')
 
   const griefOrTears = /\b(?:grief|grieving|crying|tears|sniffling|sobbing|passed away|your loss|my condolences|lost someone|miss (?:him|her|them)|heartbroken|devastated|still hurting|at the funeral)\b/i.test(source)
   const empathy = griefOrTears || /\b(?:i(?:'|’)m sorry|i am sorry|that sounds (?:hard|rough|painful|difficult|exhausting)|you(?:'|’)ve been through a lot|you must be feeling|i can imagine how|that can be overwhelming|take a breath|no wonder you feel|that must have hurt)\b/i.test(source)
   if (empathy) {
-    if (griefOrTears && hash % 3 === 0) return '[sniffs softly] ' + source
-    if (hash % 4 === 0) return '[exhales] ' + source
-    return hash % 5 === 0 ? '[softly] ' + source : '[sighs] ' + source
+    if (griefOrTears && hash % 3 === 0) return perform(source, '[sniffs softly]')
+    if (hash % 4 === 0) return perform(source, '[exhales]')
+    return perform(source, hash % 5 === 0 ? '[softly]' : '[sighs]')
   }
 
   const relief = /\b(?:what a relief|glad that worked|we made it|finally,? done|you can breathe now|that is a weight off|that went better than expected)\b/i.test(source)
-  if (relief) return '[exhales] ' + source
+  if (relief) return perform(source, '[exhales]')
 
   const soothing = /\b(?:take your time|no rush|one step at a time|we can work through this|you do not have to decide now|you have options|i am here to help|we will figure it out)\b/i.test(source)
-  if (soothing) return '[softly] ' + source
+  if (soothing) return perform(source, '[softly]')
 
   const confidence = /\b(?:you(?:'|’)ve got this|solid plan|good call|smart move|that is a strong idea|this can work|you nailed the important part|trust your preparation)\b/i.test(source)
-  if (confidence) return '[confident] ' + source
+  if (confidence) return perform(source, '[confident]')
 
   const thoughtful = /^(?:hmm+\b|well,?\s+let me think\b|let me think\b|i(?:'|’)d say\b|i would say\b|that(?:'|’)s interesting\b|honestly,?\s+i(?:'|’)m not sure\b|i need to think\b|let(?:'|’)s reason this through\b|if i look at it carefully\b)/i.test(source)
-  if (thoughtful) return hash % 4 === 0 ? '[inhales softly] [thoughtful] ' + source : '[thoughtful] ' + source
+  if (thoughtful) return perform(source, hash % 4 === 0 ? '[inhales softly] [thoughtful]' : '[thoughtful]')
 
   if (/^(?:i wonder\b|what if\b|how would you\b|have you ever\b)/i.test(source) && source.length <= 360) {
-    return '[curious] ' + source
+    return perform(source, '[curious]')
   }
-  if (source.length <= 240 && /\?\s*$/.test(source) && hash % 2 === 0) return '[curious] ' + source
+  if (source.length <= 240 && /\?\s*$/.test(source) && hash % 2 === 0) return perform(source, '[curious]')
 
   const apologetic = /\b(?:my mistake|i got that wrong|you(?:'|’)re right,? i missed|good catch|thanks for correcting me|i stand corrected)\b/i.test(source)
-  if (apologetic) return '[sheepish] ' + source
+  if (apologetic) return perform(source, '[sheepish]')
 
   const uncertainty = /\b(?:i(?:'|’)m not certain|hard to tell from this|i do not have enough information|we would need to check|it could be either|i may be missing something)\b/i.test(source)
-  if (uncertainty) return '[thoughtful, slightly hesitant] ' + source
+  if (uncertainty) return perform(source, '[thoughtful, slightly hesitant]')
 
-  // Occasional physical-sounding imperfections, never on every response.
+  // Rare physical-sounding imperfections should never be added to neutral content at random.
   if (/^(?:well,?\s|okay,?\s|right,?\s|so,?\s|excuse me\b)/i.test(source) && hash % 7 === 0) {
-    return /\bexcuse me\b/i.test(source) ? '[coughs softly] ' + source : '[clears throat] ' + source
+    return perform(source, /\bexcuse me\b/i.test(source) ? '[coughs softly]' : '[clears throat]')
   }
-  if (/\b(?:dry throat|need to cough|i(?:'|’)ve been coughing|ahem)\b/i.test(source)) return '[coughs softly] ' + source
-  if (/\b(?:quietly|in a whisper|keep your voice down|let me say this softly)\b/i.test(source)) return '[whispers] ' + source
+  if (/\b(?:dry throat|need to cough|i(?:'|’)ve been coughing|ahem)\b/i.test(source)) return perform(source, '[coughs softly]')
+  if (/\b(?:quietly|in a whisper|keep your voice down|let me say this softly)\b/i.test(source)) return perform(source, '[whispers]')
 
-  // Let text punctuation preserve pauses when no overt reaction fits.
-  return source
+  // Even neutral speech gets the voice's intended conversational character.
+  return perform(source)
 }
 
 /** Natural voice for replies and previews. Provider credentials remain server-side. */
@@ -926,7 +933,7 @@ function elevenLabsVoiceSettings(model, liveTalk) {
   return settings
 }
 
-async function requestElevenLabsSpeech(text, voiceId, liveTalk = false) {
+async function requestElevenLabsSpeech(text, voiceId, liveTalk = false, voice = '') {
   const model = elevenLabsTtsModel(liveTalk)
   return requestTtsWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: 'POST',
@@ -936,7 +943,7 @@ async function requestElevenLabsSpeech(text, voiceId, liveTalk = false) {
       'xi-api-key': ELEVENLABS_KEY(),
     },
     body: JSON.stringify({
-      text: expressiveElevenLabsText(text, model, liveTalk),
+      text: expressiveElevenLabsText(text, model, liveTalk, voice),
       model_id: model,
       voice_settings: elevenLabsVoiceSettings(model, liveTalk),
     }),
@@ -945,7 +952,7 @@ async function requestElevenLabsSpeech(text, voiceId, liveTalk = false) {
 
 
 /** Opens ElevenLabs' streaming endpoint; the caller owns the response body and abort controller. */
-async function requestElevenLabsSpeechStream(text, voiceId, liveTalk = false) {
+async function requestElevenLabsSpeechStream(text, voiceId, liveTalk = false, voice = '') {
   const model = elevenLabsTtsModel(liveTalk)
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32`
   const controller = new AbortController()
@@ -1004,8 +1011,8 @@ async function readTtsStreamChunk(reader, controller, idleTimeoutMs = ttsStreamI
 }
 
 /** Send the first generated audio chunk before waiting for the complete speech file. */
-async function streamElevenLabsToClient(text, voiceId, res, liveTalk = false) {
-  const { response, controller } = await requestElevenLabsSpeechStream(text, voiceId, liveTalk)
+async function streamElevenLabsToClient(text, voiceId, res, liveTalk = false, voice = '') {
+  const { response, controller } = await requestElevenLabsSpeechStream(text, voiceId, liveTalk, voice)
   if (!response.ok) return { ok: false, response, code: await safeTtsErrorCode(response), controller }
   if (!response.body) {
     controller.abort()
@@ -1221,7 +1228,7 @@ async function speakFromBody(body, res, excludedProviders = new Set()) {
           continue
         }
         try {
-          const result = await requestElevenLabsSpeech(text, voiceId, body.liveTalk === true)
+          const result = await requestElevenLabsSpeech(text, voiceId, body.liveTalk === true, body.voice)
           const response = result.response
           if (response.ok) return audioResponse(res, result.data, 'elevenlabs')
           logTtsProviderFailure('elevenlabs', { status: response.status, code: result.code })
@@ -1338,7 +1345,7 @@ export async function speakStream(req, res) {
   }
 
   try {
-    const streamed = await streamElevenLabsToClient(text, voiceId, res, body.liveTalk === true)
+    const streamed = await streamElevenLabsToClient(text, voiceId, res, body.liveTalk === true, body.voice)
     if (streamed.ok) return
     logTtsProviderFailure('elevenlabs_stream', { status: streamed.response?.status, code: streamed.code })
     await discardResponse(streamed.response)
