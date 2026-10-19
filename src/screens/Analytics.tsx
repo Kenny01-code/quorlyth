@@ -1,4 +1,5 @@
-import { type ReactNode, type WheelEvent, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, type PointerEvent, type WheelEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import '../styles/analytics.css'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
@@ -15,17 +16,106 @@ export function Analytics() {
   return <Gate><Inner /></Gate>
 }
 
-/** Keyboard-, trackpad-, and mouse-wheel-friendly viewport for long chart canvases. */
+/** Swipe-, drag-, and wheel-friendly viewport for chart canvases wider than their cards. */
 function ChartViewport({ children, label }: { children: ReactNode; label: string }) {
+  const drag = useRef<{ pointerId: number; x: number; left: number; moved: boolean } | null>(null)
   const onWheel = (event: WheelEvent<HTMLDivElement>) => {
     const viewport = event.currentTarget
     const hasHorizontalOverflow = viewport.scrollWidth > viewport.clientWidth + 1
-    // Keep ordinary wheel input scrolling the page vertically. Shift+wheel opts into chart scrolling.
+    // Keep normal wheel input scrolling the page. Shift+wheel is a predictable chart-scroll shortcut.
     if (!event.shiftKey || !hasHorizontalOverflow) return
     viewport.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
     event.preventDefault()
   }
-  return <div className="chs" role="region" aria-label={label} tabIndex={0} onWheel={onWheel}>{children}</div>
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    // Touch and pen retain their native momentum scrolling; mouse users can grab the chart.
+    if (event.pointerType !== 'mouse' || event.button !== 0) return
+    drag.current = { pointerId: event.pointerId, x: event.clientX, left: event.currentTarget.scrollLeft, moved: false }
+    event.currentTarget.classList.add('is-grabbed')
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch {}
+  }
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const current = drag.current
+    if (!current || current.pointerId !== event.pointerId) return
+    const dx = event.clientX - current.x
+    if (Math.abs(dx) > 3) current.moved = true
+    if (current.moved) {
+      event.currentTarget.scrollLeft = current.left - dx
+      event.preventDefault()
+    }
+  }
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId === event.pointerId) {
+      drag.current = null
+      event.currentTarget.classList.remove('is-grabbed')
+      try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
+    }
+  }
+  return (
+    <div
+      className="chs chs--slide-view"
+      role="region"
+      aria-label={label}
+      tabIndex={0}
+      onWheel={onWheel}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+    >{children}</div>
+  )
+}
+
+/** Reusable roomy view controls for the two charts with long horizontal data. */
+function AnalyticsChartCard({
+  title, subtitle, children, settings,
+}: {
+  title: string
+  subtitle: string
+  children: ReactNode
+  settings?: ReactNode
+}) {
+  const [minimized, setMinimized] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const heading = (dialog = false) => (
+    <div className="head analytics-chart-card__head" style={{ marginBottom: 10 }}>
+      <div className="analytics-chart-card__title">
+        <h3>{title}</h3>
+        <p className="dim">{subtitle}</p>
+      </div>
+      <div className="analytics-chart-card__actions">
+        {settings}
+        <button
+          type="button"
+          className="chip analytics-chart-card__icon-button"
+          aria-label={minimized ? `Restore ${title} chart` : `Minimize ${title} chart`}
+          title={minimized ? 'Restore chart' : 'Minimize chart'}
+          onClick={() => { setExpanded(false); setMinimized(value => !value) }}
+        ><Icon name={minimized ? 'expand' : 'minimize'} size={15} /></button>
+        {dialog ? (
+          <button type="button" className="chip analytics-chart-card__icon-button" aria-label={`Close expanded ${title} chart`} title="Return to Analytics" onClick={() => setExpanded(false)}><Icon name="x" size={15} /></button>
+        ) : (
+          <button type="button" className="chip analytics-chart-card__icon-button" aria-label={`Expand ${title} chart`} title="Expand chart" onClick={() => { setMinimized(false); setExpanded(true) }}><Icon name="expand" size={15} /></button>
+        )}
+      </div>
+    </div>
+  )
+  const content = <div className="analytics-chart-card__content">{children}</div>
+  return (
+    <div className={`glass pad analytics-chart-card${minimized ? ' is-minimized' : ''}`}>
+      {heading()}
+      {!minimized && content}
+      {expanded && !minimized && createPortal(
+        <div className="analytics-chart-overlay" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setExpanded(false) }}>
+          <section className="glass pad analytics-chart-dialog" role="dialog" aria-modal="true" aria-label={`${title} expanded chart`}>
+            {heading(true)}
+            {content}
+          </section>
+        </div>,
+        document.body,
+      )}
+    </div>
+  )
 }
 
 function Inner() {
@@ -197,12 +287,18 @@ function Inner() {
     if (g === 'fun') return <Funnel rows={funnel} o={cs.fun} />
     return <TopList ids={topIds} src={src} nm={a.nm} />
   }
-  const card = (g: ChartKey, sub: string) => (
-    <div className="glass pad">
-      <div className="head" style={{ marginBottom: 6 }}><div className={g === 'area' ? 'chart-heading-animated' : undefined}><h3>{TITLES[g]}</h3><p className="dim">{sub}</p></div><button className="chip" onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button></div>
-      {body(g)}
-    </div>
-  )
+  const card = (g: ChartKey, sub: string) => {
+    const settingsButton = <button type="button" className="chip" aria-label={`Chart settings for ${TITLES[g]}`} onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button>
+    if (g === 'area' || g === 'bar') {
+      return <AnalyticsChartCard key={g} title={TITLES[g]} subtitle={sub} settings={settingsButton}>{body(g)}</AnalyticsChartCard>
+    }
+    return (
+      <div className="glass pad" key={g}>
+        <div className="head" style={{ marginBottom: 6 }}><div className={g === 'area' ? 'chart-heading-animated' : undefined}><h3>{TITLES[g]}</h3><p className="dim">{sub}</p></div>{settingsButton}</div>
+        {body(g)}
+      </div>
+    )
+  }
 
   function csv() {
     const q = (s: any) => '"' + String(s ?? '').replace(/"/g, '""') + '"'
@@ -406,15 +502,21 @@ function MemberAnalyticsView() {
     })}</div>
   }
 
-  const card = (g: ChartKey, sub: string) => (
-    <div className="glass pad">
-      <div className="head" style={{ marginBottom: 6 }}>
-        <div className={g === 'area' ? 'chart-heading-animated' : undefined}><h3>{titles[g]}</h3><p className="dim">{sub}</p></div>
-        <button className="chip" aria-label={"Chart settings for " + titles[g]} onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button>
+  const card = (g: ChartKey, sub: string) => {
+    const settingsButton = <button type="button" className="chip" aria-label={`Chart settings for ${titles[g]}`} onClick={() => setOpen(g)}><Icon name="settings" size={14} />Chart settings</button>
+    if (g === 'area' || g === 'bar') {
+      return <AnalyticsChartCard key={g} title={titles[g]} subtitle={sub} settings={settingsButton}>{body(g)}</AnalyticsChartCard>
+    }
+    return (
+      <div className="glass pad" key={g}>
+        <div className="head" style={{ marginBottom: 6 }}>
+          <div className={g === 'area' ? 'chart-heading-animated' : undefined}><h3>{titles[g]}</h3><p className="dim">{sub}</p></div>
+          {settingsButton}
+        </div>
+        {body(g)}
       </div>
-      {body(g)}
-    </div>
-  )
+    )
+  }
 
   function csv() {
     const q = (value: any) => '"' + String(value ?? '').replace(/"/g, '""') + '"'
