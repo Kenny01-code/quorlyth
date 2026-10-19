@@ -831,9 +831,10 @@ async function requestElevenLabsSpeechStream(text, voiceId) {
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32`
   const controller = new AbortController()
   const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
+  // Put a short upper bound on a stalled speech provider so fallback stays conversational.
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
-    ? Math.min(configuredTimeout, 30000)
-    : 8000
+    ? Math.min(configuredTimeout, 1800)
+    : 1800
   const timer = setTimeout(() => controller.abort(new Error('TTS provider timed out before streaming audio')), timeoutMs)
   try {
     const response = await fetch(url, {
@@ -869,7 +870,7 @@ function ttsStreamIdleTimeoutMs() {
   return Number.isFinite(configured) && configured >= 1000 ? Math.min(configured, 30000) : 10000
 }
 
-async function readTtsStreamChunk(reader, controller) {
+async function readTtsStreamChunk(reader, controller, idleTimeoutMs = ttsStreamIdleTimeoutMs()) {
   let timer
   try {
     return await Promise.race([
@@ -907,7 +908,7 @@ async function streamElevenLabsToClient(text, voiceId, res) {
   try {
     let firstChunk
     while (!firstChunk) {
-      const next = await readTtsStreamChunk(reader, controller)
+      const next = await readTtsStreamChunk(reader, controller, 1800)
       if (next.done) return { ok: false, response, code: 'empty_audio_stream', controller }
       if (next.value?.byteLength) firstChunk = next.value
     }
@@ -1024,9 +1025,10 @@ async function safeTtsErrorCode(response) {
 
 async function requestTtsWithTimeout(url, options, responseType = 'audio') {
   const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
+  // Put a short upper bound on a stalled speech provider so fallback stays conversational.
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
-    ? Math.min(configuredTimeout, 30000)
-    : 8000
+    ? Math.min(configuredTimeout, 1800)
+    : 1800
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(new Error('TTS provider timed out')), timeoutMs)
   try {
@@ -1128,7 +1130,7 @@ async function speakFromBody(body, res, excludedProviders = new Set()) {
     }
 
     if (!XAI_KEY() && !GEMINI_KEY() && !ELEVENLABS_KEY() && !KEY()) {
-      return send(res, 503, { error: 'Natural voice is not configured. Add XAI_API_KEY or GEMINI_API_KEY to enable automatic voice failover.' })
+      return send(res, 503, { error: 'No AI speech provider is configured. Add ELEVENLABS_API_KEY (primary), XAI_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY to the server environment.' })
     }
     return send(res, 503, {
       error: 'QuorlythBot could not prepare voice audio. Each configured speech provider was tried; check the provider quota or retry shortly.',
@@ -1191,7 +1193,7 @@ export async function speakElevenLabs(req, res) {
   }
 }
 
-/** Streaming ElevenLabs endpoint; never falls back to another provider. */
+/** Streams ElevenLabs first, then tries configured AI speech providers before device speech. */
 export async function speakStream(req, res) {
   let body
   try {
@@ -1208,24 +1210,32 @@ export async function speakStream(req, res) {
     return send(res, 400, { error: 'Choose a voice in QuorlythBot Voice Studio before playing audio.' })
   }
 
-  // This endpoint never substitutes a different provider or the browser's device voice.
+  // ElevenLabs stays the primary human-sounding voice. If it's missing, rejects the
+  // request, or doesn't start streaming, use the configured server-side fallback chain.
   if (!ELEVENLABS_KEY()) {
-    return send(res, 503, { error: 'ElevenLabs voice is unavailable right now. Check the ElevenLabs API key and account quota. No alternate voice will be used.' })
+    logTtsProviderFailure('elevenlabs_stream', { reason: 'missing_api_key' })
+    return speakFromBody(body, res, new Set(['elevenlabs']))
   }
   const voiceId = elevenLabsVoiceId(body.voice, accent)
   if (!voiceId) {
-    return send(res, 503, { error: 'The selected ElevenLabs accent needs a matching voice ID in your ElevenLabs account. No alternate voice will be used.' })
+    logTtsProviderFailure('elevenlabs_stream', { reason: 'no_matching_voice_id', accent })
+    return speakFromBody(body, res, new Set(['elevenlabs']))
   }
+
   try {
     const streamed = await streamElevenLabsToClient(text, voiceId, res)
     if (streamed.ok) return
     logTtsProviderFailure('elevenlabs_stream', { status: streamed.response?.status, code: streamed.code })
     await discardResponse(streamed.response)
-    return send(res, 503, { error: 'ElevenLabs voice is unavailable right now. Check the ElevenLabs API key and account quota. No alternate voice will be used.' })
+    return speakFromBody(body, res, new Set(['elevenlabs']))
   } catch (error) {
     logTtsProviderFailure('elevenlabs_stream', {
       error: error?.code === 'AI_TTS_STREAM_IDLE_TIMEOUT' ? 'stream_timeout_before_audio' : (error instanceof Error ? error.name : 'UnknownError'),
     })
-    return send(res, 503, { error: 'ElevenLabs voice is unavailable right now. Check the ElevenLabs API key and account quota. No alternate voice will be used.' })
+    if (res.headersSent || res.writableEnded) {
+      try { if (!res.writableEnded) res.end() } catch {}
+      return
+    }
+    return speakFromBody(body, res, new Set(['elevenlabs']))
   }
 }
