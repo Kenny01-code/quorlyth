@@ -905,16 +905,24 @@ function audioResponse(res, audio, provider, contentType = 'audio/mpeg') {
 
 function elevenLabsVoiceSettings(model, liveTalk) {
   const settings = {
-    // Lower stability gives the expressive model more room for natural variation in Live Talk.
+    // Slightly lower stability on live replies adds variation without making the voice chaotic.
     stability: liveTalk ? 0.38 : 0.48,
-    similarity_boost: 0.82,
-    use_speaker_boost: true,
   }
-  // Eleven v4 accepts Stability and Similarity; its API does not support Style or Speed settings.
-  if (!['eleven_v4', 'eleven_v4_turbo'].includes(model)) {
+  if (model === 'eleven_v4' || model === 'eleven_v4_turbo') {
+    // V4 exposes only Stability and Similarity; omit Style, Speed and Speaker Boost.
+    settings.similarity_boost = 0.82
+    return settings
+  }
+  if (model === 'eleven_v3') {
+    // V3 does not support Similarity, Speed or Speaker Boost.
     settings.style = 0
-    settings.speed = 1
+    return settings
   }
+  // Legacy models keep their compatible extended settings.
+  settings.similarity_boost = 0.82
+  settings.use_speaker_boost = true
+  settings.style = 0
+  settings.speed = 1
   return settings
 }
 
