@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react'
+import type { Comment } from '../lib/types'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
@@ -212,6 +213,14 @@ function Workspace() {
   const nav = useNavigate()
   const comments = useComments(id || null)
   const [reply, setReply] = useState('')
+  const [replyTo, setReplyTo] = useState<string | null>(null)
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
+  const [mentionOpen, setMentionOpen] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionStart, setMentionStart] = useState(0)
+  const [communityMemberIds, setCommunityMemberIds] = useState<string[]>([])
+  const [mentionLoading, setMentionLoading] = useState(false)
+  const [discussionMode, setDiscussionMode] = useState<'inline' | 'expanded' | 'minimized'>('inline')
   const [workspaceSummary, setWorkspaceSummary] = useState('Collaboration workspace ready. Add a project plan and milestones to coordinate the work.')
   const [projectDueDate, setProjectDueDate] = useState('')
   const [busy, setBusy] = useState(false)
@@ -230,7 +239,42 @@ function Workspace() {
   const milestones = a.data.milestones.filter(m => m.projectId === id).sort((x, y) => x.at - y.at)
   const completed = milestones.filter(m => m.status === 'done').length
   const progress = milestones.length ? Math.round(completed / milestones.length * 100) : 0
-  const workspaceTeamIds = [idea?.authorId, community?.ownerId, community?.createdBy, ...acceptedApplications.map(application => application.applicantId)].filter((uid): uid is string => !!uid)
+  const workspaceTeamIds = [...new Set([idea?.authorId, community?.ownerId, community?.createdBy, ...acceptedApplications.map(application => application.applicantId)].filter((uid): uid is string => !!uid))]
+  const communityIdeaIds = new Set(a.data.ideas.filter(item => item.cid === idea?.cid).map(item => item.id))
+  const discussionParticipantIds = [...new Set([
+    ...communityMemberIds,
+    idea?.authorId,
+    community?.ownerId,
+    community?.createdBy,
+    ...Object.entries(a.data.members).filter(([, memberships]) => !!memberships?.[idea?.cid || '']).map(([userId]) => userId),
+    ...a.data.ideas.filter(item => item.cid === idea?.cid).map(item => item.authorId),
+    ...comments.map(comment => comment.authorId),
+    ...a.data.volunteers.filter(application => communityIdeaIds.has(application.ideaId) && application.status === 'accepted').map(application => application.applicantId),
+    ...Object.entries(a.data.votes).filter(([, votes]) => [...communityIdeaIds].some(communityIdeaId => !!votes?.[communityIdeaId])).map(([userId]) => userId),
+  ].filter((uid): uid is string => !!uid))]
+  const matchingDiscussionMembers = discussionParticipantIds
+    .filter(userId => userId !== a.me?.id)
+    .map(userId => ({ id: userId, name: a.nm(userId) }))
+    .filter(person => person.name && person.name.toLowerCase().includes(mentionQuery.trim().toLowerCase()))
+    .sort((first, second) => first.name.localeCompare(second.name))
+    .slice(0, 12)
+
+  useEffect(() => {
+    if (!mentionOpen || !idea || !a.backend) return
+    let active = true
+    setCommunityMemberIds([])
+    setMentionLoading(true)
+    a.backend.store.listCommunityMembers(idea.cid)
+      .then(ids => { if (active) setCommunityMemberIds(ids) })
+      .catch(error => {
+        if (active) {
+          setCommunityMemberIds([])
+          console.warn('Could not load community members for team discussion mentions:', error)
+        }
+      })
+      .finally(() => { if (active) setMentionLoading(false) })
+    return () => { active = false }
+  }, [mentionOpen, idea?.cid, a.backend])
 
   if (!idea) return <div className="glass cent ql-workspace-empty"><span className="ql-empty-mark"><QuorlythGlyph name="workspace" size={30} /></span><p className="ql-eyebrow">QUORLYTH WORKSPACE</p><h3>Collaboration not found</h3><p className="mut">This idea may have been removed, or you may not have access to it.</p><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} />Back to collaborations</button></div>
   if (!canAccess) {
@@ -314,13 +358,79 @@ function Workspace() {
     }
   }
 
+  const updateDiscussionReply = (value: string, cursorPosition: number) => {
+    setReply(value)
+    setMentionedUserIds(current => current.filter(userId => value.includes('@' + a.nm(userId).replace(/^@/, ''))))
+    const before = value.slice(0, cursorPosition)
+    const match = before.match(/(^|\s)@([^\s@]*)$/)
+    if (!match) {
+      setMentionOpen(false)
+      setMentionQuery('')
+      return
+    }
+    setMentionStart(before.length - match[2].length - 1)
+    setMentionQuery(match[2])
+    setMentionOpen(true)
+  }
+
+  const chooseDiscussionMention = (userId: string) => {
+    const name = a.nm(userId).replace(/^@/, '').trim()
+    const replacement = '@' + name + ' '
+    setReply(current => current.slice(0, mentionStart) + replacement + current.slice(mentionStart + mentionQuery.length + 1))
+    setMentionedUserIds(current => [...new Set([...current, userId])])
+    setMentionOpen(false)
+    setMentionQuery('')
+    window.setTimeout(() => document.getElementById('team-discussion-reply')?.focus(), 0)
+  }
+
+  const beginDiscussionReply = (commentId: string) => {
+    setReplyTo(commentId)
+    setMentionOpen(false)
+    window.setTimeout(() => document.getElementById('team-discussion-reply')?.focus(), 0)
+  }
+
   async function postReply(event: FormEvent) {
     event.preventDefault()
     if (!reply.trim()) return
     setBusy(true)
-    const ok = await a.addComment(id, reply.trim())
-    if (ok) setReply('')
+    const ok = await a.addComment(id, reply.trim(), replyTo || undefined, mentionedUserIds)
+    if (ok) {
+      setReply('')
+      setReplyTo(null)
+      setMentionedUserIds([])
+      setMentionOpen(false)
+      setMentionQuery('')
+    }
     setBusy(false)
+  }
+
+  const topLevelDiscussion = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
+  const renderDiscussionComment = (comment: Comment, depth = 0): import('react').ReactNode => {
+    const responses = comments.filter(item => item.parentId === comment.id)
+    return <div key={comment.id} style={{
+      marginLeft: depth ? Math.min(depth, 4) * 13 : 0,
+      marginTop: 11,
+      paddingLeft: depth ? 11 : 0,
+      borderLeft: depth ? '1px solid var(--line, rgba(255,255,255,.13))' : undefined,
+      minWidth: 0,
+    }}>
+      <div className="msg" style={{ alignItems: 'flex-start', gap: 9 }}>
+        <Av id={comment.authorId} size={29} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap' }}>
+            <button type="button" className="lk" onClick={() => nav('/me/' + comment.authorId)}><strong>{a.nm(comment.authorId)}</strong></button>
+            <span className="dim" style={{ fontSize: 11 }}>{when(comment.at)}</span>
+            {comment.parentId ? <span className="dim" style={{ fontSize: 11 }}>Reply</span> : null}
+          </p>
+          <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 4 }}>{comment.text}</p>
+          {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 11, marginTop: 5 }}>Mentioned: {comment.mentionedUserIds.map(userId => a.nm(userId)).join(', ')}</p> : null}
+          <div className="acts" style={{ marginTop: 6, gap: 6 }}>
+            <button className="chip" type="button" onClick={() => beginDiscussionReply(comment.id)}><QuorlythGlyph name="message" size={12} />Reply</button>
+          </div>
+        </div>
+      </div>
+      {responses.map(response => renderDiscussionComment(response, depth + 1))}
+    </div>
   }
 
   return <>
@@ -396,22 +506,116 @@ function Workspace() {
           </div>
           <p className="dim" style={{ marginTop: 14, fontSize: 12 }}>The idea creator, community manager, and accepted collaborators can access this space.</p>
         </section>
-        <section className="glass pad">
-          <h3 style={{ fontSize: 19 }}>Team discussion</h3>
-          <p className="mut" style={{ marginTop: 5 }}>This thread is shared with the original idea discussion, so decisions and context stay connected.</p>
-          <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
-            {comments.length ? comments.map(comment => <div key={comment.id} className="msg" style={{ alignItems: 'flex-start' }}>
-              <Av id={comment.authorId} size={30} />
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <p><strong>{a.nm(comment.authorId)}</strong> <span className="dim">{when(comment.at)}</span></p>
-                <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 4 }}>{comment.text}</p>
-              </div>
-            </div>) : <p className="mut">No discussion yet. Share the first update.</p>}
+        <section
+          className="glass pad ql-team-discussion"
+          aria-label="Team discussion"
+          style={discussionMode === 'inline' ? undefined : {
+            position: 'fixed',
+            right: discussionMode === 'expanded' ? 'max(16px, calc((100vw - 760px) / 2))' : '16px',
+            bottom: '16px',
+            width: discussionMode === 'expanded' ? 'min(760px, calc(100vw - 32px))' : 'min(350px, calc(100vw - 24px))',
+            height: discussionMode === 'expanded' ? 'min(760px, 78vh)' : undefined,
+            maxHeight: discussionMode === 'expanded' ? '78vh' : 'calc(100vh - 32px)',
+            zIndex: 120,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0,
+            overflow: 'hidden',
+            padding: 16,
+            background: 'var(--glass, rgba(12,12,14,.96))',
+            backdropFilter: 'blur(24px)',
+            border: '1px solid var(--line, rgba(255,255,255,.16))',
+            boxShadow: '0 24px 90px rgba(0,0,0,.58)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h3 style={{ fontSize: 19 }}>Team discussion <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}>· {comments.length}</span></h3>
+              {discussionMode !== 'minimized' && <p className="mut" style={{ marginTop: 5, fontSize: 12 }}>Shared with the original idea discussion, so decisions and context stay connected.</p>}
+            </div>
+            <div className="acts" style={{ margin: 0, gap: 5, flexShrink: 0 }}>
+              {discussionMode === 'inline'
+                ? <button type="button" className="chip" title="Expand discussion" aria-label="Expand team discussion" onClick={() => setDiscussionMode('expanded')}><QuorlythGlyph name="expand" size={14} /></button>
+                : <button type="button" className="chip" title="Return discussion to page" aria-label="Return team discussion to page" onClick={() => setDiscussionMode('inline')}><QuorlythGlyph name="shrink" size={14} /></button>}
+              {discussionMode !== 'minimized'
+                ? <button type="button" className="chip" title="Minimize discussion" aria-label="Minimize team discussion" onClick={() => setDiscussionMode('minimized')}><QuorlythGlyph name="minimize" size={14} /></button>
+                : <button type="button" className="chip" title="Expand minimized discussion" aria-label="Restore team discussion" onClick={() => setDiscussionMode('expanded')}><QuorlythGlyph name="expand" size={14} /></button>}
+            </div>
           </div>
-          <form onSubmit={postReply} style={{ marginTop: 14 }}>
-            <label className="field"><span>Message the team</span><textarea value={reply} onChange={e => setReply(e.target.value)} maxLength={1000} required placeholder="Share an update, question, or decision…" /></label>
-            <button className="btn p" disabled={busy || !reply.trim()}><QuorlythGlyph name="send" size={14} />{busy ? 'Posting…' : 'Post update'}</button>
-          </form>
+
+          {discussionMode !== 'minimized' && <>
+            <div
+              style={{
+                display: 'grid',
+                gap: 4,
+                marginTop: 10,
+                marginBottom: 10,
+                flex: discussionMode === 'expanded' ? 1 : undefined,
+                minHeight: 0,
+                overflowY: 'auto',
+                maxHeight: discussionMode === 'expanded' ? undefined : 320,
+                paddingRight: 4,
+                overscrollBehavior: 'contain',
+              }}
+            >
+              {comments.length
+                ? topLevelDiscussion.map(comment => renderDiscussionComment(comment))
+                : <p className="mut" style={{ padding: '12px 0' }}>No discussion yet. Share the first update.</p>}
+            </div>
+
+            <form onSubmit={postReply} style={{ marginTop: 'auto', paddingTop: 8 }}>
+              {replyTo && <div className="chip" style={{ marginBottom: 8, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                Replying to {a.nm(comments.find(comment => comment.id === replyTo)?.authorId || '')}
+                <button type="button" className="lk" aria-label="Cancel reply" onClick={() => setReplyTo(null)}><QuorlythGlyph name="close" size={12} /></button>
+              </div>}
+              <label className="field"><span>Message the team</span><textarea
+                id="team-discussion-reply"
+                value={reply}
+                onChange={event => updateDiscussionReply(event.target.value, event.currentTarget.selectionStart ?? event.target.value.length)}
+                maxLength={1000}
+                rows={discussionMode === 'expanded' ? 3 : 2}
+                required
+                placeholder="Write a reply or update. Type @ to mention someone…"
+              /></label>
+              {mentionOpen && <div className="discussion-mention-menu" role="listbox" aria-label="Mention people in this collaboration" style={{
+                display: 'grid',
+                gap: 2,
+                maxHeight: 210,
+                overflowY: 'auto',
+                padding: 6,
+                marginTop: -4,
+                marginBottom: 10,
+                border: '1px solid var(--line, rgba(255,255,255,.12))',
+                borderRadius: 12,
+                background: 'var(--panel, rgba(18,18,20,.98))',
+                boxShadow: '0 12px 34px rgba(0,0,0,.24)',
+              }}>
+                {mentionLoading
+                  ? <p className="dim" style={{ padding: 8, fontSize: 12 }}>Loading people…</p>
+                  : matchingDiscussionMembers.length
+                    ? matchingDiscussionMembers.map(person => <button
+                      key={person.id}
+                      type="button"
+                      role="option"
+                      aria-selected="false"
+                      className="discussion-mention-option"
+                      onMouseDown={event => event.preventDefault()}
+                      onClick={() => chooseDiscussionMention(person.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left', padding: '8px 9px', border: 0, borderRadius: 8, background: 'transparent', color: 'inherit', cursor: 'pointer' }}
+                    >
+                      <Av id={person.id} size={28} />
+                      <span style={{ minWidth: 0, flex: 1 }}><strong style={{ display: 'block', fontSize: 13 }}>{person.name}</strong><span className="dim" style={{ fontSize: 11 }}>Community or collaboration participant</span></span>
+                      <span className="dim" style={{ fontSize: 12 }}>@</span>
+                    </button>)
+                    : <p className="dim" style={{ padding: 8, fontSize: 12 }}>No matching people. Try another name.</p>}
+              </div>}
+              <p className="dim" style={{ fontSize: 11, margin: '-2px 0 10px' }}>Replies stay connected to the idea. Mentioned people are recorded with the message.</p>
+              <div className="acts" style={{ margin: 0 }}>
+                <button className="btn p" disabled={busy || !reply.trim()}><QuorlythGlyph name="send" size={14} />{busy ? 'Posting…' : replyTo ? 'Post reply' : 'Post update'}</button>
+                {replyTo && <button type="button" className="chip" onClick={() => setReplyTo(null)}>Cancel reply</button>}
+              </div>
+            </form>
+          </>}
         </section>
       </div>
     </div>
