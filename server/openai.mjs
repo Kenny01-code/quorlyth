@@ -728,6 +728,36 @@ function speechStyleInstructions(value) {
     + ' Use gentle natural intonation, smooth phrasing, realistic sentence pauses, and a steady but lively pace. Preserve the exact meaning and words. Do not invent text, add verbal fillers, or exaggerate the accent.'
 }
 
+/** Allow expressive ElevenLabs models while keeping model selection configurable. */
+function elevenLabsTtsModel() {
+  const configured = String(process.env.ELEVENLABS_TTS_MODEL || '').trim()
+  const supported = ['eleven_v4', 'eleven_v3', 'eleven_multilingual_v2', 'eleven_flash_v2_5']
+  return supported.includes(configured) ? configured : 'eleven_v3'
+}
+
+/**
+ * Add one restrained vocal cue to expressive-model speech when the wording
+ * strongly signals the delivery. The written reply and browser fallback remain
+ * untouched. Never add random coughs or sniffs to neutral content.
+ */
+function expressiveElevenLabsText(text, model) {
+  if (!['eleven_v4', 'eleven_v3'].includes(model)) return text
+  if (/\[(?:laughs?|chuckles|sniffs?|sighs|clears throat|coughs?|thoughtful|curious|softly|sad|excited)\]/i.test(text)) return text
+  const source = text.trim()
+  if (!source) return source
+  if (/\b(?:haha+|lol|lmao|hilarious|that(?:'|’)s funny|good one|made me laugh)\b/i.test(source)) {
+    return '[chuckles] ' + source
+  }
+  if (/^(?:hmm+\b|well,?\s+let me think\b|let me think\b|that(?:'|’)s interesting\b|i(?:'|’)d say\b|i would say\b)/i.test(source)) {
+    return '[thoughtful] ' + source
+  }
+  if (/\b(?:i(?:'|’)m sorry|i am sorry|that sounds (?:hard|rough|painful|difficult)|i can imagine how|you have been through a lot|you must be feeling)\b/i.test(source)) {
+    return '[sighs] ' + source
+  }
+  if (source.length <= 320 && /\?\s*$/.test(source)) return '[curious] ' + source
+  return source
+}
+
 /** Natural voice for replies and previews. Provider credentials remain server-side. */
 const ELEVENLABS_DEFAULT_VOICES = {
   // Current ElevenLabs premade voice IDs, grouped by trained accent.
@@ -798,9 +828,7 @@ function audioResponse(res, audio, provider, contentType = 'audio/mpeg') {
 }
 
 async function requestElevenLabsSpeech(text, voiceId) {
-  const model = ['eleven_multilingual_v2', 'eleven_flash_v2_5'].includes(process.env.ELEVENLABS_TTS_MODEL)
-    ? process.env.ELEVENLABS_TTS_MODEL
-    : 'eleven_flash_v2_5'
+  const model = elevenLabsTtsModel()
   return requestTtsWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: 'POST',
     headers: {
@@ -809,7 +837,7 @@ async function requestElevenLabsSpeech(text, voiceId) {
       'xi-api-key': ELEVENLABS_KEY(),
     },
     body: JSON.stringify({
-      text,
+      text: expressiveElevenLabsText(text, model),
       model_id: model,
       voice_settings: {
         stability: 0.45,
@@ -825,9 +853,7 @@ async function requestElevenLabsSpeech(text, voiceId) {
 
 /** Opens ElevenLabs' streaming endpoint; the caller owns the response body and abort controller. */
 async function requestElevenLabsSpeechStream(text, voiceId) {
-  const model = ['eleven_multilingual_v2', 'eleven_flash_v2_5'].includes(process.env.ELEVENLABS_TTS_MODEL)
-    ? process.env.ELEVENLABS_TTS_MODEL
-    : 'eleven_flash_v2_5'
+  const model = elevenLabsTtsModel()
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32`
   const controller = new AbortController()
   const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
@@ -847,7 +873,7 @@ async function requestElevenLabsSpeechStream(text, voiceId) {
         'xi-api-key': ELEVENLABS_KEY(),
       },
       body: JSON.stringify({
-        text,
+        text: expressiveElevenLabsText(text, model),
         model_id: model,
         voice_settings: {
           stability: 0.45,
