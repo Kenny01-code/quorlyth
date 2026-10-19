@@ -355,8 +355,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!me) return false
       const idea = data.ideas.find(item => item.id === ideaId)
       if (!idea) return false
-      if (canManageCommunity(idea.cid)) return true
-      const eligibleWorkspaceParticipant = idea.authorId === me.id || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted')
+      // Only the actual community owner gets automatic AI organizer access.
+      // Platform owners/admins must request approval just like other non-owners.
+      if (ownsCommunity(idea.cid)) return true
+      const eligibleWorkspaceParticipant = idea.authorId === me.id
+        || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted')
+        || platformAdmin || platformOwner
       return eligibleWorkspaceParticipant && data.aiOrganizerRequests.some(request => request.cid === idea.cid && request.userId === me.id && request.status === 'approved')
     }
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
@@ -656,8 +660,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!current) throw new Error('Project not found. Refresh the page and try again.')
         const projectIdea = data.ideas.find(item => item.id === current.ideaId)
         const manager = !!projectIdea && canManageCommunity(projectIdea.cid)
-        const aiBriefOnly = !!projectIdea && canOrganizeIdeaWithAI(projectIdea.id) && Object.keys(patch).every(key => key === 'summary')
-        if (!projectIdea || (!manager && !aiBriefOnly)) throw new Error('Only the community owner/platform admin or an approved AI organizer can edit this project brief.')
+        const aiOrganizerIntent = patch.aiOrganizerGenerated === true
+        const aiBriefOnly = !!projectIdea && canOrganizeIdeaWithAI(projectIdea.id) && Object.keys(patch).every(key => key === 'summary' || key === 'aiOrganizerGenerated')
+        if (!projectIdea || (aiOrganizerIntent
+          ? (!canOrganizeIdeaWithAI(projectIdea.id) || Object.keys(patch).some(key => !['summary', 'aiOrganizerGenerated'].includes(key)))
+          : (!manager && !aiBriefOnly))) {
+          throw new Error('The community owner or an approved AI organizer must approve this AI plan before it can update the project brief.')
+        }
         const safePatch = { ...patch, ...(patch.summary !== undefined ? { summary: patch.summary.trim() } : {}), updatedAt: Date.now() }
         if ('summary' in safePatch && !safePatch.summary) throw new Error('A project summary cannot be empty.')
         await up('projects/' + projectId, safePatch)
@@ -673,7 +682,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!projectIdea) throw new Error('The project idea could not be found.')
         const manager = canManageCommunity(projectIdea.cid)
         const approvedAIOrganizer = canOrganizeIdeaWithAI(projectIdea.id)
-        if (!manager && (!approvedAIOrganizer || !!details.assigneeId || details.dueAt != null || !!details.blocked || !!details.blockedNote)) {
+        const aiOrganized = details.aiOrganized === true
+        if (aiOrganized && (!approvedAIOrganizer || !!details.assigneeId || details.dueAt != null || !!details.blocked || !!details.blockedNote)) {
+          throw new Error('The community owner or an approved AI organizer must approve this AI plan before its milestones can be saved. AI-planned milestones must remain unassigned.')
+        }
+        if (!aiOrganized && !manager && (!approvedAIOrganizer || !!details.assigneeId || details.dueAt != null || !!details.blocked || !!details.blockedNote)) {
           throw new Error('Only the community owner/platform admin or an approved AI organizer can create AI-planned milestones. Organizers can add unassigned milestones only.')
         }
         if (details.priority && !['low', 'normal', 'high', 'critical'].includes(details.priority)) throw new Error('Choose a valid milestone priority.')
@@ -693,6 +706,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           acceptanceCriteria: (details.acceptanceCriteria || '').trim().slice(0, 800),
           blocked: !!details.blocked,
           blockedNote: (details.blockedNote || '').trim().slice(0, 500),
+          ...(aiOrganized ? { aiOrganized: true } : {}),
         }
         const milestone: Milestone = { id, projectId, title: cleanTitle, description: description.trim().slice(0, 2000), status: 'todo', createdBy: me!.id, at, updatedAt: at, ...extra }
         await st!.set('milestones/' + id, { projectId, title: cleanTitle, description: description.trim().slice(0, 2000), status: 'todo', createdBy: me!.id, at, updatedAt: at, ...extra })
@@ -830,9 +844,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const idea = data.ideas.find(item => item.id === ideaId)
         const community = idea && data.communities.find(item => item.id === idea.cid)
         if (!idea || !community || community.arch) throw new Error('This collaboration is no longer available for AI organizer approval.')
-        const isEligible = idea.authorId === me.id || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted')
+        const isEligible = idea.authorId === me.id
+          || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted')
+          || platformAdmin || platformOwner
         if (!isEligible) throw new Error('Only the idea creator or an accepted collaborator can request AI organizer approval.')
-        if (canManageCommunity(community.id)) throw new Error('Community owners and platform administrators already have AI organizer access.')
+        if (ownsCommunity(community.id)) throw new Error('The community owner already has AI organizer access.')
         if (canOrganizeIdeaWithAI(ideaId)) throw new Error('Your AI organizer access is already approved.')
         const path = 'communityAiOrganizerRequests/' + community.id + '__' + me.id
         const previous = await st!.get(path)
@@ -844,6 +860,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }, 'AI organizer approval requested. The community owner or a platform admin must approve it.'),
       reviewCommunityAIOrganizerRequest: (cid, userId, status) => w(async () => {
         if (!me || !canManageCommunity(cid)) throw new Error('Only this community’s owner or a platform administrator can review AI organizer requests.')
+        if (me.id === userId) throw new Error('You cannot approve or decline your own AI organizer request.')
         if (!['approved', 'declined'].includes(status)) throw new Error('Choose approve or decline.')
         const path = 'communityAiOrganizerRequests/' + cid + '__' + userId
         const current = await st!.get(path)

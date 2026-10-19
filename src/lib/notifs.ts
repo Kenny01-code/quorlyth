@@ -59,7 +59,7 @@ export function useNotifs(a: App, st: UserState): Notif[] {
     d.aiOrganizerRequests.forEach(r => {
       const community = d.communities.find(c => c.id === r.cid)
       const communityName = community?.name || 'your community'
-      if (r.status === 'pending' && a.canManageCommunity(r.cid)) {
+      if (r.status === 'pending' && a.canManageCommunity(r.cid) && r.userId !== m) {
         out.push({
           at: r.at,
           icon: 'invite',

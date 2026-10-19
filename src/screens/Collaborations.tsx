@@ -232,6 +232,7 @@ function Workspace() {
   useEffect(() => setProjectDueDate(dateInput(project?.dueAt)), [project?.dueAt])
   const community = idea ? a.data.communities.find(c => c.id === idea.cid) : undefined
   const canManage = !!idea && a.canManageCommunity(idea.cid)
+  const isCommunityOwner = !!idea && a.ownsCommunity(idea.cid)
   const canOrganizeWithAI = !!idea && a.canOrganizeIdeaWithAI(id)
   const organizerRequest = community && a.me ? a.data.aiOrganizerRequests.find(request => request.cid === community.id && request.userId === a.me!.id) : undefined
   const acceptedApplications = a.data.volunteers.filter(v => v.ideaId === id && v.status === 'accepted')
@@ -388,7 +389,7 @@ function Workspace() {
     setApplyingPlan(true)
     try {
       if (aiPlan.project_summary && aiPlan.project_summary !== project.summary) {
-        const updated = await a.updateProject(id, { summary: aiPlan.project_summary })
+        const updated = await a.updateProject(id, { summary: aiPlan.project_summary, aiOrganizerGenerated: true })
         if (!updated) throw new Error('The project brief could not be updated. Your milestone plan is still available to review.')
       }
       const existingTitles = new Set(milestones.map(milestone => milestone.title.trim().toLowerCase()))
@@ -398,6 +399,7 @@ function Workspace() {
         const ok = await a.addMilestone(id, item.title, item.description, {
           priority: item.priority,
           acceptanceCriteria: item.definition_of_done,
+          aiOrganized: true,
         })
         if (!ok) throw new Error('Some milestones could not be saved. Review the workspace before retrying; existing milestone titles will be skipped.')
         existingTitles.add(item.title.trim().toLowerCase())
@@ -517,7 +519,7 @@ function Workspace() {
               <span className="chip"><QuorlythGlyph name="plan" size={14} />Quorlyth Signal Engine</span>
               <h3 style={{ fontSize: 19, marginTop: 12 }}>Turn discussion into a buildable plan</h3>
               <p className="mut" style={{ marginTop: 6 }}>AI filters duplicate or off-topic discussion, identifies actionable signals, and drafts milestones with clear definitions of done. Review everything before it changes your workspace.</p>
-              {!canManage && <p className="mut" style={{ marginTop: 8 }}>AI organizer access is community-specific. The community owner or a platform administrator must approve your request before a plan can be generated or applied.</p>}
+              {!isCommunityOwner && <p className="mut" style={{ marginTop: 8 }}>AI organizer access is community-specific. The community owner or a platform administrator must approve your request before a plan can be generated or applied.</p>}
             </div>
             <button className="btn p" disabled={aiBusy || applyingPlan || (!canOrganizeWithAI && organizerRequest?.status === 'pending')} onClick={organizeWithAI}>
               <QuorlythGlyph name="idea" size={15} />
