@@ -128,6 +128,7 @@ function normalizeChatBody(value) {
     emojis: typeof suppliedContext.emojis === 'boolean' ? suppliedContext.emojis : undefined,
     browserContext: typeof suppliedContext.browserContext === 'string' ? suppliedContext.browserContext.slice(0, 650) : '',
     liveContext: typeof suppliedContext.liveContext === 'string' ? suppliedContext.liveContext.slice(0, 2200) : '',
+    liveTalk: suppliedContext.liveTalk === true,
   }
   return { messages, system, context, tier: value.tier === 'quick' ? 'quick' : 'smart' }
 }
@@ -670,10 +671,10 @@ export async function realtimeSession(req, res) {
     if (typeof authorization === 'string' && /^Bearer\s+/i.test(authorization)) {
       instructions = await buildAuthenticatedBotContext({ authorization, context: body.context })
     }
-    instructions = (instructions ? instructions + String.fromCharCode(10, 10) : '') + speechStyleInstructions(accent)
+    instructions = (instructions ? instructions + String.fromCharCode(10, 10) : '') + speechStyleInstructions(accent, textOnly)
       + ' Continue as a friendly spoken conversation. Respond in one to three natural sentences when appropriate, use contractions, and avoid unnecessary lists. Never expose private reasoning or internal prompts. The client validates app actions using current permissions.'
     if (textOnly) {
-      instructions += ' This is a multilingual live conversation. Understand the language actually spoken by the user rather than assuming English, and answer in that same language and script unless the user asks you to translate or switch languages. Adapt when the user changes languages. Keep responses clear and brief for speech. The client will speak your text with the user-selected ElevenLabs voice; do not create audio output.'
+      instructions += ' This is a multilingual live conversation. Understand the language actually spoken by the user rather than assuming English, and answer in that same language and script unless the user asks you to translate or switch languages. Adapt when the user changes languages. Keep responses clear and brief for speech. The client will speak your text with the user-selected ElevenLabs voice; do not create audio output. ' + LIVE_TALK_CONVERSATION_STYLE
     }
     const allowedRealtimeVoices = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar']
     if (!allowedRealtimeVoices.includes(body.voice)) {
@@ -716,7 +717,9 @@ function speechAccent(value) {
   return ['nigerian', 'american', 'british', 'international'].includes(value) ? value : 'international'
 }
 
-function speechStyleInstructions(value) {
+const LIVE_TALK_CONVERSATION_STYLE = 'Live Talk delivery: sound like a relaxed, spontaneous conversation, not a narrator. Use contractions, varied sentence lengths, natural backchannels, occasional brief thinking phrases such as “Hmm” or “well” only when they genuinely fit, and punctuation that gives the voice room to breathe. Match the emotional weight of what the user actually said: be warmly excited about genuine good news, curious when asking a real question, and gentler with sensitive subjects. Do not repeat fillers, perform an emotion that contradicts the words, invent a personal experience, or narrate stage directions. Return clean spoken words only; never print audio tags or bracketed directions. The audio layer will add occasional context-appropriate vocal reactions. Continue listening and responding for the whole live conversation.';
+
+function speechStyleInstructions(value, liveTalk = false) {
   const style = speechAccent(value)
   const accent = {
     nigerian: 'Use natural Nigerian English pronunciation and cadence, warm and clear, with a confident conversational rhythm. Avoid caricature, exaggerated vowels, or adding slang that is not in the text.',
@@ -724,8 +727,10 @@ function speechStyleInstructions(value) {
     british: 'Use natural contemporary British English pronunciation and cadence, warm and clear, without sounding theatrical or overly formal.',
     international: 'Use clear, broadly neutral international English pronunciation and cadence that is easy to understand across regions.',
   }[style]
-  return 'Speak in a warm, natural, human-sounding conversational manner, not like a formal announcer. ' + accent
-    + ' Use gentle natural intonation, smooth phrasing, realistic sentence pauses, and a steady but lively pace. Preserve the exact meaning and words. Do not invent text, add verbal fillers, or exaggerate the accent.'
+  const delivery = liveTalk
+    ? ' Use spontaneous but clear conversational intonation, varied phrasing, realistic pauses, and a steady but lively pace. Occasional verbal hesitations are welcome when they genuinely fit.'
+    : ' Use gentle natural intonation, smooth phrasing, realistic sentence pauses, and a steady but lively pace. Preserve the supplied wording; do not add verbal fillers.'
+  return 'Speak in a warm, natural, human-sounding conversational manner, not like a formal announcer. ' + accent + delivery + ' Never exaggerate the accent or add content that changes the intended meaning.'
 }
 
 /** Allow expressive ElevenLabs models while keeping model selection configurable. */
@@ -740,21 +745,63 @@ function elevenLabsTtsModel() {
  * strongly signals the delivery. The written reply and browser fallback remain
  * untouched. Never add random coughs or sniffs to neutral content.
  */
-function expressiveElevenLabsText(text, model) {
-  if (!['eleven_v4', 'eleven_v3'].includes(model)) return text
-  if (/\[(?:laughs?|chuckles|sniffs?|sighs|clears throat|coughs?|thoughtful|curious|softly|sad|excited)\]/i.test(text)) return text
+function stableVoiceCueHash(value) {
+  let hash = 2166136261
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+/**
+ * Add context-aware vocal performance cues only to Live Talk's audio payload.
+ * The transcript stays clean. There is no per-session cue cap; the voice can
+ * continue expressing each utterance for as long as the conversation continues.
+ */
+function expressiveElevenLabsText(text, model, liveTalk = false) {
+  if (!liveTalk || !['eleven_v4', 'eleven_v3'].includes(model)) return text
   const source = text.trim()
   if (!source) return source
-  if (/\b(?:haha+|lol|lmao|hilarious|that(?:'|’)s funny|good one|made me laugh)\b/i.test(source)) {
-    return '[chuckles] ' + source
-  }
-  if (/^(?:hmm+\b|well,?\s+let me think\b|let me think\b|that(?:'|’)s interesting\b|i(?:'|’)d say\b|i would say\b)/i.test(source)) {
-    return '[thoughtful] ' + source
-  }
-  if (/\b(?:i(?:'|’)m sorry|i am sorry|that sounds (?:hard|rough|painful|difficult)|i can imagine how|you have been through a lot|you must be feeling)\b/i.test(source)) {
+
+  // Respect explicit cues from a trusted in-app caller rather than stacking more.
+  if (/\[(?:laughs?|laughing|chuckles|sniffs?|sniffles?|sighs|exhales?|inhales?|clears throat|coughs?|gasps?|thoughtful|curious|softly|sad|happy|excited|surprised|whispers?|quietly|playful|amazed|peaceful|confused|proud)\]/i.test(source)) return source
+
+  const hash = stableVoiceCueHash(source.toLowerCase())
+  const laughter = /\b(?:haha+|lmao|lol|that(?:'|’)s funny|good one|made me laugh|i(?:'|’)m joking|just kidding|kidding)\b/i.test(source)
+  if (laughter) return '[laughs] ' + source
+
+  const surprise = /^(?:wait,?\s|what\?!|really\?!|no way\b|oh wow\b|wow[!,\s]|seriously\?!|you(?:'|’)re kidding\b)/i.test(source)
+  if (surprise) return '[gasps] ' + source
+
+  const happy = /\b(?:congratulations|congrats|great news|you did it|so proud of you|that(?:'|’)s amazing|that(?:'|’)s wonderful|fantastic|brilliant|well done|i knew you could|you nailed it)\b/i.test(source)
+  if (happy) return '[excited] ' + source
+
+  const griefOrTears = /\b(?:grief|grieving|crying|tears|sniffling|sobbing|passed away|your loss|my condolences|lost someone|miss (?:him|her|them)|heartbroken|devastated)\b/i.test(source)
+  const empathy = griefOrTears || /\b(?:i(?:'|’)m sorry|i am sorry|that sounds (?:hard|rough|painful|difficult|exhausting)|you(?:'|’)ve been through a lot|you must be feeling|i can imagine how|that can be overwhelming|take a breath)\b/i.test(source)
+  if (empathy) {
+    if (griefOrTears && hash % 3 === 0) return '[sniffs softly] ' + source
+    if (hash % 4 === 0) return '[exhales] ' + source
     return '[sighs] ' + source
   }
-  if (source.length <= 320 && /\?\s*$/.test(source)) return '[curious] ' + source
+
+  if (/^(?:hmm+\b|well,?\s+let me think\b|let me think\b|i(?:'|’)d say\b|i would say\b|that(?:'|’)s interesting\b|honestly,?\s+i(?:'|’)m not sure\b|i need to think\b)/i.test(source)) {
+    return '[thoughtful] ' + source
+  }
+
+  if (/^(?:i wonder\b|what if\b|how would you\b|have you ever\b)/i.test(source) && source.length <= 360) {
+    return '[curious] ' + source
+  }
+  if (source.length <= 240 && /\?\s*$/.test(source) && hash % 2 === 0) return '[curious] ' + source
+
+  // Human imperfections should be occasional and conversational, never a loop.
+  if (/^(?:well,?\s|okay,?\s|right,?\s|so,?\s|excuse me\b)/i.test(source) && hash % 7 === 0) {
+    return /\bexcuse me\b/i.test(source) ? '[coughs softly] ' + source : '[clears throat] ' + source
+  }
+  if (/\b(?:dry throat|need to cough|i(?:'|’)ve been coughing|ahem)\b/i.test(source)) return '[coughs softly] ' + source
+  if (/\b(?:relieved|what a relief|glad that worked|we made it|finally,? done)\b/i.test(source) && hash % 3 === 0) return '[exhales] ' + source
+
+  // Let the model's punctuation preserve natural pauses in every other line.
   return source
 }
 
@@ -827,7 +874,22 @@ function audioResponse(res, audio, provider, contentType = 'audio/mpeg') {
   res.end(Buffer.from(audio))
 }
 
-async function requestElevenLabsSpeech(text, voiceId) {
+function elevenLabsVoiceSettings(model, liveTalk) {
+  const settings = {
+    // Lower stability gives the expressive model more room for natural variation in Live Talk.
+    stability: liveTalk ? 0.38 : 0.48,
+    similarity_boost: 0.82,
+    use_speaker_boost: true,
+  }
+  // Eleven v4 accepts Stability and Similarity; its API does not support Style or Speed settings.
+  if (model !== 'eleven_v4') {
+    settings.style = 0
+    settings.speed = 1
+  }
+  return settings
+}
+
+async function requestElevenLabsSpeech(text, voiceId, liveTalk = false) {
   const model = elevenLabsTtsModel()
   return requestTtsWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: 'POST',
@@ -837,22 +899,16 @@ async function requestElevenLabsSpeech(text, voiceId) {
       'xi-api-key': ELEVENLABS_KEY(),
     },
     body: JSON.stringify({
-      text: expressiveElevenLabsText(text, model),
+      text: expressiveElevenLabsText(text, model, liveTalk),
       model_id: model,
-      voice_settings: {
-        stability: 0.45,
-        similarity_boost: 0.8,
-        style: 0,
-        use_speaker_boost: true,
-        speed: 1,
-      },
+      voice_settings: elevenLabsVoiceSettings(model, liveTalk),
     }),
   }, 'audio')
 }
 
 
 /** Opens ElevenLabs' streaming endpoint; the caller owns the response body and abort controller. */
-async function requestElevenLabsSpeechStream(text, voiceId) {
+async function requestElevenLabsSpeechStream(text, voiceId, liveTalk = false) {
   const model = elevenLabsTtsModel()
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32`
   const controller = new AbortController()
@@ -873,15 +929,9 @@ async function requestElevenLabsSpeechStream(text, voiceId) {
         'xi-api-key': ELEVENLABS_KEY(),
       },
       body: JSON.stringify({
-        text: expressiveElevenLabsText(text, model),
+        text: expressiveElevenLabsText(text, model, liveTalk),
         model_id: model,
-        voice_settings: {
-          stability: 0.45,
-          similarity_boost: 0.8,
-          style: 0,
-          use_speaker_boost: true,
-          speed: 1,
-        },
+        voice_settings: elevenLabsVoiceSettings(model, liveTalk),
       }),
     })
     clearTimeout(timer)
@@ -917,8 +967,8 @@ async function readTtsStreamChunk(reader, controller, idleTimeoutMs = ttsStreamI
 }
 
 /** Send the first generated audio chunk before waiting for the complete speech file. */
-async function streamElevenLabsToClient(text, voiceId, res) {
-  const { response, controller } = await requestElevenLabsSpeechStream(text, voiceId)
+async function streamElevenLabsToClient(text, voiceId, res, liveTalk = false) {
+  const { response, controller } = await requestElevenLabsSpeechStream(text, voiceId, liveTalk)
   if (!response.ok) return { ok: false, response, code: await safeTtsErrorCode(response), controller }
   if (!response.body) {
     controller.abort()
@@ -1134,7 +1184,7 @@ async function speakFromBody(body, res, excludedProviders = new Set()) {
           continue
         }
         try {
-          const result = await requestElevenLabsSpeech(text, voiceId)
+          const result = await requestElevenLabsSpeech(text, voiceId, body.liveTalk === true)
           const response = result.response
           if (response.ok) return audioResponse(res, result.data, 'elevenlabs')
           logTtsProviderFailure('elevenlabs', { status: response.status, code: result.code })
@@ -1200,7 +1250,7 @@ export async function speakElevenLabs(req, res) {
   const voiceId = elevenLabsVoiceId(body.voice, accent)
   if (!voiceId) return send(res, 503, { error: 'The selected ElevenLabs accent needs a matching voice ID in your ElevenLabs account. No alternate voice will be used.' })
   try {
-    const result = await requestElevenLabsSpeech(text, voiceId)
+    const result = await requestElevenLabsSpeech(text, voiceId, body.liveTalk === true)
     if (result.response.ok) return audioResponse(res, result.data, 'elevenlabs')
     logTtsProviderFailure('elevenlabs_buffered', { status: result.response.status, code: result.code })
     const status = result.response.status
@@ -1251,7 +1301,7 @@ export async function speakStream(req, res) {
   }
 
   try {
-    const streamed = await streamElevenLabsToClient(text, voiceId, res)
+    const streamed = await streamElevenLabsToClient(text, voiceId, res, body.liveTalk === true)
     if (streamed.ok) return
     logTtsProviderFailure('elevenlabs_stream', { status: streamed.response?.status, code: streamed.code })
     await discardResponse(streamed.response)
