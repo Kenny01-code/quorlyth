@@ -208,6 +208,19 @@ export function SignIn() {
       setBusy(false)
     }
   }
+  async function resendRecoveryCode() {
+    if (!/^\\S+@\\S+\\.\\S+$/.test(email.trim())) return toast('Enter the email address you used for your account')
+    setBusy(true)
+    try {
+      await backend!.auth.resetPassword(email.trim())
+      setOtp('')
+      toast('If an account uses this email, a fresh recovery code will arrive shortly.')
+    } catch (er: any) {
+      toast(er.message || 'Could not request another code. Please wait a moment and try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
   async function google() {
     try { await backend!.auth.signInGoogle() } catch (er: any) { toast(er.message || 'Google sign in is not set up') }
   }
@@ -267,6 +280,7 @@ export function SignIn() {
             <div className="acts" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: 18 }}>
               {mode === 'signin' && <><button type="button" className="chip" onClick={() => { setMode('signup'); setNotice('') }}>Create account</button>{!local && <button type="button" className="chip" onClick={() => setMode('reset')}>Forgot password?</button>}<button type="button" className="chip" onClick={continueAfterEmail}>I have signed in</button></>}
               {mode === 'signup' && <button type="button" className="chip" onClick={() => setMode('signin')}>Already have an account? Sign in</button>}
+              {mode === 'otp' && <button type="button" className="chip" disabled={busy} onClick={() => void resendRecoveryCode()}>Resend code</button>}
               {(mode === 'reset' || mode === 'otp' || mode === 'recovery') && <button type="button" className="chip" onClick={() => { setMode('signin'); setPassword(''); setConfirm(''); setOtp(''); setNotice('') }}>Back to sign in</button>}
               <button type="button" className="chip" onClick={copyPageLink}>Copy page link</button>
             </div>
