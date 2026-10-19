@@ -91,6 +91,9 @@ async function readError(r: Response) {
       'Request body must be valid JSON.',
       'ElevenLabs voice is unavailable right now. Check the ElevenLabs API key and account quota. No alternate voice will be used.',
       'The selected ElevenLabs accent needs a matching voice ID in your ElevenLabs account. No alternate voice will be used.',
+      'No text AI provider is configured. Add GEMINI_API_KEY, XAI_API_KEY, or OPENAI_API_KEY to the server environment.',
+      'No AI speech provider is configured. Add ELEVENLABS_API_KEY (primary), XAI_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY to the server environment.',
+      'QuorlythBot could not prepare voice audio. Each configured speech provider was tried; check the provider quota or retry shortly.',
     ]
     if (typeof error === 'string' && safeClientMessages.includes(error)) return error
     return fallback
@@ -502,10 +505,10 @@ export async function speakText(
     const abortProviderRequest = () => providerRequest.abort()
     signal.addEventListener('abort', abortProviderRequest, { once: true })
     let providerRequestTimer: number | null = null
-    // Don't leave the user waiting on a broken ElevenLabs connection. If its first
-    // audio bytes don't arrive promptly, use the device voice for this utterance.
+    // Give the server's fast ElevenLabs -> AI-provider failover time to finish.
+    // An explicit stop still aborts this request immediately.
     if (preferElevenLabsVoice && !options.elevenLabsOnly) {
-      providerRequestTimer = window.setTimeout(() => providerRequest.abort(), 1800)
+      providerRequestTimer = window.setTimeout(() => providerRequest.abort(), 7500)
     }
     try {
       response = await fetch(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream', {
