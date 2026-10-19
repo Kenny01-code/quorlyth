@@ -732,7 +732,7 @@ function speechStyleInstructions(value) {
 function elevenLabsTtsModel() {
   const configured = String(process.env.ELEVENLABS_TTS_MODEL || '').trim()
   const supported = ['eleven_v4', 'eleven_v3', 'eleven_multilingual_v2', 'eleven_flash_v2_5']
-  return supported.includes(configured) ? configured : 'eleven_v3'
+  return supported.includes(configured) ? configured : 'eleven_v4'
 }
 
 /**
