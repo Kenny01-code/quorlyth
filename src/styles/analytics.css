@@ -68,3 +68,140 @@
   width: 0;
   height: 0;
 }
+
+
+/* Premium controls and spacious horizontal navigation for the two long-form analytics charts. */
+.analytics-chart-card {
+  min-width: 0;
+  align-self: start;
+  box-sizing: border-box;
+}
+.analytics-chart-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.analytics-chart-card__title {
+  min-width: 150px;
+  flex: 1 1 220px;
+}
+.analytics-chart-card__title h3 {
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.analytics-chart-card__title p {
+  margin-top: 4px;
+  line-height: 1.45;
+}
+.analytics-chart-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.analytics-chart-card__icon-button {
+  display: inline-flex;
+  min-width: 34px;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 9px;
+}
+.analytics-chart-card__content {
+  min-width: 0;
+  width: 100%;
+}
+.analytics-chart-card.is-minimized {
+  padding-bottom: 13px;
+}
+.chs.chs--slide-view {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  cursor: grab;
+  touch-action: auto;
+  border-radius: 10px;
+  outline-offset: 3px;
+}
+.chs.chs--slide-view::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.chs.chs--slide-view.is-grabbed {
+  cursor: grabbing;
+  user-select: none;
+}
+.chs.chs--slide-view.is-grabbed svg {
+  user-select: none;
+}
+.analytics-chart-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: clamp(10px, 2vw, 26px);
+  background: rgba(0, 0, 0, .78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: analytics-chart-overlay-in .18s ease-out both;
+}
+.analytics-chart-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(1320px, 100%);
+  max-height: calc(100dvh - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: clamp(16px, 2.5vw, 30px);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 22px;
+  background: rgba(12,12,12,.96);
+  box-shadow: 0 28px 100px rgba(0,0,0,.7);
+}
+.analytics-chart-dialog .chs {
+  max-width: 100%;
+  min-width: 0;
+}
+.analytics-chart-dialog .analytics-chart-card__head {
+  position: sticky;
+  top: calc(-1 * clamp(16px, 2.5vw, 30px));
+  z-index: 2;
+  margin: calc(-1 * clamp(16px, 2.5vw, 30px)) calc(-1 * clamp(16px, 2.5vw, 30px)) 14px;
+  padding: clamp(16px, 2.5vw, 30px);
+  background: rgba(12,12,12,.96);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(12px);
+}
+.analytics-chart-dialog .analytics-chart-card__content {
+  min-width: 0;
+}
+@keyframes analytics-chart-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (max-width: 640px) {
+  .analytics-chart-card__head { gap: 10px; }
+  .analytics-chart-card__title { flex-basis: 100%; }
+  .analytics-chart-card__actions { width: 100%; justify-content: flex-start; }
+  .analytics-chart-dialog { border-radius: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .analytics-chart-overlay { animation: none; }
+}
