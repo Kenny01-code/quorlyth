@@ -54,6 +54,21 @@ test('allows preflight and calls from the configured Quorlyth origin', async t =
   assert.equal(await response.text(), 'ok')
 })
 
+test('allows immutable Vercel deployment URLs for the Quorlyth project', async t => {
+  const base = await withServer(t)
+  const deploymentOrigin = 'https://quorlyth-preview-abc123-ighiledivine77-5079s-projects.vercel.app'
+  const response = await fetch(base + '/api/chat', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: deploymentOrigin,
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'authorization,content-type',
+    },
+  })
+  assert.equal(response.status, 204)
+  assert.equal(response.headers.get('access-control-allow-origin'), deploymentOrigin)
+})
+
 test('throttles requests that exceed the configured per-minute limit', async t => {
   const base = await withServer(t, { rateLimitPerMinute: 1 })
   const send = () => fetch(base + '/api/chat', {
