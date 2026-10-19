@@ -32,6 +32,7 @@ export function NotifPanel({ list, sound, onSound, desktopPermission, onDesktop,
                 n.kind === 'settings' ? '/settings?tab=requests' :
                 n.kind === 'access' ? '/access' :
                 n.kind === 'join' ? '/communities/' + (n.target || n.id || '').split('__')[0] + '?tab=join-requests' :
+                n.kind === 'ai-organizer' ? '/communities/' + (n.target || n.id || '').split('__')[0] + '?tab=ai-organizer-requests' :
                 n.kind === 'collab-request' ? '/queue?idea=' + encodeURIComponent(n.target || '') :
                 n.kind === 'collaboration' ? '/idea/' + (n.target || n.id || '') :
                 n.kind === 'message' ? '/messages/' + (n.target || n.id || '') :

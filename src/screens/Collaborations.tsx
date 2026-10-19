@@ -232,6 +232,8 @@ function Workspace() {
   useEffect(() => setProjectDueDate(dateInput(project?.dueAt)), [project?.dueAt])
   const community = idea ? a.data.communities.find(c => c.id === idea.cid) : undefined
   const canManage = !!idea && a.canManageCommunity(idea.cid)
+  const canOrganizeWithAI = !!idea && a.canOrganizeIdeaWithAI(id)
+  const organizerRequest = community && a.me ? a.data.aiOrganizerRequests.find(request => request.cid === community.id && request.userId === a.me!.id) : undefined
   const acceptedApplications = a.data.volunteers.filter(v => v.ideaId === id && v.status === 'accepted')
   const isAccepted = !!a.me && acceptedApplications.some(v => v.applicantId === a.me?.id)
   const isIdeaAuthor = !!a.me && idea?.authorId === a.me.id
@@ -350,7 +352,20 @@ function Workspace() {
   }
 
   async function organizeWithAI() {
-    if (!idea || !community || !canManage) return
+    if (!idea || !community || !canAccess) return
+    if (!canOrganizeWithAI) {
+      if (organizerRequest?.status === 'pending') {
+        a.toast('Your AI organizer request is waiting for the community owner or a platform administrator.')
+        return
+      }
+      setAiBusy(true)
+      try {
+        await a.requestCommunityAIOrganizerApproval(id, 'I would like to use Organize with AI for this collaboration workspace.')
+      } finally {
+        setAiBusy(false)
+      }
+      return
+    }
     setAiBusy(true)
     try {
       const plan = await generateProjectPlan({
@@ -369,7 +384,7 @@ function Workspace() {
   }
 
   async function applyAIPlan() {
-    if (!aiPlan || !idea || !canManage || !project) return
+    if (!aiPlan || !idea || !canOrganizeWithAI || !project) return
     setApplyingPlan(true)
     try {
       if (aiPlan.project_summary && aiPlan.project_summary !== project.summary) {
@@ -496,14 +511,18 @@ function Workspace() {
             <div className="ql-project-progress__track"><i style={{ width: progress + '%' }} /></div>
           </div>
         </section>
-        {canManage && <section className="glass pad ql-ai-plan">
+        {canAccess && project && <section className="glass pad ql-ai-plan">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <span className="chip"><QuorlythGlyph name="plan" size={14} />Quorlyth Signal Engine</span>
               <h3 style={{ fontSize: 19, marginTop: 12 }}>Turn discussion into a buildable plan</h3>
               <p className="mut" style={{ marginTop: 6 }}>AI filters duplicate or off-topic discussion, identifies actionable signals, and drafts milestones with clear definitions of done. Review everything before it changes your workspace.</p>
+              {!canManage && <p className="mut" style={{ marginTop: 8 }}>AI organizer access is community-specific. The community owner or a platform administrator must approve your request before a plan can be generated or applied.</p>}
             </div>
-            <button className="btn p" disabled={aiBusy || applyingPlan} onClick={organizeWithAI}><QuorlythGlyph name="idea" size={15} />{aiBusy ? 'Organizing signals…' : aiPlan ? 'Regenerate plan' : 'Organize with AI'}</button>
+            <button className="btn p" disabled={aiBusy || applyingPlan || (!canOrganizeWithAI && organizerRequest?.status === 'pending')} onClick={organizeWithAI}>
+              <QuorlythGlyph name="idea" size={15} />
+              {aiBusy ? (canOrganizeWithAI ? 'Organizing signals…' : 'Requesting approval…') : canOrganizeWithAI ? (aiPlan ? 'Regenerate plan' : 'Organize with AI') : organizerRequest?.status === 'pending' ? 'Approval pending' : organizerRequest?.status === 'declined' ? 'Request approval again' : 'Request AI organizer approval'}
+            </button>
           </div>
           {aiPlan && <div style={{ display: 'grid', gap: 14, marginTop: 18 }}>
             <div className="grid i2" style={{ gap: 10 }}>

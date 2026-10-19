@@ -1,15 +1,15 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Backend, createBackend } from '../backend'
-import { Comment, Community, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkSubmission } from '../lib/types'
+import { Comment, Community, CommunityAIOrganizerRequest, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkSubmission } from '../lib/types'
 import { slug } from '../lib/util'
 import { createDemoBackend, DEMO_ME } from './demo'
 
 type Rec<T> = Record<string, T>
 interface Data {
   communities: Community[]; ideas: Idea[]; reviews: Rec<Review>; outcomes: Rec<Pick<Review, 'status' | 'at'>>; votes: Rec<Rec<boolean>>; members: Rec<Rec<boolean>>
-  profiles: Rec<Profile>; requests: Request[]; joinRequests: CommunityJoinRequest[]; decisions: Rec<Decision>; promotions: Promotion[]; volunteers: VolunteerApplication[]; projects: Rec<Project>; milestones: Milestone[]; workSubmissions: WorkSubmission[]; settings: SpaceSettings | null; ownerId: string | null
+  profiles: Rec<Profile>; requests: Request[]; joinRequests: CommunityJoinRequest[]; aiOrganizerRequests: CommunityAIOrganizerRequest[]; decisions: Rec<Decision>; promotions: Promotion[]; volunteers: VolunteerApplication[]; projects: Rec<Project>; milestones: Milestone[]; workSubmissions: WorkSubmission[]; settings: SpaceSettings | null; ownerId: string | null
 }
-const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], workSubmissions: [], settings: null, ownerId: null }
+const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], workSubmissions: [], settings: null, ownerId: null }
 
 export interface App {
   ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data
@@ -20,6 +20,9 @@ export interface App {
   joined: (cid: string) => boolean
   ownsCommunity: (cid: string) => boolean
   canManageCommunity: (cid: string) => boolean
+  canOrganizeIdeaWithAI: (ideaId: string) => boolean
+  requestCommunityAIOrganizerApproval: (ideaId: string, message?: string) => Promise<boolean>
+  reviewCommunityAIOrganizerRequest: (cid: string, userId: string, status: 'approved' | 'declined') => Promise<boolean>
   canPost: () => boolean
   createCommunity: (c: Partial<Community>) => Promise<boolean>
   createCommunityDetailed: (c: Partial<Community>) => Promise<{ ok: boolean; error?: string }>
@@ -171,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setData(d => ({
       ...d,
       reviews: {}, outcomes: {}, votes: {}, members: {}, requests: [],
-      joinRequests: [], decisions: {}, promotions: [], volunteers: [],
+      joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [],
       projects: {}, milestones: [], workSubmissions: [], settings: null,
     }))
 
@@ -199,6 +202,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         s.subscribe('members', d => set('members', Object.fromEntries(d.map(x => [x.id, x.data?.c || {}]))), onReadError),
         s.subscribe('requests', d => set('requests', asList<Request>(d)), onReadError),
         s.subscribe('communityJoinRequests', d => set('joinRequests', asList<CommunityJoinRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
+        s.subscribe('communityAiOrganizerRequests', d => set('aiOrganizerRequests', asList<CommunityAIOrganizerRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
         s.subscribe('decisions', d => set('decisions', asMap<Decision>(d)), onReadError),
         s.subscribe('promotions', d => set('promotions', asList<Promotion>(d).sort((a, b) => b.at - a.at)), onReadError),
         s.subscribe('volunteers', d => set('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
@@ -347,6 +351,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const idea = data.ideas.find(item => item.id === ideaId)
       return !!me && !!idea && (canManageCommunity(idea.cid) || idea.authorId === me.id || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted'))
     }
+    const canOrganizeIdeaWithAI = (ideaId: string) => {
+      if (!me) return false
+      const idea = data.ideas.find(item => item.id === ideaId)
+      if (!idea) return false
+      if (canManageCommunity(idea.cid)) return true
+      const eligibleWorkspaceParticipant = idea.authorId === me.id || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted')
+      return eligibleWorkspaceParticipant && data.aiOrganizerRequests.some(request => request.cid === idea.cid && request.userId === me.id && request.status === 'approved')
+    }
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
       try {
@@ -396,6 +408,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       joined: cid => !!(me && data.members[me.id]?.[cid]),
       ownsCommunity,
       canManageCommunity,
+      canOrganizeIdeaWithAI,
       canPost: () => owner || !data.settings?.appr || data.decisions[me?.id || '']?.status === 'approved',
       createCommunity: c => createCommunityDetailed(c).then(r => r.ok),
       createCommunityDetailed,
@@ -642,7 +655,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const current = data.projects[projectId]
         if (!current) throw new Error('Project not found. Refresh the page and try again.')
         const projectIdea = data.ideas.find(item => item.id === current.ideaId)
-        if (!projectIdea || !canManageCommunity(projectIdea.cid)) throw new Error('Only the community owner or a platform administrator can edit the project brief or status.')
+        const manager = !!projectIdea && canManageCommunity(projectIdea.cid)
+        const aiBriefOnly = !!projectIdea && canOrganizeIdeaWithAI(projectIdea.id) && Object.keys(patch).every(key => key === 'summary')
+        if (!projectIdea || (!manager && !aiBriefOnly)) throw new Error('Only the community owner/platform admin or an approved AI organizer can edit this project brief.')
         const safePatch = { ...patch, ...(patch.summary !== undefined ? { summary: patch.summary.trim() } : {}), updatedAt: Date.now() }
         if ('summary' in safePatch && !safePatch.summary) throw new Error('A project summary cannot be empty.')
         await up('projects/' + projectId, safePatch)
@@ -656,7 +671,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (project.status !== 'active') throw new Error('Reopen the project before adding milestones.')
         const projectIdea = data.ideas.find(item => item.id === project.ideaId)
         if (!projectIdea) throw new Error('The project idea could not be found.')
-        if (!canManageCommunity(projectIdea.cid)) throw new Error('Only the community owner or a platform administrator can create and assign milestones.')
+        const manager = canManageCommunity(projectIdea.cid)
+        const approvedAIOrganizer = canOrganizeIdeaWithAI(projectIdea.id)
+        if (!manager && (!approvedAIOrganizer || !!details.assigneeId || details.dueAt != null || !!details.blocked || !!details.blockedNote)) {
+          throw new Error('Only the community owner/platform admin or an approved AI organizer can create AI-planned milestones. Organizers can add unassigned milestones only.')
+        }
         if (details.priority && !['low', 'normal', 'high', 'critical'].includes(details.priority)) throw new Error('Choose a valid milestone priority.')
         if (details.dueAt != null && !Number.isFinite(details.dueAt)) throw new Error('Choose a valid milestone due date.')
         const community = data.communities.find(item => item.id === projectIdea.cid)
@@ -806,6 +825,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (previous) await st!.set(path, request)
         else await st!.create(path, request)
       }, 'Join request sent'),
+      requestCommunityAIOrganizerApproval: (ideaId, message = '') => w(async () => {
+        if (!me) throw new Error('Sign in before requesting AI organizer access.')
+        const idea = data.ideas.find(item => item.id === ideaId)
+        const community = idea && data.communities.find(item => item.id === idea.cid)
+        if (!idea || !community || community.arch) throw new Error('This collaboration is no longer available for AI organizer approval.')
+        const isEligible = idea.authorId === me.id || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted')
+        if (!isEligible) throw new Error('Only the idea creator or an accepted collaborator can request AI organizer approval.')
+        if (canManageCommunity(community.id)) throw new Error('Community owners and platform administrators already have AI organizer access.')
+        if (canOrganizeIdeaWithAI(ideaId)) throw new Error('Your AI organizer access is already approved.')
+        const path = 'communityAiOrganizerRequests/' + community.id + '__' + me.id
+        const previous = await st!.get(path)
+        if (previous?.status === 'pending') throw new Error('Your AI organizer request is already waiting for approval.')
+        if (previous?.status === 'approved') throw new Error('Your AI organizer access is already approved.')
+        const request = { cid: community.id, userId: me.id, ideaId, message: message.trim().slice(0, 500), status: 'pending', at: Date.now() }
+        if (previous) await st!.set(path, request)
+        else await st!.create(path, request)
+      }, 'AI organizer approval requested. The community owner or a platform admin must approve it.'),
+      reviewCommunityAIOrganizerRequest: (cid, userId, status) => w(async () => {
+        if (!me || !canManageCommunity(cid)) throw new Error('Only this community’s owner or a platform administrator can review AI organizer requests.')
+        if (!['approved', 'declined'].includes(status)) throw new Error('Choose approve or decline.')
+        const path = 'communityAiOrganizerRequests/' + cid + '__' + userId
+        const current = await st!.get(path)
+        if (!current || current.cid !== cid || current.userId !== userId || current.status !== 'pending') throw new Error('This AI organizer request is no longer pending. Refresh the page and try again.')
+        const reviewedAt = Date.now()
+        await st!.set(path, { ...current, status, reviewedAt, reviewedBy: me.id })
+        setData(d => {
+          const updated = { ...current, id: current.id || cid + '__' + userId, status, reviewedAt, reviewedBy: me.id } as CommunityAIOrganizerRequest
+          const exists = d.aiOrganizerRequests.some(request => request.cid === cid && request.userId === userId)
+          return {
+            ...d,
+            aiOrganizerRequests: exists
+              ? d.aiOrganizerRequests.map(request => request.cid === cid && request.userId === userId ? updated : request)
+              : [updated, ...d.aiOrganizerRequests],
+          }
+        })
+      }, status === 'approved' ? 'AI organizer approved for this community' : 'AI organizer request declined'),
       reviewCommunityJoinRequest: (cid, userId, status) => w(async () => {
         if (!me || !canManageCommunity(cid)) throw new Error('Only this community’s owner or a platform administrator can review its join requests.')
         if (!backend) throw new Error('The backend is not ready.')

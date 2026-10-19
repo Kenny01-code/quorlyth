@@ -482,7 +482,7 @@ test('chat switches to Gemini when Grok requires payment instead of retrying Gro
     if (String(url).includes('api.x.ai')) {
       return new Response(JSON.stringify({ error: { code: 'payment_required' } }), { status: 402 })
     }
-    return new Response('data: {"candidates":[{"content":{"parts":[{"text":"Gemini backup"}]}}]}\\n\\n', { status: 200 })
+    return new Response('data: {"candidates":[{"content":{"parts":[{"text":"Gemini backup"}]}}]}\n\n', { status: 200 })
   }
   const res = response()
   await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)

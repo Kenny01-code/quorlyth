@@ -157,9 +157,11 @@ function Detail({ cid }: { cid: string }) {
   const emptyIdea = { title: '', body: '', tags: '' }
   const [f, setF, clearIdeaDraft] = useDraftState(`q-draft:${a.me?.id}:idea:${cid}`, emptyIdea)
   useEffect(() => {
-    const wantsJoinRequests = new URLSearchParams(loc.search).get('tab') === 'join-requests'
-    if (wantsJoinRequests && a.canManageCommunity(cid)) setTab(3)
-    else if (!wantsJoinRequests) setTab(0)
+    const requestedTab = new URLSearchParams(loc.search).get('tab')
+    const canReviewCommunityRequests = a.canManageCommunity(cid)
+    if (requestedTab === 'join-requests' && canReviewCommunityRequests) setTab(3)
+    else if (requestedTab === 'ai-organizer-requests' && canReviewCommunityRequests) setTab(4)
+    else if (!['join-requests', 'ai-organizer-requests'].includes(requestedTab || '') || !canReviewCommunityRequests) setTab(0)
   }, [loc.search, cid, a.me?.id, a.platformAdmin, a.data.communities])
   if (!c) return <Empty icon="community" title="Community not found" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back</button></Empty>
 
@@ -177,7 +179,7 @@ function Detail({ cid }: { cid: string }) {
   list = [...list].sort(sort === 1 ? (x, y) => a.votesOf(y.id) - a.votesOf(x.id) : sort === 2 ? (x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1) : (x, y) => y.at - x.at)
   const pin = c.pinned ? data.ideas.find(i => i.id === c.pinned) : null
   const tags = Object.entries(list.reduce((o: Record<string, number>, i) => { (i.tags || []).forEach(t => (o[t] = (o[t] || 0) + 1)); return o }, {})).sort((x, y) => y[1] - x[1]).slice(0, 10).map(x => x[0])
-  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'Insights', 'Settings'] : [])]
+  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'AI organizer requests', 'Insights', 'Settings'] : [])]
 
   async function post() {
     if (!f.title.trim()) return a.toast('Give your idea a title')
@@ -221,7 +223,7 @@ function Detail({ cid }: { cid: string }) {
           </div>
         </div>
       </div>
-      <div className="ctabs">{tabs.map((t, i) => <Chip key={t} on={tab === i} onClick={() => setTab(i)}>{t}{t === 'Join requests' && data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length > 0 ? ' (' + data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length + ')' : ''}</Chip>)}</div>
+      <div className="ctabs">{tabs.map((t, i) => <Chip key={t} on={tab === i} onClick={() => setTab(i)}>{t}{t === 'Join requests' && data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length > 0 ? ' (' + data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length + ')' : t === 'AI organizer requests' && data.aiOrganizerRequests.filter(r => r.cid === cid && r.status === 'pending').length > 0 ? ' (' + data.aiOrganizerRequests.filter(r => r.cid === cid && r.status === 'pending').length + ')' : ''}</Chip>)}</div>
       {shareOpen && <ShareCard title={"Share " + c.name} url={window.location.origin + "/communities/" + c.id} sub="Copy the community link or let people scan the QR code. Unlisted communities still require access." />}
 
       {tab === 0 && (
@@ -316,8 +318,9 @@ function Detail({ cid }: { cid: string }) {
         </div>
       )}
       {tab === 3 && own && <JoinRequests cid={cid} />}
-      {tab === 4 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
-      {tab === 5 && own && <CommunitySettings c={c} />}
+      {tab === 4 && own && <AIOrganizerRequests cid={cid} />}
+      {tab === 5 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
+      {tab === 6 && own && <CommunitySettings c={c} />}
     </>
   )
 }
@@ -346,6 +349,56 @@ function JoinRequests({ cid }: { cid: string }) {
       <div style={{ display: 'flex', gap: 12, minWidth: 0 }}><Av id={r.userId} size={38} /><div><h3 style={{ fontSize: 15 }}>{a.nm(r.userId)}</h3><p className="dim">{when(r.at)}</p>{r.message && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.message}</p>}</div></div>
       <div className="acts" style={{ margin: 0, flexShrink: 0 }}>{r.status === 'pending' ? <><button className="btn p" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(r.userId, 'approved')}>{workingUserId === r.userId ? 'Saving…' : 'Approve'}</button><button className="btn" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(r.userId, 'declined')}>{workingUserId === r.userId ? 'Saving…' : 'Decline'}</button></> : <span className="chip">{r.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
     </div>) : <p className="mut" style={{ padding: '20px 0' }}>No join requests for this community yet.</p>}
+  </div>
+}
+
+
+function AIOrganizerRequests({ cid }: { cid: string }) {
+  const a = useApp()
+  const [workingUserId, setWorkingUserId] = useState<string | null>(null)
+  const requests = a.data.aiOrganizerRequests.filter(request => request.cid === cid).sort((x, y) => y.at - x.at)
+  const pendingCount = requests.filter(request => request.status === 'pending').length
+
+  async function review(userId: string, status: 'approved' | 'declined') {
+    if (workingUserId) return
+    setWorkingUserId(userId)
+    try {
+      await a.reviewCommunityAIOrganizerRequest(cid, userId, status)
+    } finally {
+      setWorkingUserId(null)
+    }
+  }
+
+  return <div className="glass pad">
+    <div className="profile-section-heading">
+      <div>
+        <p className="dim">COMMUNITY MANAGEMENT</p>
+        <h3 style={{ marginBottom: 4 }}>AI organizer requests</h3>
+        <p className="mut">Approve trusted idea creators or accepted collaborators to use Organize with AI in this community’s collaboration workspaces. This does not grant community settings, deletion, or platform-admin permissions. {pendingCount ? pendingCount + ' awaiting review.' : 'No requests are waiting for review.'}</p>
+      </div>
+      <span className="profile-section-mark"><Icon name="spark" size={19} /></span>
+    </div>
+    {requests.length ? requests.map(request => {
+      const idea = a.data.ideas.find(item => item.id === request.ideaId)
+      return <div key={request.id} className="set" style={{ alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: 12, minWidth: 0 }}>
+          <Av id={request.userId} size={38} />
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ fontSize: 15 }}>{a.nm(request.userId)}</h3>
+            <p className="dim">{idea ? 'Workspace: ' + idea.title : 'Idea no longer available'} · {when(request.at)}</p>
+            {request.message && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{request.message}</p>}
+          </div>
+        </div>
+        <div className="acts" style={{ margin: 0, flexShrink: 0 }}>
+          {request.status === 'pending'
+            ? <>
+              <button className="btn p" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(request.userId, 'approved')}>{workingUserId === request.userId ? 'Saving…' : 'Approve'}</button>
+              <button className="btn" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(request.userId, 'declined')}>{workingUserId === request.userId ? 'Saving…' : 'Decline'}</button>
+            </>
+            : <span className="chip">{request.status === 'approved' ? 'Approved' : 'Declined'}</span>}
+        </div>
+      </div>
+    }) : <p className="mut" style={{ padding: '20px 0' }}>No AI organizer requests for this community yet.</p>}
   </div>
 }
 

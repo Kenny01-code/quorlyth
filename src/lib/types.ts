@@ -30,6 +30,7 @@ export interface Promotion { id: string; ideaId: string; text: string; credits: 
 export interface Profile { id: string; name?: string; head?: string; bio?: string; photo?: string; authName?: string; authAvatarUrl?: string; at?: number }
 export interface Request { id: string; platforms?: string[]; aud?: string; note?: string; at: number }
 export interface CommunityJoinRequest { id: string; cid: string; userId: string; message?: string; status: 'pending' | 'approved' | 'declined'; at: number; reviewedAt?: number; reviewedBy?: string }
+export interface CommunityAIOrganizerRequest { id: string; cid: string; userId: string; ideaId: string; message?: string; status: 'pending' | 'approved' | 'declined'; at: number; reviewedAt?: number; reviewedBy?: string }
 export interface Decision { id: string; status: 'approved' | 'declined'; at: number }
 export type VolunteerStatus = 'pending' | 'accepted' | 'declined'
 export interface VolunteerApplication { id: string; ideaId: string; applicantId: string; message?: string; status: VolunteerStatus; at: number; reviewedAt?: number; reviewedBy?: string }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { App } from '../data/AppProvider'
 import { UserState } from './userState'
 
-export type NotifKind = 'idea' | 'promo' | 'access' | 'settings' | 'join' | 'collaboration' | 'collab-request' | 'comment' | 'vote' | 'community' | 'project' | 'milestone' | 'message' | 'announcement' | 'call'
+export type NotifKind = 'idea' | 'promo' | 'access' | 'settings' | 'join' | 'ai-organizer' | 'collaboration' | 'collab-request' | 'comment' | 'vote' | 'community' | 'project' | 'milestone' | 'message' | 'announcement' | 'call'
 export interface Notif { key: string; at: number; icon: string; text: string; kind: NotifKind; id?: string; target?: string; unread: boolean }
 type StoredNotif = Omit<Notif, 'key' | 'unread'> & { key?: string }
 
@@ -55,6 +55,30 @@ export function useNotifs(a: App, st: UserState): Notif[] {
       if (r.status !== 'pending' || (!a.owner && !a.canManageCommunity(r.cid))) return
       const community = d.communities.find(c => c.id === r.cid)
       out.push({ at: r.at, icon: 'member', text: `${a.nm(r.userId)} requested to join ${community?.name || 'your community'}`, kind: 'join', id: r.cid + '__' + r.userId, target: r.cid })
+    })
+    d.aiOrganizerRequests.forEach(r => {
+      const community = d.communities.find(c => c.id === r.cid)
+      const communityName = community?.name || 'your community'
+      if (r.status === 'pending' && a.canManageCommunity(r.cid)) {
+        out.push({
+          at: r.at,
+          icon: 'invite',
+          text: a.nm(r.userId) + ' requested AI organizer access for ' + communityName,
+          kind: 'ai-organizer',
+          id: r.cid + '__' + r.userId,
+          target: r.cid,
+        })
+      }
+      if (r.userId === m && r.status !== 'pending' && r.reviewedAt) {
+        out.push({
+          at: r.reviewedAt,
+          icon: r.status === 'approved' ? 'approve' : 'decline',
+          text: 'Your AI organizer request for ' + communityName + ' was ' + r.status,
+          kind: 'ai-organizer',
+          id: r.cid + '__' + r.userId,
+          target: r.cid,
+        })
+      }
     })
     d.volunteers.forEach(application => {
       const idea = d.ideas.find(item => item.id === application.ideaId)
