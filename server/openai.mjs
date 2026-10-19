@@ -734,10 +734,16 @@ function speechStyleInstructions(value, liveTalk = false) {
 }
 
 /** Allow expressive ElevenLabs models while keeping model selection configurable. */
-function elevenLabsTtsModel() {
-  const configured = String(process.env.ELEVENLABS_TTS_MODEL || '').trim()
-  const supported = ['eleven_v4', 'eleven_v3', 'eleven_multilingual_v2', 'eleven_flash_v2_5']
-  return supported.includes(configured) ? configured : 'eleven_v4'
+function elevenLabsTtsModel(liveTalk = false) {
+  // Live Talk prefers the faster expressive v4 Turbo model; studio previews keep
+  // the higher-fidelity v4 model. Both model families support audio tags.
+  const configured = String(
+    liveTalk
+      ? (process.env.ELEVENLABS_LIVE_TTS_MODEL || 'eleven_v4_turbo')
+      : (process.env.ELEVENLABS_TTS_MODEL || 'eleven_v4'),
+  ).trim()
+  const supported = ['eleven_v4_turbo', 'eleven_v4', 'eleven_v3', 'eleven_multilingual_v2', 'eleven_flash_v2_5']
+  return supported.includes(configured) ? configured : (liveTalk ? 'eleven_v4_turbo' : 'eleven_v4')
 }
 
 /**
@@ -760,7 +766,7 @@ function stableVoiceCueHash(value) {
  * continue expressing each utterance for as long as the conversation continues.
  */
 function expressiveElevenLabsText(text, model, liveTalk = false) {
-  if (!liveTalk || !['eleven_v4', 'eleven_v3'].includes(model)) return text
+  if (!liveTalk || !['eleven_v4_turbo', 'eleven_v4', 'eleven_v3'].includes(model)) return text
   const source = text.trim()
   if (!source) return source
 
@@ -899,7 +905,7 @@ function elevenLabsVoiceSettings(model, liveTalk) {
     use_speaker_boost: true,
   }
   // Eleven v4 accepts Stability and Similarity; its API does not support Style or Speed settings.
-  if (model !== 'eleven_v4') {
+  if (!['eleven_v4', 'eleven_v4_turbo'].includes(model)) {
     settings.style = 0
     settings.speed = 1
   }
@@ -907,7 +913,7 @@ function elevenLabsVoiceSettings(model, liveTalk) {
 }
 
 async function requestElevenLabsSpeech(text, voiceId, liveTalk = false) {
-  const model = elevenLabsTtsModel()
+  const model = elevenLabsTtsModel(liveTalk)
   return requestTtsWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
     method: 'POST',
     headers: {
@@ -926,7 +932,7 @@ async function requestElevenLabsSpeech(text, voiceId, liveTalk = false) {
 
 /** Opens ElevenLabs' streaming endpoint; the caller owns the response body and abort controller. */
 async function requestElevenLabsSpeechStream(text, voiceId, liveTalk = false) {
-  const model = elevenLabsTtsModel()
+  const model = elevenLabsTtsModel(liveTalk)
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32`
   const controller = new AbortController()
   const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
