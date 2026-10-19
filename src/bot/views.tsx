@@ -68,14 +68,14 @@ export function BotViews(p: P) {
           p.robot.current?.talk(false)
           setHello({ state: 'idle', message: 'Voice preview finished.' })
         },
-        { accent: s.accent || 'auto', allowBrowserFallback: true, preferBrowserVoice: true },
+        { accent: s.accent || 'auto', allowBrowserFallback: true, preferElevenLabsVoice: true },
       )
       if (run !== helloRun.current) {
         playback.stop()
         return
       }
       helloPlayback.current = playback
-      setHello({ state: 'playing', message: 'Your device’s best available natural voice is playing.' })
+      setHello({ state: 'playing', message: 'Your selected ElevenLabs voice is playing.' })
     } catch (error) {
       if (run !== helloRun.current) return
       const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
@@ -107,7 +107,7 @@ export function BotViews(p: P) {
       const m = f[Math.floor(f.length / 2)], g = m < 165 ? 'm' : 'f', v = VOICES.find(x => x.g === g)!
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: true, preferBrowserVoice: true }).catch(() => a.toast('Natural voice playback is unavailable on this device.'))
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', allowBrowserFallback: true, preferElevenLabsVoice: true }).catch(() => a.toast('Natural voice playback is unavailable on this device.'))
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
@@ -182,7 +182,7 @@ export function BotViews(p: P) {
         <div className="glass pad" style={{ padding: '6px 18px', marginBottom: 12 }}>
           <div className="csr" style={{ alignItems: 'flex-start' }}><span><b style={{ fontWeight: 400 }}>Finish</b><br /><span className="dim">The look of your robot</span></span>
             <div className="acts" style={{ margin: 0, gap: 6, justifyContent: 'flex-end' }}>{Object.keys(THEMES).map(k => { const T = (THEMES as any)[k]; return <Chip key={k} on={s.theme === k} onClick={() => { bd.saveSettings({ theme: k }); p.robot.current?.theme(k); p.robot.current?.spin() }}><i className="sw" style={{ background: `radial-gradient(circle at 30% 30%,${T.g1},${T.g2})` }} />{T.n}</Chip> })}</div></div>
-          <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Uses your selected voice profile with the best natural voice available on this device.</span></span>
+          <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Uses ElevenLabs first for a human-sounding voice, then switches to your device voice only if ElevenLabs is unavailable.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
             <div className="acts" style={{ margin: 0 }}>
               <button className="btn p" disabled={hello.state === 'loading'} onClick={() => void playNaturalVoicePreview(cur.ai)}><Icon name="voice" size={16} />{hello.state === 'loading' ? 'Starting voice…' : hello.state === 'playing' ? 'Playing voice' : 'Hear a hello'}</button>
