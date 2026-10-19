@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "node --test server/*.test.mjs",
-    "dev:vite": "vite"
+    "dev:vite": "vite",
+    "start": "node server/railway-server.mjs"
   },
   "dependencies": {
     "jspdf": "^4.2.1",
