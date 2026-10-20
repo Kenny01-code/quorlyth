@@ -9,6 +9,10 @@ import { useEffect, useState } from 'react'
 
 const HERO_COPIES = [
   {
+    headline: 'From followers to ideas worth sharing.',
+    support: 'Give your audience a place to build together, see why ideas stand out, and choose which contributions move forward with credit intact.',
+  },
+  {
     headline: 'Turn your fanbase into a source of ideas.',
     support: 'Bring your audience together, surface the ideas that matter with AI, and choose what gets promoted. Every selected contribution stays credited.',
   },
@@ -21,10 +25,6 @@ const HERO_COPIES = [
     support: 'Turn scattered reactions into thoughtful communities, collaborative ideas, and creator-led decisions that keep contributors credited.',
   },
   {
-    headline: 'From followers to ideas worth sharing.',
-    support: 'Give your audience a place to build together, see why ideas stand out, and choose which contributions move forward with credit intact.',
-  },
-  {
     headline: 'Let your fans help shape what comes next.',
     support: 'Organise the people who care, review ideas with clear AI reasoning, and promote the ones you choose while preserving contributor credit.',
   },
@@ -32,16 +32,16 @@ const HERO_COPIES = [
 
 const PREVIEW_COPIES = [
   {
+    headline: 'Every great decision starts with an idea.',
+    support: 'See promising contributions reviewed with transparent reasoning, selected by the creator, and prepared for promotion.',
+  },
+  {
     headline: "From a fan's idea to a creator's decision.",
     support: 'See how an idea is reviewed with clear reasons, selected by a creator, and prepared for promotion with contributor credit intact.',
   },
   {
     headline: "From a fan's thought to an idea worth sharing.",
     support: 'Watch ideas move through thoughtful AI review, creator selection, and promotion preparation, with every contribution credited.',
-  },
-  {
-    headline: 'Every great decision starts with an idea.',
-    support: 'See promising contributions reviewed with transparent reasoning, selected by the creator, and prepared for promotion.',
   },
   {
     headline: 'From community suggestions to meaningful action.',
@@ -84,7 +84,7 @@ export function Landing() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const timer = window.setInterval(() => {
       setPreviewCopyIndex(index => (index + 1) % PREVIEW_COPIES.length)
-    }, 5200)
+    }, 5800)
     return () => window.clearInterval(timer)
   }, [])
 
@@ -128,8 +128,8 @@ export function Landing() {
       <section className="product-preview rv" aria-labelledby="preview-heading">
         <div className="preview-copy">
           <p className="eyebrow">INSIDE QUORLYTH</p>
-          <h2 key={previewCopy.headline} id="preview-heading" className="preview-copy-enter">{previewCopy.headline}</h2>
-          <p key={previewCopy.support} className="mut preview-copy-enter">{previewCopy.support}</p>
+          <h2 key={previewCopy.headline} id="preview-heading" className="hero-copy-enter">{previewCopy.headline}</h2>
+          <p key={previewCopy.support} className="mut hero-copy-enter">{previewCopy.support}</p>
         </div>
         <div className="glass preview-card">
           <div className="preview-topline">
