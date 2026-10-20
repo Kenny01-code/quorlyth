@@ -353,3 +353,79 @@ test('security migration locks creator data and supports the real collaboration-
     }))
   })
 })
+
+
+test('docs RLS consolidation keeps each specialized predicate and removes duplicate permissive policies', async (t) => {
+  const db = new PGlite()
+  t.after(() => db.close())
+  await db.exec(`
+    create role anon;
+    create role authenticated;
+    create schema private;
+    create table public.docs (path text primary key, data jsonb not null default '{}'::jsonb, updated_at timestamptz not null default now());
+    alter table public.docs enable row level security;
+    create function private.can_insert_doc(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_create_ai_organizer_request(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_insert_ai_organizer_milestone(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_insert_work_submission(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_read_doc(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_read_conversation_doc(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_read_ai_organizer_request(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_read_collaboration_application(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_read_work_submission(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_update_doc(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_update_ai_organizer_request(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_review_pending_collaboration_application(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_review_work_submission(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_update_ai_organizer_project_brief(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_save_ai_organizer_request(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_decide_collaboration_application(text,jsonb) returns boolean language sql as $$ select false $$;
+    create function private.can_save_work_review(text,jsonb) returns boolean language sql as $$ select false $$;
+
+    create policy docs_insert_scoped on public.docs for insert to authenticated with check ((select private.can_insert_doc(path,data)));
+    create policy docs_insert_ai_organizer_milestones on public.docs for insert to authenticated with check (private.can_insert_ai_organizer_milestone(path,data));
+    create policy docs_insert_ai_organizer_project_brief on public.docs for insert to authenticated with check (private.can_update_ai_organizer_project_brief(path,data));
+    create policy docs_insert_ai_organizer_requests on public.docs for insert to authenticated with check (private.can_create_ai_organizer_request(path,data));
+    create policy docs_insert_work_submissions on public.docs for insert to authenticated with check (private.can_insert_work_submission(path,data));
+
+    create policy docs_read_scoped on public.docs for select to anon, authenticated using ((select private.can_read_doc(path,data)) or (select private.can_read_conversation_doc(path,data)));
+    create policy docs_read_ai_organizer_requests on public.docs for select to authenticated using (private.can_read_ai_organizer_request(path,data));
+    create policy docs_read_idea_author_collaboration_application on public.docs for select to authenticated using (private.can_read_collaboration_application(path,data));
+    create policy docs_read_work_submissions on public.docs for select to authenticated using (private.can_read_work_submission(path,data));
+
+    create policy docs_update_scoped on public.docs for update to authenticated using ((select private.can_update_doc(path,data))) with check ((select private.can_update_doc(path,data)));
+    create policy docs_update_ai_organizer_requests on public.docs for update to authenticated using (private.can_update_ai_organizer_request(path,data)) with check (private.can_save_ai_organizer_request(path,data));
+    create policy docs_update_ai_organizer_project_brief on public.docs for update to authenticated using (private.can_update_ai_organizer_project_brief(path,data)) with check (private.can_update_ai_organizer_project_brief(path,data));
+    create policy docs_update_idea_author_collaboration_decision on public.docs for update to authenticated using (private.can_review_pending_collaboration_application(path,data)) with check (private.can_decide_collaboration_application(path,data));
+    create policy docs_review_work_submissions on public.docs for update to authenticated using (private.can_review_work_submission(path,data)) with check (private.can_save_work_review(path,data));
+  `)
+  const migration = await readFile(new URL('../supabase/migrations/20261020050000_consolidate_specialized_docs_policies.sql', import.meta.url), 'utf8')
+  await db.exec(migration)
+
+  const { rows } = await db.query(`
+    select cmd, roles::text as roles, count(*)::int as n
+    from pg_policies
+    where schemaname='public' and tablename='docs' and permissive='PERMISSIVE'
+    group by cmd, roles
+  `)
+  const counts = Object.fromEntries(rows.map(row => [row.cmd + ':' + row.roles, row.n]))
+  assert.equal(counts['INSERT:{authenticated}'], 1)
+  assert.equal(counts['SELECT:{anon}'], 1)
+  assert.equal(counts['SELECT:{authenticated}'], 1)
+  assert.equal(counts['UPDATE:{authenticated}'], 1)
+  for (const policy of [
+    'docs_insert_ai_organizer_milestones',
+    'docs_insert_ai_organizer_project_brief',
+    'docs_insert_ai_organizer_requests',
+    'docs_insert_work_submissions',
+    'docs_read_ai_organizer_requests',
+    'docs_read_idea_author_collaboration_application',
+    'docs_read_work_submissions',
+    'docs_update_ai_organizer_requests',
+    'docs_update_ai_organizer_project_brief',
+    'docs_update_idea_author_collaboration_decision',
+    'docs_review_work_submissions',
+  ]) {
+    assert.equal((await db.query('select count(*)::int as n from pg_policies where schemaname=$1 and tablename=$2 and policyname=$3', ['public', 'docs', policy])).rows[0].n, 0, policy + ' should be consolidated')
+  }
+})
