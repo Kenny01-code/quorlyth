@@ -464,7 +464,7 @@ export function Messages() {
            <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
           <label className="chat-filter" title="Search conversations"><Icon name="search" size={16} /><input ref={conversationSearch} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search conversations" aria-label="Search conversations" /><kbd className="chat-search-shortcut" aria-hidden="true">Ctrl K</kbd></label>
           <div className="chat-filter-tabs" role="group" aria-label="Filter conversations"><button className={cn(conversationFilter === 'all' && 'on')} onClick={() => setConversationFilter('all')}>All</button><button className={cn(conversationFilter === 'unread' && 'on')} onClick={() => setConversationFilter('unread')}>Unread</button><button className={cn(conversationFilter === 'groups' && 'on')} onClick={() => setConversationFilter('groups')}>Groups</button><button className={cn(conversationFilter === 'archived' && 'on')} onClick={() => setConversationFilter('archived')}>Archived</button></div>
-          <div className="chat-conversation-list">{visibleConversations.map(c => {
+          <div className="chat-conversation-list">{visibleConversations.map((c, index) => {
             const last = lastMessage(c), unread = unreadCount(c)
             const pref = preferenceFor(c.id)
             const previousPinned = index > 0 ? !!preferenceFor(visibleConversations[index - 1].id)?.pinned : null
