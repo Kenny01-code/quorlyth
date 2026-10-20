@@ -399,7 +399,7 @@ test('docs RLS consolidation keeps each specialized predicate and removes duplic
     create policy docs_update_idea_author_collaboration_decision on public.docs for update to authenticated using (private.can_review_pending_collaboration_application(path,data)) with check (private.can_decide_collaboration_application(path,data));
     create policy docs_review_work_submissions on public.docs for update to authenticated using (private.can_review_work_submission(path,data)) with check (private.can_save_work_review(path,data));
   `)
-  const migration = await readFile(new URL('../supabase/migrations/20261020050000_consolidate_specialized_docs_policies.sql', import.meta.url), 'utf8')
+  const migration = await readFile(new URL('../supabase/migrations/20261020045802_consolidate_specialized_docs_policies.sql', import.meta.url), 'utf8')
   await db.exec(migration)
 
   const { rows } = await db.query(`
