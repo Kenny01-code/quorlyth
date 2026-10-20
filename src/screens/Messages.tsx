@@ -88,8 +88,23 @@ export function Messages() {
   const shouldStickToBottom = useRef(true)
   const lastConversationId = useRef<string | undefined>(undefined)
   const textarea = useRef<HTMLTextAreaElement>(null)
+  const conversationSearch = useRef<HTMLInputElement>(null)
   const store = a.backend?.store
   const meId = a.me?.id || ''
+
+  useEffect(() => {
+    const onKeyboardShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        conversationSearch.current?.focus()
+      } else if (event.key === 'Escape' && document.activeElement === conversationSearch.current) {
+        setQuery('')
+        conversationSearch.current?.blur()
+      }
+    }
+    window.addEventListener('keydown', onKeyboardShortcut)
+    return () => window.removeEventListener('keydown', onKeyboardShortcut)
+  }, [])
 
   useEffect(() => {
     if (!meId) {
@@ -447,7 +462,7 @@ export function Messages() {
           </nav>
           <div className="chat-inbox-panel">
            <div className="chat-sidebar-head"><div><p className="dim">YOUR INBOX</p><h3>Messages <span>{conversations.length || ''}</span></h3></div><button className="chat-icon-btn" title="New message" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}><Icon name="plus" size={18} /></button></div>
-          <label className="chat-filter"><Icon name="search" size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" /></label>
+          <label className="chat-filter" title="Search conversations"><Icon name="search" size={16} /><input ref={conversationSearch} value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a conversation" aria-label="Search conversations" /><kbd className="chat-search-shortcut" aria-hidden="true">Ctrl K</kbd></label>
           <div className="chat-filter-tabs" role="group" aria-label="Filter conversations"><button className={cn(conversationFilter === 'all' && 'on')} onClick={() => setConversationFilter('all')}>All</button><button className={cn(conversationFilter === 'groups' && 'on')} onClick={() => setConversationFilter('groups')}>Groups</button><button className={cn(conversationFilter === 'unread' && 'on')} onClick={() => setConversationFilter('unread')}>Unread</button><button className={cn(conversationFilter === 'archived' && 'on')} onClick={() => setConversationFilter('archived')}>Archived</button></div>
           <div className="chat-conversation-list">{visibleConversations.map(c => {
             const last = lastMessage(c), unread = unreadCount(c)
