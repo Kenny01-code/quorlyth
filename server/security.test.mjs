@@ -403,21 +403,23 @@ test('docs RLS consolidation keeps each specialized predicate and removes duplic
   await db.exec(migration)
 
   const { rows } = await db.query(`
-    select cmd, count(*)::int as n
+    select cmd, roles::text as roles, count(*)::int as n
     from pg_policies
     where schemaname='public' and tablename='docs' and permissive='PERMISSIVE'
-    group by cmd
+    group by cmd, roles
   `)
-  const counts = Object.fromEntries(rows.map(row => [row.cmd, row.n]))
-  assert.equal(counts.INSERT, 1)
-  assert.equal(counts.SELECT, 1)
-  assert.equal(counts.UPDATE, 1)
+  const counts = Object.fromEntries(rows.map(row => [row.cmd + ':' + row.roles, row.n]))
+  assert.equal(counts['INSERT:{authenticated}'], 1)
+  assert.equal(counts['SELECT:{anon}'], 1)
+  assert.equal(counts['SELECT:{authenticated}'], 1)
+  assert.equal(counts['UPDATE:{authenticated}'], 1)
   for (const policy of [
     'docs_insert_ai_organizer_milestones',
     'docs_insert_ai_organizer_project_brief',
     'docs_insert_ai_organizer_requests',
     'docs_insert_work_submissions',
     'docs_read_ai_organizer_requests',
+    'docs_read_public_scoped',
     'docs_read_idea_author_collaboration_application',
     'docs_read_work_submissions',
     'docs_update_ai_organizer_requests',
