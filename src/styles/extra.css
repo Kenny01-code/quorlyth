@@ -35,11 +35,6 @@ img, video, canvas { max-width: 100% }
 .preview-copy { display:flex; flex-direction:column; justify-content:center; min-height:248px; }
 .preview-copy h2 { max-width:520px; min-height:2.45em; margin:14px 0; }
 .preview-copy > p:not(.eyebrow) { max-width:470px; min-height:6em; }
-.preview-copy-enter { animation: preview-copy-enter .62s cubic-bezier(.2,.7,.2,1) both; }
-@keyframes preview-copy-enter {
-  from { opacity:0; transform:translateY(9px); filter:blur(3px); }
-  to { opacity:1; transform:translateY(0); filter:blur(0); }
-}
 .eyebrow { color:var(--g5); font-size:11px; letter-spacing:.16em; }
 .preview-card { min-width:0; padding:clamp(20px,3vw,32px); }
 .preview-topline,.preview-detail { display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -85,7 +80,6 @@ img, video, canvas { max-width: 100% }
   .ft { align-items:flex-start; flex-direction:column; gap:12px; }
 }
 @media (prefers-reduced-motion:reduce) {
-  .preview-copy-enter { animation:none !important; }
   html { scroll-behavior:auto; }
   .skip-link { transition:none; }
   .mq > div { animation:none !important; }
@@ -102,4 +96,24 @@ img, video, canvas { max-width: 100% }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-copy-enter { animation:none !important; }
+}
+
+
+/* Both rotating homepage copy areas use the original Quorlyth reveal,
+   with a reserved text frame so longer lines never shove the page around. */
+.hero h1.hero-title { min-height: 2em; }
+.hero .hero-copy { min-height: 5.4em; }
+.preview-copy h2 { min-height: 2.45em; }
+.preview-copy > p:not(.eyebrow) { min-height: 6em; }
+
+@media (max-width: 680px) {
+  .hero h1.hero-title { min-height: 2.05em; }
+  .hero .hero-copy { min-height: 7em; }
+  .preview-copy { min-height: 280px; }
+  .preview-copy h2 { min-height: 2.8em; }
+  .preview-copy > p:not(.eyebrow) { min-height: 7em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-copy-enter { animation: none !important; }
 }
