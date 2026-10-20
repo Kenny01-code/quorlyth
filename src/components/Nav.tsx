@@ -8,7 +8,7 @@ import { Av } from './ui'
 
 const ITEMS: { path: string; label: string; icon: string; owner?: boolean; communityOwner?: boolean; platformOwnerOnly?: boolean; platformAdminOnly?: boolean; guest?: boolean }[] = [
   { path: '/', label: 'Home', icon: 'audience' },
-  { path: '/demo', label: 'Try demo', icon: 'spark', guest: true },
+  { path: '/demo', label: 'Explore demo', icon: 'spark', guest: true },
   { path: '/signin', label: 'Sign in', icon: 'private', guest: true },
   { path: '/dashboard', label: 'Dashboard', icon: 'home' },
   { path: '/access', label: 'Request access', icon: 'invite' },
@@ -60,6 +60,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   const loc = useLocation()
   const app = useApp()
   const { me, owner, platformOwner, platformAdmin } = app
+  const publicLanding = loc.pathname === '/' && !me && !demo
   const communityOwner = !!me && app.data.communities.some(c => app.ownsCommunity(c.id))
   const workspaceManager = owner || communityOwner
   const hasAccessibleProject = !!me && app.data.ideas.some(idea => {
@@ -117,8 +118,8 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   }, [loc.pathname, owner])
 
   return (
-    <nav className="glass" id="nav">
-      <button className="lgb" onClick={onReplay} title="Replay intro"><Logo size={26} breathe /></button>
+    <nav className={cn('glass', publicLanding && 'nav-public')} id="nav" aria-label="Main navigation">
+      <button className="lgb" onClick={onReplay} title="Replay intro" aria-label="Replay Quorlyth introduction"><Logo size={26} breathe /></button>
       <b className="nav-wordmark">{'QUORLYTH'.split('').map((c, i) => <span key={i} style={{ ['--word-index' as any]: i }}>{c}</span>)}</b>
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
@@ -129,7 +130,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
             if (i.path === '/access' && me && app.data.decisions[me.id]?.status === 'approved' && !accessSent) return false
             if (demo) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             if (me) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
-            return ['/', '/demo', '/signin'].includes(i.path)
+            return publicLanding ? ['/demo', '/signin'].includes(i.path) : ['/', '/demo', '/signin'].includes(i.path)
           }).map(i => (
             <button key={i.path} className={cn('nav-item', 'nav-item-' + (i.path.slice(1).replace(/[^a-z0-9]+/g, '-') || 'home'), active(i.path) && 'on')} onPointerEnter={() => preloadRoute(i.path)} onPointerDown={() => preloadRoute(i.path)} onFocus={() => preloadRoute(i.path)} onClick={() => i.path === '/demo' ? onDemo() : nav(i.path === '/settings' && unreadRequests ? '/settings?tab=requests' : i.path)} title={i.label} aria-label={i.path === '/settings' && pendingRequests ? `${i.label}, ${pendingRequests} pending access requests` : i.path === '/access' && accessSent ? `${i.label}, request sent` : i.label} style={{ position: 'relative' }}>
               <Icon name={i.icon} size={18} /><span>{i.label}</span>
@@ -140,15 +141,15 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
         </div>
         <div className="nsl"><i ref={thumb} /></div>
       </div>
-      <div className="navend">
+      {!publicLanding && <div className="navend">
         <button className="bl" onClick={onBell} title="Notifications" aria-label="Notifications" style={{ position: 'relative' }}>
           <Icon name="bell" size={18} />{unread > 0 && <b className="bdg pulse">{unread > 9 ? '9+' : unread}</b>}
         </button>
-        <button className="srch" onClick={onSearch} title="Search (Ctrl K)"><Icon name="search" size={18} /><span>Search</span><kbd>Ctrl K</kbd></button>
-        <button className="navav" onClick={() => nav(me ? '/me' : '/signin')} title={me ? 'My profile' : 'Sign in'}>
+        <button className="srch" onClick={onSearch} title="Search (Ctrl K)" aria-label="Search Quorlyth (Control K)"><Icon name="search" size={18} /><span>Search</span><kbd>Ctrl K</kbd></button>
+        <button className="navav" onClick={() => nav(me ? '/me' : '/signin')} title={me ? 'My profile' : 'Sign in'} aria-label={me ? 'Open my profile' : 'Sign in'}>
           {me ? <><Av id={me.id} size={34} /><i className="ring" /></> : <Icon name="private" size={18} />}
         </button>
-      </div>
+      </div>}
     </nav>
   )
 }

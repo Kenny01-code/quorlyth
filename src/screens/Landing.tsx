@@ -4,11 +4,10 @@ import { Logo } from '../lib/Logo'
 import { Orbit } from '../components/Orbit'
 import { Bar } from '../components/ui'
 import { useApp } from '../data/AppProvider'
-import { useReveal, useTypewriter } from '../lib/hooks'
-import { useEffect, useState } from 'react'
+import { useReveal } from '../lib/hooks'
+import { useEffect } from 'react'
 
-const HEADLINES = ['Your fans, in order.', 'Every idea, heard.', 'Many voices, one direction.', 'Where ideas earn their place.', 'Followers become a community.', 'Quiet power, loudly shared.']
-const SUBS = ['QuorlythBot turns a crowd of followers into communities that think with you.', 'The best ideas rise. You choose which ones the world sees.', 'Every contributor credited. Every idea given a fair hearing.']
+const WORDS = ['Communities', 'Ideas', 'Collaboration', 'Surfacing', 'Selection', 'Promotion', 'Credit', 'Reach']
 const STAGES = [['audience', 'Followers', 'Everyone who shows up'], ['community', 'Communities', 'Grouped by interest'], ['idea', 'Ideas', 'Shared and built on'], ['surface', 'Surfacing', 'Ranked with reasons'], ['promote', 'Promotion', 'You choose, then publish']]
 const STEPS = [
   ['audience', 'Followers', 'Everyone who shows up arrives unsorted. Quorlyth gives every person a place to land.', 'Share your space link with your audience.'],
@@ -18,40 +17,70 @@ const STEPS = [
   ['promote', 'Promotion', 'You choose. The idea becomes a post, with contributors credited.', 'Select an idea and publish it.'],
 ]
 const FEATURES = [['rank', 'Ranked with reasons', 'Every score comes with a plain explanation.'], ['contribute', 'Credit built in', 'Contributors stay attached to the share-ready post.'], ['private', 'Private by default', 'Your space is only open to the people you share it with.'], ['status', 'Calm by design', 'No noise. Just what needs your attention.'], ['member', 'Your voice stays yours', 'The AI suggests. You decide, always.'], ['audience', 'Made to grow', 'From a handful of fans to a large community.']]
-const WORDS = ['Communities', 'Ideas', 'Collaboration', 'Surfacing', 'Selection', 'Promotion', 'Credit', 'Reach']
-
-function Words({ list }: { list: string[] }) {
-  const [k, setK] = useState(0)
-  const [fo, setFo] = useState(false)
-  useEffect(() => { const t = setTimeout(() => { setFo(true); setTimeout(() => { setK(x => x + 1); setFo(false) }, 600) }, 5600); return () => clearTimeout(t) }, [k])
-  return <p className={'mut' + (fo ? ' fo' : '')} style={{ minHeight: '3.6em' }}>{list[k % list.length].split(' ').map((w, i) => <span key={k + '-' + i} className="wd" style={{ ['--i' as any]: i, marginRight: '0.28em' }}>{w}</span>)}</p>
-}
 
 export function Landing() {
   const nav = useNavigate()
   const { me, data, enterDemo } = useApp()
-  const typed = useTypewriter(HEADLINES)
+  useEffect(() => {
+    const detail = { page_path: window.location.pathname }
+    window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'landing_view', ...detail } }))
+    const analyticsWindow = window as Window & { gtag?: (command: string, eventName: string, parameters?: Record<string, unknown>) => void }
+    analyticsWindow.gtag?.('event', 'landing_view', detail)
+  }, [])
   useReveal()
   const w = { o: data.settings?.wo ?? 40, f: data.settings?.wf ?? 25, r: data.settings?.wr ?? 35 }
   const ws = [...WORDS, ...WORDS]
   return (
     <>
-      <div className="hero">
+      <div className="hero" id="top">
         <Orbit />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
-        <h1 style={{ marginTop: 28, minHeight: '2.1em' }}>{typed}<span className="cr" /></h1>
-        <Words list={SUBS} />
-        <button className="btn p" onClick={() => nav(me ? '/dashboard' : '/signin')}>{me ? 'Open dashboard' : 'Get started'}</button>{' '}
-        {!me && <button className="btn" onClick={() => { enterDemo(); nav('/dashboard') }}><Icon name="spark" size={15} />Try Demo</button>}{' '}
-        {!me && <button className="btn" onClick={() => nav('/signin')}>Sign in</button>}
+        <h1 className="hero-title">Turn your fanbase into a source of ideas.</h1>
+        <p className="hero-copy">Bring your audience together, surface the ideas that matter with AI, and choose what gets promoted. Every selected contribution stays credited.</p>
+        <div className="hero-actions">
+          <button className="btn p" onClick={() => {
+            window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'demo_start', page_path: '/' } }))
+            const analyticsWindow = window as Window & { gtag?: (command: string, eventName: string, parameters?: Record<string, unknown>) => void }
+            analyticsWindow.gtag?.('event', 'demo_start', { page_path: '/' })
+            enterDemo()
+            nav('/dashboard')
+          }}>
+            <Icon name="spark" size={16} />Explore the demo
+          </button>
+          <a className="btn" href="#how-it-works" onClick={() => {
+            window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'how_it_works_click', page_path: '/' } }))
+            const analyticsWindow = window as Window & { gtag?: (command: string, eventName: string, parameters?: Record<string, unknown>) => void }
+            analyticsWindow.gtag?.('event', 'how_it_works_click', { page_path: '/' })
+          }}>See how it works</a>
+        </div>
+        <p className="hero-note">Explore with sample data. No account needed.</p>
         <i className="hz" />
       </div>
       <div className="mq"><div>{ws.map((x, i) => <span key={i} style={{ display: 'contents' }}><span>{x}</span><Icon name="audience" size={14} /></span>)}</div></div>
+      <section className="product-preview rv" aria-labelledby="preview-heading">
+        <div className="preview-copy">
+          <p className="eyebrow">INSIDE QUORLYTH</p>
+          <h2 id="preview-heading">From a fan's idea to a creator's decision.</h2>
+          <p className="mut">See how an idea is reviewed with clear reasons, selected by a creator, and prepared for promotion with contributor credit intact.</p>
+        </div>
+        <div className="glass preview-card">
+          <div className="preview-topline">
+            <span className="chip">Illustrative demo</span>
+            <span className="dim">Idea review</span>
+          </div>
+          <h3>What should our community build next?</h3>
+          <p className="mut">A community-led concept, ready for review.</p>
+          <div className="preview-divider" />
+          <div className="preview-detail"><span className="dim">AI assessment</span><span>Reasons explained</span></div>
+          <div className="preview-detail"><span className="dim">Final selection</span><span>Creator decides</span></div>
+          <div className="preview-detail"><span className="dim">Promotion</span><span>Contributor credit retained</span></div>
+        </div>
+      </section>
       <div className="grid g5">
         {STAGES.map(([ic, t, d]) => <div key={t} className="glass pad lift" style={{ padding: '22px 18px', borderRadius: 20 }}><div style={{ marginBottom: 34 }}><Icon name={ic} size={26} /></div><h3>{t}</h3><p className="dim">{d}</p></div>)}
       </div>
-      <div className="sec rv"><h2>From a crowd to a choice.</h2><p className="mut">Five quiet steps turn a following into something you can steer.</p>
+      <div className="sec rv" id="how-it-works"><h2>From a crowd to a choice.</h2><p className="mut">Five quiet steps turn a following into something you can steer.</p>
         <div className="tl">{STEPS.map(([ic, t, d, what], i) => (
           <div key={t} className="ts rv" style={{ ['--d' as any]: i * 0.05 + 's' }}><div className="nd"><Icon name={ic} size={20} /></div>
             <div><h3>{t}</h3><p className="mut">{d}</p></div>
@@ -64,10 +93,31 @@ export function Landing() {
       <div className="sec rv"><h2>Made quietly, built to last.</h2>
         <div className="grid g3" style={{ marginTop: 40 }}>{FEATURES.map(([ic, t, d], i) => <div key={t} className="glass pad lift rv" style={{ ['--d' as any]: (i % 3) * 0.08 + 's' }}><div style={{ marginBottom: 46 }}><Icon name={ic} size={28} /></div><h3>{t}</h3><p className="dim" style={{ marginTop: 6 }}>{d}</p></div>)}</div></div>
       <div className="sec rv"><p className="mani">A following is a crowd.<br />A community is a room<br />full of ideas.</p></div>
-      <div className="sec rv"><div className="glass cta lift"><div className="hmark" style={{ marginTop: -20 }}><i className="hh" /><Logo size={72} breathe /></div>
-        <h2>Bring order to your fans.</h2><p className="mut" style={{ margin: '14px auto 30px', maxWidth: 420 }}>Request access to join a space, or sign in if you already have it.</p>
-        <div className="acts"><button className="btn p" onClick={() => me ? nav('/access') : (enterDemo(), nav('/dashboard'))}>{me ? 'Request access' : 'Explore Demo Space'}</button><button className="btn" onClick={() => nav('/signin')}>Sign in</button></div></div>
-        <footer className="ft" aria-label="Quorlyth creator credit"><span>Quorlyth</span><span className="dim">Built for creators and their communities</span><span className="creator-credit">Created by Ighile Divine</span></footer></div>
+      <div className="sec rv">
+        <div className="glass cta lift">
+          <div className="hmark" style={{ marginTop: -20 }}><i className="hh" /><Logo size={72} breathe /></div>
+          <h2>Ready to build with your community?</h2>
+          <p className="mut" style={{ margin: '14px auto 30px', maxWidth: 440 }}>Start with the demo, see how ideas move forward, and decide when you are ready to create your own space.</p>
+          <div className="acts">
+            <button className="btn p" onClick={() => {
+              window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: me ? 'dashboard_open' : 'signup_start', page_path: '/' } }))
+              const analyticsWindow = window as Window & { gtag?: (command: string, eventName: string, parameters?: Record<string, unknown>) => void }
+              analyticsWindow.gtag?.('event', me ? 'dashboard_open' : 'signup_start', { page_path: '/' })
+              nav(me ? '/dashboard' : '/signin')
+            }}>{me ? 'Open your dashboard' : 'Get started'}</button>
+            {!me && <button className="btn" onClick={() => { enterDemo(); nav('/dashboard') }}>Explore the demo</button>}
+          </div>
+        </div>
+        <footer className="ft" aria-label="Site footer">
+          <a className="footer-brand" href="/" aria-label="Quorlyth home">QUORLYTH</a>
+          <span className="dim footer-description">Built for creators and their communities.</span>
+          <nav className="footer-links" aria-label="Legal links">
+            <a href="/privacy">Privacy</a>
+            <a href="/terms">Terms</a>
+          </nav>
+          <span className="dim footer-copyright">© {new Date().getFullYear()} Quorlyth</span>
+        </footer>
+      </div>
     </>
   )
 }
