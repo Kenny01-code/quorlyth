@@ -31,6 +31,16 @@
 }
 .q-loader--screen::before,
 .q-loader--screen::after { display: none; }
+
+/* Route loaders use the viewport center, never the top of the page flow. */
+.q-loader--route {
+  position:fixed; z-index:9999; top:50%; left:50%;
+  display:grid; place-items:center; width:144px; height:144px;
+  min-width:0; min-height:0; padding:0; overflow:visible;
+  transform:translate(-50%,-50%); pointer-events:none; background:transparent;
+}
+.q-loader--route::before,
+.q-loader--route::after { display:none; }
 .q-loader__scene {
   position: relative;
   z-index: 1;
