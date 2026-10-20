@@ -21,7 +21,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(), geolocation=(), microphone=(self)"
+          "value": "camera=(self), geolocation=(), microphone=(self)"
         }
       ]
     }

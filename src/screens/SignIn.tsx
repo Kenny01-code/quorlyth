@@ -65,7 +65,7 @@ function Stage({ greeting }: { greeting: string }) {
           accent: preferredAccent(),
           signal: controller.signal,
           elevenLabsOnly: true,
-          allowBrowserFallback: true,
+          // "Hear a hello" must never silently switch to the browser's basic voice.
           preferElevenLabsVoice: true,
           liveTalk: true,
           onBrowserFallback: () => {
