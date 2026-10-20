@@ -168,7 +168,34 @@ test('structured JSON requests use Gemini JSON output mode', async () => {
   assert.deepEqual(JSON.parse(res.output), { ok: true })
 })
 
-test('chat does not retry a failed Gemini model when no backup provider is configured', async () => {
+test('chat recovers with a structured JSON reply when streaming fails', async () => {
+  process.env.AI_PROVIDER = 'gemini'
+  process.env.GEMINI_API_KEY = 'test-gemini-key'
+  delete process.env.XAI_API_KEY
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push({ url: String(url), options })
+    if (String(url).includes(':streamGenerateContent')) {
+      return new Response(JSON.stringify({ error: { status: 'UNAVAILABLE' } }), { status: 503 })
+    }
+    assert.match(String(url), /gemini-3\.8-flash:generateContent/)
+    assert.equal(JSON.parse(options.body).generationConfig.responseMimeType, 'application/json')
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ reply: 'Recovered without streaming.' }) }] } }],
+    }), { status: 200 })
+  }
+
+  const res = response()
+  await chat({ body: { system: 'Be helpful', tier: 'smart', messages: [{ role: 'user', content: 'Hi there' }] } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.equal(res.statusCode, 200)
+  assert.match(res.headers['Content-Type'], /text\/event-stream/)
+  assert.match(res.output, /"t":"Recovered without streaming\."/)
+  assert.match(res.output, /"done":true/)
+})
+test('chat tries structured recovery before returning unavailable when Gemini streaming fails', async () => {
   process.env.AI_PROVIDER = 'gemini'
   process.env.GEMINI_API_KEY = 'test-secret'
   delete process.env.XAI_API_KEY
@@ -181,8 +208,9 @@ test('chat does not retry a failed Gemini model when no backup provider is confi
   const res = response()
   await chat({ body: { messages: [{ role: 'user', content: 'Hi' }] } }, res)
 
-  assert.equal(requested.length, 1)
+  assert.equal(requested.length, 2)
   assert.match(requested[0], /gemini-3\.8-flash:streamGenerateContent/)
+  assert.match(requested[1], /gemini-3\.8-flash:generateContent/)
   assert.equal(res.statusCode, 503)
 })
 

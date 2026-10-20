@@ -379,6 +379,17 @@ async function primeStreamResponse(response) {
   }
 }
 
+// Log only provider, operation, HTTP status and sanitized error code — never prompts or credentials.
+async function safeAiErrorCode(response) {
+  try {
+    const payload = await response.clone().json()
+    const code = payload?.error?.code || payload?.error?.status || payload?.error?.type
+    return typeof code === 'string' && /^[a-z0-9_.-]{1,80}$/i.test(code) ? code : undefined
+  } catch {
+    return undefined
+  }
+}
+
 async function chooseProvider(providers, request, requireStream = false) {
   let lastFailure = null
   for (const provider of providers) {
@@ -391,15 +402,31 @@ async function chooseProvider(providers, request, requireStream = false) {
           return { provider, response: await primeStreamResponse(response) }
         } catch (error) {
           lastFailure = { provider, error }
+          console.warn('[Quorlyth AI] provider stream was not ready', {
+            provider,
+            mode: 'chat_stream',
+            reason: error?.code === 'AI_STREAM_IDLE_TIMEOUT' ? 'first_chunk_timeout' : (error instanceof Error ? error.name : 'UnknownError'),
+          })
           await discardResponse(response)
           continue
         }
       }
       lastFailure = { provider, response }
+      console.warn('[Quorlyth AI] provider returned an error', {
+        provider,
+        mode: requireStream ? 'chat_stream' : 'structured_json',
+        status: response.status,
+        code: await safeAiErrorCode(response),
+      })
       if (!shouldTryAnotherProvider(response)) return lastFailure
       await discardResponse(response)
     } catch (error) {
       lastFailure = { provider, error }
+      console.warn('[Quorlyth AI] provider request failed', {
+        provider,
+        mode: requireStream ? 'chat_stream' : 'structured_json',
+        reason: error?.code || (error instanceof Error ? error.name : 'UnknownError'),
+      })
       if (response) await discardResponse(response)
     }
   }
@@ -553,6 +580,100 @@ async function streamOpenAICompatibleResponse(r, res) {
   }
 }
 
+/** Bound structured response reads so a provider that sends headers but stalls cannot block failover indefinitely. */
+async function readProviderJsonWithTimeout(response) {
+  const configured = Number(process.env.AI_JSON_BODY_TIMEOUT_MS)
+  const timeoutMs = Number.isFinite(configured) && configured >= 1000 ? Math.min(configured, 15000) : 6000
+  let timer
+  try {
+    return await Promise.race([
+      response.json(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          const error = new Error('AI provider JSON response stalled')
+          error.code = 'AI_JSON_BODY_TIMEOUT'
+          reject(error)
+        }, timeoutMs)
+      }),
+    ])
+  } catch (error) {
+    try { await response.body?.cancel(error) } catch {}
+    throw error
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+/**
+ * Last-resort chat recovery: some providers may fail on streaming while their
+ * structured response endpoint remains healthy. Return one normal Quorlyth SSE
+ * reply so the existing client can finish the turn without a UI change.
+ */
+async function recoverChatWithStructuredJson(providers, body) {
+  const conversation = body.messages.slice(-10).map(message => {
+    const role = message.role === 'assistant' ? 'QuorlythBot' : 'User'
+    return role + ': ' + String(message.content).slice(-900)
+  }).join('\n\n')
+  const prompt = 'Recent conversation:\n' + conversation + '\n\nAnswer the latest user message directly and helpfully.'
+  const system = [
+    body.system || 'You are QuorlythBot, a helpful assistant inside the Quorlyth application.',
+    'The primary streamed reply path was unavailable. Continue to follow the instructions and app context above.',
+    'Return only a valid JSON object with one string field named reply, for example {"reply":"Your answer here"}. Do not use Markdown fences.',
+  ].join('\n\n')
+
+  for (const provider of providers) {
+    let response
+    try {
+      response = await requestProviderJson(provider, { prompt, system, tier: body.tier })
+      if (!response.ok) {
+        console.warn('[Quorlyth AI] structured chat recovery returned an error', {
+          provider,
+          mode: 'chat_recovery_json',
+          status: response.status,
+          code: await safeAiErrorCode(response),
+        })
+        await discardResponse(response)
+        continue
+      }
+
+      const payload = await readProviderJsonWithTimeout(response)
+      const parsed = parseProviderJson(provider, payload)
+      const reply = typeof parsed?.reply === 'string' ? parsed.reply.trim()
+        : typeof parsed?.text === 'string' ? parsed.text.trim()
+        : typeof parsed?.answer === 'string' ? parsed.answer.trim()
+        : ''
+      if (!reply) {
+        console.warn('[Quorlyth AI] structured chat recovery returned no reply', { provider, mode: 'chat_recovery_json' })
+        continue
+      }
+
+      console.info('[Quorlyth AI] chat recovered with structured response mode', { provider })
+      return reply.slice(0, 24000)
+    } catch (error) {
+      console.warn('[Quorlyth AI] structured chat recovery failed', {
+        provider,
+        mode: 'chat_recovery_json',
+        reason: error?.code || (error instanceof Error ? error.name : 'UnknownError'),
+      })
+      if (response) await discardResponse(response)
+    }
+  }
+  return ''
+}
+
+function sendRecoveredChatReply(res, reply) {
+  res.statusCode = 200
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Accel-Buffering', 'no')
+  res.flushHeaders?.()
+  res.write('data: ' + JSON.stringify({ t: reply }) + '\n\n')
+  res.write('data: {"done":true}\n\n')
+  res.end()
+}
+
 /** Streams a chat reply. Provider failures are handled before the response starts. */
 export async function chat(req, res) {
   try {
@@ -565,7 +686,11 @@ export async function chat(req, res) {
     }
     const providers = needText()
     const failure = await chooseProvider(providers, provider => requestProviderChat(provider, body), true)
-    if (!failure?.response?.ok || !failure.response.body) return await sendProviderFailure(res, failure)
+    if (!failure?.response?.ok || !failure.response.body) {
+      const recoveredReply = await recoverChatWithStructuredJson(providers, body)
+      if (recoveredReply) return sendRecoveredChatReply(res, recoveredReply)
+      return await sendProviderFailure(res, failure)
+    }
     if (failure.provider === 'gemini') return await streamGeminiResponse(failure.response, res)
     return await streamOpenAICompatibleResponse(failure.response, res)
   } catch (e) {
