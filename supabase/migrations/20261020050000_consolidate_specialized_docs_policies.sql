@@ -22,8 +22,19 @@ drop policy if exists docs_insert_ai_organizer_requests on public.docs;
 drop policy if exists docs_insert_work_submissions on public.docs;
 
 drop policy if exists docs_read_scoped on public.docs;
+-- Anonymous visitors must not evaluate the private helpers that are intentionally
+-- executable by authenticated users only. Keep their original public-read predicates
+-- in a separate anon-only policy; authenticated users get the combined policy below.
+drop policy if exists docs_read_public_scoped on public.docs;
+create policy docs_read_public_scoped on public.docs
+for select to anon
+using (
+  (select private.can_read_doc(path, data))
+  or (select private.can_read_conversation_doc(path, data))
+);
+
 create policy docs_read_scoped on public.docs
-for select to anon, authenticated
+for select to authenticated
 using (
   (select private.can_read_doc(path, data))
   or (select private.can_read_conversation_doc(path, data))
