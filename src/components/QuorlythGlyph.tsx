@@ -5,7 +5,7 @@ export type QuorlythGlyphName =
   | 'review' | 'plan' | 'person' | 'add' | 'back' | 'send' | 'edit'
   | 'complete' | 'start' | 'blocked' | 'calendar' | 'priority' | 'due'
   | 'open' | 'document' | 'progress' | 'checkpoint' | 'community'
-  | 'profile' | 'settings' | 'message' | 'share' | 'lock' | 'arrow-up' | 'arrow-up-right'
+  | 'profile' | 'info' | 'smile' | 'settings' | 'message' | 'share' | 'lock' | 'arrow-up' | 'arrow-up-right'
   | 'arrow' | 'check' | 'close' | 'minimize' | 'surface' | 'invite' | 'hold'
   | 'search' | 'mail' | 'eye' | 'alert' | 'bell' | 'save' | 'camera' | 'tag'
   | 'rotate' | 'keys' | 'database' | 'link' | 'pin' | 'phone' | 'phone-off'
@@ -39,6 +39,8 @@ const SHAPES: Record<QuorlythGlyphName, ReactNode> = {
   checkpoint: <><path d="M4 12h4M16 12h4"/><path d="m12 3.5 6.2 8.5-6.2 8.5L5.8 12 12 3.5Z"/><circle cx="12" cy="12" r="2.2"/></>,
   community: <><path d="m12 3.5 8.5 4.2v8.6L12 20.5l-8.5-4.2V7.7L12 3.5Z"/><path d="m3.5 7.7 8.5 4.4 8.5-4.4M12 12.1v8.4"/><circle cx="12" cy="12" r="1.5"/></>,
   profile: <><circle cx="8" cy="8" r="2.4"/><circle cx="17" cy="9" r="2"/><path d="M3.8 19.5c.2-3 1.7-4.8 4.2-4.8s4 1.8 4.2 4.8M14 15c3.2-.8 5.6.8 6.2 3.8"/></>,
+  info: <><circle cx="12" cy="12" r="8.8"/><path d="M12 10.8v5.1M12 7.8v.1"/></>,
+  smile: <><circle cx="12" cy="12" r="8.8"/><path d="M8.2 14.1c.8 1.4 2.1 2.2 3.8 2.2s3-.8 3.8-2.2"/><path d="M8.7 9.5h.1M15.2 9.5h.1"/></>,
   settings: <><path d="M4 7.5h7M15 7.5h5M4 16.5h3M11 16.5h9"/><circle cx="13" cy="7.5" r="2"/><circle cx="9" cy="16.5" r="2"/></>,
   message: <><path d="M4 4.5h16v12H11l-5 4v-4H4z"/><path d="M8 8.5h8M8 12h5"/></>,
   share: <><circle cx="18" cy="5" r="2.2"/><circle cx="6" cy="12" r="2.2"/><circle cx="18" cy="19" r="2.2"/><path d="m8 10.9 8-4.7M8 13.1l8 4.7"/></>,
