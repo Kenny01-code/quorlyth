@@ -419,7 +419,6 @@ test('docs RLS consolidation keeps each specialized predicate and removes duplic
     'docs_insert_ai_organizer_requests',
     'docs_insert_work_submissions',
     'docs_read_ai_organizer_requests',
-    'docs_read_public_scoped',
     'docs_read_idea_author_collaboration_application',
     'docs_read_work_submissions',
     'docs_update_ai_organizer_requests',
