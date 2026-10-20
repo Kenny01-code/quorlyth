@@ -360,6 +360,45 @@ nav .lgb{flex:none}nav b{flex:none}
 .cover-sample{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:rgba(0,0,0,.4);font-size:15px;box-shadow:0 0 24px rgba(255,255,255,.18)}
 @media(max-width:520px){.cover-picker{grid-template-columns:repeat(2,minmax(0,1fr))}.cover-option .ccv{height:74px}}
 
+/* High-end monochrome community icon picker and selected-state motion. */
+.community-icon-picker { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.community-icon-choice {
+  position:relative; display:grid; place-items:center; flex:0 0 48px; width:48px; height:48px;
+  border:1px solid rgba(255,255,255,.12); border-radius:15px; color:var(--g6);
+  background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  cursor:pointer; isolation:isolate; transition:transform .32s cubic-bezier(.2,.7,.2,1),border-color .32s,background .32s,box-shadow .32s,color .32s;
+}
+.community-icon-choice:hover { transform:translateY(-3px) scale(1.04); border-color:rgba(255,255,255,.48); color:#fff; background:rgba(255,255,255,.075); }
+.community-icon-choice:focus-visible { outline:1px solid #fff; outline-offset:4px; }
+.community-icon-choice.on {
+  color:#fff; border-color:rgba(255,255,255,.82);
+  background:linear-gradient(145deg,rgba(255,255,255,.19),rgba(255,255,255,.055));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 0 0 1px rgba(255,255,255,.08),0 8px 24px -12px rgba(255,255,255,.56);
+}
+.community-icon-choice.on::before {
+  content:""; position:absolute; inset:-4px; z-index:-1; border:1px solid rgba(255,255,255,.2);
+  border-radius:18px; animation:community-icon-aura 3s ease-in-out infinite; pointer-events:none;
+}
+.community-icon-choice__glyph { display:grid; place-items:center; transition:transform .35s cubic-bezier(.2,.7,.2,1),filter .35s; }
+.community-icon-choice__glyph svg { display:block; transition:filter .35s; }
+.community-icon-choice:hover .community-icon-choice__glyph { transform:scale(1.12) rotate(-4deg); }
+.community-icon-choice.on .community-icon-choice__glyph { transform:scale(1.08); animation:community-icon-float 3.4s ease-in-out infinite; }
+.community-icon-choice.on .community-icon-choice__glyph svg { filter:drop-shadow(0 0 7px rgba(255,255,255,.56)); }
+.community-icon-choice__check {
+  position:absolute; top:-5px; right:-5px; display:grid; place-items:center; width:17px; height:17px;
+  color:#050505; background:#fff; border:1px solid rgba(0,0,0,.3); border-radius:50%;
+  box-shadow:0 0 12px rgba(255,255,255,.28); animation:community-icon-check .35s cubic-bezier(.2,.8,.2,1) both;
+}
+.ccl .cic { transition:transform .4s cubic-bezier(.2,.7,.2,1),box-shadow .4s,border-color .4s; }
+.ccl:hover .cic { transform:translateY(-3px) rotate(-3deg) scale(1.035); border-color:rgba(255,255,255,.62); box-shadow:0 0 48px -4px rgba(255,255,255,.56),inset 0 1px 0 rgba(255,255,255,.25); }
+@keyframes community-icon-aura { 0%,100% { opacity:.42; transform:scale(.98); } 50% { opacity:1; transform:scale(1.025); } }
+@keyframes community-icon-float { 0%,100% { transform:translateY(0) scale(1.08); } 50% { transform:translateY(-2px) scale(1.13); } }
+@keyframes community-icon-check { from { opacity:0; transform:scale(.55) rotate(-25deg); } to { opacity:1; transform:scale(1) rotate(0); } }
+@media(max-width:520px){ .community-icon-picker { gap:8px; } .community-icon-choice { flex-basis:46px; width:46px; height:46px; } }
+@media(prefers-reduced-motion:reduce) {
+  .community-icon-choice, .community-icon-choice::before, .community-icon-choice__glyph, .community-icon-choice__check, .ccl .cic { animation:none !important; transition:none !important; }
+}
+
 
 /* QUORLYTH MESSAGING — monochrome glass workspace */
 

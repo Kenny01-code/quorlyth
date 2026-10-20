@@ -1299,11 +1299,14 @@ export async function speakElevenLabs(req, res) {
     logTtsProviderFailure('elevenlabs_buffered', { status: result.response.status, code: result.code })
     const status = result.response.status
     await discardResponse(result.response)
-    if (status === 402) {
-      return send(res, 503, { error: 'ElevenLabs returned Payment Required (402). Check your ElevenLabs plan, billing, and available credits. No alternate voice was used.' })
+    if (result.code === 'quota_exceeded' || result.code === 'insufficient_credits') {
+      return send(res, 503, { error: 'ElevenLabs received the request but refused voice generation because the account or API key has reached its quota. Check ElevenLabs usage, available credits, and this key’s credit limit. The key may still be valid. No alternate voice was used.' })
     }
-    if (status === 401 || status === 403) {
-      return send(res, 503, { error: 'ElevenLabs rejected the API key or its permissions. Check the ElevenLabs API key configured for Quorlyth. No alternate voice was used.' })
+    if (status === 402 || result.code === 'payment_required') {
+      return send(res, 503, { error: 'ElevenLabs requires available credits or an eligible billing plan for this request. Check your ElevenLabs usage and billing settings. No alternate voice was used.' })
+    }
+    if (result.code === 'invalid_api_key' || result.code === 'missing_api_key' || status === 401 || status === 403) {
+      return send(res, 503, { error: 'ElevenLabs rejected the API key or its permissions. Verify that the current key is valid and allows text-to-speech access. No alternate voice was used.' })
     }
     if (status === 429) {
       return send(res, 503, { error: 'ElevenLabs rate limit reached. Wait briefly or check your ElevenLabs usage limits. No alternate voice was used.' })

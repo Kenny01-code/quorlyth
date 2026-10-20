@@ -25,9 +25,26 @@ export function Communities() {
 }
 
 function Pick({ label, value, onChange, opts }: { label: string; value: string; onChange: (v: string) => void; opts: [string, React.ReactNode][] }) {
+  const iconPicker = label.toLowerCase() === 'icon'
   return (
     <div className="field"><span>{label}</span>
-      <div className="acts" style={{ margin: 0, gap: 6 }}>{opts.map(([k, l]) => <Chip key={k} on={value === k} onClick={() => onChange(k)}>{l}</Chip>)}</div></div>
+      <div className={cn('acts', iconPicker && 'community-icon-picker')} style={{ margin: 0, gap: iconPicker ? 10 : 6 }}>
+        {opts.map(([k, l]) => iconPicker ? (
+          <button
+            type="button"
+            key={k}
+            className={cn('community-icon-choice', value === k && 'on')}
+            aria-label={`Select ${k} community icon`}
+            aria-pressed={value === k}
+            title={`Use ${k} icon`}
+            onClick={() => onChange(k)}
+          >
+            <span className="community-icon-choice__glyph">{l}</span>
+            {value === k && <span className="community-icon-choice__check" aria-hidden="true"><Icon name="check" size={10} /></span>}
+          </button>
+        ) : <Chip key={k} on={value === k} onClick={() => onChange(k)}>{l}</Chip>)}
+      </div>
+    </div>
   )
 }
 

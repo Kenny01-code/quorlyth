@@ -30,6 +30,29 @@ const HERO_COPIES = [
   },
 ]
 
+const PREVIEW_COPIES = [
+  {
+    headline: "From a fan's idea to a creator's decision.",
+    support: 'See how an idea is reviewed with clear reasons, selected by a creator, and prepared for promotion with contributor credit intact.',
+  },
+  {
+    headline: "From a fan's thought to an idea worth sharing.",
+    support: 'Watch ideas move through thoughtful AI review, creator selection, and promotion preparation, with every contribution credited.',
+  },
+  {
+    headline: 'Every great decision starts with an idea.',
+    support: 'See promising contributions reviewed with transparent reasoning, selected by the creator, and prepared for promotion.',
+  },
+  {
+    headline: 'From community suggestions to meaningful action.',
+    support: 'Quorlyth surfaces ideas with clear reasons, leaves the final decision to the creator, and keeps contributor credit intact.',
+  },
+  {
+    headline: 'Good ideas deserve a clear path forward.',
+    support: 'Follow an idea from community submission through explainable AI review and creator approval to a promotion-ready post.',
+  },
+]
+
 const WORDS = ['Communities', 'Ideas', 'Collaboration', 'Surfacing', 'Selection', 'Promotion', 'Credit', 'Reach']
 const STAGES = [['audience', 'Followers', 'Everyone who shows up'], ['community', 'Communities', 'Grouped by interest'], ['idea', 'Ideas', 'Shared and built on'], ['surface', 'Surfacing', 'Ranked with reasons'], ['promote', 'Promotion', 'You choose, then publish']]
 const STEPS = [
@@ -46,12 +69,22 @@ export function Landing() {
   const { me, data, enterDemo } = useApp()
   const [copyIndex, setCopyIndex] = useState(0)
   const rotatingCopy = HERO_COPIES[copyIndex]
+  const [previewCopyIndex, setPreviewCopyIndex] = useState(0)
+  const previewCopy = PREVIEW_COPIES[previewCopyIndex]
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const timer = window.setInterval(() => {
       setCopyIndex(index => (index + 1) % HERO_COPIES.length)
     }, 5800)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timer = window.setInterval(() => {
+      setPreviewCopyIndex(index => (index + 1) % PREVIEW_COPIES.length)
+    }, 5200)
     return () => window.clearInterval(timer)
   }, [])
 
@@ -95,8 +128,8 @@ export function Landing() {
       <section className="product-preview rv" aria-labelledby="preview-heading">
         <div className="preview-copy">
           <p className="eyebrow">INSIDE QUORLYTH</p>
-          <h2 id="preview-heading">From a fan's idea to a creator's decision.</h2>
-          <p className="mut">See how an idea is reviewed with clear reasons, selected by a creator, and prepared for promotion with contributor credit intact.</p>
+          <h2 key={previewCopy.headline} id="preview-heading" className="preview-copy-enter">{previewCopy.headline}</h2>
+          <p key={previewCopy.support} className="mut preview-copy-enter">{previewCopy.support}</p>
         </div>
         <div className="glass preview-card">
           <div className="preview-topline">
