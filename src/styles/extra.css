@@ -56,16 +56,6 @@ img, video, canvas { max-width: 100% }
 #main:focus { outline:none; }
 #nav:focus-visible { outline:2px solid #fff; outline-offset:3px; }
 
-/* Public navigation stays compact; app navigation keeps its full destination set. */
-#nav.nav-public { width:min(720px,calc(100% - 24px)); max-width:calc(100% - 24px); justify-content:space-between; gap:6px; }
-#nav.nav-public .nav-wordmark { flex:0 0 auto; font-size:11px; letter-spacing:.16em; padding:0 10px; }
-#nav.nav-public .navwrap { flex:1 1 auto; min-width:0; overflow:hidden; }
-#nav.nav-public .navmain { display:flex; min-width:0; gap:4px; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-#nav.nav-public .navmain::-webkit-scrollbar { display:none; }
-#nav.nav-public .nav-item { flex:0 0 auto; min-height:44px; padding:9px 13px; font-size:12px; gap:7px; }
-#nav.nav-public .nav-item span { display:inline; }
-#nav.nav-public .navend { display:none; }
-
 .legal-page { width:min(100%,860px); margin:30px auto 80px; }
 .legal-kicker { color:var(--g5); font-size:11px; letter-spacing:.16em; }
 .legal-page h1 { margin:14px 0 12px; font-size:clamp(36px,6vw,58px); line-height:1.05; }
@@ -77,32 +67,32 @@ img, video, canvas { max-width: 100% }
 .legal-content ul { padding-left:20px; display:grid; gap:8px; }
 .legal-back { display:inline-flex; margin-top:36px; color:var(--g6); text-underline-offset:4px; font-size:13px; }
 
-@media (max-width:860px) {
-  #nav.nav-public .nav-wordmark { display:block; }
-  #nav.nav-public .nav-item span { display:inline; }
-}
 @media (max-width:720px) {
   .product-preview { grid-template-columns:1fr; gap:22px; margin-top:14px; }
 }
 @media (max-width:680px) {
-  #nav.nav-public { width:calc(100% - 20px); max-width:none; padding:5px; gap:3px; border-radius:18px; overflow:hidden; }
-  #nav.nav-public .lgb { flex:0 0 auto; padding:8px; }
-  #nav.nav-public .nav-wordmark { font-size:10px; padding:0 5px; letter-spacing:.13em; }
-  #nav.nav-public .nav-item { padding:8px 10px; font-size:12px; }
-  #nav.nav-public .nav-item .ic { width:16px; height:16px; }
-  .hero { padding:40px 0 28px; }
+.hero { padding:40px 0 28px; }
   .hero h1.hero-title { font-size:clamp(38px,11vw,56px); }
   .hero-copy { padding:0 8px; font-size:16px !important; }
   .hero-actions { flex-direction:column; align-items:stretch; width:100%; max-width:360px; margin:0 auto; }
   .hero-actions .btn { width:100%; padding:13px 16px; }
   .ft { align-items:flex-start; flex-direction:column; gap:12px; }
 }
-@media (max-width:390px) {
-  #nav.nav-public .nav-wordmark { display:none; }
-  #nav.nav-public .nav-item { padding:8px 9px; gap:5px; }
-}
 @media (prefers-reduced-motion:reduce) {
   html { scroll-behavior:auto; }
   .skip-link { transition:none; }
   .mq > div { animation:none !important; }
+}
+
+
+/* Paired hero copy rotates as complete phrases, preserving readability. */
+.hero-copy-enter {
+  animation: qHeroCopyReveal 620ms cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes qHeroCopyReveal {
+  from { opacity:0; transform:translateY(9px); filter:blur(6px); }
+  to { opacity:1; transform:translateY(0); filter:blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-copy-enter { animation:none !important; }
 }

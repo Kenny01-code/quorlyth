@@ -5,7 +5,30 @@ import { Orbit } from '../components/Orbit'
 import { Bar } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { useReveal } from '../lib/hooks'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
+const HERO_COPIES = [
+  {
+    headline: 'Turn your fanbase into a source of ideas.',
+    support: 'Bring your audience together, surface the ideas that matter with AI, and choose what gets promoted. Every selected contribution stays credited.',
+  },
+  {
+    headline: 'Bring your community’s best ideas forward.',
+    support: 'Gather fans around shared interests, let explainable AI surface promising contributions, and decide what deserves to be promoted.',
+  },
+  {
+    headline: 'Your audience has more to offer.',
+    support: 'Turn scattered reactions into thoughtful communities, collaborative ideas, and creator-led decisions that keep contributors credited.',
+  },
+  {
+    headline: 'From followers to ideas worth sharing.',
+    support: 'Give your audience a place to build together, see why ideas stand out, and choose which contributions move forward with credit intact.',
+  },
+  {
+    headline: 'Let your fans help shape what comes next.',
+    support: 'Organise the people who care, review ideas with clear AI reasoning, and promote the ones you choose while preserving contributor credit.',
+  },
+]
 
 const WORDS = ['Communities', 'Ideas', 'Collaboration', 'Surfacing', 'Selection', 'Promotion', 'Credit', 'Reach']
 const STAGES = [['audience', 'Followers', 'Everyone who shows up'], ['community', 'Communities', 'Grouped by interest'], ['idea', 'Ideas', 'Shared and built on'], ['surface', 'Surfacing', 'Ranked with reasons'], ['promote', 'Promotion', 'You choose, then publish']]
@@ -21,6 +44,17 @@ const FEATURES = [['rank', 'Ranked with reasons', 'Every score comes with a plai
 export function Landing() {
   const nav = useNavigate()
   const { me, data, enterDemo } = useApp()
+  const [copyIndex, setCopyIndex] = useState(0)
+  const rotatingCopy = HERO_COPIES[copyIndex]
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timer = window.setInterval(() => {
+      setCopyIndex(index => (index + 1) % HERO_COPIES.length)
+    }, 5800)
+    return () => window.clearInterval(timer)
+  }, [])
+
   useEffect(() => {
     const detail = { page_path: window.location.pathname }
     window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'landing_view', ...detail } }))
@@ -36,8 +70,8 @@ export function Landing() {
         <Orbit />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
-        <h1 className="hero-title">Turn your fanbase into a source of ideas.</h1>
-        <p className="hero-copy">Bring your audience together, surface the ideas that matter with AI, and choose what gets promoted. Every selected contribution stays credited.</p>
+        <h1 key={rotatingCopy.headline} className="hero-title hero-copy-enter">{rotatingCopy.headline}</h1>
+        <p key={rotatingCopy.support} className="hero-copy hero-copy-enter">{rotatingCopy.support}</p>
         <div className="hero-actions">
           <button className="btn p" onClick={() => {
             window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'demo_start', page_path: '/' } }))
