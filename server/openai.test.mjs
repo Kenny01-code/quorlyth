@@ -6,6 +6,7 @@ const originalFetch = globalThis.fetch
 const originalGeminiKey = process.env.GEMINI_API_KEY
 const originalOpenAIKey = process.env.OPENAI_API_KEY
 const originalElevenLabsKey = process.env.ELEVENLABS_API_KEY
+const originalElevenLabsTtsModel = process.env.ELEVENLABS_TTS_MODEL
 const originalElevenLabsNigerianVoiceId = process.env.ELEVENLABS_VOICE_NIGERIAN_ID
 const originalRealtimeModel = process.env.OPENAI_REALTIME_MODEL
 const originalXaiKey = process.env.XAI_API_KEY
@@ -35,6 +36,8 @@ afterEach(() => {
   else process.env.OPENAI_API_KEY = originalOpenAIKey
   if (originalElevenLabsKey === undefined) delete process.env.ELEVENLABS_API_KEY
   else process.env.ELEVENLABS_API_KEY = originalElevenLabsKey
+  if (originalElevenLabsTtsModel === undefined) delete process.env.ELEVENLABS_TTS_MODEL
+  else process.env.ELEVENLABS_TTS_MODEL = originalElevenLabsTtsModel
   if (originalElevenLabsNigerianVoiceId === undefined) delete process.env.ELEVENLABS_VOICE_NIGERIAN_ID
   else process.env.ELEVENLABS_VOICE_NIGERIAN_ID = originalElevenLabsNigerianVoiceId
   if (originalRealtimeModel === undefined) delete process.env.OPENAI_REALTIME_MODEL
@@ -526,6 +529,7 @@ test('natural voice endpoint applies the selected accent using server-side OpenA
 })
 
 test('ElevenLabs is preferred for natural voice even when Grok is selected for chat', async () => {
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_flash_v2_5'
   process.env.AI_PROVIDER = 'grok'
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
   process.env.XAI_API_KEY = 'test-xai-key'
@@ -660,6 +664,7 @@ test('speech endpoint refuses to silently substitute a default Studio voice', as
 
 
 test('streaming ElevenLabs voice begins sending MP3 before the full clip is generated', async () => {
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_flash_v2_5'
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-stream-test-key'
   delete process.env.XAI_API_KEY
