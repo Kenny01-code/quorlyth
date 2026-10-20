@@ -128,8 +128,8 @@ export function Landing() {
       <section className="product-preview rv" aria-labelledby="preview-heading">
         <div className="preview-copy">
           <p className="eyebrow">INSIDE QUORLYTH</p>
-          <h2 key={previewCopy.headline} id="preview-heading" className="hero-copy-enter">{previewCopy.headline}</h2>
-          <p key={previewCopy.support} className="mut hero-copy-enter">{previewCopy.support}</p>
+          <h2 key={previewCopy.headline} id="preview-heading" className="preview-copy-enter">{previewCopy.headline}</h2>
+          <p key={previewCopy.support} className="mut preview-copy-enter">{previewCopy.support}</p>
         </div>
         <div className="glass preview-card">
           <div className="preview-topline">
