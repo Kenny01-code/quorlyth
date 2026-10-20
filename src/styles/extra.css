@@ -20,3 +20,89 @@ img, video, canvas { max-width: 100% }
 .demo-banner > div { display: flex; gap: 6px; flex: none }
 .demo-banner .chip { margin: 0 }
 @media(max-width:600px) { .demo-banner { width: calc(100% - 20px); align-items: flex-start; padding: 10px; } .demo-banner span { display: grid; gap: 2px; } .demo-banner small { max-width: 34vw; line-height: 1.3 } .demo-banner .chip { padding: 8px 10px } }
+
+
+/* Landing V2: stable copy, clear conversion hierarchy, and quiet product proof. */
+.hero { padding-top: 58px; }
+.hero h1.hero-title { min-height: 0; max-width: 1000px; margin: 28px auto 0; font-size: clamp(42px, 7vw, 84px); line-height: .99; letter-spacing: -.055em; font-weight: 300; text-wrap: balance; }
+.hero-copy { max-width: 650px !important; margin: 24px auto 28px !important; color: var(--g5); font-size: clamp(16px, 1.7vw, 19px) !important; line-height: 1.7; text-wrap: pretty; }
+.hero-actions { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; }
+.hero-actions .btn { min-height:48px; justify-content:center; text-decoration:none; }
+.hero-note { margin:16px auto 0 !important; color:var(--g4); font-size:12px !important; }
+#how-it-works { scroll-margin-top:100px; }
+
+.product-preview { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); align-items:center; gap:clamp(24px,5vw,64px); max-width:1040px; margin:16px auto 0; }
+.preview-copy h2 { max-width:520px; margin:14px 0; }
+.preview-copy > p:not(.eyebrow) { max-width:470px; }
+.eyebrow { color:var(--g5); font-size:11px; letter-spacing:.16em; }
+.preview-card { min-width:0; padding:clamp(20px,3vw,32px); }
+.preview-topline,.preview-detail { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.preview-topline { margin-bottom:28px; }
+.preview-card h3 { font-size:clamp(19px,2.5vw,25px); line-height:1.3; }
+.preview-card > p { margin-top:10px; }
+.preview-divider { height:1px; margin:24px 0 12px; background:var(--line); }
+.preview-detail { padding:13px 0; border-bottom:1px solid var(--line); font-size:13px; }
+.preview-detail:last-child { border-bottom:0; }
+.ft { align-items:center; padding:24px 0 8px; border-top:1px solid var(--line); }
+.footer-brand { color:var(--w); text-decoration:none; font-size:12px; letter-spacing:.14em; white-space:nowrap; }
+.footer-links { display:flex; flex-wrap:wrap; gap:20px; }
+.footer-links a { color:var(--g5); font-size:12px; text-decoration:none; text-underline-offset:4px; }
+.footer-links a:hover,.footer-links a:focus-visible { color:var(--w); text-decoration:underline; }
+.footer-copyright { white-space:nowrap; }
+
+/* Keyboard access without changing the monochrome visual system. */
+.skip-link { position:fixed; top:12px; left:12px; z-index:10000; padding:12px 16px; color:#000; background:#fff; border:1px solid #fff; border-radius:12px; font-size:14px; text-decoration:none; transform:translateY(-180%); transition:transform 160ms ease; }
+.skip-link:focus { transform:translateY(0); outline:2px solid #fff; outline-offset:3px; }
+#main:focus { outline:none; }
+#nav:focus-visible { outline:2px solid #fff; outline-offset:3px; }
+
+/* Public navigation stays compact; app navigation keeps its full destination set. */
+#nav.nav-public { width:min(720px,calc(100% - 24px)); max-width:calc(100% - 24px); justify-content:space-between; gap:6px; }
+#nav.nav-public .nav-wordmark { flex:0 0 auto; font-size:11px; letter-spacing:.16em; padding:0 10px; }
+#nav.nav-public .navwrap { flex:1 1 auto; min-width:0; overflow:hidden; }
+#nav.nav-public .navmain { display:flex; min-width:0; gap:4px; overflow-x:auto; overscroll-behavior-x:contain; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+#nav.nav-public .navmain::-webkit-scrollbar { display:none; }
+#nav.nav-public .nav-item { flex:0 0 auto; min-height:44px; padding:9px 13px; font-size:12px; gap:7px; }
+#nav.nav-public .nav-item span { display:inline; }
+#nav.nav-public .navend { display:none; }
+
+.legal-page { width:min(100%,860px); margin:30px auto 80px; }
+.legal-kicker { color:var(--g5); font-size:11px; letter-spacing:.16em; }
+.legal-page h1 { margin:14px 0 12px; font-size:clamp(36px,6vw,58px); line-height:1.05; }
+.legal-updated { color:var(--g4); font-size:12px; margin-bottom:28px; }
+.legal-draft { padding:14px 16px; margin:0 0 32px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.035); color:var(--g5); font-size:13px; }
+.legal-content { display:grid; gap:26px; }
+.legal-content h2 { font-size:23px; margin-bottom:8px; }
+.legal-content p,.legal-content li { color:var(--g5); line-height:1.8; font-size:14px; }
+.legal-content ul { padding-left:20px; display:grid; gap:8px; }
+.legal-back { display:inline-flex; margin-top:36px; color:var(--g6); text-underline-offset:4px; font-size:13px; }
+
+@media (max-width:860px) {
+  #nav.nav-public .nav-wordmark { display:block; }
+  #nav.nav-public .nav-item span { display:inline; }
+}
+@media (max-width:720px) {
+  .product-preview { grid-template-columns:1fr; gap:22px; margin-top:14px; }
+}
+@media (max-width:680px) {
+  #nav.nav-public { width:calc(100% - 20px); max-width:none; padding:5px; gap:3px; border-radius:18px; overflow:hidden; }
+  #nav.nav-public .lgb { flex:0 0 auto; padding:8px; }
+  #nav.nav-public .nav-wordmark { font-size:10px; padding:0 5px; letter-spacing:.13em; }
+  #nav.nav-public .nav-item { padding:8px 10px; font-size:12px; }
+  #nav.nav-public .nav-item .ic { width:16px; height:16px; }
+  .hero { padding:40px 0 28px; }
+  .hero h1.hero-title { font-size:clamp(38px,11vw,56px); }
+  .hero-copy { padding:0 8px; font-size:16px !important; }
+  .hero-actions { flex-direction:column; align-items:stretch; width:100%; max-width:360px; margin:0 auto; }
+  .hero-actions .btn { width:100%; padding:13px 16px; }
+  .ft { align-items:flex-start; flex-direction:column; gap:12px; }
+}
+@media (max-width:390px) {
+  #nav.nav-public .nav-wordmark { display:none; }
+  #nav.nav-public .nav-item { padding:8px 9px; gap:5px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  html { scroll-behavior:auto; }
+  .skip-link { transition:none; }
+  .mq > div { animation:none !important; }
+}

@@ -10,6 +10,8 @@ import { WritingAssistant } from './components/WritingAssistant'
 import { Logo } from './lib/Logo'
 import { QuorlythLoader } from './components/QuorlythLoader'
 const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.Landing })))
+const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
+const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
 const Dashboard = lazy(() => import('./screens/Dashboard').then(m => ({ default: m.Dashboard })))
 const Communities = lazy(() => import('./screens/Communities').then(m => ({ default: m.Communities })))
@@ -304,6 +306,7 @@ export default function App() {
   )
   return (
     <>
+      <a className="skip-link" href="#main">Skip to main content</a>
       <div id="sp" />
       {intro && <Intro replay={replay} onDone={() => {
         setIntro(false)
@@ -312,11 +315,13 @@ export default function App() {
       }} />}
       <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
-      <main id="main">
+      <main id="main" tabIndex={-1}>
         <section className="on">
           <Suspense fallback={<DelayedRouteLoader />}>
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="/demo" element={<DemoRedirect onBeforeRedirect={() => { skipNextPageTransition.current = true }} />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/dashboard" element={<Dashboard />} />
