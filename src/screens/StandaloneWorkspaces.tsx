@@ -275,7 +275,7 @@ function WorkspaceProjectView() {
   async function startTask(task: WorkspaceTask) {
     if (!a.backend || !a.me) return
     await runAction('start-'+task.id, async () => {
-      await a.backend!.store.update('standaloneTasks/' + task.id, { status: 'in_progress', updatedAt: Date.now() })
+      await a.backend!.store.update('standaloneTasks/' + task.id, { status: 'in_progress', ...(task.assigneeId ? {} : { assigneeId: a.me!.id }), updatedAt: Date.now() })
       a.toast('Task started.')
     })
   }
@@ -456,7 +456,9 @@ function WorkspaceProjectView() {
       </section>
       <section className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">TEAM DISCUSSION</p><h3>Project room</h3><p>Keep decisions and next steps attached to this project.</p></div></div>
         <div className="sw-comments">{projectComments.length?projectComments.map(comment=><article className="sw-comment" key={comment.id}><Av id={comment.authorId} size={30}/><div><div className="sw-comment__meta"><strong>{a.nm(comment.authorId)}</strong><small>{new Date(comment.at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></div><p>{comment.text}</p></div></article>):<div className="sw-empty-inline"><QuorlythGlyph name="message" size={20}/><strong>No discussion yet</strong><p>Post a decision, blocker or next step to get the conversation started.</p></div>}</div>
+{canContribute && (
         <form className="sw-comment-form" onSubmit={postComment}><label className="sw-field"><span>Message the team</span><textarea value={commentText} onChange={e=>setCommentText(e.target.value)} maxLength={3000} rows={3} placeholder="What should the team know?" required /></label><button className="btn p" disabled={busy==='comment'||!commentText.trim()}><QuorlythGlyph name="send" size={14}/>Post update</button></form>
+        )}
       </section>
     </div>}
 
