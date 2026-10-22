@@ -104,7 +104,7 @@ function Stage({ greeting }: { greeting: string }) {
     <div className="glass stage ok" id="stg">
       <Robot ref={r} defer onReady={() => { setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400) }} />
       <div className="c1 glass"><span className="chip"><Icon name="private" size={12} />Private session</span></div>
-      <button className="chip hello" onClick={() => void hello(false)}><Icon name="voice" size={14} />Hear a hello</button>
+      <button className="chip hello" onClick={() => void hello()}><Icon name="voice" size={14} />Hear a hello</button>
       {helloStatus && <p className="dim" role="status" aria-live="polite" style={{ position: 'absolute', left: 12, right: 12, bottom: 48, fontSize: 11, textAlign: 'center' }}>{helloStatus}</p>}
       <div className="cap"><p className="dim">QuorlythBot</p><h3 style={{ fontSize: 22, fontWeight: 200, marginTop: 4 }}>{first ? 'Your room is ready.' : 'Welcome back to your room.'}</h3></div>
     </div>
