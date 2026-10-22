@@ -479,7 +479,7 @@ export function Messages() {
               {pref?.pinned && <span className="chat-pin-indicator" title="Pinned chat"><Icon name="pin" size={12} /></span>}
               {pref?.muted && <span className="chat-pin-indicator" title="Muted chat"><Icon name="bell" size={12} /></span>}
               {unread > 0 && <span className="chat-unread-count" aria-label={unread + ' unread messages'}>{unread > 99 ? '99+' : unread}</span>}
-              <button type="button" className="chat-conversation-menu-trigger" aria-label={'Options for ' + titleOf(c)} title="Conversation options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openConversationMenu(c.id, r.right, r.top) }}><Icon name="more" size={17} /></button>
+              
             </div></Fragment>
           })}{!visibleConversations.length && <div className="chat-inbox-empty"><span className="chat-empty-icon"><Icon name="message" size={23} /></span><b>{conversationFilter === 'archived' ? 'No archived conversations.' : 'Your inbox is a blank canvas.'}</b><p>{conversationFilter === 'archived' ? 'Chats you archive will live here until you restore them.' : 'Start a private conversation or bring your collaborators together.'}</p>{conversationFilter !== 'archived' && <button className="btn p" onClick={() => { setPeopleOpen(true); setGroupOpen(false) }}>Start chatting</button>}</div>}</div>
           <div className="chat-sidebar-foot"><span className="chat-secure-dot" />Conversation privacy <span className="dim">· visible to its members</span></div>
@@ -515,7 +515,7 @@ export function Messages() {
                       {editingMessageId === m.id ? <div className="chat-edit-block"><textarea value={editDraft} maxLength={4000} rows={3} onChange={e => setEditDraft(e.target.value)} aria-label="Edit message text" /><div><button type="button" className="chat-small-action" onClick={() => { setEditingMessageId(null); setEditDraft('') }}>Cancel</button><button type="button" className="chat-small-action is-primary" disabled={!editDraft.trim()} onClick={() => void saveMessageEdit(m)}>Save edit</button></div></div> : <p>{deleted ? 'This message was deleted.' : messageText(m)}</p>}
                       <time>{formatTime(m.at)}{messageEdits.some(edit => edit.messageId === m.id) && !deleted && ' · edited'}</time>
                     </div>
-                    <button type="button" className="chat-message-menu-trigger chat-icon-btn" aria-label="Message options" title="Message options" onClick={e => { e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openMessageMenu(m.id, r.right, r.top) }}><Icon name="more" size={16} /></button>
+                    
                   </div>
                   {reactionTypes.length > 0 && !deleted && <div className="chat-message-reactions">{reactionTypes.map(emoji => <button type="button" key={emoji} className={cn('chat-reaction-pill', reactions.some(r => r.userId === meId && r.reaction === emoji) && 'mine')} onClick={() => void actOnMessage('react', m, emoji)}>{emoji}<span>{reactions.filter(r => r.reaction === emoji).length}</span></button>)}</div>}
                 </div></Fragment>
