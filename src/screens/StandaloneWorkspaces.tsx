@@ -21,8 +21,8 @@ type WorkspaceTask = {
 }
 type WorkspaceAttachment = { path: string; name: string; mimeType: string; size: number; uploadedAt: number }
 type WorkspaceArtifact = {
-  id: string; projectId: string; taskId: string; provider: 'github' | 'manual'; kind: 'commit' | 'pull_request' | 'link' | 'document' | 'demo'
-  url: string; summary: string; status: 'submitted' | 'approved' | 'changes_requested'
+  id: string; projectId: string; taskId: string; provider: 'github' | 'manual'; kind: 'commit' | 'pull_request' | 'link' | 'document' | 'demo' | 'file'
+  url?: string; attachments?: WorkspaceAttachment[]; summary: string; status: 'submitted' | 'approved' | 'changes_requested'
   verificationStatus: 'source_verified' | 'submitted_evidence'; verifiedAt?: number; submittedBy: string; submittedAt: number
   reviewedAt?: number; reviewedBy?: string; reviewNote?: string; updatedAt?: number; repositoryFullName?: string
   sourceMetadata: Record<string, unknown>; docId?: string
