@@ -100,12 +100,19 @@ export async function createSupabaseStore(url: string, key: string) {
       const cur = await store.get(path)
       if (!cur) throw new Error('not_found')
       const next = deepMerge(cur, patch)
-      if (path.startsWith('workSubmissions/') && !path.slice('workSubmissions/'.length).includes('/')) {
-        // Review updates use the dedicated UPDATE policy. An upsert would also
-        // invoke the INSERT policy and is intentionally not allowed for submissions.
+      const isRootWorkSubmission = path.startsWith('workSubmissions/') && !path.slice('workSubmissions/'.length).includes('/')
+      const isRootProject = path.startsWith('projects/') && !path.slice('projects/'.length).includes('/')
+      if (isRootWorkSubmission || isRootProject) {
+        // These records have narrow UPDATE permissions. Upsert also evaluates
+        // INSERT RLS on conflict, which would wrongly deny AI organizers who can
+        // update an existing project brief but cannot create the project itself.
         const { data, error } = await sb.from('docs').update({ data: next }).eq('path', path).select('path').maybeSingle()
-        if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the review')
-        if (!data) throw new Error('Review permission denied or this submission is no longer pending.')
+        if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the update')
+        if (!data) {
+          throw new Error(isRootProject
+            ? 'Project update permission denied or this project is no longer available.'
+            : 'Review permission denied or this submission is no longer pending.')
+        }
         return
       }
       await store.set(path, next)
