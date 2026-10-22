@@ -164,7 +164,8 @@ function Inner() {
           {!communityOwner && idea.authorId !== a.me?.id && <div className="reason" style={{ marginTop: 20 }}>
             <h3 style={{ fontSize: 18 }}>Collaborate on this idea</h3>
             <p className="mut" style={{ marginTop: 6 }}>Apply to join the work. If the owner accepts, your collaboration space will appear in Collaborations.</p>
-            {acceptedCollaborator ? <button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={15} />Open collaboration space</button>
+            {archivedCommunity ? <span className="chip" style={{ marginTop: 12, display: 'inline-flex' }}>Archived community · applications closed</span>
+              : acceptedCollaborator ? <button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={15} />Open collaboration space</button>
               : myApplication?.status === 'pending' ? <span className="chip" style={{ marginTop: 12, display: 'inline-flex' }}>Application pending review</span>
               : !a.joined(idea.cid) ? <div className="acts" style={{ marginTop: 12 }}><button className="btn" onClick={() => nav('/communities/' + idea.cid)}>Join this community to apply</button></div>
               : <form onSubmit={async event => { event.preventDefault(); setApplying(true); const ok = await a.applyToCollaborate(idea.id, applicationMessage); if (ok) setApplicationMessage(''); setApplying(false) }} style={{ marginTop: 12 }}>
