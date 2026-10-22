@@ -58,7 +58,6 @@ function preloadRoute(path: string) {
 export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests, accessSent, demo, onDemo, onReplay }: { onSearch: () => void; onBell: () => void; unread: number; pendingRequests: number; unreadRequests: number; accessSent: boolean; demo: boolean; onDemo: () => void; onReplay: () => void }) {
   const nav = useNavigate()
   const loc = useLocation()
-  const isMessagesRoute = loc.pathname.startsWith('/messages')
   const app = useApp()
   const { me, owner, platformOwner, platformAdmin } = app
   const communityOwner = !!me && app.data.communities.some(c => app.ownsCommunity(c.id))
@@ -124,7 +123,6 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
           {ITEMS.filter(i => {
-            if (isMessagesRoute && !['/dashboard', '/communities', '/queue', '/messages', '/collaborations'].includes(i.path)) return false
             if (i.platformAdminOnly) return !!platformAdmin && !demo
             if (i.platformOwnerOnly) return !!platformOwner && !demo
             if (i.path === '/projects' && !workspaceManager && !hasAccessibleProject) return false
@@ -133,9 +131,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
             if (me) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             return ['/', '/demo', '/signin'].includes(i.path)
           }).map(i => {
-            const navLabel = isMessagesRoute
-              ? ({ '/dashboard': 'Overview', '/communities': 'Communities', '/queue': 'Ideas', '/messages': 'Messages', '/collaborations': 'Collaborate' } as Record<string, string>)[i.path] || i.label
-              : i.label
+            const navLabel = i.label
             return (
             <button key={i.path} className={cn('nav-item', 'nav-item-' + (i.path.slice(1).replace(/[^a-z0-9]+/g, '-') || 'home'), active(i.path) && 'on')} onPointerEnter={() => preloadRoute(i.path)} onPointerDown={() => preloadRoute(i.path)} onFocus={() => preloadRoute(i.path)} onClick={() => i.path === '/demo' ? onDemo() : nav(i.path === '/settings' && unreadRequests ? '/settings?tab=requests' : i.path)} title={navLabel} aria-label={i.path === '/settings' && pendingRequests ? `${navLabel}, ${pendingRequests} pending access requests` : i.path === '/access' && accessSent ? `${navLabel}, request sent` : navLabel} style={{ position: 'relative' }}>
               <Icon name={i.icon} size={18} /><span>{navLabel}</span>
