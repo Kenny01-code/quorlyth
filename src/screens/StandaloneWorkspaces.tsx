@@ -225,6 +225,7 @@ function WorkspaceProjectView() {
   const artifacts = useWorkspaceCollection<WorkspaceArtifact>('standaloneArtifacts')
   const repositories = useWorkspaceCollection<GithubRepository>('standaloneGithubRepos')
   const comments = useWorkspaceCollection<WorkspaceComment>('standaloneComments')
+  const activity = useWorkspaceCollection<{ id: string; projectId: string; docId?: string }>('standaloneActivity')
 
   const project = projects.find(item => item.id === id || item.docId === id)
   const team = members.filter(item => item.projectId === id && item.status === 'active')
@@ -248,6 +249,7 @@ function WorkspaceProjectView() {
   const projectArtifacts = artifacts.filter(item => item.projectId === id).sort((x,y) => y.submittedAt-x.submittedAt)
   const projectRepos = repositories.filter(item => item.projectId === id).sort((x,y) => y.lastSyncedAt-x.lastSyncedAt)
   const projectComments = comments.filter(item => item.projectId === id).sort((x,y) => x.at-y.at)
+  const projectActivity = activity.filter(item => item.projectId === id)
   const doneCount = projectTasks.filter(task => task.status === 'done').length
   const progress = projectTasks.length ? Math.round(doneCount / projectTasks.length * 100) : 0
   const pendingReviews = projectArtifacts.filter(item => item.status === 'submitted').length
@@ -369,6 +371,42 @@ function WorkspaceProjectView() {
     })
   }
 
+
+  async function removeWorkspace() {
+    if (!project || !a.backend || !isOwner) return
+    const projectMembers = members.filter(member => member.projectId === id)
+    const linkedAttachments = projectArtifacts.flatMap(artifact => artifact.attachments || [])
+    const confirmed = window.confirm(
+      `Permanently delete "${project.title}"? This removes ${projectTasks.length} task${projectTasks.length === 1 ? '' : 's'}, ${projectArtifacts.length} evidence item${projectArtifacts.length === 1 ? '' : 's'}, ${projectMembers.length} team membership${projectMembers.length === 1 ? '' : 's'}, ${projectComments.length} comment${projectComments.length === 1 ? '' : 's'}, and ${linkedAttachments.length} private file attachment${linkedAttachments.length === 1 ? '' : 's'}. This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    await runAction('delete-workspace', async () => {
+      let failedFileCleanup = 0
+      for (const attachment of linkedAttachments) {
+        try {
+          if (!a.backend?.deleteWorkFile) throw new Error('Private file deletion is not configured.')
+          await a.backend.deleteWorkFile(attachment.path)
+        } catch (error) {
+          failedFileCleanup += 1
+          console.warn('A private workspace attachment could not be removed:', error)
+        }
+      }
+
+      for (const artifact of projectArtifacts) await a.backend!.store.delete('standaloneArtifacts/' + artifact.id)
+      for (const task of projectTasks) await a.backend!.store.delete('standaloneTasks/' + task.id)
+      for (const comment of projectComments) await a.backend!.store.delete('standaloneComments/' + comment.id)
+      for (const repo of projectRepos) await a.backend!.store.delete('standaloneGithubRepos/' + repo.id)
+      for (const item of projectActivity) await a.backend!.store.delete('standaloneActivity/' + item.id)
+      for (const member of projectMembers) await a.backend!.store.delete('standaloneProjectMembers/' + member.id)
+      await a.backend!.store.delete('standaloneProjects/' + project.id)
+
+      a.toast(failedFileCleanup
+        ? 'Workspace deleted. Some private attachments could not be removed.'
+        : 'Workspace and all linked project records deleted.')
+      nav('/workspaces')
+    })
+  }
   async function toggleProjectStatus() {
     if (!project || !a.backend) return
     const next = project.status === 'completed' ? 'active' : 'completed'
@@ -610,6 +648,6 @@ function WorkspaceProjectView() {
       </section>
     </div>}
 
-    {canManage&&<section className="glass pad sw-settings-panel"><details><summary><QuorlythGlyph name="settings" size={15}/>Workspace settings <span>Owner and manager only</span></summary><form onSubmit={saveProject} className="sw-settings-form"><label className="sw-field"><span>Project title</span><input value={projectTitle} onChange={e=>setProjectTitle(e.target.value)} maxLength={100} required /></label><label className="sw-field"><span>Project brief</span><textarea value={projectSummary} onChange={e=>setProjectSummary(e.target.value)} maxLength={4000} rows={3} required /></label><label className="sw-field"><span>Target delivery</span><input type="date" min={minimumDateInput(dateInput(project?.dueAt))} value={projectDueDate} onChange={e=>setProjectDueDate(e.target.value)} /></label><div className="acts"><button className="btn p" disabled={busy==='save-project'}>Save settings</button><button className="btn" type="button" disabled={busy==='project-status'||project.status==='active'&&projectTasks.some(task=>task.status!=='done')} onClick={()=>void toggleProjectStatus()}>{project.status==='completed'?'Reopen workspace':'Close workspace'} </button></div><p className="sw-muted">Closing a workspace is permitted only after every task has completed with approved evidence. Reopening allows new tasks or revisions.</p></form></details></section>}
+    {canManage&&<section className="glass pad sw-settings-panel"><details><summary><QuorlythGlyph name="settings" size={15}/>Workspace settings <span>Owner and manager only</span></summary><form onSubmit={saveProject} className="sw-settings-form"><label className="sw-field"><span>Project title</span><input value={projectTitle} onChange={e=>setProjectTitle(e.target.value)} maxLength={100} required /></label><label className="sw-field"><span>Project brief</span><textarea value={projectSummary} onChange={e=>setProjectSummary(e.target.value)} maxLength={4000} rows={3} required /></label><label className="sw-field"><span>Target delivery</span><input type="date" min={minimumDateInput(dateInput(project?.dueAt))} value={projectDueDate} onChange={e=>setProjectDueDate(e.target.value)} /></label><div className="acts"><button className="btn p" disabled={busy==='save-project'}>Save settings</button><button className="btn" type="button" disabled={busy==='project-status'||project.status==='active'&&projectTasks.some(task=>task.status!=='done')} onClick={()=>void toggleProjectStatus()}>{project.status==='completed'?'Reopen workspace':'Close workspace'} </button>{isOwner&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-workspace'} onClick={()=>void removeWorkspace()}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-workspace'?'Deleting workspace…':'Delete workspace permanently'}</button>}</div><p className="sw-muted">Closing a workspace is permitted only after every task has completed with approved evidence. Reopening allows new tasks or revisions.</p>{isOwner&&<p className="sw-muted">Permanent deletion is available to the workspace owner only and removes all tasks, evidence records, team memberships, comments and linked repository records.</p>}</form></details></section>}
   </>
 }
