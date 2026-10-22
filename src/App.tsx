@@ -19,6 +19,8 @@ const Messages = lazy(() => import('./screens/Messages').then(m => ({ default: m
 const IdeaPage = lazy(() => import('./screens/IdeaPage').then(m => ({ default: m.IdeaPage })))
 const Queue = lazy(() => import('./screens/Queue').then(m => ({ default: m.Queue })))
 const Projects = lazy(() => import('./screens/Projects').then(m => ({ default: m.Projects })))
+const StandaloneWorkspaceList = lazy(() => import('./screens/StandaloneWorkspaces').then(m => ({ default: m.StandaloneWorkspaceList })))
+const StandaloneWorkspaceDetail = lazy(() => import('./screens/StandaloneWorkspaces').then(m => ({ default: m.StandaloneWorkspaceDetail })))
 const Collaborations = lazy(() => import('./screens/Collaborations').then(m => ({ default: m.Collaborations })))
 const CollaborationWorkspace = lazy(() => import('./screens/Collaborations').then(m => ({ default: m.CollaborationWorkspace })))
 const Promote = lazy(() => import('./screens/Promote').then(m => ({ default: m.Promote })))
@@ -333,6 +335,8 @@ export default function App() {
               <Route path="/idea/:id" element={<IdeaPage />} />
               <Route path="/queue" element={<Queue />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/workspaces" element={<StandaloneWorkspaceList />} />
+              <Route path="/workspaces/:id" element={<StandaloneWorkspaceDetail />} />
               <Route path="/collaborations" element={<Collaborations />} />
               <Route path="/collaboration/:id" element={<CollaborationWorkspace />} />
               <Route path="/promote" element={<Promote />} />

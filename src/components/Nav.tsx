@@ -17,6 +17,7 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/messages', label: 'Messages', icon: 'message' },
   { path: '/queue', label: 'Review queue', icon: 'queue', owner: true },
   { path: '/projects', label: 'Projects', icon: 'insight' },
+  { path: '/workspaces', label: 'Workspaces', icon: 'collab' },
   { path: '/collaborations', label: 'Collaborations', icon: 'collab' },
   { path: '/promote', label: 'Promote', icon: 'promote', owner: true },
   { path: '/settings', label: 'Settings', icon: 'settings' },
@@ -29,6 +30,7 @@ function preloadRoute(path: string) {
   const normalized = path.startsWith('/communities/') ? '/communities'
     : path.startsWith('/messages/') ? '/messages'
     : path.startsWith('/collaboration/') ? '/collaboration'
+    : path.startsWith('/workspaces/') ? '/workspaces'
     : path.startsWith('/me/') ? '/me'
     : path.startsWith('/idea/') ? '/idea'
     : path === '/request-access' ? '/access'
@@ -42,6 +44,7 @@ function preloadRoute(path: string) {
     '/messages': () => import('../screens/Messages'),
     '/queue': () => import('../screens/Queue'),
     '/projects': () => import('../screens/Projects'),
+    '/workspaces': () => import('../screens/StandaloneWorkspaces'),
     '/collaborations': () => import('../screens/Collaborations'),
     '/collaboration': () => import('../screens/Collaborations'),
     '/promote': () => import('../screens/Promote'),
