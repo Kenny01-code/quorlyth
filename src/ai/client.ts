@@ -519,7 +519,7 @@ export async function speakText(
     // is enabled, callers can choose a fast timeout; streamed provider failover keeps
     // its longer window. An explicit stop still aborts this request immediately.
     const requestedTimeout = options.browserFallbackTimeoutMs
-    const defaultTimeout = options.elevenLabsOnly && options.allowBrowserFallback === true ? 1200 : 7500
+    const defaultTimeout = options.elevenLabsOnly && options.allowBrowserFallback === true ? 10_000 : 7500
     const providerTimeout = typeof requestedTimeout === 'number' && Number.isFinite(requestedTimeout)
       ? Math.max(250, Math.min(30_000, requestedTimeout))
       : defaultTimeout
