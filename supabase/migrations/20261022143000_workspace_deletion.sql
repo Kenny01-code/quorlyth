@@ -1,6 +1,6 @@
 -- Permit workspace owners to delete their workspace and managers to remove
--- workspace-linked records during that cleanup. The UI exposes full workspace
--- deletion to its owner only; per-record task cleanup remains owner/manager.
+-- workspace-linked records during that cleanup. Full workspace deletion is
+-- owner-only; per-record task cleanup remains owner/manager.
 create or replace function private.can_delete_doc(p_path text, p_data jsonb)
 returns boolean
 language plpgsql
@@ -69,220 +69,22 @@ begin
         where milestone.path = 'milestones/' || (p_data->>'milestoneId')
           and milestone.data->>'projectId' = p_data->>'projectId'
       );
-  elsif p_path ~ '^standaloneProjects/[^/]+
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs project
-        where project.path = 'standaloneProjects/' || project_id
-          and project.data->>'id' = project_id
-      );
-  elsif p_path ~ '^standaloneArtifacts/[^/]+$' then
-    project_id := p_data->>'projectId';
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs task
-        where task.path = 'standaloneTasks/' || (p_data->>'taskId')
-          and task.data->>'projectId' = project_id
-      );
-  elsif p_path ~ '^promotions/[^/]+$' then
-    return private.can_manage_community(private.idea_community_id(p_data->>'ideaId'));
-  elsif p_path ~ '^chatReads/[^/]+$'
-     or p_path ~ '^chatPreferences/[^/]+$'
-     or p_path ~ '^chatMessageHides/[^/]+$'
-     or p_path ~ '^chatMessageReactions/[^/]+$' then
-    return p_data->>'userId' = uid
-      and private.is_chat_member(p_data->>'conversationId');
-  elsif p_path ~ '^conversations/[^/]+$' then
-    return private.is_chat_member(split_part(p_path,'/',2));
-  end if;
-  return false;
-end;
-$function$;
- then
+  elsif p_path ~ '^standaloneProjects/[^/]+$' then
     project_id := split_part(p_path,'/',2);
     return p_data->>'id' = project_id
       and p_data->>'createdBy' = uid;
-  elsif p_path ~ '^standaloneProjectMembers/[^/]+
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs project
-        where project.path = 'standaloneProjects/' || project_id
-          and project.data->>'id' = project_id
-      );
-  elsif p_path ~ '^standaloneArtifacts/[^/]+$' then
-    project_id := p_data->>'projectId';
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs task
-        where task.path = 'standaloneTasks/' || (p_data->>'taskId')
-          and task.data->>'projectId' = project_id
-      );
-  elsif p_path ~ '^promotions/[^/]+$' then
-    return private.can_manage_community(private.idea_community_id(p_data->>'ideaId'));
-  elsif p_path ~ '^chatReads/[^/]+$'
-     or p_path ~ '^chatPreferences/[^/]+$'
-     or p_path ~ '^chatMessageHides/[^/]+$'
-     or p_path ~ '^chatMessageReactions/[^/]+$' then
-    return p_data->>'userId' = uid
-      and private.is_chat_member(p_data->>'conversationId');
-  elsif p_path ~ '^conversations/[^/]+$' then
-    return private.is_chat_member(split_part(p_path,'/',2));
-  end if;
-  return false;
-end;
-$function$;
- then
+  elsif p_path ~ '^standaloneProjectMembers/[^/]+$' then
     project_id := p_data->>'projectId';
     return p_data->>'id' = split_part(p_path,'/',2)
       and (p_data->>'userId' = uid or private.can_manage_standalone_project(project_id));
-  elsif p_path ~ '^standaloneComments/[^/]+
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs project
-        where project.path = 'standaloneProjects/' || project_id
-          and project.data->>'id' = project_id
-      );
-  elsif p_path ~ '^standaloneArtifacts/[^/]+$' then
-    project_id := p_data->>'projectId';
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs task
-        where task.path = 'standaloneTasks/' || (p_data->>'taskId')
-          and task.data->>'projectId' = project_id
-      );
-  elsif p_path ~ '^promotions/[^/]+$' then
-    return private.can_manage_community(private.idea_community_id(p_data->>'ideaId'));
-  elsif p_path ~ '^chatReads/[^/]+$'
-     or p_path ~ '^chatPreferences/[^/]+$'
-     or p_path ~ '^chatMessageHides/[^/]+$'
-     or p_path ~ '^chatMessageReactions/[^/]+$' then
-    return p_data->>'userId' = uid
-      and private.is_chat_member(p_data->>'conversationId');
-  elsif p_path ~ '^conversations/[^/]+$' then
-    return private.is_chat_member(split_part(p_path,'/',2));
-  end if;
-  return false;
-end;
-$function$;
-
-     or p_path ~ '^standaloneGithubRepos/[^/]+
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs project
-        where project.path = 'standaloneProjects/' || project_id
-          and project.data->>'id' = project_id
-      );
-  elsif p_path ~ '^standaloneArtifacts/[^/]+$' then
-    project_id := p_data->>'projectId';
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs task
-        where task.path = 'standaloneTasks/' || (p_data->>'taskId')
-          and task.data->>'projectId' = project_id
-      );
-  elsif p_path ~ '^promotions/[^/]+$' then
-    return private.can_manage_community(private.idea_community_id(p_data->>'ideaId'));
-  elsif p_path ~ '^chatReads/[^/]+$'
-     or p_path ~ '^chatPreferences/[^/]+$'
-     or p_path ~ '^chatMessageHides/[^/]+$'
-     or p_path ~ '^chatMessageReactions/[^/]+$' then
-    return p_data->>'userId' = uid
-      and private.is_chat_member(p_data->>'conversationId');
-  elsif p_path ~ '^conversations/[^/]+$' then
-    return private.is_chat_member(split_part(p_path,'/',2));
-  end if;
-  return false;
-end;
-$function$;
-
-     or p_path ~ '^standaloneActivity/[^/]+
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs project
-        where project.path = 'standaloneProjects/' || project_id
-          and project.data->>'id' = project_id
-      );
-  elsif p_path ~ '^standaloneArtifacts/[^/]+$' then
-    project_id := p_data->>'projectId';
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs task
-        where task.path = 'standaloneTasks/' || (p_data->>'taskId')
-          and task.data->>'projectId' = project_id
-      );
-  elsif p_path ~ '^promotions/[^/]+$' then
-    return private.can_manage_community(private.idea_community_id(p_data->>'ideaId'));
-  elsif p_path ~ '^chatReads/[^/]+$'
-     or p_path ~ '^chatPreferences/[^/]+$'
-     or p_path ~ '^chatMessageHides/[^/]+$'
-     or p_path ~ '^chatMessageReactions/[^/]+$' then
-    return p_data->>'userId' = uid
-      and private.is_chat_member(p_data->>'conversationId');
-  elsif p_path ~ '^conversations/[^/]+$' then
-    return private.is_chat_member(split_part(p_path,'/',2));
-  end if;
-  return false;
-end;
-$function$;
- then
+  elsif p_path ~ '^standaloneComments/[^/]+$'
+     or p_path ~ '^standaloneGithubRepos/[^/]+$'
+     or p_path ~ '^standaloneActivity/[^/]+$' then
     project_id := p_data->>'projectId';
     return p_data->>'id' = split_part(p_path,'/',2)
       and project_id is not null
       and private.can_manage_standalone_project(project_id);
-  elsif p_path ~ '^standaloneTasks/[^/]+
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs project
-        where project.path = 'standaloneProjects/' || project_id
-          and project.data->>'id' = project_id
-      );
-  elsif p_path ~ '^standaloneArtifacts/[^/]+$' then
-    project_id := p_data->>'projectId';
-    return p_data->>'id' = split_part(p_path,'/',2)
-      and project_id is not null
-      and private.can_manage_standalone_project(project_id)
-      and exists (
-        select 1 from public.docs task
-        where task.path = 'standaloneTasks/' || (p_data->>'taskId')
-          and task.data->>'projectId' = project_id
-      );
-  elsif p_path ~ '^promotions/[^/]+$' then
-    return private.can_manage_community(private.idea_community_id(p_data->>'ideaId'));
-  elsif p_path ~ '^chatReads/[^/]+$'
-     or p_path ~ '^chatPreferences/[^/]+$'
-     or p_path ~ '^chatMessageHides/[^/]+$'
-     or p_path ~ '^chatMessageReactions/[^/]+$' then
-    return p_data->>'userId' = uid
-      and private.is_chat_member(p_data->>'conversationId');
-  elsif p_path ~ '^conversations/[^/]+$' then
-    return private.is_chat_member(split_part(p_path,'/',2));
-  end if;
-  return false;
-end;
-$function$;
- then
+  elsif p_path ~ '^standaloneTasks/[^/]+$' then
     project_id := p_data->>'projectId';
     return p_data->>'id' = split_part(p_path,'/',2)
       and project_id is not null
