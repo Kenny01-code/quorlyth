@@ -19,6 +19,7 @@ type WorkspaceTask = {
   createdBy: string; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null
   acceptanceCriteria?: string; docId?: string
 }
+type WorkspaceAttachment = { path: string; name: string; mimeType: string; size: number; uploadedAt: number }
 type WorkspaceArtifact = {
   id: string; projectId: string; taskId: string; provider: 'github' | 'manual'; kind: 'commit' | 'pull_request' | 'link' | 'document' | 'demo'
   url: string; summary: string; status: 'submitted' | 'approved' | 'changes_requested'
@@ -62,6 +63,44 @@ const dateEnd = (value: string) => {
   return Number.isFinite(d.getTime()) ? d.getTime() : null
 }
 const errorText = (error: unknown) => error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+
+function WorkspaceEvidenceAttachment({ attachment }: { attachment: WorkspaceAttachment }) {
+  const a = useApp()
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [unavailable, setUnavailable] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    setUrl('')
+    setUnavailable(false)
+    if (!a.backend?.getWorkFileUrl) {
+      setUnavailable(true)
+      return () => { active = false }
+    }
+    setLoading(true)
+    void a.backend.getWorkFileUrl(attachment.path).then(value => {
+      if (active) setUrl(value)
+    }).catch(() => {
+      if (active) setUnavailable(true)
+    }).finally(() => {
+      if (active) setLoading(false)
+    })
+    return () => { active = false }
+  }, [a.backend, attachment.path])
+
+  const size = attachment.size < 1024 ? attachment.size + ' B'
+    : attachment.size < 1024 * 1024 ? Math.round(attachment.size / 1024) + ' KB'
+    : (attachment.size / (1024 * 1024)).toFixed(1) + ' MB'
+
+  return <div className="sw-evidence-attachment">
+    <span className="sw-repo-mark"><QuorlythGlyph name="file" size={16}/></span>
+    <div><strong title={attachment.name}>{attachment.name}</strong><small>{size} · {attachment.mimeType || 'File'}</small></div>
+    {url ? <a href={url} target="_blank" rel="noreferrer">Open file <QuorlythGlyph name="open" size={12}/></a>
+      : <small className="sw-muted">{loading ? 'Preparing secure link…' : unavailable ? 'File unavailable' : ''}</small>}
+  </div>
+}
+
 
 async function githubAction(a: ReturnType<typeof useApp>, action: string, projectId: string, extra: Record<string, unknown>) {
   if (!a.backend || a.backend.auth.mode !== 'supabase') {
