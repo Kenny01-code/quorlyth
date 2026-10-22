@@ -1,9 +1,12 @@
 export function localTodayDateInput(): string {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  return year + '-' + month + '-' + day
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Lagos',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const part = (type: string) => parts.find(item => item.type === type)?.value || ''
+  return part('year') + '-' + part('month') + '-' + part('day')
 }
 
 export function isPastDateInput(value?: string | null): boolean {
