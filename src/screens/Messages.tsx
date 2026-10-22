@@ -242,6 +242,7 @@ export function Messages() {
         a.toast(pref?.pinned ? 'Chat unpinned' : 'Chat pinned to the top')
       } else if (action === 'archive') {
         await saveChatPreference(id, { archived: !pref?.archived })
+        if (pref?.archived) setConversationFilter('all')
         a.toast(pref?.archived ? 'Chat restored to your inbox' : 'Chat archived')
       } else if (action === 'mute') {
         await saveChatPreference(id, { muted: !pref?.muted })
@@ -415,14 +416,16 @@ export function Messages() {
     const id = makeId()
     try {
       const conversation: Conversation = { id, title: groupName.trim().slice(0, 60), type: 'group', members, createdBy: meId, createdAt: Date.now() }
-      await store.set('conversations/' + id, { title: conversation.title, type: conversation.type, members, createdBy: meId, createdAt: conversation.createdAt })
+      await store.create('conversations/' + id, { title: conversation.title, type: conversation.type, members, createdBy: meId, createdAt: conversation.createdAt })
       setConversations(current => [conversation, ...current.filter(c => c.id !== id)])
       nav('/messages/' + id)
       setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setSelectedPeople([]); setGroupName(''); setPeopleQuery('')
     } catch (e) {
       const detail = readableChatError(e)
       console.error('Quorlyth group creation failed:', e)
-      setError('Could not create the group. ' + (detail && detail !== '[object Object]' ? detail : 'The database rejected the conversation. Confirm the private/group chat migration is applied and try again.'))
+      setError(/row-level security|permission denied|42501/i.test(detail)
+        ? 'Quorlyth could not verify permission to create this group. Refresh the page, confirm you are signed in, and try again. No group was created.'
+        : 'Could not create the group. ' + (detail && detail !== '[object Object]' ? detail : 'The database rejected the conversation. Refresh and try again.'))
     }
   }
 
