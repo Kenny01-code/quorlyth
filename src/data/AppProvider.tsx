@@ -42,6 +42,7 @@ export interface App {
   updateProject: (projectId: string, patch: Partial<Pick<Project, 'summary' | 'status' | 'dueAt' | 'aiOrganizerGenerated'>>) => Promise<boolean>
   addMilestone: (projectId: string, title: string, description: string, details?: MilestoneDetails) => Promise<boolean>
   updateMilestone: (milestoneId: string, patch: MilestonePatch) => Promise<boolean>
+  deleteMilestone: (milestoneId: string) => Promise<boolean>
   submitMilestoneWork: (milestoneId: string, summary: string, attachments: WorkAttachment[]) => Promise<boolean>
   reviewMilestoneWork: (submissionId: string, status: 'approved' | 'changes_requested', reviewNote?: string) => Promise<boolean>
   saveSettings: (p: Partial<SpaceSettings>) => Promise<boolean>
@@ -755,6 +756,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await up('milestones/' + milestoneId, { ...safePatch, updatedAt })
         setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...safePatch, updatedAt } : item) }))
       }, 'Milestone updated'),
+      deleteMilestone: async milestoneId => {
+        let deleted = false
+        try {
+          if (!me || !backend || !st) throw new Error('Sign in again before deleting a milestone.')
+          const current = data.milestones.find(item => item.id === milestoneId)
+          if (!current) throw new Error('Milestone not found. Refresh the page and try again.')
+          const project = data.projects[current.projectId]
+          const projectIdea = data.ideas.find(item => item.id === (project?.ideaId || current.projectId))
+          if (!projectIdea || !canManageCommunity(projectIdea.cid)) {
+            throw new Error('Only the community owner or a platform administrator can delete milestones.')
+          }
+
+          const submissions = data.workSubmissions.filter(item => item.milestoneId === milestoneId)
+          const filePaths = [...new Set(submissions.flatMap(item => item.attachments || []).map(file => file.path).filter(Boolean))]
+          let filesFailedToDelete = 0
+          for (const filePath of filePaths) {
+            try {
+              if (!backend.deleteWorkFile) throw new Error('Private file deletion is not configured.')
+              await backend.deleteWorkFile(filePath)
+            } catch (error) {
+              filesFailedToDelete += 1
+              console.warn('A private milestone attachment could not be removed:', error)
+            }
+          }
+
+          for (const submission of submissions) await st.delete('workSubmissions/' + submission.id)
+          await st.delete('milestones/' + milestoneId)
+          deleted = true
+          setData(d => ({
+            ...d,
+            milestones: d.milestones.filter(item => item.id !== milestoneId),
+            workSubmissions: d.workSubmissions.filter(item => item.milestoneId !== milestoneId),
+          }))
+          toast(filesFailedToDelete
+            ? 'Milestone deleted. Some private attachments could not be removed.'
+            : 'Milestone and linked work submissions deleted.')
+          return true
+        } catch (error: any) {
+          const message = String(error?.message || error || 'Unknown error').slice(0, 280)
+          console.error('Quorlyth milestone deletion failed:', error)
+          toast(deleted ? 'Milestone deleted, but some linked records may need cleanup.' : message)
+          return deleted
+        }
+      },
       submitMilestoneWork: (milestoneId, summary, attachments) => w(async () => {
         if (!me || !st) throw new Error('Sign in before submitting project work.')
         const milestone = data.milestones.find(item => item.id === milestoneId)
