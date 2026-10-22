@@ -7,6 +7,7 @@ import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, Project } from '../lib/types'
 import { when } from '../lib/util'
+import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 
 const dateInput = (timestamp?: number | null) => {
   if (!timestamp) return ''
@@ -44,6 +45,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
   async function createProject(event: FormEvent) {
     event.preventDefault()
     if (!summary.trim()) return a.toast('Add a short project summary first.')
+    if (isPastDateInput(projectDueDate)) return a.toast(PAST_DATE_MESSAGE)
     setBusy('project')
     await a.createProject(idea.id, summary.trim(), dateEnd(projectDueDate))
     setBusy('')
@@ -52,6 +54,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
   async function saveSummary(event: FormEvent) {
     event.preventDefault()
     if (!project || !summary.trim()) return a.toast('A project summary cannot be empty.')
+    if (isPastDateChange(projectDueDate, dateInput(project.dueAt))) return a.toast(PAST_DATE_MESSAGE)
     setBusy('summary')
     const ok = await a.updateProject(project.id, { summary: summary.trim(), dueAt: dateEnd(projectDueDate) })
     if (ok) setEditSummary(false)
@@ -91,7 +94,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
               <span>Project plan</span>
               <textarea value={summary} onChange={e => setSummary(e.target.value)} maxLength={1200} required placeholder="What are you going to deliver, and how will the contributors help?" />
             </label>
-            <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
+            <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" min={minimumDateInput()} value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
             <p className="dim" style={{ marginTop: -6, marginBottom: 12 }}>Create a tracked project from this selected idea. You can then add milestones and share progress with community members.</p>
             <button className="btn p" disabled={busy === 'project'}><QuorlythGlyph name="plan" size={16} />{busy === 'project' ? 'Creating project…' : 'Create project'}</button>
           </form>
@@ -101,7 +104,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
           {editSummary && canManage ? (
             <form onSubmit={saveSummary}>
               <label className="field"><span>Project summary</span><textarea value={summary} onChange={e => setSummary(e.target.value)} required maxLength={1200} /></label>
-              <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
+              <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" min={minimumDateInput(dateInput(project?.dueAt))} value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
               <div className="acts"><button className="btn p" disabled={busy === 'summary'}>{busy === 'summary' ? 'Saving…' : 'Save summary'}</button><button type="button" className="btn" onClick={() => { setSummary(project.summary); setEditSummary(false) }}>Cancel</button></div>
             </form>
           ) : (
