@@ -1,0 +1,84 @@
+/* Focused collaboration workspace shell. Keep Quorlyth's monochrome liquid-glass language. */
+.ql-workspace-shell{display:grid;gap:13px;margin:0 0 18px;padding:16px;border:1px solid rgba(255,255,255,.13);border-radius:22px;color:#f4f4f5;background:radial-gradient(ellipse 75% 100% at 0% 0%,rgba(255,255,255,.075),transparent 72%),linear-gradient(150deg,rgba(255,255,255,.05),rgba(255,255,255,.012) 68%),rgba(4,4,5,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 24px 56px -44px rgba(255,255,255,.22);-webkit-backdrop-filter:blur(28px) saturate(145%);backdrop-filter:blur(28px) saturate(145%)}
+.ql-workspace-shell__meta{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.ql-workspace-shell__description{margin:5px 0 0;max-width:640px;color:rgba(244,244,246,.55);font-size:12px;line-height:1.6}
+.ql-workspace-trust,.ql-workspace-state,.ql-evidence-ledger__count{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;padding:7px 10px;border:1px solid rgba(255,255,255,.15);border-radius:999px;color:rgba(248,248,250,.78);background:rgba(255,255,255,.04);font-size:10px;white-space:nowrap}
+.ql-workspace-tabs{display:flex;align-items:stretch;gap:6px;min-width:0;padding:5px;overflow-x:auto;scrollbar-width:none;border:1px solid rgba(255,255,255,.085);border-radius:15px;background:rgba(0,0,0,.24)}
+.ql-workspace-tabs::-webkit-scrollbar{display:none}
+.ql-workspace-tabs button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;min-width:max-content;padding:10px 14px;border:1px solid transparent;border-radius:11px;color:rgba(244,244,246,.62);background:transparent;font:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:color .18s,background .18s,border-color .18s,box-shadow .18s}
+.ql-workspace-tabs button:hover{color:#fff;background:rgba(255,255,255,.055)}
+.ql-workspace-tabs button.is-active{color:#fff;border-color:rgba(255,255,255,.16);background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.045));box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 22px -18px #fff}
+.ql-workspace-tabs button small{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border:1px solid rgba(255,255,255,.12);border-radius:999px;color:rgba(255,255,255,.65);background:rgba(255,255,255,.045);font-size:10px}
+.ql-workspace-tabs button.is-active small{color:#fff;border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.1)}
+.ql-workspace-tab-panel{min-width:0;animation:ql-workspace-enter .22s ease both}
+@keyframes ql-workspace-enter{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.ql-workspace-overview-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(310px,.9fr);align-items:start;gap:14px}
+.ql-workspace-brief>section{margin:0;min-width:0;height:100%}
+.ql-workspace-pulse{display:grid;gap:16px;min-width:0}
+.ql-workspace-pulse__heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.ql-workspace-pulse__heading h3{margin:5px 0 0;font-size:21px;letter-spacing:-.04em}
+.ql-workspace-state.is-complete{background:rgba(255,255,255,.1);color:#fff}
+.ql-workspace-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ql-workspace-stat-grid>div{display:grid;gap:5px;min-width:0;padding:13px;border:1px solid rgba(255,255,255,.09);border-radius:14px;background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012))}
+.ql-workspace-stat-grid strong{color:#f6f6f7;font-size:25px;font-weight:520;letter-spacing:-.04em;line-height:1}
+.ql-workspace-stat-grid span{color:rgba(244,244,246,.5);font-size:11px;line-height:1.45}
+.ql-workspace-next{display:flex;align-items:flex-start;gap:11px;padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:15px;background:rgba(255,255,255,.025)}
+.ql-workspace-next__mark{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.055)}
+.ql-workspace-next strong{display:block;font-size:12px;font-weight:550}
+.ql-workspace-next p{margin:5px 0 0;color:rgba(244,244,246,.53);font-size:11px;line-height:1.6}
+.ql-workspace-pulse__actions{display:flex;flex-wrap:wrap;gap:8px}
+.ql-workspace-plan-panel{display:grid;gap:14px;min-width:0}
+.ql-workspace-plan-panel .ql-ai-plan{margin:0}
+.ql-workspace-plan-panel .ql-milestone-board{margin-top:0}
+.ql-workspace-team-grid{align-items:start}
+.ql-workspace-team-grid>div>section{min-width:0;margin:0}
+.ql-evidence-ledger{display:grid;gap:16px;min-width:0}
+.ql-evidence-ledger__heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ql-evidence-ledger__heading h3{margin:6px 0 0;font-size:24px;font-weight:500;letter-spacing:-.045em}
+.ql-evidence-ledger__heading .ql-muted{margin:6px 0 0;max-width:650px;font-size:12px;line-height:1.6}
+.ql-evidence-ledger__notice{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.035)}
+.ql-evidence-ledger__notice>svg{flex:none;margin-top:2px;color:rgba(255,255,255,.75)}
+.ql-evidence-ledger__notice p{margin:0;color:rgba(245,245,247,.57);font-size:11px;line-height:1.65}
+.ql-evidence-ledger__list{display:grid;gap:11px;min-width:0}
+.ql-evidence-record{display:grid;gap:13px;min-width:0;padding:16px;border:1px solid rgba(255,255,255,.105);border-radius:17px;background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.012))}
+.ql-evidence-record__top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ql-evidence-record__identity{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.ql-evidence-record__mark{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:1px solid rgba(255,255,255,.12);border-radius:11px;color:rgba(255,255,255,.78);background:rgba(255,255,255,.045)}
+.ql-evidence-record__identity h4{margin:5px 0 3px;font-size:15px;font-weight:550;letter-spacing:-.02em;overflow-wrap:anywhere}
+.ql-evidence-record__identity p:last-child{margin:0;color:rgba(244,244,246,.5);font-size:11px}
+.ql-evidence-decision{display:inline-flex;align-items:center;gap:6px;flex:none;padding:6px 9px;border:1px solid rgba(255,255,255,.13);border-radius:999px;color:rgba(245,245,247,.76);background:rgba(255,255,255,.04);font-size:10px}
+.ql-evidence-decision.status-approved{color:#fff;background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.22)}
+.ql-evidence-decision.status-changes_requested{border-style:dashed}
+.ql-evidence-record__summary{margin:0;color:rgba(245,245,247,.77);font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.ql-evidence-review-note{display:grid;gap:5px;padding:11px 12px;border-left:2px solid rgba(255,255,255,.4);border-radius:0 10px 10px 0;background:rgba(255,255,255,.035)}
+.ql-evidence-review-note strong{font-size:11px;font-weight:550}
+.ql-evidence-review-note p{margin:0;color:rgba(244,244,246,.61);font-size:11px;line-height:1.6;white-space:pre-wrap}
+.ql-evidence-review-note small{color:rgba(244,244,246,.38);font-size:10px}
+.ql-evidence-record__files{display:grid;gap:7px;min-width:0}
+.ql-evidence-file{display:flex;align-items:center;gap:9px;min-width:0;padding:9px 10px;border:1px solid rgba(255,255,255,.085);border-radius:12px;background:rgba(0,0,0,.22)}
+.ql-evidence-file__mark{display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(255,255,255,.04)}
+.ql-evidence-file__copy{display:grid;flex:1;gap:3px;min-width:0}
+.ql-evidence-file__copy strong{overflow:hidden;color:rgba(247,247,249,.84);font-size:11px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.ql-evidence-file__copy small{color:rgba(244,244,246,.4);font-size:10px;overflow-wrap:anywhere}
+.ql-evidence-file__open{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:none;padding:7px 9px;border:1px solid rgba(255,255,255,.14);border-radius:9px;color:rgba(255,255,255,.86);background:rgba(255,255,255,.04);font-size:10px;text-decoration:none}
+.ql-evidence-file__open:hover{color:#fff;background:rgba(255,255,255,.1)}
+.ql-evidence-file__state{flex:none;color:rgba(244,244,246,.4);font-size:10px}
+.ql-evidence-ledger__empty{display:grid;justify-items:center;gap:10px;text-align:center;padding:clamp(24px,5vw,54px) 12px}
+.ql-evidence-ledger__empty>span{display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(255,255,255,.13);border-radius:15px;background:rgba(255,255,255,.05)}
+.ql-evidence-ledger__empty h4{margin:0;font-size:17px;font-weight:550}
+.ql-evidence-ledger__empty p{margin:0;max-width:520px;color:rgba(244,244,246,.52);font-size:12px;line-height:1.65}
+@media(max-width:900px){
+.ql-workspace-shell{padding:12px;border-radius:18px}
+.ql-workspace-shell__meta{align-items:flex-start;flex-direction:column}
+.ql-workspace-tabs{margin-right:-1px}
+.ql-workspace-tabs button{padding:9px 11px;min-height:41px}
+.ql-workspace-overview-grid{grid-template-columns:minmax(0,1fr)}
+.ql-workspace-pulse__heading h3{font-size:20px}
+.ql-workspace-team-grid{grid-template-columns:minmax(0,1fr)!important;gap:14px!important}
+.ql-evidence-ledger__heading h3{font-size:22px}
+.ql-evidence-record{padding:12px}
+.ql-evidence-file{align-items:flex-start;flex-wrap:wrap}
+.ql-evidence-file__copy{flex-basis:calc(100% - 45px)}
+.ql-evidence-file__open,.ql-evidence-file__state{margin-left:40px}
+}
+@media(prefers-reduced-motion:reduce){.ql-workspace-tab-panel{animation:none}.ql-workspace-tabs button{transition:none}}
