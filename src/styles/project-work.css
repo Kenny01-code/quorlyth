@@ -346,3 +346,8 @@
 @media (prefers-reduced-motion: reduce) {
   .q-work-panel *, .q-work-panel *::before, .q-work-panel *::after { transition: none !important; }
 }
+
+
+/* Destructive controls stay quiet until hover to match Quorlyth's monochrome interface. */
+.ql-danger-action { color: rgba(245,245,247,.66); border-color: rgba(255,255,255,.14); }
+.ql-danger-action:hover { color: rgba(255,255,255,.96); border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.045); }
