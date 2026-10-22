@@ -554,13 +554,13 @@ function Workspace() {
           <p className="ql-eyebrow">PROJECT WORKSPACE</p>
           <p className="ql-workspace-shell__description">One shared source of truth for the plan, submitted work, and team decisions.</p>
         </div>
-        <span className="ql-workspace-trust"><QuorlythGlyph name="shield" size={14} />Evidence-led completion</span>
+        <span className="ql-workspace-trust"><QuorlythGlyph name="lock" size={14} />Evidence-led completion</span>
       </div>
       <div className="ql-workspace-tabs" role="tablist" aria-label="Workspace sections">
         <button id="ql-workspace-tab-overview" type="button" role="tab" aria-selected={workspaceTab === 'overview'} aria-controls="ql-workspace-panel-overview" className={workspaceTab === 'overview' ? 'is-active' : ''} onClick={() => setWorkspaceTab('overview')}><QuorlythGlyph name="workspace" size={16} /><span>Overview</span></button>
-        <button id="ql-workspace-tab-plan" type="button" role="tab" aria-selected={workspaceTab === 'plan'} aria-controls="ql-workspace-panel-plan" className={workspaceTab === 'plan' ? 'is-active' : ''} onClick={() => setWorkspaceTab('plan')}><QuorlythGlyph name="milestone" size={16} /><span>Plan & tasks</span><small>{milestones.length{'}'}</small></button>
-        <button id="ql-workspace-tab-evidence" type="button" role="tab" aria-selected={workspaceTab === 'evidence'} aria-controls="ql-workspace-panel-evidence" className={workspaceTab === 'evidence' ? 'is-active' : ''} onClick={() => setWorkspaceTab('evidence')}><QuorlythGlyph name="upload" size={16} /><span>Evidence & reviews</span><small>{pendingEvidenceReviews || projectSubmissions.length{'}'}</small></button>
-        <button id="ql-workspace-tab-team" type="button" role="tab" aria-selected={workspaceTab === 'team'} aria-controls="ql-workspace-panel-team" className={workspaceTab === 'team' ? 'is-active' : ''} onClick={() => setWorkspaceTab('team')}><QuorlythGlyph name="team" size={16} /><span>Team room</span><small>{workspaceTeamIds.length{'}'}</small></button>
+        <button id="ql-workspace-tab-plan" type="button" role="tab" aria-selected={workspaceTab === 'plan'} aria-controls="ql-workspace-panel-plan" className={workspaceTab === 'plan' ? 'is-active' : ''} onClick={() => setWorkspaceTab('plan')}><QuorlythGlyph name="milestone" size={16} /><span>Plan & tasks</span><small>{milestones.length}</small></button>
+        <button id="ql-workspace-tab-evidence" type="button" role="tab" aria-selected={workspaceTab === 'evidence'} aria-controls="ql-workspace-panel-evidence" className={workspaceTab === 'evidence' ? 'is-active' : ''} onClick={() => setWorkspaceTab('evidence')}><QuorlythGlyph name="upload" size={16} /><span>Evidence & reviews</span><small>{pendingEvidenceReviews || projectSubmissions.length}</small></button>
+        <button id="ql-workspace-tab-team" type="button" role="tab" aria-selected={workspaceTab === 'team'} aria-controls="ql-workspace-panel-team" className={workspaceTab === 'team' ? 'is-active' : ''} onClick={() => setWorkspaceTab('team')}><QuorlythGlyph name="team" size={16} /><span>Team room</span><small>{workspaceTeamIds.length}</small></button>
       </div>
     </section>
     {workspaceTab === 'overview' && <div id="ql-workspace-panel-overview" role="tabpanel" aria-labelledby="ql-workspace-tab-overview" className="ql-workspace-tab-panel">
@@ -581,10 +581,10 @@ function Workspace() {
         <section className="glass pad ql-workspace-pulse">
           <div className="ql-workspace-pulse__heading"><div><p className="ql-eyebrow">PROJECT PULSE</p><h3>Where things stand</h3></div><span className={'ql-workspace-state' + (project.status === 'completed' ? ' is-complete' : '')}>{project.status === 'completed' ? 'Closed' : 'In progress'}</span></div>
           <div className="ql-workspace-stat-grid">
-            <div><strong>{milestones.length{'}'}</strong><span>Planned outcomes</span></div>
-            <div><strong>{progress{'}'}%</strong><span>Approved complete</span></div>
-            <div><strong>{pendingEvidenceReviews{'}'}</strong><span>Awaiting review</span></div>
-            <div><strong>{approvedEvidenceCount{'}'}</strong><span>Approved submissions</span></div>
+            <div><strong>{milestones.length}</strong><span>Planned outcomes</span></div>
+            <div><strong>{progress}%</strong><span>Approved complete</span></div>
+            <div><strong>{pendingEvidenceReviews}</strong><span>Awaiting review</span></div>
+            <div><strong>{approvedEvidenceCount}</strong><span>Approved submissions</span></div>
           </div>
           <div className="ql-workspace-next">
             <span className="ql-workspace-next__mark"><QuorlythGlyph name={pendingEvidenceReviews ? 'upload' : 'milestone'} size={17} /></span>
@@ -593,7 +593,7 @@ function Workspace() {
           <div className="ql-workspace-pulse__actions"><button type="button" className="ql-primary-action" onClick={() => setWorkspaceTab(pendingEvidenceReviews ? 'evidence' : 'plan')}><QuorlythGlyph name={pendingEvidenceReviews ? 'upload' : 'milestone'} size={15} />{pendingEvidenceReviews ? 'Review evidence' : 'Open plan'}</button><button type="button" className="ql-quiet-action" onClick={() => setWorkspaceTab('team')}><QuorlythGlyph name="team" size={14} />Go to team room</button></div>
         </section>
       </div>
-    </div>
+    </div>}
     {workspaceTab === 'plan' && <div id="ql-workspace-panel-plan" role="tabpanel" aria-labelledby="ql-workspace-tab-plan" className="ql-workspace-tab-panel ql-workspace-plan-panel">
               {canAccess && project && <section className="glass pad ql-ai-plan">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -634,7 +634,7 @@ function Workspace() {
     </div>}
     {workspaceTab === 'evidence' && <section id="ql-workspace-panel-evidence" role="tabpanel" aria-labelledby="ql-workspace-tab-evidence" className="ql-workspace-tab-panel glass pad ql-evidence-ledger">
       <div className="ql-evidence-ledger__heading"><div><p className="ql-eyebrow">DELIVERABLE REGISTER</p><h3>Evidence & reviews</h3><p className="ql-muted">Every record keeps its revision, contributor, submitted files, and reviewer decision together.</p></div><span className="ql-evidence-ledger__count">{projectSubmissions.length} submission{projectSubmissions.length === 1 ? '' : 's'}</span></div>
-      <div className="ql-evidence-ledger__notice"><QuorlythGlyph name="shield" size={16} /><p>Files here are contributor-submitted evidence. They are not labelled source-verified unless a connected provider confirms their origin. A reviewer must still check them against the milestone criteria.</p></div>
+      <div className="ql-evidence-ledger__notice"><QuorlythGlyph name="lock" size={16} /><p>Files here are contributor-submitted evidence. They are not labelled source-verified unless a connected provider confirms their origin. A reviewer must still check them against the milestone criteria.</p></div>
       {projectSubmissions.length ? <div className="ql-evidence-ledger__list">
         {projectSubmissions.map(submission => {
           const linkedMilestone = milestones.find(item => item.id === submission.milestoneId)
