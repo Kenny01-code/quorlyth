@@ -466,7 +466,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; liveTalk?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; browserFallbackTimeoutMs?: number; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; liveTalk?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const source = text.trim().slice(0, 1500)
@@ -515,10 +515,16 @@ export async function speakText(
     const abortProviderRequest = () => providerRequest.abort()
     signal.addEventListener('abort', abortProviderRequest, { once: true })
     let providerRequestTimer: number | null = null
-    // Give the server's fast ElevenLabs -> AI-provider failover time to finish.
-    // An explicit stop still aborts this request immediately.
-    if (preferElevenLabsVoice && !options.elevenLabsOnly) {
-      providerRequestTimer = window.setTimeout(() => providerRequest.abort(), 7500)
+    // Bound provider latency, including ElevenLabs-only calls. If browser fallback
+    // is enabled, callers can choose a fast timeout; streamed provider failover keeps
+    // its longer window. An explicit stop still aborts this request immediately.
+    const requestedTimeout = options.browserFallbackTimeoutMs
+    const defaultTimeout = options.elevenLabsOnly && options.allowBrowserFallback === true ? 1200 : 7500
+    const providerTimeout = typeof requestedTimeout === 'number' && Number.isFinite(requestedTimeout)
+      ? Math.max(250, Math.min(30_000, requestedTimeout))
+      : defaultTimeout
+    if (preferElevenLabsVoice) {
+      providerRequestTimer = window.setTimeout(() => providerRequest.abort(), providerTimeout)
     }
     try {
       response = await fetch(aiApiUrl(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream'), {
