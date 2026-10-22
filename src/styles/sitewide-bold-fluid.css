@@ -1,0 +1,187 @@
+/* Quorlyth site-wide typography and fluid-surface refinement.
+   Keeps the existing monochrome liquid-glass direction while improving
+   type weight, text contrast, control clarity, and interaction smoothness. */
+
+:root {
+  --q-fluid-black: #020203;
+  --q-fluid-surface: rgba(255, 255, 255, 0.055);
+  --q-fluid-surface-raised: rgba(255, 255, 255, 0.085);
+  --q-fluid-edge: rgba(255, 255, 255, 0.18);
+  --q-fluid-edge-strong: rgba(255, 255, 255, 0.3);
+  --q-fluid-muted: rgba(255, 255, 255, 0.69);
+  --q-fluid-reflection: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --q-fluid-shadow: 0 28px 64px -32px rgba(0, 0, 0, 0.98);
+}
+
+#root {
+  color: #f4f4f6;
+}
+
+body {
+  font-weight: 450;
+  line-height: 1.62;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Give the entire product a consistent, confident type hierarchy. */
+#root :is(h1, h2, h3, h4, h5, h6) {
+  color: #f8f8fa;
+  font-weight: 700 !important;
+  letter-spacing: -0.028em;
+  line-height: 1.14;
+  text-wrap: balance;
+}
+
+#root h1 {
+  font-weight: 750 !important;
+  letter-spacing: -0.04em;
+  line-height: 1.06;
+}
+
+#root h2 {
+  font-weight: 720 !important;
+  letter-spacing: -0.034em;
+}
+
+#root h3,
+#root :is(h4, h5, h6) {
+  font-weight: 680 !important;
+  letter-spacing: -0.018em;
+}
+
+#root :is(p, li, dd, dt, blockquote, figcaption) {
+  font-weight: 450;
+  line-height: 1.65;
+}
+
+#root :is(strong, b, th, label, .field span, .label, .eyebrow, .chip, .badge) {
+  font-weight: 650;
+}
+
+#root :is(a, button, .btn, [role="button"]) {
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+
+#root :is(button, .btn, [role="button"], input[type="submit"], input[type="button"]) {
+  font-weight: 650;
+  letter-spacing: -0.008em;
+}
+
+#root :is(small, .dim, .mut, .muted, .subtle, .hint, .helper, .caption) {
+  color: rgba(255, 255, 255, 0.69);
+  font-weight: 500;
+}
+
+/* More defined navigation, without changing its layout or route structure. */
+#nav {
+  background-color: rgba(5, 5, 7, 0.84);
+  border-color: rgba(255, 255, 255, 0.17);
+  box-shadow:
+    0 20px 58px -28px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(30px) saturate(155%);
+  backdrop-filter: blur(30px) saturate(155%);
+}
+
+#nav .navmain .nav-item,
+#nav .navmain button {
+  font-weight: 650;
+  letter-spacing: -0.008em;
+}
+
+#nav .navmain .nav-item.on {
+  font-weight: 750;
+}
+
+/* Stronger, cleaner edges and deeper glass on shared app surfaces. */
+#root :is(.glass, .lift, .card, .panel, .modal, .dialog, .popover, .dropdown, .menu, .sheet) {
+  background-color: rgba(9, 9, 11, 0.82);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 24px 62px -34px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.11);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  backdrop-filter: blur(28px) saturate(145%);
+  transition:
+    background-color 0.28s ease,
+    border-color 0.28s ease,
+    box-shadow 0.32s ease,
+    transform 0.32s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+#root :is(.glass, .lift, .card, .panel):hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow:
+    0 28px 70px -34px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Inputs should feel solid and readable, not washed out. */
+#root :is(
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="datetime-local"],
+  textarea,
+  select
+) {
+  color: #f7f7f9;
+  background-color: rgba(3, 3, 5, 0.82);
+  border-color: rgba(255, 255, 255, 0.2);
+  font-weight: 500;
+  transition:
+    background-color 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.3s ease,
+    color 0.24s ease;
+}
+
+#root :is(
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="datetime-local"],
+  textarea,
+  select
+):focus-visible {
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.075),
+    inset 0 1px 8px rgba(0, 0, 0, 0.58);
+}
+
+#root :is(input, textarea, select)::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+  opacity: 1;
+}
+
+#root :is(button, .btn, [role="button"]):active {
+  filter: brightness(0.94);
+}
+
+#root :is(button, .btn, [role="button"], a):focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.86);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root *,
+  #root *::before,
+  #root *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
