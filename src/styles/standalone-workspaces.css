@@ -195,3 +195,13 @@
 .sw-project-card,.sw-tabs button,.sw-progress-track i{transition:none}
 .sw-project-card:hover{transform:none}
 }
+
+.sw-evidence-attachment{display:flex;align-items:center;gap:10px;min-width:0;margin:0;padding:10px;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:rgba(0,0,0,.18)}
+.sw-evidence-attachment>div{display:grid;gap:4px;flex:1;min-width:0}
+.sw-evidence-attachment strong{display:block;overflow:hidden;color:rgba(248,248,250,.84);font-size:10px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.sw-evidence-attachment small{color:rgba(241,241,244,.42);font-size:9px}
+.sw-evidence-attachment>a{display:inline-flex;align-items:center;gap:5px;flex:none;color:rgba(250,250,252,.85);font-size:10px;text-decoration:none}
+.sw-evidence-attachment>a:hover{text-decoration:underline}
+.sw-selected-files{display:block;padding:8px 10px;border:1px solid rgba(255,255,255,.085);border-radius:9px;background:rgba(255,255,255,.025);color:rgba(244,244,246,.59);font-size:10px;line-height:1.65;overflow-wrap:anywhere}
+.sw-field input[type="file"]{padding:10px;border-style:dashed;font-size:11px}
+.sw-field input[type="file"]::file-selector-button{margin-right:9px;padding:7px 10px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:rgba(255,255,255,.07);color:rgba(250,250,252,.87);font:inherit;font-size:10px;cursor:pointer}
