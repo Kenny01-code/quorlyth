@@ -34,7 +34,7 @@ function Stage({ greeting }: { greeting: string }) {
     } catch { return 'auto' }
   }
 
-  async function hello(automatic = false) {
+  async function hello() {
     helloController.current?.abort()
     helloController.current = null
     helloPlayback.current?.stop()
@@ -43,7 +43,7 @@ function Stage({ greeting }: { greeting: string }) {
     const controller = new AbortController()
     helloController.current = controller
     let usedBrowserFallback = false
-    setHelloStatus(automatic ? 'Starting your welcome…' : 'Starting voice…')
+    setHelloStatus('Starting voice…')
     r.current?.welcome()
     try {
       const playback = await speakText(
@@ -64,8 +64,10 @@ function Stage({ greeting }: { greeting: string }) {
         {
           accent: preferredAccent(),
           signal: controller.signal,
+          // Prefer the natural voice, but never leave this button stuck on a failed provider.
           elevenLabsOnly: true,
-          // "Hear a hello" must never silently switch to the browser's basic voice.
+          allowBrowserFallback: true,
+          browserFallbackTimeoutMs: 850,
           preferElevenLabsVoice: true,
           liveTalk: true,
           onBrowserFallback: () => {
@@ -81,32 +83,26 @@ function Stage({ greeting }: { greeting: string }) {
       helloPlayback.current = playback
     } catch (error) {
       if (run !== helloRun.current || controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
-      const message = error instanceof Error ? error.message : 'Voice playback is unavailable.'
-      setHelloStatus(automatic
-        ? 'Automatic audio could not start. Tap “Hear a hello” to retry if your browser blocked playback.'
-        : message)
-      if (!automatic) toast(message)
+      const message = 'Voice playback could not start. Check your device audio and try again.'
+      setHelloStatus(message)
+      toast(message)
     }
   }
 
-  useEffect(() => {
-    // Try the greeting as soon as the sign-in stage opens. Some browsers block
-    // audible autoplay until the visitor interacts, so keep the retry button.
-    const timer = window.setTimeout(() => { void hello(true) }, 500)
-    return () => {
-      window.clearTimeout(timer)
-      helloRun.current += 1
-      helloController.current?.abort()
-      helloController.current = null
-      helloPlayback.current?.stop()
-      helloPlayback.current = null
-      r.current?.talk(false)
-    }
-  }, [greeting])
+  // Do not make an AI/network request just because the sign-in page opened.
+  // The visitor's explicit click starts voice playback and can fall back to device speech.
+  useEffect(() => () => {
+    helloRun.current += 1
+    helloController.current?.abort()
+    helloController.current = null
+    helloPlayback.current?.stop()
+    helloPlayback.current = null
+    r.current?.talk(false)
+  }, [])
 
   return (
     <div className="glass stage ok" id="stg">
-      <Robot ref={r} onReady={() => { setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400) }} />
+      <Robot ref={r} defer onReady={() => { setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400) }} />
       <div className="c1 glass"><span className="chip"><Icon name="private" size={12} />Private session</span></div>
       <button className="chip hello" onClick={() => void hello(false)}><Icon name="voice" size={14} />Hear a hello</button>
       {helloStatus && <p className="dim" role="status" aria-live="polite" style={{ position: 'absolute', left: 12, right: 12, bottom: 48, fontSize: 11, textAlign: 'center' }}>{helloStatus}</p>}
