@@ -252,9 +252,10 @@ function WorkspaceProjectView() {
   const [repoUrl, setRepoUrl] = useState('')
   const [repoPreview, setRepoPreview] = useState<any[]>([])
   const [artifactTask, setArtifactTask] = useState('')
-  const [artifactType, setArtifactType] = useState<'github' | 'link' | 'document' | 'demo'>('github')
+  const [artifactType, setArtifactType] = useState<'github' | 'link' | 'document' | 'demo' | 'file'>('github')
   const [artifactUrl, setArtifactUrl] = useState('')
   const [artifactSummary, setArtifactSummary] = useState('')
+  const [artifactFiles, setArtifactFiles] = useState<File[]>([])
   const [commentText, setCommentText] = useState('')
   const [reviewNotes, setReviewNotes] = useState<Record<string,string>>({})
   const [projectTitle, setProjectTitle] = useState('')
@@ -365,9 +366,26 @@ function WorkspaceProjectView() {
 
   async function submitEvidence(event: FormEvent) {
     event.preventDefault()
-    if (!artifactTask || !artifactUrl.trim()) return setError('Choose the task and add an evidence link.')
-    if (artifactType !== 'github' && artifactSummary.trim().length < 8) return setError('Describe what this link demonstrates in at least 8 characters.')
-    await runAction(artifactType === 'github' ? 'verify-github' : 'submit-link', async () => {
+    if (!artifactTask) return setError('Choose the task this evidence supports.')
+    if (artifactType === 'file' ? artifactFiles.length === 0 : !artifactUrl.trim()) {
+      return setError(artifactType === 'file' ? 'Attach at least one file.' : 'Add an evidence link.')
+    }
+    if (artifactType !== 'github' && artifactSummary.trim().length < 8) {
+      return setError('Describe what this evidence demonstrates in at least 8 characters.')
+    }
+    if (artifactType === 'link' || artifactType === 'document' || artifactType === 'demo') {
+      try {
+        const candidate = new URL(artifactUrl.trim())
+        if (candidate.protocol !== 'https:' || candidate.username || candidate.password) {
+          return setError('Use a secure HTTPS link without embedded credentials.')
+        }
+      } catch {
+        return setError('Enter a valid HTTPS evidence link.')
+      }
+    }
+
+    const action = artifactType === 'github' ? 'verify-github' : artifactType === 'file' ? 'upload-files' : 'submit-link'
+    await runAction(action, async () => {
       if (!a.backend || !a.me) throw new Error('Sign in again before submitting project evidence.')
       if (artifactType === 'github') {
         await githubAction(a, 'verify_artifact', id, { taskId: artifactTask, artifactUrl: artifactUrl.trim() })
@@ -375,19 +393,46 @@ function WorkspaceProjectView() {
       } else {
         const now = Date.now()
         const artifactId = crypto.randomUUID()
-        const kind = artifactType
-        const record: WorkspaceArtifact = {
-          id: artifactId, projectId: id, taskId: artifactTask, provider: 'manual', kind,
-          url: artifactUrl.trim(), summary: artifactSummary.trim().slice(0, 1200),
-          status: 'submitted', verificationStatus: 'submitted_evidence',
-          submittedBy: a.me.id, submittedAt: now, updatedAt: now,
-          sourceMetadata: { source: 'user_submitted_link', submittedAt: now },
+        const attachments: WorkspaceAttachment[] = []
+        try {
+          if (artifactType === 'file') {
+            if (!a.backend.uploadWorkFile) throw new Error('Private file uploads are not configured for this session.')
+            if (artifactFiles.length > 8) throw new Error('Attach no more than 8 files per submission.')
+            for (const file of artifactFiles) {
+              if (file.size > 25 * 1024 * 1024) throw new Error('Each file must be 25 MB or smaller.')
+              const filePath = await a.backend.uploadWorkFile(id, artifactTask, file)
+              attachments.push({
+                path: filePath,
+                name: file.name.replace(/[\\/]/g, '_').slice(0, 180) || 'attachment',
+                mimeType: file.type || 'application/octet-stream',
+                size: file.size,
+                uploadedAt: Date.now(),
+              })
+            }
+          }
+          const kind = artifactType
+          const record: WorkspaceArtifact = {
+            id: artifactId, projectId: id, taskId: artifactTask, provider: 'manual', kind,
+            ...(artifactType === 'file' ? { attachments } : { url: artifactUrl.trim() }),
+            summary: artifactSummary.trim().slice(0, 1200),
+            status: 'submitted', verificationStatus: 'submitted_evidence',
+            submittedBy: a.me.id, submittedAt: now, updatedAt: now,
+            sourceMetadata: { source: artifactType === 'file' ? 'private_file_upload' : 'user_submitted_link', submittedAt: now },
+          }
+          await a.backend.store.create('standaloneArtifacts/' + artifactId, record)
+          a.toast(artifactType === 'file'
+            ? 'Private files submitted. A manager must review them before the task can be completed.'
+            : 'Evidence link submitted. It is not source-verified; a manager can review it.')
+        } catch (error) {
+          if (a.backend.deleteWorkFile) {
+            await Promise.all(attachments.map(file => a.backend!.deleteWorkFile!(file.path).catch(() => undefined)))
+          }
+          throw error
         }
-        await a.backend.store.create('standaloneArtifacts/' + artifactId, record)
-        a.toast('Evidence link submitted. It is not source-verified; a project manager can review it.')
       }
       setArtifactUrl('')
       setArtifactSummary('')
+      setArtifactFiles([])
       setTab('evidence')
     })
   }
