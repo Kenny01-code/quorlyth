@@ -250,7 +250,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
               <span className="q-work-dropzone__icon"><QuorlythGlyph name="upload" size={24} /></span>
               <div className="q-work-dropzone__copy">
                 <strong>{uploading ? uploadLabel || 'Uploading files…' : 'Add files, images or documents'}</strong>
-                <small>Up to 8 files · {fileSize(maximumSize)} per file · Private to this collaboration</small>
+                <small>Required: at least 1 evidence file · Up to 8 files · {fileSize(maximumSize)} per file · Private to this collaboration</small>
               </div>
               <button type="button" className="q-work-upload-btn" disabled={uploading || submitting || !uploadAvailable || attachments.length >= MAX_ATTACHMENTS} onClick={() => fileInput.current?.click()}>
                 <QuorlythGlyph name="paperclip" size={16} />Choose files
@@ -263,8 +263,8 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
             </div>}
 
             <div className="q-work-submit-row">
-              <span className="q-work-hint">Your submission is saved with a revision number. The milestone completes after approval.</span>
-              <button className="q-work-submit-btn" disabled={submitting || uploading || summary.trim().length < 8}>
+              <span className="q-work-hint">{attachments.length ? 'Your evidence is saved with this revision. The milestone completes only after an authorized reviewer approves it.' : 'Attach at least one screenshot, document, demo recording, or other deliverable. A progress note alone cannot complete this milestone.'}</span>
+              <button className="q-work-submit-btn" disabled={submitting || uploading || summary.trim().length < 8 || attachments.length === 0} title={attachments.length ? 'Submit evidence for review' : 'Attach at least one evidence file to submit'}>
                 <QuorlythGlyph name="send" size={15} />{submitting ? 'Submitting…' : mine?.status === 'changes_requested' ? 'Submit revision' : 'Submit for review'}
               </button>
             </div>

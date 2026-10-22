@@ -723,6 +723,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const projectIdea = data.ideas.find(item => item.id === (project?.ideaId || current.projectId))
         if (!projectIdea) throw new Error('The project idea could not be found.')
         const manager = canManageCommunity(projectIdea.cid)
+        if (patch.status === 'done') {
+          throw new Error('Milestones can only be completed after an authorized reviewer approves a work submission with attached evidence.')
+        }
         if (!manager && (
           Object.keys(patch).some(key => key !== 'status')
           || patch.status !== 'in_progress'
@@ -777,6 +780,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (!file.name || file.name.length > 180 || !Number.isFinite(file.size) || file.size < 0 || file.size > 25 * 1024 * 1024) throw new Error('One of the attachments has invalid file details.')
           return { path: file.path, name: file.name.slice(0, 180), mimeType: String(file.mimeType || 'application/octet-stream').slice(0, 120), size: file.size, uploadedAt: Number(file.uploadedAt) || Date.now() }
         })
+        if (!cleanedAttachments.length) throw new Error('Attach at least one piece of evidence before submitting work for review.')
         const latestMine = data.workSubmissions
           .filter(item => item.milestoneId === milestoneId && item.submittedBy === me.id)
           .sort((first, second) => second.revision - first.revision || second.submittedAt - first.submittedAt)[0]
@@ -807,6 +811,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!project || !idea) throw new Error('The submission’s project could not be found.')
         if (project.status !== 'active') throw new Error('Reopen the project before reviewing pending milestone work.')
         if (!canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can review submitted work.')
+        if (submission.submittedBy === me.id) throw new Error('You cannot review your own submission. Another authorized reviewer must decide.')
         if (submission.status !== 'submitted') throw new Error('This submission has already been reviewed.')
         const cleanNote = reviewNote.trim().slice(0, 1600)
         if (status === 'changes_requested' && cleanNote.length < 4) throw new Error('Explain what needs to change so the contributor knows what to do next.')
