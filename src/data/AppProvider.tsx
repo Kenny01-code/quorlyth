@@ -510,7 +510,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           toast('You already have an active application for this idea')
           return Promise.resolve(false)
         }
-        return w(() => st!.set('volunteers/' + slug(), { ideaId, applicantId: me.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
+        return w(() => st!.create('volunteers/' + slug(), { ideaId, applicantId: me.id, message: message.trim(), status: 'pending', at: Date.now() }), 'Collaboration request sent')
       },
       decideVolunteer: (applicationId, status) => w(async () => {
         const application = data.volunteers.find(item => item.id === applicationId)
