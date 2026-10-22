@@ -4,6 +4,7 @@ import { QuorlythGlyph } from './QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, MilestonePriority } from '../lib/types'
 import { MilestoneWorkPanel } from './MilestoneWorkPanel'
+import { isPastDateChange, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 
 type FilterKey = 'all' | 'open' | 'mine' | 'overdue' | 'blocked'
 type MilestoneDraft = {
@@ -72,10 +73,10 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   const overdue = milestones.filter(isOverdue).length
   const open = milestones.length - completed
 
-  const people = useMemo(() => [...new Set(teamMemberIds)]
+  const people = useMemo(() => [...new Set([...teamMemberIds, ...(a.me?.id ? [a.me.id] : [])])]
     .filter(id => !!id)
-    .map(id => ({ id, name: a.nm(id) }))
-    .sort((x, y) => x.name.localeCompare(y.name)), [teamMemberIds, a.nm])
+    .map(id => ({ id, name: a.nm(id) || (id === a.me?.id ? 'You' : 'Team member') }))
+    .sort((x, y) => x.name.localeCompare(y.name)), [teamMemberIds, a.nm, a.me?.id])
 
   const visibleMilestones = useMemo(() => milestones
     .filter(item => {
@@ -125,6 +126,8 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   async function saveMilestone(event: FormEvent) {
     event.preventDefault()
     if (!draft.title.trim()) return a.toast('Give this milestone a clear outcome.')
+    const existingDueDate = editingId ? asDateInput(milestones.find(item => item.id === editingId)?.dueAt) : ''
+    if (isPastDateChange(draft.dueDate, existingDueDate)) return a.toast(PAST_DATE_MESSAGE)
     setBusyId(editingId || 'new')
     const details = {
       priority: draft.priority,
@@ -190,7 +193,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
         <label className="ql-field"><span>Work notes <small>Optional</small></span><textarea value={draft.description} onChange={event => setDraft(current => ({ ...current, description: event.target.value }))} maxLength={2000} rows={3} placeholder="Scope, hand-offs, dependencies or implementation notes…" /></label>
         <div className="ql-field-grid">
           <label className="ql-field"><span>Priority</span><select value={draft.priority} onChange={event => setDraft(current => ({ ...current, priority: event.target.value as MilestonePriority }))}><option value="low">Low</option><option value="normal">Standard</option><option value="high">High</option><option value="critical">Critical</option></select></label>
-          <label className="ql-field"><span>Due date</span><input type="date" value={draft.dueDate} onChange={event => setDraft(current => ({ ...current, dueDate: event.target.value }))} /></label>
+          <label className="ql-field"><span>Due date</span><input type="date" min={minimumDateInput(editingId ? asDateInput(milestones.find(item => item.id === editingId)?.dueAt) : '')} value={draft.dueDate} onChange={event => setDraft(current => ({ ...current, dueDate: event.target.value }))} /></label>
           <label className="ql-field"><span>Assign to</span><select value={draft.assigneeId} onChange={event => setDraft(current => ({ ...current, assigneeId: event.target.value }))}><option value="">Unassigned</option>{people.map(person => <option key={person.id} value={person.id}>{person.name}{person.id === a.me?.id ? ' (you)' : ''}</option>)}</select></label>
         </div>
         <label className="ql-field"><span>Acceptance criteria <small>How the team knows it is done</small></span><textarea value={draft.acceptanceCriteria} onChange={event => setDraft(current => ({ ...current, acceptanceCriteria: event.target.value }))} rows={2} maxLength={800} placeholder="A reviewer can sign in, complete the flow, and see a persisted result…" /></label>
