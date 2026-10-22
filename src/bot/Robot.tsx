@@ -7,7 +7,7 @@ export interface RobotApi {
 }
 
 /** The 3D QuorlythBot. Shows a retry button if the 3D scene cannot start. */
-export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; onReady?: () => void }>(function Robot({ theme = 'onyx', calm, drag, onReady }, ref) {
+export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; defer?: boolean; onReady?: () => void }>(function Robot({ theme = 'onyx', calm, drag, defer = false, onReady }, ref) {
   const cv = useRef<HTMLCanvasElement>(null)
   const api = useRef<RobotApi | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'fail'>('loading')
@@ -21,30 +21,38 @@ export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolea
     if (!el) return
     let cancelled = false
     let dispose: (() => void) | null = null
-    void import('./robot3d').then(({ robot3d }) => {
+    let loadTimer: number | null = null
+    const loadRobot = () => {
       if (cancelled) return
-      try {
-        const R = robot3d(el, { tight: 1, drag: !!drag, theme, onerror: () => { if (!cancelled) setState('fail') } })
-        if (cancelled) { R.dispose(); return }
-        api.current = R
-        dispose = () => {
-          R.dispose()
-          if (api.current === R) api.current = null
+      void import('./robot3d').then(({ robot3d }) => {
+        if (cancelled) return
+        try {
+          const R = robot3d(el, { tight: 1, drag: !!drag, theme, onerror: () => { if (!cancelled) setState('fail') } })
+          if (cancelled) { R.dispose(); return }
+          api.current = R
+          dispose = () => {
+            R.dispose()
+            if (api.current === R) api.current = null
+          }
+          if (calm) R.calm(true)
+          setState('ok')
+          onReady?.()
+        } catch {
+          if (!cancelled) setState('fail')
         }
-        if (calm) R.calm(true)
-        setState('ok')
-        onReady?.()
-      } catch {
+      }).catch(() => {
         if (!cancelled) setState('fail')
-      }
-    }).catch(() => {
-      if (!cancelled) setState('fail')
-    })
+      })
+    }
+    // The sign-in form and primary button render before the heavy WebGL chunk is requested.
+    if (defer) loadTimer = window.setTimeout(loadRobot, 350)
+    else loadRobot()
     return () => {
       cancelled = true
+      if (loadTimer !== null) window.clearTimeout(loadTimer)
       dispose?.()
     }
-  }, [try_])
+  }, [try_, defer])
 
   useEffect(() => { api.current?.theme(theme) }, [theme])
   useEffect(() => { api.current?.calm(!!calm) }, [calm])
