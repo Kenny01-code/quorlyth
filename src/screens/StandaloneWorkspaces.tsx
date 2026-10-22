@@ -4,6 +4,7 @@ import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
+import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 
 type WorkspaceTab = 'overview' | 'tasks' | 'evidence' | 'team'
 type WorkspaceProject = {
@@ -145,6 +146,7 @@ function WorkspaceProjectList() {
     const cleanTitle = title.trim()
     const cleanSummary = summary.trim()
     if (cleanTitle.length < 2 || cleanSummary.length < 8) return setError('Add a clear project name and a meaningful short brief.')
+    if (isPastDateInput(dueDate)) return setError(PAST_DATE_MESSAGE)
     setBusy(true)
     setError('')
     const id = crypto.randomUUID()
@@ -184,7 +186,7 @@ function WorkspaceProjectList() {
       <form onSubmit={createProject}>
         <label className="sw-field"><span>Project name</span><input value={title} onChange={e => setTitle(e.target.value)} required maxLength={100} placeholder="e.g. Creator analytics dashboard" /></label>
         <label className="sw-field"><span>What are you building?</span><textarea value={summary} onChange={e => setSummary(e.target.value)} required minLength={8} maxLength={4000} placeholder="Describe the purpose, audience and what a successful outcome looks like." rows={4} /></label>
-        <label className="sw-field"><span>Target delivery <small>Optional</small></span><input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} /></label>
+        <label className="sw-field"><span>Target delivery <small>Optional</small></span><input type="date" min={minimumDateInput()} value={dueDate} onChange={e => setDueDate(e.target.value)} /></label>
         {error && <p className="sw-error" role="alert">{error}</p>}
         <div className="acts"><button className="btn p" disabled={busy || title.trim().length < 2 || summary.trim().length < 8}><QuorlythGlyph name="workspace" size={15} />{busy ? 'Creating…' : 'Create project space'}</button><button type="button" className="btn" onClick={() => setCreating(false)}>Cancel</button></div>
       </form>
@@ -232,6 +234,16 @@ function WorkspaceProjectView() {
   const role = isOwner ? 'owner' : myMembership?.role
   const canManage = !!role && ['owner','manager'].includes(role)
   const canContribute = !!role && ['owner','manager','contributor'].includes(role)
+  const taskAssignees = team.filter(member => member.role !== 'viewer')
+  if (a.me?.id && canManage && !taskAssignees.some(member => member.userId === a.me!.id)) {
+    const now = Date.now()
+    taskAssignees.unshift({
+      id: id + '__' + a.me.id, projectId: id, userId: a.me.id,
+      role: isOwner ? 'owner' : 'manager', status: 'active',
+      invitedBy: a.me.id, at: now, updatedAt: now,
+    })
+  }
+  taskAssignees.sort((first, second) => a.nm(first.userId).localeCompare(a.nm(second.userId)))
   const projectTasks = tasks.filter(item => item.projectId === id).sort((x,y) => (x.dueAt || Number.MAX_SAFE_INTEGER) - (y.dueAt || Number.MAX_SAFE_INTEGER) || x.at-y.at)
   const projectArtifacts = artifacts.filter(item => item.projectId === id).sort((x,y) => y.submittedAt-x.submittedAt)
   const projectRepos = repositories.filter(item => item.projectId === id).sort((x,y) => y.lastSyncedAt-x.lastSyncedAt)
@@ -291,6 +303,7 @@ function WorkspaceProjectView() {
   async function saveProject(event: FormEvent) {
     event.preventDefault()
     if (!project || !a.backend) return
+    if (isPastDateChange(projectDueDate, dateInput(project.dueAt))) return setError(PAST_DATE_MESSAGE)
     await runAction('save-project', async () => {
       await a.backend!.store.update('standaloneProjects/' + project.id, { title: projectTitle.trim(), summary: projectSummary.trim(), dueAt: dateEnd(projectDueDate), updatedAt: Date.now() })
       a.toast('Workspace details saved.')
@@ -301,6 +314,7 @@ function WorkspaceProjectView() {
     event.preventDefault()
     if (!project || !a.backend || !a.me) return
     if (taskTitle.trim().length < 2) return setError('Give the task a clear title.')
+    if (isPastDateInput(taskDueDate)) return setError(PAST_DATE_MESSAGE)
     await runAction('add-task', async () => {
       const now = Date.now(); const taskId = crypto.randomUUID()
       const task: WorkspaceTask = {
@@ -506,7 +520,7 @@ function WorkspaceProjectView() {
         <label className="sw-field"><span>Task title</span><input value={taskTitle} onChange={e=>setTaskTitle(e.target.value)} required maxLength={140} placeholder="What concrete result should be delivered?" /></label>
         <label className="sw-field"><span>Details <small>Optional</small></span><textarea value={taskDescription} onChange={e=>setTaskDescription(e.target.value)} maxLength={2000} rows={2} placeholder="Scope, approach or links the contributor needs." /></label>
         <label className="sw-field"><span>Definition of done</span><textarea value={taskCriteria} onChange={e=>setTaskCriteria(e.target.value)} maxLength={1000} rows={2} placeholder="Which behaviour, tests or changes must the evidence demonstrate?" /></label>
-        <div className="sw-form-row"><label className="sw-field"><span>Assign to</span><select value={taskAssignee} onChange={e=>setTaskAssignee(e.target.value)}><option value="">Unassigned</option>{team.filter(member=>member.role!=='viewer').map(member=><option key={member.userId} value={member.userId}>{a.nm(member.userId)}</option>)}</select></label><label className="sw-field"><span>Due date</span><input type="date" value={taskDueDate} onChange={e=>setTaskDueDate(e.target.value)} /></label></div>
+        <div className="sw-form-row"><label className="sw-field"><span>Assign to</span><select value={taskAssignee} onChange={e=>setTaskAssignee(e.target.value)}><option value="">Unassigned</option>{taskAssignees.map(member=><option key={member.userId} value={member.userId}>{a.nm(member.userId)}{member.userId===a.me?.id?' (you)':''}</option>)}</select></label><label className="sw-field"><span>Due date</span><input type="date" min={minimumDateInput()} value={taskDueDate} onChange={e=>setTaskDueDate(e.target.value)} /></label></div>
         <button className="btn p" disabled={busy==='add-task'||taskTitle.trim().length<2}><QuorlythGlyph name="add" size={14}/>{busy==='add-task'?'Adding…':'Add task'}</button>
       </form>}
       {!projectTasks.length ? <div className="sw-empty-inline"><QuorlythGlyph name="milestone" size={22}/><strong>Nothing planned yet</strong><p>Start by adding a task with clear acceptance criteria.</p></div> : <div className="sw-task-list">{projectTasks.map(task => {
@@ -571,6 +585,6 @@ function WorkspaceProjectView() {
       </section>
     </div>}
 
-    {canManage&&<section className="glass pad sw-settings-panel"><details><summary><QuorlythGlyph name="settings" size={15}/>Workspace settings <span>Owner and manager only</span></summary><form onSubmit={saveProject} className="sw-settings-form"><label className="sw-field"><span>Project title</span><input value={projectTitle} onChange={e=>setProjectTitle(e.target.value)} maxLength={100} required /></label><label className="sw-field"><span>Project brief</span><textarea value={projectSummary} onChange={e=>setProjectSummary(e.target.value)} maxLength={4000} rows={3} required /></label><label className="sw-field"><span>Target delivery</span><input type="date" value={projectDueDate} onChange={e=>setProjectDueDate(e.target.value)} /></label><div className="acts"><button className="btn p" disabled={busy==='save-project'}>Save settings</button><button className="btn" type="button" disabled={busy==='project-status'||project.status==='active'&&projectTasks.some(task=>task.status!=='done')} onClick={()=>void toggleProjectStatus()}>{project.status==='completed'?'Reopen workspace':'Close workspace'} </button></div><p className="sw-muted">Closing a workspace is permitted only after every task has completed with approved evidence. Reopening allows new tasks or revisions.</p></form></details></section>}
+    {canManage&&<section className="glass pad sw-settings-panel"><details><summary><QuorlythGlyph name="settings" size={15}/>Workspace settings <span>Owner and manager only</span></summary><form onSubmit={saveProject} className="sw-settings-form"><label className="sw-field"><span>Project title</span><input value={projectTitle} onChange={e=>setProjectTitle(e.target.value)} maxLength={100} required /></label><label className="sw-field"><span>Project brief</span><textarea value={projectSummary} onChange={e=>setProjectSummary(e.target.value)} maxLength={4000} rows={3} required /></label><label className="sw-field"><span>Target delivery</span><input type="date" min={minimumDateInput(dateInput(project?.dueAt))} value={projectDueDate} onChange={e=>setProjectDueDate(e.target.value)} /></label><div className="acts"><button className="btn p" disabled={busy==='save-project'}>Save settings</button><button className="btn" type="button" disabled={busy==='project-status'||project.status==='active'&&projectTasks.some(task=>task.status!=='done')} onClick={()=>void toggleProjectStatus()}>{project.status==='completed'?'Reopen workspace':'Close workspace'} </button></div><p className="sw-muted">Closing a workspace is permitted only after every task has completed with approved evidence. Reopening allows new tasks or revisions.</p></form></details></section>}
   </>
 }

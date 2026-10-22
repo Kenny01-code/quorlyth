@@ -8,6 +8,7 @@ import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp, useComments } from '../data/AppProvider'
 import { when } from '../lib/util'
 import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
+import { isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 
 
 type WorkspaceTab = 'overview' | 'plan' | 'evidence' | 'team'
@@ -386,12 +387,13 @@ function Workspace() {
         {canManage ? <form className="reason" style={{ marginTop: 16 }} onSubmit={async event => {
           event.preventDefault()
           if (!workspaceSummary.trim()) return a.toast('Add a short project brief first.')
+          if (isPastDateInput(projectDueDate)) return a.toast(PAST_DATE_MESSAGE)
           setBusy(true)
           await a.createProject(id, workspaceSummary.trim(), dateEnd(projectDueDate))
           setBusy(false)
         }}>
           <label className="field"><span>Project brief</span><textarea value={workspaceSummary} onChange={e => setWorkspaceSummary(e.target.value)} maxLength={1200} required placeholder="Describe the goal, scope, and first outcome for this collaboration." /></label>
-          <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
+          <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" min={minimumDateInput()} value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
           <button className="btn p" disabled={busy || !workspaceSummary.trim()}><QuorlythGlyph name="workspace" size={15} />{busy ? 'Creating workspace…' : 'Initialize collaboration workspace'}</button>
         </form> : <div className="acts" style={{ marginTop: 14 }}>
           <button className="btn" onClick={() => nav('/idea/' + idea.id)}>View original idea</button>
