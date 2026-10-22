@@ -242,6 +242,7 @@ export function Messages() {
         a.toast(pref?.pinned ? 'Chat unpinned' : 'Chat pinned to the top')
       } else if (action === 'archive') {
         await saveChatPreference(id, { archived: !pref?.archived })
+        if (pref?.archived) setConversationFilter('all')
         a.toast(pref?.archived ? 'Chat restored to your inbox' : 'Chat archived')
       } else if (action === 'mute') {
         await saveChatPreference(id, { muted: !pref?.muted })
@@ -412,17 +413,20 @@ export function Messages() {
     const members = [...new Set([meId, ...selectedPeople])]
     if (!groupName.trim()) { setError('Give your group a name first.'); return }
     if (members.length < 3) { setError('Choose at least two other people for a group chat.'); return }
+    if (members.length > 100) { setError('A group can have up to 100 people, including you. Remove a few members and try again.'); return }
     const id = makeId()
     try {
       const conversation: Conversation = { id, title: groupName.trim().slice(0, 60), type: 'group', members, createdBy: meId, createdAt: Date.now() }
-      await store.set('conversations/' + id, { title: conversation.title, type: conversation.type, members, createdBy: meId, createdAt: conversation.createdAt })
+      await store.create('conversations/' + id, { title: conversation.title, type: conversation.type, members, createdBy: meId, createdAt: conversation.createdAt })
       setConversations(current => [conversation, ...current.filter(c => c.id !== id)])
       nav('/messages/' + id)
       setGroupOpen(false); setSettingsOpen(false); setProfileOpen(false); setSelectedPeople([]); setGroupName(''); setPeopleQuery('')
     } catch (e) {
       const detail = readableChatError(e)
       console.error('Quorlyth group creation failed:', e)
-      setError('Could not create the group. ' + (detail && detail !== '[object Object]' ? detail : 'The database rejected the conversation. Confirm the private/group chat migration is applied and try again.'))
+      setError(/row-level security|permission denied|42501/i.test(detail)
+        ? 'Quorlyth could not verify permission to create this group. Refresh the page, confirm you are signed in, and try again. No group was created.'
+        : 'Could not create the group. ' + (detail && detail !== '[object Object]' ? detail : 'The database rejected the conversation. Refresh and try again.'))
     }
   }
 
@@ -536,8 +540,8 @@ export function Messages() {
           {(peopleOpen || groupOpen) && <>
             {groupOpen && <label className="chat-group-name"><span>Group name</span><input value={groupName} onChange={e => setGroupName(e.target.value)} maxLength={60} placeholder="e.g. The next big idea" /></label>}
             <label className="chat-search"><Icon name="search" size={18} /><input value={peopleQuery} onChange={e => setPeopleQuery(e.target.value)} placeholder="Search people by name..." autoFocus /></label>
-            <div className="chat-people-list">{visiblePeople.map(p => <button className="chat-person" key={p.id} disabled={!groupOpen && startingPerson !== null} onClick={() => groupOpen ? setSelectedPeople(old => old.includes(p.id) ? old.filter(x => x !== p.id) : [...old, p.id]) : void startDirect(p.id)}><Av id={p.id} size={42} /><span className="chat-person-copy"><b>{p.name}</b>{isPlatformAdmin(p.id) && <span className="owner-badge">✦ PLATFORM OWNER</span>}{isCommunityCreator(p.id) && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}<small>{a.data.profiles[p.id]?.head || 'Quorlyth member'}</small></span>{groupOpen ? <span className={cn('chat-check', selectedPeople.includes(p.id) && 'on')}>{selectedPeople.includes(p.id) && <Icon name="check" size={14} />}</span> : startingPerson === p.id ? <span className="chat-spinner" aria-label="Starting conversation" /> : <Icon name="arrow-up-right" size={17} />}</button>)}{!visiblePeople.length && <p className="mut chat-empty">No matching members found yet. People appear here after their profiles or community activity is available.</p>}</div>
-            {groupOpen && <div className="chat-create-footer"><span className="dim">{selectedPeople.length} selected · choose at least 2</span><button className="btn p" disabled={selectedPeople.length < 2 || !groupName.trim()} onClick={() => void createGroup()}>Create group <Icon name="arrow" size={16} /></button></div>}
+            <div className="chat-people-list">{visiblePeople.map(p => <button className="chat-person" key={p.id} disabled={!groupOpen && startingPerson !== null} onClick={() => groupOpen ? setSelectedPeople(old => old.includes(p.id) ? old.filter(x => x !== p.id) : old.length >= 99 ? old : [...old, p.id]) : void startDirect(p.id)}><Av id={p.id} size={42} /><span className="chat-person-copy"><b>{p.name}</b>{isPlatformAdmin(p.id) && <span className="owner-badge">✦ PLATFORM OWNER</span>}{isCommunityCreator(p.id) && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}<small>{a.data.profiles[p.id]?.head || 'Quorlyth member'}</small></span>{groupOpen ? <span className={cn('chat-check', selectedPeople.includes(p.id) && 'on')}>{selectedPeople.includes(p.id) && <Icon name="check" size={14} />}</span> : startingPerson === p.id ? <span className="chat-spinner" aria-label="Starting conversation" /> : <Icon name="arrow-up-right" size={17} />}</button>)}{!visiblePeople.length && <p className="mut chat-empty">No matching members found yet. People appear here after their profiles or community activity is available.</p>}</div>
+            {groupOpen && <div className="chat-create-footer"><span className="dim">{selectedPeople.length} selected · {selectedPeople.length >= 99 ? 'maximum group size reached' : 'choose at least 2, up to 99 others'}</span><button className="btn p" disabled={selectedPeople.length < 2 || selectedPeople.length > 99 || !groupName.trim()} onClick={() => void createGroup()}>Create group <Icon name="arrow" size={16} /></button></div>}
           </>}
           {profileOpen && <div className="chat-panel-profile"><div className="chat-profile-card"><Av id={meId} size={72} /><div><h4>{a.nm(meId)}</h4><p>{a.data.profiles[meId]?.head || 'Quorlyth member'}</p><small>Signed in to Quorlyth</small></div></div><div className="chat-panel-note">Your profile is how people recognize you across conversations and communities.</div><button className="btn p chat-panel-action" onClick={() => nav('/me')}><Icon name="member" size={16} />Open my profile <Icon name="arrow-up-right" size={15} /></button><button className="btn chat-panel-action" onClick={() => nav('/settings')}><Icon name="settings" size={16} />Account settings <Icon name="arrow-up-right" size={15} /></button></div>}
           {settingsOpen && <div className="chat-panel-settings"><p className="chat-panel-intro">Make your messaging space feel like yours. Full account controls remain available in Quorlyth settings.</p><button className="chat-setting-row" onClick={() => nav('/settings')}><span className="chat-setting-icon"><Icon name="settings" size={17} /></span><span><b>Account & preferences</b><small>Manage your Quorlyth settings</small></span><Icon name="arrow-up-right" size={16} /></button><button className="chat-setting-row" onClick={() => nav('/me')}><span className="chat-setting-icon"><Icon name="member" size={17} /></span><span><b>Profile & identity</b><small>Update how others see you</small></span><Icon name="arrow-up-right" size={16} /></button><button className="chat-setting-row" onClick={() => { setSettingsOpen(false); setPeopleOpen(false); setGroupOpen(false); setProfileOpen(false); setConversationFilter('unread') }}><span className="chat-setting-icon"><Icon name="bell" size={17} /></span><span><b>Unread messages</b><small>Filter your inbox to unread conversations</small></span><Icon name="arrow-up-right" size={16} /></button><div className="chat-panel-note">Only settings that are implemented by the existing account system are shown as account controls. Messaging-specific preferences can be expanded without pretending unsupported features are active.</div></div>}
