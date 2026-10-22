@@ -344,6 +344,31 @@ function WorkspaceProjectView() {
     })
   }
 
+  async function removeTask(task: WorkspaceTask) {
+    if (!project || !a.backend || !canManage) return
+    const linkedArtifacts = projectArtifacts.filter(artifact => artifact.taskId === task.id)
+    const attachments = linkedArtifacts.flatMap(artifact => artifact.attachments || [])
+    if (!window.confirm(`Delete "${task.title}" permanently? This also removes ${linkedArtifacts.length} linked evidence item${linkedArtifacts.length === 1 ? '' : 's'} and ${attachments.length} attached private file${attachments.length === 1 ? '' : 's'}. This cannot be undone.`)) return
+
+    await runAction('delete-' + task.id, async () => {
+      let failedFileCleanup = 0
+      for (const attachment of attachments) {
+        try {
+          if (!a.backend?.deleteWorkFile) throw new Error('Private file deletion is not configured.')
+          await a.backend.deleteWorkFile(attachment.path)
+        } catch (error) {
+          failedFileCleanup += 1
+          console.warn('A private task attachment could not be removed:', error)
+        }
+      }
+      for (const artifact of linkedArtifacts) await a.backend!.store.delete('standaloneArtifacts/' + artifact.id)
+      await a.backend!.store.delete('standaloneTasks/' + task.id)
+      a.toast(failedFileCleanup
+        ? 'Task and evidence deleted. Some private attachments could not be removed.'
+        : 'Task and linked evidence deleted.')
+    })
+  }
+
   async function toggleProjectStatus() {
     if (!project || !a.backend) return
     const next = project.status === 'completed' ? 'active' : 'completed'
@@ -532,7 +557,7 @@ function WorkspaceProjectView() {
           {task.description && <p className="sw-task__description">{task.description}</p>}
           {task.acceptanceCriteria && <div className="sw-criteria"><span><QuorlythGlyph name="check" size={14}/></span><div><strong>Definition of done</strong><p>{task.acceptanceCriteria}</p></div></div>}
           <div className="sw-task__meta"><span><QuorlythGlyph name="person" size={13}/>{task.assigneeId?a.nm(task.assigneeId):'Unassigned'}</span><span><QuorlythGlyph name="calendar" size={13}/>{task.dueAt?localDate(task.dueAt):'No deadline'}</span><button type="button" className="sw-link-button" onClick={()=>{setArtifactTask(task.id);setTab('evidence')}}><QuorlythGlyph name="link" size={13}/>{taskEvidence.length} evidence item{taskEvidence.length===1?'':'s'}</button></div>
-          <div className="sw-task__actions">{canContribute && project.status==='active' && task.status==='todo' && (currentAssignee||!task.assigneeId||canManage) && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{canManage&&project.status==='active'&&task.status!=='done'&&<button className="btn p" type="button" disabled={busy==='complete-'+task.id||approved===0} title={approved?'Complete with approved GitHub evidence':'A manager must approve evidence first'} onClick={()=>void completeTask(task)}><QuorlythGlyph name="complete" size={14}/>{busy==='complete-'+task.id?'Checking…':'Mark complete'}{approved===0?' · evidence needed':''}</button>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Evidence approved</span>}</div>
+          <div className="sw-task__actions">{canContribute && project.status==='active' && task.status==='todo' && (currentAssignee||!task.assigneeId||canManage) && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{canManage&&project.status==='active'&&task.status!=='done'&&<button className="btn p" type="button" disabled={busy==='complete-'+task.id||approved===0} title={approved?'Complete with approved GitHub evidence':'A manager must approve evidence first'} onClick={()=>void completeTask(task)}><QuorlythGlyph name="complete" size={14}/>{busy==='complete-'+task.id?'Checking…':'Mark complete'}{approved===0?' · evidence needed':''}</button>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Evidence approved</span>}{canManage&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-'+task.id} onClick={()=>void removeTask(task)}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-'+task.id?'Deleting…':'Delete task'}</button>}</div>
         </article>
       })}</div>}
     </section>}
