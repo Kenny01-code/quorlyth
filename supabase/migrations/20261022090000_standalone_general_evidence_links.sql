@@ -66,20 +66,14 @@ begin
           and member.data->>'status' = 'active')
         or exists (select 1 from public.docs project where project.path = 'standaloneProjects/' || project_id and project.data->>'createdBy' = p_data->>'assigneeId')
       );
-  elsif p_path ~ '^standaloneComments/[^/]+
-end;
-$function$; then
+  elsif p_path ~ '^standaloneComments/[^/]+$' then
     project_id := p_data->>'projectId';
     return p_data->>'id' = split_part(p_path,'/',2)
       and p_data->>'authorId' = uid
       and length(trim(coalesce(p_data->>'text',''))) between 1 and 3000
-      and coalesce(p_data->>'at','') ~ '^[0-9]{10,16}
-end;
-$function$;
+      and coalesce(p_data->>'at','') ~ '^[0-9]{10,16}$'
       and private.is_standalone_project_member(project_id, array['owner','manager','contributor']::text[]);
-  elsif p_path ~ '^standaloneArtifacts/[^/]+
-end;
-$function$; then
+  elsif p_path ~ '^standaloneArtifacts/[^/]+$' then
     project_id := p_data->>'projectId';
     return p_data->>'id' = split_part(p_path,'/',2)
       and p_data->>'provider' = 'manual'
@@ -89,16 +83,10 @@ $function$; then
       and p_data->>'taskId' is not null
       and p_data->>'kind' in ('link','document','demo')
       and length(trim(coalesce(p_data->>'summary',''))) between 8 and 1200
-      and coalesce(p_data->>'url','') ~ '^https://[^[:space:]]+
-end;
-$function$;
+      and coalesce(p_data->>'url','') ~ '^https://[^[:space:]]+$'
       and jsonb_typeof(p_data->'sourceMetadata') = 'object'
-      and coalesce(p_data->>'submittedAt','') ~ '^[0-9]{10,16}
-end;
-$function$;
-      and coalesce(p_data->>'updatedAt','') ~ '^[0-9]{10,16}
-end;
-$function$;
+      and coalesce(p_data->>'submittedAt','') ~ '^[0-9]{10,16}$'
+      and coalesce(p_data->>'updatedAt','') ~ '^[0-9]{10,16}$'
       and exists (select 1 from public.docs task where task.path = 'standaloneTasks/' || (p_data->>'taskId')
         and task.data->>'projectId' = project_id and task.data->>'status' <> 'done')
       and exists (select 1 from public.docs project where project.path = 'standaloneProjects/' || project_id
@@ -301,6 +289,7 @@ begin
           and artifact.data->>'verificationStatus' = 'submitted_evidence'
           and coalesce(artifact.data->>'submittedAt','') ~ '^[0-9]{10,16}$')
       )
+      and (artifact.data->>'reviewedAt')::numeric > previous_updated_ms
   ) then
     raise exception 'Tasks can only be completed after a different project manager approves submitted evidence or a GitHub source-verified artifact.'
       using errcode = '42501';
