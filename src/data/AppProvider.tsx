@@ -168,6 +168,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, toast, demo])
 
   useEffect(() => {
+    // A settings snapshot is valid only for the current subscription lifecycle.
+    // Reset it before switching account/backend subscriptions so a same-user
+    // sign-out/sign-in cannot reuse an earlier loaded flag before fresh data arrives.
+    setSettingsSnapshot(null)
     if (!backend) { setData(EMPTY); return }
 
     // Drop account-scoped snapshots immediately when auth/backend changes. The
