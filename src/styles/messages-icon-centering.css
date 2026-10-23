@@ -1,56 +1,91 @@
-/* Messages utility rail: use a fixed icon cell so glyphs remain optically centered
-   on desktop and mobile rather than shifting with label width or inherited line-height. */
-.chat-page .chat-utility-nav {
-  align-items: stretch !important;
-}
+/* Messages utility rail alignment.
+   Desktop keeps a balanced vertical rail; narrow layouts keep their compact horizontal navigation. */
+@media (min-width: 901px) {
+  .chat-page .chat-utility-nav {
+    align-items: stretch !important;
+  }
 
-.chat-page .chat-utility-item {
-  display: grid !important;
-  grid-template-rows: 22px auto !important;
-  justify-items: center !important;
-  align-content: center !important;
-  align-items: center !important;
-  text-align: center !important;
-}
-
-.chat-page .chat-utility-item > svg {
-  display: block !important;
-  grid-row: 1 !important;
-  justify-self: center !important;
-  align-self: center !important;
-  flex: none !important;
-  width: 20px !important;
-  height: 20px !important;
-  margin: 0 auto !important;
-  translate: 0 0 !important;
-}
-
-.chat-page .chat-utility-item > span {
-  grid-row: 2 !important;
-  justify-self: center !important;
-  align-self: center !important;
-  width: 100% !important;
-  margin: 0 !important;
-  text-align: center !important;
-  line-height: 1.2 !important;
-}
-
-@media (max-width: 900px) {
   .chat-page .chat-utility-item {
-    grid-template-rows: 20px auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: 22px auto !important;
     justify-items: center !important;
+    align-content: center !important;
     align-items: center !important;
+    /* Optical correction: move the icon-and-label stack 2px left within the narrow rail. */
+    padding-left: 1px !important;
+    padding-right: 5px !important;
+    text-align: center !important;
   }
 
   .chat-page .chat-utility-item > svg {
-    width: 18px !important;
-    height: 18px !important;
-    margin-inline: auto !important;
+    display: block !important;
+    grid-row: 1 !important;
+    justify-self: center !important;
+    align-self: center !important;
+    flex: none !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+    translate: 0 0 !important;
+  }
+
+  .chat-page .chat-utility-item > span {
+    display: block !important;
+    grid-row: 2 !important;
+    justify-self: center !important;
+    align-self: center !important;
+    width: 100% !important;
+    margin: 0 !important;
+    text-align: center !important;
+    line-height: 1.2 !important;
   }
 }
 
-/* Align the global Messages destination's glyph to the same exact icon cell
-   as the other navigation items, without changing its entrance animation. */
+@media (max-width: 900px) {
+  .chat-page .chat-utility-nav {
+    align-items: center !important;
+  }
+
+  .chat-page .chat-utility-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding-left: 2px !important;
+    padding-right: 6px !important;
+    text-align: center !important;
+  }
+
+  .chat-page .chat-utility-item > svg {
+    display: block !important;
+    flex: 0 0 auto !important;
+    align-self: center !important;
+    width: 14px !important;
+    height: 14px !important;
+    margin: 0 !important;
+    translate: 0 0 !important;
+  }
+
+  .chat-page .chat-utility-item > span {
+    display: inline !important;
+    grid-row: auto !important;
+    justify-self: auto !important;
+    align-self: center !important;
+    flex: 0 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    text-align: left !important;
+    line-height: 1 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* Align the global Messages destination's glyph with the other navigation items. */
 #nav .navmain .nav-item-messages {
   display: inline-flex !important;
   align-items: center !important;
