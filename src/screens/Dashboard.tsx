@@ -10,6 +10,7 @@ import { ShareCard } from '../components/ShareCard'
 import { askJson } from '../ai/client'
 import { useDraftState } from '../lib/useDraftState'
 import { PromotionPreview } from '../components/PromotionPreview'
+import { QuorlythLoader } from '../components/QuorlythLoader'
 
 export function Dashboard() {
   return <Gate><Inner /></Gate>
@@ -18,7 +19,7 @@ export function Dashboard() {
 function Inner() {
   const a = useApp()
   const nav = useNavigate()
-  const { data: rawData, owner, platformOwner, me } = a
+  const { data: rawData, owner, platformOwner, me, settingsLoaded, platformRolesReady } = a
   const ownedCommunities = rawData.communities.filter(c => a.ownsCommunity(c.id))
   const communityOwner = !owner && ownedCommunities.length > 0
   const ownedCommunityIds = new Set(ownedCommunities.map(c => c.id))
@@ -47,6 +48,12 @@ function Inner() {
   const setName = (name: string) => setSetupDraft(d => ({ ...d, name }))
   const setC1 = (firstCommunity: string) => setSetupDraft(d => ({ ...d, firstCommunity }))
   const s = data.settings
+
+  // Wait for the account's initial settings snapshot and verified platform role before
+  // deciding whether this is an existing space or a genuinely new-space setup.
+  if (!settingsLoaded || !platformRolesReady) {
+    return <QuorlythLoader variant="screen" label="Preparing your dashboard" />
+  }
 
   if (platformOwner && !s) {
     return (
