@@ -259,10 +259,22 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       setMinimized(false)
       return
     }
-    const first = !localStorage.getItem('qseen')
-    localStorage.setItem('qseen', '1')
+    let first = false
+    try {
+      // Keep first-use guidance per account: a visitor opening the bot must not consume a member's tour.
+      const guideKey = `qbot:welcomed:v1:${a.me?.id || 'visitor'}`
+      first = localStorage.getItem(guideKey) !== '1'
+      if (first) localStorage.setItem(guideKey, '1')
+      localStorage.setItem('qseen', '1')
+    } catch { first = true }
     const name = a.me?.name.split(' ')[0]
-    const msg = !a.me ? 'Welcome to Quorlyth. Sign in to enter your space.' : first ? `Welcome, ${name}. I am QuorlythBot, your concierge. Ask me anything, or let me show you around.` : `Welcome back, ${name}.`
+    const msg = !a.me
+      ? first
+        ? 'Welcome to Quorlyth. I can help you explore communities, ideas, analytics, workspaces, and collaborations. Sign in when you are ready to enter your space.'
+        : 'Welcome back to Quorlyth. You can explore the site or sign in to enter your space.'
+      : first
+        ? `Welcome, ${name}. I am QuorlythBot, your concierge. I can help with communities, ideas, analytics, workspaces, and collaborations. Ask me anything, or say “show me around” for a quick tour.`
+        : `Welcome back, ${name}.`
     setCaption(msg)
     first ? robot.current?.welcome() : robot.current?.wave()
     say(msg)

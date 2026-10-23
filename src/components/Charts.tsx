@@ -1,5 +1,82 @@
-import { useId } from 'react'
+import { type PointerEvent, type ReactNode, type WheelEvent, useEffect, useId, useRef, useState } from 'react'
 import { Av } from './ui'
+
+/** Shared horizontal chart viewport. The scrollbar is hidden, but wheel, drag, keyboard and touch scrolling remain available. */
+export function ChartViewport({ children, label }: { children: ReactNode; label: string }) {
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ pointerId: number; x: number; left: number; moved: boolean } | null>(null)
+  const [hasOverflow, setHasOverflow] = useState(false)
+
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const measure = () => {
+      const next = viewport.scrollWidth > viewport.clientWidth + 1
+      setHasOverflow(current => current === next ? current : next)
+    }
+    measure()
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    observer?.observe(viewport)
+    Array.from(viewport.children).forEach(child => {
+      if (child instanceof Element) observer?.observe(child)
+    })
+    window.addEventListener('resize', measure)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [children])
+
+  const onWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const viewport = event.currentTarget
+    const hasHorizontalOverflow = viewport.scrollWidth > viewport.clientWidth + 1
+    if (!event.shiftKey || !hasHorizontalOverflow) return
+    viewport.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+    event.preventDefault()
+  }
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return
+    if (event.currentTarget.scrollWidth <= event.currentTarget.clientWidth + 1) return
+    drag.current = { pointerId: event.pointerId, x: event.clientX, left: event.currentTarget.scrollLeft, moved: false }
+    event.currentTarget.classList.add('is-grabbed')
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch {}
+  }
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const current = drag.current
+    if (!current || current.pointerId !== event.pointerId) return
+    const dx = event.clientX - current.x
+    if (Math.abs(dx) > 3) current.moved = true
+    if (current.moved) {
+      event.currentTarget.scrollLeft = current.left - dx
+      event.preventDefault()
+    }
+  }
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId !== event.pointerId) return
+    drag.current = null
+    event.currentTarget.classList.remove('is-grabbed')
+    try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
+  }
+
+  return (
+    <div className="chart-viewport">
+      <div
+        ref={viewportRef}
+        className="chs chs--slide-view"
+        role="region"
+        aria-label={label}
+        tabIndex={0}
+        title="Swipe, drag, or hold Shift while using the mouse wheel to explore this chart"
+        onWheel={onWheel}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >{children}</div>
+      {hasOverflow && <p className="chart-viewport__hint">Swipe or drag horizontally to see all chart details</p>}
+    </div>
+  )
+}
 
 export interface Daily { v: number[]; d: number[] }
 export const fd = (t: number) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -54,7 +131,7 @@ export function BarChart({ rows, o }: { rows: { n: string; v: number }[]; o: Bar
   }
   const H = 340, L = 44, B = 56, T = 28, pw = W - L - 12, ph = H - T - B, bw = Math.min(64, (pw / (rows.length || 1)) * 0.62)
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 520, height: 'auto', display: 'block' }} role="img" aria-label="Bar chart">
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: `max(100%, ${W}px)`, minWidth: `${W}px`, maxWidth: 'none', height: 'auto', display: 'block' }} role="img" aria-label="Bar chart">
       <defs><linearGradient id="bgv" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#555" /><stop offset="1" stopColor="#fff" /></linearGradient></defs>
       {[0, 1, 2, 3, 4].map(g => { const y = T + (ph * g) / 4; return <g key={g}>{o.grid && <line x1={L} x2={W - 12} y1={y} y2={y} stroke="rgba(255,255,255,.08)" />}<text x={L - 8} y={y + 4} textAnchor="end" fill="#6b6b6b" fontSize="11">{Math.round(mx * (1 - g / 4))}</text></g> })}
       {rows.map((r, i) => { const cx = L + (pw * (i + 0.5)) / rows.length, h = Math.max((r.v / mx) * ph, 3); return <g key={i} className="bvh"><title>{r.n}: {r.v}</title><rect className="bv" style={{ ['--i' as any]: i }} x={cx - bw / 2} y={T + ph - h} width={bw} height={h} rx="10" fill="url(#bgv)" opacity=".92" />{o.lab && <text x={cx} y={T + ph - h - 8} textAnchor="middle" fill="#e4e4e4" fontSize="12">{lab(r)}</text>}<text x={cx} y={H - B + 22} textAnchor="middle" fill="#a8a8a8" fontSize="12">{r.n.slice(0, 28)}</text></g> })}

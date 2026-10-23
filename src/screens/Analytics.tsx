@@ -1,10 +1,10 @@
-import { type ReactNode, type PointerEvent, type WheelEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import '../styles/analytics.css'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
-import { AreaChart, BarChart, Daily, Donut, Funnel, Heat, TopList, fd } from '../components/Charts'
+import { AreaChart, BarChart, ChartViewport, Daily, Donut, Funnel, Heat, TopList, fd } from '../components/Charts'
 import { Chip, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { ChartKey, ITEMS, MEMBER_ITEMS, TITLES, useChartSettings } from '../lib/chartSettings'
@@ -14,56 +14,6 @@ import { communityOwnerLookup, isCommunityOwnerContribution } from '../lib/contr
 
 export function Analytics() {
   return <Gate><Inner /></Gate>
-}
-
-/** Swipe-, drag-, and wheel-friendly viewport for chart canvases wider than their cards. */
-function ChartViewport({ children, label }: { children: ReactNode; label: string }) {
-  const drag = useRef<{ pointerId: number; x: number; left: number; moved: boolean } | null>(null)
-  const onWheel = (event: WheelEvent<HTMLDivElement>) => {
-    const viewport = event.currentTarget
-    const hasHorizontalOverflow = viewport.scrollWidth > viewport.clientWidth + 1
-    // Keep normal wheel input scrolling the page. Shift+wheel is a predictable chart-scroll shortcut.
-    if (!event.shiftKey || !hasHorizontalOverflow) return
-    viewport.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
-    event.preventDefault()
-  }
-  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    // Touch and pen retain their native momentum scrolling; mouse users can grab the chart.
-    if (event.pointerType !== 'mouse' || event.button !== 0) return
-    drag.current = { pointerId: event.pointerId, x: event.clientX, left: event.currentTarget.scrollLeft, moved: false }
-    event.currentTarget.classList.add('is-grabbed')
-    try { event.currentTarget.setPointerCapture(event.pointerId) } catch {}
-  }
-  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const current = drag.current
-    if (!current || current.pointerId !== event.pointerId) return
-    const dx = event.clientX - current.x
-    if (Math.abs(dx) > 3) current.moved = true
-    if (current.moved) {
-      event.currentTarget.scrollLeft = current.left - dx
-      event.preventDefault()
-    }
-  }
-  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (drag.current?.pointerId === event.pointerId) {
-      drag.current = null
-      event.currentTarget.classList.remove('is-grabbed')
-      try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
-    }
-  }
-  return (
-    <div
-      className="chs chs--slide-view"
-      role="region"
-      aria-label={label}
-      tabIndex={0}
-      onWheel={onWheel}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-    >{children}</div>
-  )
 }
 
 /** Reusable roomy view controls for the two charts with long horizontal data. */

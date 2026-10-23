@@ -98,6 +98,12 @@ export default function App() {
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
+  // Warm the assistant chunk after the first paint so mobile taps do not pay the full download cost.
+  // This runs asynchronously and never blocks the page's first render.
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadQuorlythBot().catch(() => {}) }, 650)
+    return () => window.clearTimeout(timer)
+  }, [])
   useEffect(() => {
     if (us.st.preferences?.sound !== undefined) setSound(us.st.preferences.sound)
   }, [a.me?.id, us.st.preferences?.sound])
@@ -361,10 +367,11 @@ export default function App() {
           className="astl"
           onPointerEnter={() => { void loadQuorlythBot().catch(() => {}) }}
           onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
-          aria-label="Open QuorlythBot"
-          title="Right-click to hide · Press and hold on mobile to hide"
+          aria-label="Open QuorlythBot for help with communities, ideas, analytics, workspaces, and collaborations"
+          title="Ask QuorlythBot for help · Right-click to hide on desktop or press and hold on mobile"
           onClick={() => {
             if (deferredLongPressTriggered.current) { deferredLongPressTriggered.current = false; return }
+            void loadQuorlythBot().catch(() => {})
             setBotMounted(true)
           }}
           onContextMenu={event => { event.preventDefault(); hideDeferredLauncher() }}
@@ -393,7 +400,13 @@ export default function App() {
           <button type="button" onClick={restoreDeferredLauncher}>Undo</button>
           <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
         </div>}
-      </> : <Suspense fallback={<div className="astl qbot-deferred-loading" role="status" aria-label="Loading QuorlythBot"><span className="astm"><Logo size={30} /></span></div>}><QuorlythBot initialOpen /></Suspense>}
+      </> : <Suspense fallback={<div className="qbot-open-fallback" role="status" aria-live="polite" aria-label="Opening QuorlythBot">
+        <div className="qbot-open-fallback__panel">
+          <span className="qbot-open-fallback__mark"><Logo size={30} /></span>
+          <div className="qbot-open-fallback__copy"><strong>QuorlythBot</strong><span>Preparing your assistant…</span><small>Communities · ideas · analytics · workspaces · collaborations</small></div>
+          <span className="qbot-open-fallback__signal" aria-hidden="true"><i /><i /><i /></span>
+        </div>
+      </div>}><QuorlythBot initialOpen /></Suspense>}
       <Toast />
       <WritingAssistant />
     </>

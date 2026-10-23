@@ -5,7 +5,7 @@ import { Gate } from '../components/Gate'
 import { Av, Empty, Head, Num } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { when } from '../lib/util'
-import { AreaChart } from '../components/Charts'
+import { AreaChart, ChartViewport } from '../components/Charts'
 import { ShareCard } from '../components/ShareCard'
 import { askJson } from '../ai/client'
 import { useDraftState } from '../lib/useDraftState'
@@ -108,7 +108,7 @@ function Inner() {
       </div>
       <div className="grid g32">
       <div className="glass pad"><div className="head" style={{ marginBottom: 10 }}><div className="chart-heading-animated"><h3>Ideas over time</h3><p className="dim">Last 30 days</p></div>{(owner || communityOwner) && <button className="chip" onClick={() => nav('/analytics')}>Open analytics</button>}</div>
-        {data.ideas.length ? <div className="chs"><AreaChart dd={dd} o={{ sm: true, pts: false, lab: false, avg: false, ma: false, grid: true }} /></div> : <Empty icon="insight" title="No ideas yet" text="Ideas will appear here as members share them." />}</div>
+        {data.ideas.length ? <ChartViewport label="Ideas over time chart"><AreaChart dd={dd} o={{ sm: true, pts: false, lab: false, avg: false, ma: false, grid: true }} /></ChartViewport> : <Empty icon="insight" title="No ideas yet" text="Ideas will appear here as members share them." />}</div>
       <div className="glass pad">
         <h3 style={{ marginBottom: 8 }}>{ranked.length ? 'Top picks from QuorlythBot' : 'Latest ideas'}</h3>
         {list.length === 0 && <p className="mut" style={{ padding: '18px 0' }}>Nothing here yet.</p>}

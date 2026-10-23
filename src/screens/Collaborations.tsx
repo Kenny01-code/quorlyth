@@ -389,8 +389,13 @@ function Workspace() {
           if (!workspaceSummary.trim()) return a.toast('Add a short project brief first.')
           if (isPastDateInput(projectDueDate)) return a.toast(PAST_DATE_MESSAGE)
           setBusy(true)
-          await a.createProject(id, workspaceSummary.trim(), dateEnd(projectDueDate))
-          setBusy(false)
+          try {
+            await a.createProject(id, workspaceSummary.trim(), dateEnd(projectDueDate))
+          } catch {
+            a.toast('Could not initialize the collaboration workspace. Please try again.')
+          } finally {
+            setBusy(false)
+          }
         }}>
           <label className="field"><span>Project brief</span><textarea value={workspaceSummary} onChange={e => setWorkspaceSummary(e.target.value)} maxLength={1200} required placeholder="Describe the goal, scope, and first outcome for this collaboration." /></label>
           <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" min={minimumDateInput()} value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
