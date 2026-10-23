@@ -12,7 +12,7 @@ interface Data {
 const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], workSubmissions: [], settings: null, ownerId: null }
 
 export interface App {
-  ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data
+  ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data; settingsLoaded: boolean; platformRolesReady: boolean
   enterDemo: () => void; exitDemo: () => Promise<void>; signOut: () => Promise<void>
   toast: (m: string) => void; toastMsg: string
   nm: (id: string) => string; avatar: (id: string) => string
@@ -68,6 +68,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
   const [data, setData] = useState<Data>(EMPTY)
+  const [settingsSnapshot, setSettingsSnapshot] = useState<{ backend: Backend; userId: string; loaded: boolean } | null>(null)
+  const [platformRoleSnapshot, setPlatformRoleSnapshot] = useState<{ backend: Backend; userId: string; ready: boolean } | null>(null)
   const [platformAdmin, setPlatformAdmin] = useState(false)
   const [platformOwnerRole, setPlatformOwnerRole] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
@@ -210,7 +212,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         s.subscribe('projects', d => set('projects', asMap<Project>(d)), onReadError),
         s.subscribe('milestones', d => set('milestones', asList<Milestone>(d).map(item => ({ ...item, status: String(item.status) === 'completed' ? 'done' as const : item.status })).sort((a, b) => a.at - b.at)), onReadError),
         s.subscribe('workSubmissions', d => set('workSubmissions', asList<WorkSubmission>(d).sort((a, b) => b.submittedAt - a.submittedAt)), onReadError),
-        s.subscribe('settings', d => set('settings', d.find(x => x.id === 'space')?.data ?? null), onReadError),
+        s.subscribe('settings', d => {
+          set('settings', d.find(x => x.id === 'space')?.data ?? null)
+          if (me) setSettingsSnapshot({ backend, userId: me.id, loaded: true })
+        }, onReadError),
       ] : []),
     ]
     return () => offs.forEach(f => f())
@@ -237,16 +242,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!backend || !me) {
       setPlatformAdmin(false)
       setPlatformOwnerRole(false)
+      setPlatformRoleSnapshot(null)
       return
     }
     if (demo) {
       setPlatformAdmin(true)
       setPlatformOwnerRole(true)
+      setPlatformRoleSnapshot({ backend, userId: me.id, ready: true })
       return
     }
     let active = true
     setPlatformAdmin(false)
     setPlatformOwnerRole(false)
+    setPlatformRoleSnapshot({ backend, userId: me.id, ready: false })
     void Promise.all([
       backend.isPlatformAdmin(),
       backend.isPlatformOwner ? backend.isPlatformOwner() : Promise.resolve(false),
@@ -254,16 +262,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!active) return
       setPlatformAdmin(isAdmin)
       setPlatformOwnerRole(isOwner)
+      setPlatformRoleSnapshot({ backend, userId: me.id, ready: true })
     }).catch(error => {
       console.warn('Could not resolve platform permissions', error)
       if (active) {
         setPlatformAdmin(false)
         setPlatformOwnerRole(false)
+        setPlatformRoleSnapshot({ backend, userId: me.id, ready: true })
       }
     })
     return () => { active = false }
   }, [backend, me?.id, demo])
 
+  const settingsLoaded = !!(backend && me && settingsSnapshot?.backend === backend && settingsSnapshot.userId === me.id && settingsSnapshot.loaded)
+  const platformRolesReady = !me || !!(backend && platformRoleSnapshot?.backend === backend && platformRoleSnapshot.userId === me.id && platformRoleSnapshot.ready)
   const st = backend?.store
   // Platform-owner access comes from the backend role resolver. In Supabase this
   // checks the private platform_roles table; local mode validates its own owner claim.
@@ -404,7 +416,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 }
     return {
-      ready, startupError, backend, me, owner, platformOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, toast, toastMsg,
+      ready, startupError, backend, me, owner, platformOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg,
       nm: id => data.profiles[id]?.name || data.profiles[id]?.authName || (me && id === me.id ? me.name : 'Member'),
       avatar: id => data.profiles[id]?.photo || data.profiles[id]?.authAvatarUrl || (me && id === me.id ? me.avatarUrl || '' : ''),
       votesOf,
@@ -951,7 +963,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),
       useComments: () => [],
     }
-  }, [ready, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, toast, toastMsg, st])
+  }, [ready, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, st])
 
   return <Ctx.Provider value={app}>{children}</Ctx.Provider>
 }
