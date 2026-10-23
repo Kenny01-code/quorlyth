@@ -520,7 +520,7 @@ export function Messages() {
                   {reactionTypes.length > 0 && !deleted && <div className="chat-message-reactions">{reactionTypes.map(emoji => <button type="button" key={emoji} className={cn('chat-reaction-pill', reactions.some(r => r.userId === meId && r.reaction === emoji) && 'mine')} onClick={() => void actOnMessage('react', m, emoji)}>{emoji}<span>{reactions.filter(r => r.reaction === emoji).length}</span></button>)}</div>}
                 </div></Fragment>
               })}
-              <div className="chat-thread-intro"><span className="chat-intro-mark"><Icon name="message" size={12} /></span><p>Built around the ideas you bring to life.</p></div>
+
               <div ref={bottom} />
             </div>
             <form className="chat-composer" onSubmit={sendMessage}>
@@ -566,7 +566,7 @@ export function Messages() {
         <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-me', m) }}><Icon name="eye" size={15} />Delete for me</button>
         {activeMessages.find(m => m.id === messageMenu.messageId)?.senderId === meId && !isDeletedMessage(messageMenu.messageId) && <button role="menuitem" className="is-danger" onClick={() => { const m = activeMessages.find(item => item.id === messageMenu.messageId); if (m) void actOnMessage('delete-all', m) }}><Icon name="trash" size={15} />Delete for everyone</button>}
       </div></>}
-      <p className="chat-footnote">Designed for collaboration. <span>Built around the ideas you bring to life.</span></p>
+
     </div>
   )
 }
