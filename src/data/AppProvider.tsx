@@ -32,6 +32,8 @@ export interface App {
   join: (cid: string, on: boolean) => Promise<boolean>
   postIdea: (i: { title: string; body?: string; cid: string; tags?: string[] }) => Promise<boolean>
   postIdeaDetailed: (i: { title: string; body?: string; cid: string; tags?: string[] }) => Promise<{ ok: boolean; error?: string }>
+  updateIdea: (ideaId: string, patch: Partial<Pick<Idea, 'title' | 'body' | 'tags'>>) => Promise<boolean>
+  deleteIdea: (ideaId: string) => Promise<boolean>
   vote: (ideaId: string) => Promise<boolean>
   addComment: (ideaId: string, text: string, parentId?: string, mentionedUserIds?: string[]) => Promise<boolean>
   setStatus: (ideaId: string, status: Status, extra?: Partial<Review>) => Promise<boolean>
@@ -506,6 +508,83 @@ export function AppProvider({ children }: { children: ReactNode }) {
         emitWorkflowEvent('idea.created', { id: ideaId, title: i.title.trim(), body: i.body || '', communityId: i.cid, at })
       }, 'Idea shared'),
       postIdeaDetailed,
+      updateIdea: (ideaId, patch) => w(async () => {
+        if (!me || !st) throw new Error('Sign in before editing an idea.')
+        const current = data.ideas.find(item => item.id === ideaId)
+        if (!current) throw new Error('Idea not found. Refresh the page and try again.')
+        const community = data.communities.find(item => item.id === current.cid)
+        if (!community || community.arch) throw new Error('Ideas in an archived or unavailable community cannot be edited.')
+        if (current.authorId !== me.id && !canManageCommunity(current.cid)) {
+          throw new Error('Only the idea creator or the community owner/platform administrator can edit this idea.')
+        }
+        const safePatch: Partial<Pick<Idea, 'title' | 'body' | 'tags'>> = {}
+        if (patch.title !== undefined) {
+          const title = patch.title.trim().slice(0, 120)
+          if (!title) throw new Error('An idea title cannot be empty.')
+          safePatch.title = title
+        }
+        if (patch.body !== undefined) safePatch.body = patch.body.trim().slice(0, 2000)
+        if (patch.tags !== undefined) safePatch.tags = [...new Set(patch.tags.map(tag => tag.trim().slice(0, 40)).filter(Boolean))].slice(0, 10)
+        if (!Object.keys(safePatch).length) throw new Error('There are no idea changes to save.')
+        await up('ideas/' + ideaId, safePatch)
+        setData(d => ({ ...d, ideas: d.ideas.map(item => item.id === ideaId ? { ...item, ...safePatch } : item) }))
+      }, 'Idea updated'),
+      deleteIdea: async ideaId => {
+        let deleted = false
+        try {
+          if (!me || !backend || !st) throw new Error('Sign in again before deleting an idea.')
+          const idea = data.ideas.find(item => item.id === ideaId)
+          if (!idea) throw new Error('Idea not found. Refresh the page and try again.')
+          if (!canManageCommunity(idea.cid)) throw new Error('Only the community owner or a platform administrator can delete an idea and its linked workspace.')
+          const milestoneIds = new Set(data.milestones.filter(item => item.projectId === ideaId).map(item => item.id))
+          const submissions = data.workSubmissions.filter(item => item.ideaId === ideaId || item.projectId === ideaId || milestoneIds.has(item.milestoneId))
+          const attachments = [...new Set(submissions.flatMap(item => item.attachments || []).map(file => file.path).filter(Boolean))]
+          const failedPaths: string[] = []
+          for (const path of attachments) {
+            try {
+              if (!backend.deleteWorkFile) throw new Error('Private work-file deletion is not configured.')
+              await backend.deleteWorkFile(path)
+            } catch (error) {
+              failedPaths.push(path)
+              console.warn('A private attachment could not be removed while deleting an idea:', error)
+            }
+          }
+          if (failedPaths.length) throw new Error('Some private work attachments could not be removed, so the idea and its linked workspace were left in place. Check storage access and retry.')
+          for (const submission of submissions) await st.delete('workSubmissions/' + submission.id)
+          for (const milestoneId of milestoneIds) await st.delete('milestones/' + milestoneId)
+          for (const application of data.volunteers.filter(item => item.ideaId === ideaId)) await st.delete('volunteers/' + application.id)
+          for (const promotion of data.promotions.filter(item => item.ideaId === ideaId)) await st.delete('promotions/' + promotion.id)
+          await st.delete('reviews/' + ideaId)
+          await st.delete('ideaOutcomes/' + ideaId)
+          await st.delete('projects/' + ideaId)
+          // DocStore.delete removes the idea and its nested discussion documents.
+          await st.delete('ideas/' + ideaId)
+          deleted = true
+          setData(d => ({
+            ...d,
+            ideas: d.ideas.filter(item => item.id !== ideaId),
+            reviews: Object.fromEntries(Object.entries(d.reviews).filter(([key]) => key !== ideaId)),
+            outcomes: Object.fromEntries(Object.entries(d.outcomes).filter(([key]) => key !== ideaId)),
+            projects: Object.fromEntries(Object.entries(d.projects).filter(([key]) => key !== ideaId)),
+            milestones: d.milestones.filter(item => item.projectId !== ideaId),
+            workSubmissions: d.workSubmissions.filter(item => !submissions.some(removed => removed.id === item.id)),
+            volunteers: d.volunteers.filter(item => item.ideaId !== ideaId),
+            promotions: d.promotions.filter(item => item.ideaId !== ideaId),
+            votes: Object.fromEntries(Object.entries(d.votes).map(([userId, ideas]) => {
+              const nextVotes = { ...ideas }
+              delete nextVotes[ideaId]
+              return [userId, nextVotes]
+            })),
+          }))
+          toast('Idea and linked workspace records deleted.')
+          return true
+        } catch (error: any) {
+          const message = String(error?.message || error || 'Unknown error').slice(0, 300)
+          console.error('Quorlyth idea deletion failed:', error)
+          toast(deleted ? 'Idea deleted, but some linked records may need cleanup.' : message)
+          return deleted
+        }
+      },
       vote: id => {
         const idea = data.ideas.find(item => item.id === id)
         if (!me) { toast('Sign in before backing an idea.'); return Promise.resolve(false) }
