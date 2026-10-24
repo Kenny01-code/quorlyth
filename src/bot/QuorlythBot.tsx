@@ -87,23 +87,39 @@ type PendingAction =
   | { type: 'updateMilestone'; milestoneId: string; projectId: string; oldTitle: string; patch: { title?: string; description?: string; status?: 'in_progress' } }
   | { type: 'deleteMilestone'; milestoneId: string; projectId: string; title: string; ideaTitle: string }
   | { type: 'reviewSubmission'; submissionId: string; projectId: string; ideaTitle: string; milestoneTitle: string; revision: number; submitterName: string; decision: 'approved' | 'changes_requested'; reviewNote: string }
-  | { type: 'createAutomation'; workflow: WorkflowDefinition }
-  | { type: 'updateAutomation'; workflowId: string; currentName: string; workflow: WorkflowDefinition }
+  | { type: 'createAutomation'; workflow: WorkflowDefinition; workspaceNames: Record<string, string> }
+  | { type: 'updateAutomation'; workflowId: string; currentName: string; workflow: WorkflowDefinition; workspaceNames: Record<string, string> }
   | { type: 'toggleAutomation'; workflowId: string; currentName: string; status: 'active' | 'draft' }
   | { type: 'deleteAutomation'; workflowId: string; name: string }
   | { type: 'runAutomation'; workflowId: string; name: string }
 
-function describeWorkflow(workflow: WorkflowDefinition): string {
+function describeWorkflow(workflow: WorkflowDefinition, workspaceNames: Record<string, string> = {}): string {
   const trigger = workflow.trigger === 'manual' ? 'Manual trigger'
     : workflow.trigger === 'idea.created' ? 'When an idea is created'
       : workflow.trigger === 'task.completed' ? 'When a task is completed'
         : 'When a workspace is created'
-  const actions = workflow.actions.map(action => {
-    if (action.type === 'notify') return 'notify'
-    if (action.type === 'create_task') return 'create task' + (action.projectId ? ' in a selected workspace' : '')
-    return 'HTTPS webhook'
+  const actions = workflow.actions.map((action, index) => {
+    const actionNumber = (index + 1) + '. '
+    if (action.type === 'notify') {
+      return actionNumber + 'Notification — ' + JSON.stringify(String(action.message || '{{workflow.name}} ran for {{event.title}}').slice(0, 220))
+    }
+    if (action.type === 'create_task') {
+      const workspace = workspaceNames[action.projectId || ''] || 'Workspace not resolved'
+      return actionNumber + 'Create task ' + JSON.stringify(String(action.taskTitle || 'Follow up: {{event.title}}').slice(0, 140))
+        + ' in ' + JSON.stringify(workspace)
+        + (action.taskDescription ? ' · description: ' + JSON.stringify(action.taskDescription.slice(0, 200)) : '')
+        + (action.acceptanceCriteria ? ' · definition of done: ' + JSON.stringify(action.acceptanceCriteria.slice(0, 120)) : '')
+    }
+    const url = String(action.url || '').trim()
+    return actionNumber + 'HTTPS webhook POST to ' + (url || 'No endpoint configured')
   }).join(' → ')
-  return JSON.stringify(workflow.name) + ' · ' + trigger + ' → ' + actions + ' · ' + workflow.status
+  const condition = workflow.condition?.trim() ? ' · Filter: ' + JSON.stringify(workflow.condition.trim()) : ' · No text filter'
+  return JSON.stringify(workflow.name)
+    + ' · Trigger: ' + trigger
+    + condition
+    + ' · Actions: ' + actions
+    + ' · Status: ' + workflow.status
+    + (workflow.description ? ' · Purpose: ' + JSON.stringify(workflow.description.slice(0, 160)) : '')
 }
 
 function actionDecisionDescription(action: Extract<PendingAction, { type: 'reviewSubmission' }>): string {
@@ -127,8 +143,8 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'updateMilestone': return 'Milestone: ' + JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.status ? ' · Status → In progress' : '') + (action.patch.description ? ' · Description updated' : '')
     case 'deleteMilestone': return JSON.stringify(action.title) + ' · ' + action.ideaTitle + ' · linked work submissions and private attachments may be removed'
     case 'reviewSubmission': return (action.decision === 'approved' ? 'Approve' : 'Request changes to') + ' revision ' + action.revision + ' for ' + action.milestoneTitle + ' · submitted by ' + action.submitterName + (action.reviewNote ? ' · reviewer note: ' + JSON.stringify(action.reviewNote.slice(0, 240)) : '')
-    case 'createAutomation': return describeWorkflow(action.workflow)
-    case 'updateAutomation': return action.currentName + ' → ' + describeWorkflow(action.workflow)
+    case 'createAutomation': return describeWorkflow(action.workflow, action.workspaceNames)
+    case 'updateAutomation': return action.currentName + ' → ' + describeWorkflow(action.workflow, action.workspaceNames)
     case 'toggleAutomation': return action.currentName + ' → ' + (action.status === 'active' ? 'Active' : 'Draft / paused')
     case 'deleteAutomation': return JSON.stringify(action.name) + ' · saved run history will also be deleted'
     case 'runAutomation': return JSON.stringify(action.name) + ' · test run will execute configured actions'
@@ -1766,9 +1782,10 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       ...(existingWorkflow?.lastRunAt ? { lastRunAt: existingWorkflow.lastRunAt } : {}),
     }
     if (workflow.name.length < 2) throw new Error('Give this workflow a clearer name before saving it.')
+    const workspaceNames = Object.fromEntries(projects.map(item => [item.id, item.title]))
     return existingWorkflow
-      ? { type: 'updateAutomation', workflowId: existingWorkflow.id, currentName: existingWorkflow.name, workflow }
-      : { type: 'createAutomation', workflow }
+      ? { type: 'updateAutomation', workflowId: existingWorkflow.id, currentName: existingWorkflow.name, workflow, workspaceNames }
+      : { type: 'createAutomation', workflow, workspaceNames }
   }
 
   function planAction(text: string): PendingAction | null {
