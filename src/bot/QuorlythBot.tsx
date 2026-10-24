@@ -811,7 +811,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           const planned = await planContextAction(t)
           if (planned) {
             const draft = add(cur, { r: 'u', t })
-            const destructive = planned.type === 'deleteIdea'
+            const destructive = planned.type === 'deleteIdea' || planned.type === 'deleteStandaloneWorkspace' || planned.type === 'deleteStandaloneTask'
             const prompt = destructive
               ? 'I prepared a deletion preview for the exact item and its linked records. Nothing will be deleted until you confirm.'
               : 'I prepared a proposed change using the current page and the records available to your account. Review the exact details below. Nothing has been changed yet.'
@@ -3739,7 +3739,17 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                                   ? 'This changes the idea’s platform review status, which can affect queue visibility and available follow-up actions.'
                                   : pendingAction.type === 'communityMembership'
                                     ? pendingAction.mode === 'request' ? 'This sends a membership request with the message shown above. It does not grant membership until the community’s approval process accepts it.' : 'Review the community name and membership change before continuing.'
-                                    : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+                                    : pendingAction.type === 'deleteStandaloneWorkspace'
+                                       ? 'This permanently removes the workspace and its linked tasks, evidence, team records, comments, repositories and activity. Private attachments must be deleted first.'
+                                       : pendingAction.type === 'deleteStandaloneTask'
+                                         ? 'This permanently deletes the task and its linked evidence. Private attachments must be removed before task records are deleted.'
+                                         : pendingAction.type === 'completeStandaloneTask'
+                                           ? 'QuorlythBot rechecks for at least one linked approved evidence item before marking the task complete. It cannot bypass the evidence requirement.'
+                                           : pendingAction.type === 'reviewWorkspaceArtifact'
+                                             ? 'Review the selected evidence carefully. Requesting changes requires a note; your own submission cannot be reviewed.'
+                                             : pendingAction.type === 'inviteWorkspaceMember'
+                                               ? 'This creates an invitation for the named existing Quorlyth member with the selected role.'
+                                               : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
                 <div className="bc">
