@@ -2784,6 +2784,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     setBusy(true); setStatus('Applying action')
     let ok = false
     let successOverride = ''
+    let successNavigation = ''
     try {
       if (action.type === 'community') {
         if (!a.me) throw new Error('Sign in before creating a community.')
@@ -2921,6 +2922,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           throw membershipError
         }
         emitWorkflowEvent('workspace.created', { id, title, summary, projectId: id, at: now })
+        successNavigation = '/workspaces/' + id
         ok = true
         successOverride = 'Workspace created successfully. Opening your new workspace now.'
       } else if (action.type === 'updateStandaloneWorkspace') {
@@ -3419,6 +3421,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           postWorkspaceComment: 'Workspace message posted successfully.',
           inviteWorkspaceMember: 'Workspace invitation sent successfully.',
           reviewWorkspaceArtifact: 'Workspace evidence review recorded successfully.',
+          createStandaloneWorkspace: 'Workspace created successfully.',
+          updateStandaloneWorkspace: 'Workspace details updated successfully.',
+          toggleStandaloneWorkspace: 'Workspace status changed successfully.',
+          deleteStandaloneWorkspace: 'Workspace and linked records deleted successfully.',
+          addStandaloneTask: 'Task added to the workspace successfully.',
+          updateStandaloneTask: 'Task details updated successfully.',
+          startStandaloneTask: 'Task started successfully.',
+          completeStandaloneTask: 'Task completed with approved evidence.',
+          deleteStandaloneTask: 'Task and linked evidence deleted successfully.',
+          postWorkspaceComment: 'Workspace message posted successfully.',
+          inviteWorkspaceMember: 'Workspace invitation sent successfully.',
+          reviewWorkspaceArtifact: 'Workspace evidence review recorded successfully.',
         }
         const next = add(cur, { r: 'a', t: successOverride || labels[action.type] })
         persist(next); setPendingAction(null)
@@ -3430,6 +3444,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         if (action.type === 'setIdeaStatus') nav('/queue')
         if (action.type === 'updateProfile') nav('/me')
         if (action.type === 'createAutomation') nav('/architecture?automationCreated=' + encodeURIComponent(action.workflow.id) + '#arch-system-title')
+        if (successNavigation) nav(successNavigation)
+        else if (action.type === 'updateStandaloneWorkspace' || action.type === 'toggleStandaloneWorkspace') nav('/workspaces/' + action.workspaceId)
+        else if (action.type === 'addStandaloneTask' || action.type === 'updateStandaloneTask' || action.type === 'startStandaloneTask' || action.type === 'completeStandaloneTask' || action.type === 'deleteStandaloneTask') nav('/workspaces/' + action.workspaceId + '?tab=tasks')
+        else if (action.type === 'postWorkspaceComment') nav('/workspaces/' + action.workspaceId + '?tab=team')
+        else if (action.type === 'reviewWorkspaceArtifact') nav('/workspaces/' + action.workspaceId + '?tab=evidence')
+        else if (action.type === 'inviteWorkspaceMember') nav('/workspaces/' + action.workspaceId + '?tab=team')
+        else if (action.type === 'deleteStandaloneWorkspace') nav('/workspaces')
       }
     } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
     finally { setBusy(false); setStatus('Online') }
@@ -3674,6 +3695,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           applyCollaboration: 'Apply to collaborate',
           reviewCollaboration: 'Review collaboration application',
           setIdeaStatus: 'Change idea review status',
+          createStandaloneWorkspace: 'Create standalone workspace',
+          updateStandaloneWorkspace: 'Edit standalone workspace',
+          toggleStandaloneWorkspace: 'Change workspace status',
+          deleteStandaloneWorkspace: 'Delete standalone workspace',
+          addStandaloneTask: 'Add workspace task',
+          updateStandaloneTask: 'Edit workspace task',
+          startStandaloneTask: 'Start workspace task',
+          completeStandaloneTask: 'Complete workspace task',
+          deleteStandaloneTask: 'Delete workspace task',
+          postWorkspaceComment: 'Post to workspace team room',
+          inviteWorkspaceMember: 'Invite workspace member',
+          reviewWorkspaceArtifact: 'Review workspace evidence',
           createStandaloneWorkspace: 'Create standalone workspace',
           updateStandaloneWorkspace: 'Edit standalone workspace',
           toggleStandaloneWorkspace: 'Change workspace status',
