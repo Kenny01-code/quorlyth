@@ -4,6 +4,7 @@ import {
   WorkflowDefinition,
   WorkflowEventDetail,
   WORKFLOW_EVENT_NAME,
+  emitWorkflowEvent,
   executeWorkflowActions,
   persistWorkflowRun,
   workflowMatchesEvent,
@@ -19,6 +20,7 @@ export function AutomationRuntime() {
   const [workflows, setWorkflows] = useState<WorkflowDefinition[]>([])
   const workflowsRef = useRef<WorkflowDefinition[]>([])
   const activeRuns = useRef(new Set<string>())
+  const recentEvents = useRef(new Map<string, number>())
 
   workflowsRef.current = workflows
 
@@ -44,9 +46,72 @@ export function AutomationRuntime() {
     if (!store || !userId) return
 
     let alive = true
+    const unsubscribes: Array<() => void> = []
+    const seenIdeas = new Set<string>()
+    const seenProjects = new Set<string>()
+    const taskStatuses = new Map<string, string>()
+    let ideasReady = false
+    let projectsReady = false
+    let tasksReady = false
+
+    // Supabase realtime lets a running Quorlyth session react to changes made by
+    // other people in collections this user is already allowed to read. The local
+    // event emits below keep demo/local workflows responsive too.
+    unsubscribes.push(store.subscribe('ideas', docs => {
+      if (!alive) return
+      if (!ideasReady) {
+        docs.forEach(doc => seenIdeas.add(doc.id))
+        ideasReady = true
+        return
+      }
+      for (const doc of docs) {
+        if (seenIdeas.has(doc.id)) continue
+        seenIdeas.add(doc.id)
+        emitWorkflowEvent('idea.created', { id: doc.id, title: String(doc.data?.title || ''), body: String(doc.data?.body || ''), communityId: String(doc.data?.cid || ''), at: Number(doc.data?.at) || Date.now() })
+      }
+    }, error => console.warn('Workflow idea trigger could not refresh:', error)))
+
+    unsubscribes.push(store.subscribe('standaloneProjects', docs => {
+      if (!alive) return
+      if (!projectsReady) {
+        docs.forEach(doc => seenProjects.add(doc.id))
+        projectsReady = true
+        return
+      }
+      for (const doc of docs) {
+        if (seenProjects.has(doc.id)) continue
+        seenProjects.add(doc.id)
+        emitWorkflowEvent('workspace.created', { id: doc.id, projectId: doc.id, title: String(doc.data?.title || ''), summary: String(doc.data?.summary || ''), at: Number(doc.data?.at) || Date.now() })
+      }
+    }, error => console.warn('Workflow workspace trigger could not refresh:', error)))
+
+    unsubscribes.push(store.subscribe('standaloneTasks', docs => {
+      if (!alive) return
+      if (!tasksReady) {
+        docs.forEach(doc => taskStatuses.set(doc.id, String(doc.data?.status || 'todo')))
+        tasksReady = true
+        return
+      }
+      for (const doc of docs) {
+        const nextStatus = String(doc.data?.status || 'todo')
+        const previousStatus = taskStatuses.get(doc.id)
+        taskStatuses.set(doc.id, nextStatus)
+        if (previousStatus && previousStatus !== 'done' && nextStatus === 'done') {
+          emitWorkflowEvent('task.completed', { id: doc.id, taskId: doc.id, projectId: String(doc.data?.projectId || ''), title: String(doc.data?.title || ''), summary: String(doc.data?.description || ''), at: Number(doc.data?.updatedAt) || Date.now() })
+        }
+      }
+    }, error => console.warn('Workflow task trigger could not refresh:', error)))
+
     const onWorkflowEvent = (raw: Event) => {
       const detail = (raw as CustomEvent<WorkflowEventDetail>).detail
       if (!detail?.type) return
+      const eventId = String(detail.payload?.id || detail.payload?.taskId || detail.payload?.at || '')
+      const dedupeKey = detail.type + ':' + eventId
+      const now = Date.now()
+      const previousEventAt = recentEvents.current.get(dedupeKey)
+      if (previousEventAt && now - previousEventAt < 15000) return
+      recentEvents.current.set(dedupeKey, now)
+      for (const [key, time] of recentEvents.current) if (now - time > 60000) recentEvents.current.delete(key)
 
       const matching = workflowsRef.current.filter(workflow => workflowMatchesEvent(workflow, detail))
       for (const workflow of matching) {
@@ -76,6 +141,7 @@ export function AutomationRuntime() {
     return () => {
       alive = false
       window.removeEventListener(WORKFLOW_EVENT_NAME, onWorkflowEvent)
+      unsubscribes.forEach(unsubscribe => unsubscribe())
     }
   }, [app.backend?.store, app.me?.id, app.demo, app.toast])
 
