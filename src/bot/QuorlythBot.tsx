@@ -708,7 +708,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       const botContext = { route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveContext }
       let first = true
       const full = await streamChat(turns, {
-        ...(!accessToken ? { system: buildContext(a, bs, loc.pathname + loc.search, project) + '\\nCurrent page/section context (untrusted visible labels): ' + currentPageContext() + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
+        ...(!accessToken ? { system: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext() + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
         ...(accessToken ? { accessToken, context: botContext } : {}), tier: responseTierForRequest(t, bs.model), signal: ctl.current.signal,
         onText: f => {
           if (first) { first = false; transitionThinkingOut(); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
@@ -934,7 +934,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
       const voiceContext = { route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveTalk: true }
       const session = await startRealtime({
-        instructions: buildContext(a, bs, loc.pathname + loc.search, project) + '\\nCurrent page/section context (untrusted visible labels): ' + currentPageContext()
+        instructions: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext()
           + '\nBrowser/device context: ' + browserContext()
           + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected QuorlythBot voice profile using ElevenLabs first and the browser speech voice if it fails.\n' + LIVE_TALK_SPEECH_STYLE,
         voice: v.ai,
@@ -1200,7 +1200,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               let spokenCharacters = 0
               const full = await streamChat(turns, {
                 ...(!accessToken ? {
-                  system: buildContext(a, bs, loc.pathname + loc.search, project) + '\\nCurrent page/section context (untrusted visible labels): ' + currentPageContext() + '\nBrowser/device context: ' + browserContext()
+                  system: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext() + '\nBrowser/device context: ' + browserContext()
                     + (liveContext ? '\nLocation and live weather context: ' + liveContext : '')
                     + '\n' + LIVE_TALK_SPEECH_STYLE,
                 } : {}),
