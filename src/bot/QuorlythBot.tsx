@@ -1866,6 +1866,238 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     if (operation === 'help') return null
     const findIdea = (id: string | undefined) => a.data.ideas.find(idea => !!id && idea.id === id)
     const findCommunity = (id: string | undefined) => a.data.communities.find(community => !!id && community.id === id)
+    const findWorkspace = (id: string | undefined) => availableWorkspaces.find(workspace => !!id && (workspace.id === id || (workspace as any).docId === id))
+      || (activeWorkspace && (!id || activeWorkspace.id === id || activeWorkspace.docId === id) ? availableWorkspaces.find(workspace => workspace.id === activeWorkspace.id) : undefined)
+    const workspaceRecord = (id: string) => workspaceProjects.find(workspace => workspace.id === id || workspace.docId === id)
+    const tasksFor = (workspaceId: string) => workspaceTasks.filter(task => task.projectId === workspaceId)
+    const artifactsFor = (workspaceId: string) => workspaceArtifacts.filter(artifact => artifact.projectId === workspaceId)
+    const membersFor = (workspaceId: string) => workspaceMembers.filter(member => member.projectId === workspaceId)
+    const commentsFor = (workspaceId: string) => workspaceComments.filter(comment => comment.projectId === workspaceId)
+    const reposFor = (workspaceId: string) => workspaceRepositories.filter(repository => repository.projectId === workspaceId)
+    const activityFor = (workspaceId: string) => workspaceActivity.filter(item => item.projectId === workspaceId)
+    const storeDocumentPath = (collection: string, record: { id: string; docId?: string }) => collection + '/' + (record.docId || record.id)
+    const canManageWorkspaceRecord = (workspace: any) => !!workspace && !!a.me && (
+      workspace.createdBy === a.me.id
+      || membersFor(workspace.id).some(member => member.userId === a.me!.id && member.status === 'active' && ['owner', 'manager'].includes(member.role))
+    )
+    const parseWorkspaceDate = (value: string | null | undefined): number | null => {
+      if (value == null || value.trim() === '') return null
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('Use a valid date in YYYY-MM-DD format.')
+      const [year, month, day] = value.split('-').map(Number)
+      const timestamp = new Date(year, month - 1, day, 23, 59, 59, 999).getTime()
+      const normalized = new Date(year, month - 1, day)
+      if (normalized.getFullYear() !== year || normalized.getMonth() !== month - 1 || normalized.getDate() !== day || !Number.isFinite(timestamp)) {
+        throw new Error('That workspace date is invalid.')
+      }
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (timestamp < today.getTime()) throw new Error('Choose today or a future date for a workspace deadline.')
+      return timestamp
+    }
+    const requestedWorkspaceOperation = new Set([
+      'create_standalone_workspace', 'update_standalone_workspace', 'set_standalone_workspace_status',
+      'delete_standalone_workspace', 'add_standalone_task', 'update_standalone_task',
+      'start_standalone_task', 'complete_standalone_task', 'delete_standalone_task',
+      'post_workspace_comment', 'invite_workspace_member', 'review_workspace_artifact',
+    ])
+    if (requestedWorkspaceOperation.has(operation)) {
+      if (!workspaceIntent || !a.me || !a.backend) {
+        throw new Error('Sign in and open a Quorlyth workspace before asking me to change its tasks, team, or evidence.')
+      }
+      const requestWantsDelete = /\b(delete|remove|permanently delete|destroy)\b/i.test(requestText)
+      const target = findWorkspace(response.workspaceId)
+      const workspace = target ? workspaceRecord(target.id) : undefined
+      const targetId = workspace?.id || target?.id || ''
+      const manager = !!workspace && canManageWorkspaceRecord(workspace)
+      const membership = workspace && membersFor(workspace.id).find(member => member.userId === a.me!.id && member.status === 'active')
+      const role = workspace?.createdBy === a.me.id ? 'owner' : membership?.role || ''
+      const canContribute = !!role && ['owner', 'manager', 'contributor'].includes(role)
+      const isOwner = !!workspace && workspace.createdBy === a.me.id
+      const tasks = workspace ? tasksFor(workspace.id) : []
+      const artifacts = workspace ? artifactsFor(workspace.id) : []
+      const team = workspace ? membersFor(workspace.id).filter(member => member.status === 'active') : []
+      const approvedEvidenceCount = (taskId: string) => artifacts.filter(artifact =>
+        artifact.taskId === taskId && artifact.status === 'approved'
+        && ((artifact.provider === 'github' && artifact.verificationStatus === 'source_verified')
+          || (artifact.provider === 'manual' && artifact.verificationStatus === 'submitted_evidence'))
+      ).length
+
+      if (operation === 'create_standalone_workspace') {
+        if (!/\b(create|build|start|set up|make|open)\b/i.test(requestText) || !/\b(workspace|standalone project|project space|independent project)\b/i.test(requestText)) {
+          throw new Error('Ask me to create or build a workspace, and I’ll prepare it for your review.')
+        }
+        const title = String(response.title || '').trim().slice(0, 100)
+        const summary = String(response.summary || '').trim().slice(0, 4000)
+        if (title.length < 2 || summary.length < 8) throw new Error('A workspace needs a clear name and a meaningful project brief of at least eight characters.')
+        const dueAt = parseWorkspaceDate(response.dueDate)
+        return { type: 'createStandaloneWorkspace', title, summary, dueAt }
+      }
+
+      if (!workspace || !targetId) {
+        throw new Error(availableWorkspaces.length
+          ? 'I could not identify the correct workspace from your current page and the workspaces visible to your account. Open that workspace or name its exact title.'
+          : 'No standalone workspace is visible to your account yet. Create a workspace first or accept an invitation.')
+      }
+
+      if (operation === 'update_standalone_workspace') {
+        if (!manager) throw new Error('Only this workspace’s owner or active manager can edit its project brief and deadline.')
+        if (workspace.status !== 'active') throw new Error('Reopen the workspace before editing it.')
+        const proposed = response.workspacePatch || {}
+        const patch: { title?: string; summary?: string; dueAt?: number | null } = {}
+        if (typeof proposed.title === 'string' && proposed.title.trim()) patch.title = proposed.title.trim().slice(0, 100)
+        if (typeof proposed.summary === 'string' && proposed.summary.trim()) {
+          if (proposed.summary.trim().length < 8) throw new Error('A workspace brief must contain at least eight meaningful characters.')
+          patch.summary = proposed.summary.trim().slice(0, 4000)
+        }
+        if (proposed.dueDate !== undefined) patch.dueAt = parseWorkspaceDate(proposed.dueDate)
+        if (!Object.keys(patch).length) throw new Error('Tell me which workspace field you want changed: its title, project brief, or due date.')
+        if (patch.title === workspace.title && patch.summary === workspace.summary && patch.dueAt === workspace.dueAt) return null
+        return { type: 'updateStandaloneWorkspace', workspaceId: targetId, oldTitle: workspace.title, patch }
+      }
+
+      if (operation === 'set_standalone_workspace_status') {
+        if (!manager) throw new Error('Only this workspace’s owner or active manager can close or reopen it.')
+        const status = String(response.status || '').toLowerCase()
+        if (status !== 'active' && status !== 'completed') throw new Error('Choose either active (reopen) or completed (close) for the workspace.')
+        if (status === workspace.status) return null
+        if (status === 'completed' && !/\b(close|complete|finish|archive)\b/i.test(requestText)) throw new Error('Please explicitly ask to close or complete this workspace.')
+        if (status === 'active' && !/\b(reopen|reactivate|open again|resume)\b/i.test(requestText)) throw new Error('Please explicitly ask to reopen this workspace.')
+        return { type: 'toggleStandaloneWorkspace', workspaceId: targetId, title: workspace.title, previous: workspace.status, status }
+      }
+
+      if (operation === 'delete_standalone_workspace') {
+        if (!requestWantsDelete) throw new Error('I only prepare a workspace deletion when you explicitly ask me to delete or remove it.')
+        if (!isOwner) throw new Error('Only the workspace creator can permanently delete the workspace.')
+        const linkedTasks = tasks
+        const linkedArtifacts = artifacts
+        const attachedFiles = linkedArtifacts.flatMap(artifact => Array.isArray(artifact.attachments) ? artifact.attachments : [])
+        return {
+          type: 'deleteStandaloneWorkspace',
+          workspaceId: targetId,
+          title: workspace.title,
+          taskCount: linkedTasks.length,
+          evidenceCount: linkedArtifacts.length,
+          memberCount: membersFor(workspace.id).length,
+          commentCount: commentsFor(workspace.id).length,
+          attachmentCount: attachedFiles.length,
+        }
+      }
+
+      if (workspace.status !== 'active' && operation !== 'set_standalone_workspace_status' && operation !== 'delete_standalone_workspace') {
+        throw new Error('This workspace is closed. Reopen it before changing its task, team, or evidence records.')
+      }
+
+      if (operation === 'add_standalone_task') {
+        if (!manager) throw new Error('Only the workspace owner or an active manager can add tasks.')
+        const title = String(response.title || '').trim().slice(0, 140)
+        const description = String(response.description || '').trim().slice(0, 2000)
+        const acceptanceCriteria = String(response.acceptanceCriteria || '').trim().slice(0, 1000)
+        if (title.length < 2) throw new Error('Give the new task a clear title of at least two characters.')
+        const dueAt = parseWorkspaceDate(response.dueDate)
+        const assigneeId = typeof response.assigneeId === 'string' && response.assigneeId.trim() ? response.assigneeId.trim() : null
+        const allowedAssignees = new Set([
+          workspace.createdBy,
+          ...team.filter(member => member.role !== 'viewer').map(member => member.userId),
+        ].filter(Boolean))
+        if (assigneeId && !allowedAssignees.has(assigneeId)) throw new Error('Only an active owner, manager, or contributor in this workspace can be assigned.')
+        return {
+          type: 'addStandaloneTask',
+          workspaceId: targetId,
+          workspaceTitle: workspace.title,
+          title,
+          description,
+          acceptanceCriteria,
+          dueAt,
+          assigneeId,
+          assigneeName: assigneeId ? a.nm(assigneeId) : '',
+        }
+      }
+
+      if (operation === 'update_standalone_task') {
+        if (!manager) throw new Error('Only the workspace owner or an active manager can edit task details.')
+        const task = tasks.find(item => item.id === response.taskId || item.docId === response.taskId)
+          || (tasks.length === 1 ? tasks[0] : undefined)
+        if (!task || task.projectId !== workspace.id) throw new Error('Name the exact task you want to edit; I will not guess between multiple tasks.')
+        const supplied = response.taskPatch || {}
+        const patch: { title?: string; description?: string; acceptanceCriteria?: string; dueAt?: number | null; assigneeId?: string | null } = {}
+        if (typeof supplied.title === 'string' && supplied.title.trim()) patch.title = supplied.title.trim().slice(0, 140)
+        if (typeof supplied.description === 'string') patch.description = supplied.description.trim().slice(0, 2000)
+        if (typeof supplied.acceptanceCriteria === 'string') patch.acceptanceCriteria = supplied.acceptanceCriteria.trim().slice(0, 1000)
+        if (supplied.dueDate !== undefined) patch.dueAt = parseWorkspaceDate(supplied.dueDate)
+        if (supplied.assigneeId !== undefined) {
+          const assigneeId = supplied.assigneeId?.trim() || null
+          const allowedAssignees = new Set([workspace.createdBy, ...team.filter(member => member.role !== 'viewer').map(member => member.userId)])
+          if (assigneeId && !allowedAssignees.has(assigneeId)) throw new Error('Only an active owner, manager, or contributor in this workspace can be assigned.')
+          patch.assigneeId = assigneeId
+        }
+        if (!Object.keys(patch).length) throw new Error('Tell me which task field you want to update.')
+        return { type: 'updateStandaloneTask', workspaceId: targetId, workspaceTitle: workspace.title, taskId: task.id, oldTitle: task.title, patch }
+      }
+
+      if (operation === 'start_standalone_task') {
+        if (!canContribute) throw new Error('Only active workspace owners, managers, or contributors can start tasks.')
+        const task = tasks.find(item => item.id === response.taskId || item.docId === response.taskId)
+          || (tasks.length === 1 ? tasks[0] : undefined)
+        if (!task || task.projectId !== workspace.id) throw new Error('Name the task to start; I will not guess between multiple tasks.')
+        if (task.status !== 'todo') throw new Error('Only a queued task can be started.')
+        if (task.assigneeId && task.assigneeId !== a.me.id && !manager) throw new Error('That task is assigned to someone else.')
+        return { type: 'startStandaloneTask', workspaceId: targetId, workspaceTitle: workspace.title, taskId: task.id, title: task.title, currentAssigneeId: task.assigneeId || null }
+      }
+
+      if (operation === 'complete_standalone_task') {
+        if (!manager) throw new Error('Only the workspace owner or an active manager can complete a task.')
+        const task = tasks.find(item => item.id === response.taskId || item.docId === response.taskId)
+          || (tasks.length === 1 ? tasks[0] : undefined)
+        if (!task || task.projectId !== workspace.id) throw new Error('Name the exact task you want to complete.')
+        if (task.status === 'done') throw new Error('That task is already marked complete.')
+        const evidenceCount = approvedEvidenceCount(task.id)
+        if (evidenceCount < 1) throw new Error('This task cannot be completed yet: at least one linked evidence item must be reviewed and approved first.')
+        return { type: 'completeStandaloneTask', workspaceId: targetId, workspaceTitle: workspace.title, taskId: task.id, title: task.title, approvedEvidenceCount: evidenceCount }
+      }
+
+      if (operation === 'delete_standalone_task') {
+        if (!requestWantsDelete) throw new Error('I only prepare a task deletion when you explicitly ask to delete or remove it.')
+        if (!manager) throw new Error('Only the workspace owner or an active manager can delete tasks.')
+        const task = tasks.find(item => item.id === response.taskId || item.docId === response.taskId)
+          || (tasks.length === 1 ? tasks[0] : undefined)
+        if (!task || task.projectId !== workspace.id) throw new Error('Name the exact task to delete.')
+        const linked = artifacts.filter(artifact => artifact.taskId === task.id)
+        const attachmentCount = linked.reduce((sum, artifact) => sum + (Array.isArray(artifact.attachments) ? artifact.attachments.length : 0), 0)
+        return { type: 'deleteStandaloneTask', workspaceId: targetId, workspaceTitle: workspace.title, taskId: task.id, title: task.title, evidenceCount: linked.length, attachmentCount }
+      }
+
+      if (operation === 'post_workspace_comment') {
+        if (!membership) throw new Error('Only active members of this workspace can post in its team room.')
+        const text = String(response.commentText || response.message || '').trim().slice(0, 3000)
+        if (text.length < 1) throw new Error('Draft the message you want posted to the workspace team room.')
+        return { type: 'postWorkspaceComment', workspaceId: targetId, workspaceTitle: workspace.title, text }
+      }
+
+      if (operation === 'invite_workspace_member') {
+        if (!manager) throw new Error('Only the workspace owner or an active manager can invite team members.')
+        const memberId = String(response.memberId || '').trim()
+        const profile = memberId && a.data.profiles[memberId]
+        if (!profile || memberId === a.me.id) throw new Error('Choose a real existing Quorlyth member to invite.')
+        if (membersFor(workspace.id).some(member => member.userId === memberId && member.status !== 'removed')) throw new Error('That person already has an active membership or a pending invitation.')
+        const roleValue = String(response.memberRole || 'contributor').toLowerCase()
+        const memberRole = roleValue === 'viewer' ? 'viewer' : 'contributor'
+        return { type: 'inviteWorkspaceMember', workspaceId: targetId, workspaceTitle: workspace.title, memberId, memberName: a.nm(memberId), role: memberRole }
+      }
+
+      if (operation === 'review_workspace_artifact') {
+        if (!manager) throw new Error('Only the workspace owner or an active manager can review evidence.')
+        const artifact = artifacts.find(item => item.id === response.artifactId || item.docId === response.artifactId)
+          || (artifacts.filter(item => item.status === 'submitted').length === 1 ? artifacts.find(item => item.status === 'submitted') : undefined)
+        if (!artifact || artifact.projectId !== workspace.id || artifact.status !== 'submitted') throw new Error('Name the exact submitted evidence you want reviewed.')
+        if (artifact.submittedBy === a.me.id) throw new Error('You cannot review your own submitted evidence.')
+        const decision = String(response.decision || '').toLowerCase()
+        if (decision !== 'approved' && decision !== 'changes_requested') throw new Error('Choose approve or request changes for this evidence item.')
+        const note = String(response.reviewNote || response.message || '').trim().slice(0, 1600)
+        if (decision === 'changes_requested' && note.length < 4) throw new Error('Provide a reviewer note of at least four characters when requesting changes.')
+        const task = tasks.find(item => item.id === artifact.taskId)
+        return { type: 'reviewWorkspaceArtifact', workspaceId: targetId, workspaceTitle: workspace.title, artifactId: artifact.id, taskId: task?.id || artifact.taskId, taskTitle: task?.title || 'Task evidence', decision, note }
+      }
+    }
     if (operation === 'update_idea') {
       const idea = findIdea(response.ideaId) || activeIdea
       const patch: Partial<Pick<Idea, 'title' | 'body' | 'tags'>> = {}
