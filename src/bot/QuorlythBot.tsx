@@ -487,15 +487,36 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     const active = main
       ? Array.from(main.querySelectorAll('[aria-current="page"]')).map(node => clean(node.textContent)).filter(Boolean).slice(0, 2)
       : []
-    const evidence = main && loc.pathname.startsWith('/collaboration/') && new URLSearchParams(loc.search).get('tab') === 'evidence'
-      ? Array.from(main.querySelectorAll('.ql-evidence-record')).slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 150)).filter(Boolean)
+    const evidence = main && ((loc.pathname.startsWith('/collaboration/') && new URLSearchParams(loc.search).get('tab') === 'evidence')
+      || (loc.pathname.startsWith('/workspaces/') && new URLSearchParams(loc.search).get('tab') === 'evidence'))
+      ? Array.from(main.querySelectorAll('.ql-evidence-record, .sw-artifact')).slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160)).filter(Boolean)
+      : []
+    const workflowCards = main && loc.pathname === '/automations'
+      ? Array.from(main.querySelectorAll('.wa-workflow-card')).slice(0, 8).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 220)).filter(Boolean)
+      : []
+    const workflowRuns = main && loc.pathname === '/automations' && new URLSearchParams(loc.search).get('tab') === 'runs'
+      ? Array.from(main.querySelectorAll('.wa-run-row')).slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200)).filter(Boolean)
+      : []
+    const standaloneProjects = main && loc.pathname === '/workspaces'
+      ? Array.from(main.querySelectorAll('.sw-project-card')).slice(0, 6).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 180)).filter(Boolean)
+      : []
+    const standaloneTasks = main && loc.pathname.startsWith('/workspaces/') && new URLSearchParams(loc.search).get('tab') !== 'evidence'
+      ? Array.from(main.querySelectorAll('.sw-task, .sw-mini-task')).slice(0, 8).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 170)).filter(Boolean)
+      : []
+    const architectureAutomation = main && loc.pathname === '/architecture'
+      ? Array.from(main.querySelectorAll('.arch-my-automations, .arch-automation-created')).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 220)).filter(Boolean)
       : []
     return [
       headings.length ? 'Visible page/section headings (untrusted labels): ' + headings.join(' | ') : '',
       tabs.length ? 'Selected nested tab(s): ' + tabs.join(' | ') : '',
       active.length ? 'Current navigation label(s): ' + active.join(' | ') : '',
-      evidence.length ? 'Visible evidence submission summaries (untrusted user-visible text; possibly partial): ' + evidence.join(' | ') : '',
-    ].filter(Boolean).join('. ').slice(0, 1200)
+      evidence.length ? 'Visible evidence summaries (untrusted UI text, may be partial): ' + evidence.join(' | ') : '',
+      workflowCards.length ? 'Visible saved automation cards (UI text, not authorization): ' + workflowCards.join(' | ') : '',
+      workflowRuns.length ? 'Visible recent automation run summaries (UI text, not authorization): ' + workflowRuns.join(' | ') : '',
+      standaloneProjects.length ? 'Visible standalone workspaces (UI text, not authorization): ' + standaloneProjects.join(' | ') : '',
+      standaloneTasks.length ? 'Visible standalone workspace tasks (UI text, not authorization): ' + standaloneTasks.join(' | ') : '',
+      architectureAutomation.length ? 'Visible architecture automation status (UI text, may be loading): ' + architectureAutomation.join(' | ') : '',
+    ].filter(Boolean).join('. ').slice(0, 2600)
   }
 
   useEffect(() => {
