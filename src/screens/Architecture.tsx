@@ -47,12 +47,19 @@ interface DiagramNodeProps {
   title: string
   detail: string[]
   kind?: 'app' | 'data' | 'api' | 'optional' | 'automation'
+  shape?: 'box' | 'cylinder'
 }
 
-function DiagramNode({ x, y, w, h, title, detail, kind = 'app' }: DiagramNodeProps) {
+function DiagramNode({ x, y, w, h, title, detail, kind = 'app', shape = 'box' }: DiagramNodeProps) {
   return (
     <g className={'arch-map-node arch-map-node--' + kind}>
-      <rect x={x} y={y} width={w} height={h} rx="13" />
+      {shape === 'cylinder' ? (
+        <g className="arch-map-cylinder">
+          <rect x={x} y={y + 11} width={w} height={h - 22} />
+          <ellipse cx={x + w / 2} cy={y + 11} rx={w / 2} ry="11" />
+          <ellipse cx={x + w / 2} cy={y + h - 11} rx={w / 2} ry="11" />
+        </g>
+      ) : <rect x={x} y={y} width={w} height={h} rx="13" />}
       <text className="arch-map-node-title" x={x + w / 2} y={y + 29}>{title}</text>
       {detail.map((line, index) => (
         <text key={line} className="arch-map-node-detail" x={x + w / 2} y={y + 51 + index * 15}>{line}</text>
@@ -104,8 +111,8 @@ function SystemArchitectureMap() {
               <path className="arch-map-edge" d="M182 195 V275" markerEnd="url(#arch-map-arrow)" />
               <path className="arch-map-edge" d="M285 155 H320 V315 H355" markerEnd="url(#arch-map-arrow)" />
               <path className="arch-map-edge arch-map-edge--data" d="M285 137 H630 V132 H680" markerEnd="url(#arch-map-arrow)" />
-              <path className="arch-map-edge arch-map-edge--data" d="M585 155 H950" markerStart="url(#arch-map-arrow-start)" markerEnd="url(#arch-map-arrow)" />
-              <path className="arch-map-edge arch-map-edge--data" d="M1070 170 V230" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--data" d="M585 168 H630 V205 H940 V132 H960" markerStart="url(#arch-map-arrow-start)" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--data" d="M1070 170 V230" />
               <path className="arch-map-edge" d="M182 355 V425 H665 V485 H700" markerEnd="url(#arch-map-arrow)" />
               <path className="arch-map-edge" d="M865 515 V560" markerEnd="url(#arch-map-arrow)" />
               <path className="arch-map-edge arch-map-edge--data" d="M1030 595 H1095 V190 H870 V170" markerEnd="url(#arch-map-arrow)" />
@@ -115,15 +122,14 @@ function SystemArchitectureMap() {
               <path className="arch-map-edge arch-map-edge--automation" d="M470 355 V610" markerEnd="url(#arch-map-arrow)" />
               <path className="arch-map-edge arch-map-edge--automation" d="M325 688 V780" markerEnd="url(#arch-map-arrow)" />
               <path className="arch-map-edge arch-map-edge--automation" d="M325 855 V935" markerEnd="url(#arch-map-arrow)" />
-              <path className="arch-map-edge arch-map-edge--optional" d="M285 320 H600 V840 H720" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--optional" d="M720 840 H600 V320 H285" markerEnd="url(#arch-map-arrow)" />
               <path className="arch-map-edge arch-map-edge--data" d="M560 980 H640 V1140 H1400 V132 H1180" markerEnd="url(#arch-map-arrow)" />
             </g>
 
             <g className="arch-map-edge-labels">
               <text x="305" y="127">components</text>
               <text x="194" y="238">bot context</text>
-              <text x="450" y="127">data adapter</text>
-              <text x="448" y="145">read / write</text>
+              <text x="705" y="222">read / write</text>
               <text x="365" y="413">same-origin /api</text>
               <text x="875" y="180">authenticated context</text>
               <text x="1110" y="440">chat / reasoning</text>
@@ -140,7 +146,7 @@ function SystemArchitectureMap() {
             <DiagramNode x={355} y={275} w={230} h={80} title="Automation Studio" detail={['Events and workflow runtime']} kind="automation" />
 
             <DiagramNode x={680} y={95} w={190} h={75} title="Supabase Auth" detail={['Identity and sessions']} kind="data" />
-            <DiagramNode x={960} y={95} w={220} h={75} title="Supabase Postgres" detail={['Shared app records']} kind="data" />
+            <DiagramNode x={960} y={95} w={220} h={75} title="Supabase Postgres" detail={['Shared app records']} kind="data" shape="cylinder" />
             <DiagramNode x={960} y={230} w={220} h={75} title="RLS + ownership" detail={['Private data access rules']} kind="data" />
 
             <DiagramNode x={700} y={455} w={330} h={60} title="Vercel /api routes" detail={['Chat · structured AI · speech']} kind="api" />
