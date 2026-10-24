@@ -72,3 +72,5 @@
 @media(max-width:520px){.arch-page{padding-bottom:32px}.arch-hero h1{font-size:clamp(40px,13vw,60px)}.arch-hero-foot{margin-top:38px;gap:12px}.arch-journey{padding:4px 14px}.arch-journey-item{grid-template-columns:54px minmax(0,1fr);gap:11px;padding:22px 0 32px}.arch-icon{width:40px;height:40px;border-radius:13px}.arch-connector{left:11px}.arch-system-cap{padding:16px}.arch-system-grid{padding:12px;gap:8px}.arch-system-module{padding:15px 12px}.arch-system-band{grid-template-columns:1fr;padding:0 12px}.arch-system-grid--services{grid-template-columns:1fr;padding-top:12px;padding-bottom:14px}.arch-automation-flow>div{padding:20px}.arch-footer{margin-top:72px}.arch-footer .arch-hero-actions{width:100%}.arch-footer .btn{flex:1}}
 
 .arch-down-arrow{font-size:22px;line-height:1;font-weight:300;color:#929292}
+
+.arch-live-section{position:relative}
