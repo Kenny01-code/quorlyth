@@ -805,7 +805,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         stopVoice()
         setView('chat')
         const draft = add(cur, { r: 'u', t })
-        const isDestructive = action.type === 'deleteCommunity' || action.type === 'deleteIdea' || action.type === 'deleteMilestone' || action.type === 'deleteAutomation'
+        const isDestructive = action.type === 'deleteCommunity' || action.type === 'deleteIdea' || action.type === 'deleteMilestone' || action.type === 'deleteAutomation' || action.type === 'deleteStandaloneTask' || action.type === 'deleteStandaloneWorkspace'
         const prompt = isDestructive
           ? 'I have identified the target and prepared a deletion preview below. Check the exact item and linked records carefully. Nothing will be deleted unless you confirm.'
           : action.type === 'promote'
@@ -2607,6 +2607,14 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           toggleAutomation: 'Automation status updated successfully.',
           deleteAutomation: 'Automation deleted successfully.',
           runAutomation: 'Automation test run completed.',
+          createStandaloneWorkspace: 'Private workspace created successfully.',
+          updateStandaloneWorkspace: 'Workspace details updated successfully.',
+          createStandaloneTask: 'Workspace task created successfully.',
+          updateStandaloneTask: 'Workspace task updated successfully.',
+          startStandaloneTask: 'Workspace task started successfully.',
+          setStandaloneWorkspaceStatus: 'Workspace status updated successfully.',
+          deleteStandaloneTask: 'Workspace task and linked evidence deleted.',
+          deleteStandaloneWorkspace: 'Workspace and linked project records deleted.',
         }
         const next = add(cur, { r: 'a', t: successOverride || labels[action.type] })
         persist(next); setPendingAction(null)
@@ -2614,6 +2622,10 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         if (action.type === 'idea') nav('/communities/' + action.cid)
         if (action.type === 'deleteIdea') nav('/communities/' + action.cid)
         if (action.type === 'createAutomation') nav('/architecture?automationCreated=' + encodeURIComponent(action.workflow.id) + '#arch-system-title')
+        if (action.type === 'createStandaloneWorkspace') nav('/workspaces/' + action.workspaceId)
+        if (action.type === 'deleteStandaloneWorkspace') nav('/workspaces')
+        if (action.type === 'createStandaloneTask' || action.type === 'updateStandaloneTask' || action.type === 'startStandaloneTask' || action.type === 'deleteStandaloneTask') nav('/workspaces/' + action.workspaceId)
+        if (action.type === 'updateStandaloneWorkspace' || action.type === 'setStandaloneWorkspaceStatus') nav('/workspaces/' + action.workspaceId)
       }
     } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
     finally { setBusy(false); setStatus('Online') }
