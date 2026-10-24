@@ -776,6 +776,34 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         setPendingAction(action)
         return
       }
+      const contextualIntent = /\b(edit|rewrite|improve|update|change|revise|rename|comment|reply|respond|post|back|vote|unvote|unback|join|leave|apply|collaborat|accept|decline|approve|select|hold|reject|mark|set)\b/i.test(t)
+        && (/\b(idea|community|profile|bio|headline|collaboration|application|review queue|comment|reply|discussion|status|this page|this idea|this community|my profile)\b/i.test(t)
+          || /^(?:\/idea\/|\/communities\/|\/collaboration\/|\/queue)/.test(loc.pathname))
+      if (!raw && contextualIntent) {
+        stopVoice(); setView('chat')
+        setBusy(true); setStatus('Planning action'); setThinkingTask('Checking the current page and your permissions')
+        robot.current?.think(true)
+        try {
+          const planned = await planContextAction(t)
+          if (planned) {
+            const draft = add(cur, { r: 'u', t })
+            const destructive = planned.type === 'deleteIdea'
+            const prompt = destructive
+              ? 'I prepared a deletion preview for the exact item and its linked records. Nothing will be deleted until you confirm.'
+              : 'I prepared a proposed change using the current page and the records available to your account. Review the exact details below. Nothing has been changed yet.'
+            persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            setPendingAction(planned)
+            return
+          }
+        } catch (failure) {
+          const draft = add(cur, { r: 'u', t })
+          const message = failure instanceof Error ? failure.message : 'I could not prepare that action safely.'
+          persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          return
+        } finally {
+          setBusy(false); setStatus('Online'); setThinkingTask(''); robot.current?.think(false)
+        }
+      }
     }
     // Greetings are deterministic, so do not pay an API round trip just to say hello.
     if (!raw && /^(?:hi|hello|hey|hiya|yo|good morning|good afternoon|good evening|what'?s up)[.!?,\s]*$/i.test(t)) {
