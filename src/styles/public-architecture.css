@@ -1,0 +1,72 @@
+.arch-page{--arch-line:rgba(255,255,255,.13);--arch-muted:#a8a8a8;max-width:1120px;margin:0 auto;padding:8px 0 64px;color:var(--w,#fff)}
+.arch-hero{position:relative;padding:34px 0 52px;border-bottom:1px solid var(--arch-line);overflow:hidden}
+.arch-hero:before{content:"";position:absolute;width:540px;height:540px;right:-150px;top:-210px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.1),transparent 68%);pointer-events:none}
+.arch-brand{display:flex;align-items:center;gap:12px;color:#e9e9e9;font-size:11px;letter-spacing:.22em;margin-bottom:60px}
+.arch-brand svg{filter:drop-shadow(0 0 16px rgba(255,255,255,.24))}
+.arch-kicker,.arch-overline{display:inline-flex;align-items:center;gap:9px;font-size:10px;letter-spacing:.19em;color:#b7b7b7}
+.arch-kicker{border:1px solid var(--arch-line);padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.035)}
+.arch-kicker i{width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff}
+.arch-hero h1{position:relative;max-width:880px;font-size:clamp(42px,8vw,84px);line-height:.99;letter-spacing:-.055em;margin-top:26px}
+.arch-lead{position:relative;color:#b5b5b5;font-size:clamp(16px,2vw,19px);line-height:1.7;max-width:700px;margin-top:24px}
+.arch-hero-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:28px}
+.arch-hero-foot{position:relative;display:flex;gap:14px 36px;flex-wrap:wrap;margin-top:58px;padding-top:22px;border-top:1px solid var(--arch-line);color:#d6d6d6;font-size:13px}
+.arch-hero-foot span{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.arch-hero-foot b{font-size:9px;letter-spacing:.16em;color:#808080;font-weight:500}
+.arch-section{margin-top:94px}
+.arch-section-heading{max-width:760px;margin-bottom:32px}
+.arch-section-heading h2{margin-top:16px;font-size:clamp(30px,4.4vw,48px);letter-spacing:-.04em;line-height:1.08}
+.arch-section-heading>p{max-width:670px;margin-top:15px;color:var(--arch-muted);font-size:15px;line-height:1.75}
+.arch-journey{position:relative;display:grid;gap:0;border:1px solid var(--arch-line);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.015));padding:10px 24px}
+.arch-journey-item{position:relative;display:grid;grid-template-columns:78px minmax(0,1fr);gap:18px;padding:24px 6px 35px}
+.arch-journey-item:not(:last-child){border-bottom:1px solid rgba(255,255,255,.07)}
+.arch-node{display:flex;flex-direction:column;align-items:center;gap:10px}
+.arch-number{font:11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:#818181;letter-spacing:.08em}
+.arch-icon{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.055);box-shadow:inset 0 1px rgba(255,255,255,.1)}
+.arch-journey-copy h3{font-size:20px;font-weight:400;letter-spacing:-.025em}
+.arch-journey-copy>p{max-width:690px;margin-top:7px;color:#a9a9a9;line-height:1.7;font-size:14px}
+.arch-output{display:flex;align-items:center;gap:8px;margin-top:15px;color:#e9e9e9;font-size:12px}
+.arch-output .ic{color:#777}
+.arch-connector{position:absolute;left:29px;bottom:-10px;z-index:1;width:28px;height:24px;display:grid;place-items:center;background:#090909;color:#858585}
+.arch-system{border:1px solid var(--arch-line);border-radius:24px;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.012))}
+.arch-system-cap{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:18px 22px;background:rgba(255,255,255,.045);border-bottom:1px solid var(--arch-line)}
+.arch-system-cap>span{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.14em}
+.arch-system-cap>span .ic{color:#d0d0d0}
+.arch-system-cap small{font-size:12px;color:#929292}
+.arch-system-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:20px}
+.arch-system-module{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:18px 15px;border:1px solid rgba(255,255,255,.11);border-radius:16px;background:rgba(0,0,0,.2)}
+.arch-system-module>.ic{color:#e5e5e5}
+.arch-system-module b{font-size:13px;font-weight:500}
+.arch-system-module span{font-size:12px;line-height:1.55;color:#909090}
+.arch-system-link{display:flex;align-items:center;justify-content:center;gap:0;height:42px;color:#929292}
+.arch-system-link span{height:1px;width:calc(50% - 15px);background:linear-gradient(90deg,transparent,rgba(255,255,255,.25))}
+.arch-system-link span:last-child{background:linear-gradient(90deg,rgba(255,255,255,.25),transparent)}
+.arch-system-band{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px}
+.arch-system-band>div{padding:20px;border:1px solid rgba(255,255,255,.16);border-radius:16px;background:rgba(255,255,255,.035)}
+.arch-layer-index{display:block;font-size:9px;letter-spacing:.15em;color:#8a8a8a;margin-bottom:12px}
+.arch-system-band b{font-size:14px;font-weight:500}
+.arch-system-band p{margin-top:7px;font-size:12px;line-height:1.6;color:#989898}
+.arch-system-grid--services{grid-template-columns:repeat(3,minmax(0,1fr));padding-top:20px;padding-bottom:22px}
+.arch-system-cap--bottom{border-top:1px solid var(--arch-line);border-bottom:0;background:rgba(255,255,255,.025)}
+.arch-caption{margin-top:12px;color:#777;font-size:12px;line-height:1.6}
+.arch-automation-flow{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr) 28px minmax(0,1fr);align-items:stretch;gap:10px}
+.arch-automation-flow>div{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:24px;border:1px solid var(--arch-line);border-radius:20px;background:rgba(255,255,255,.035);min-width:0}
+.arch-automation-flow>div>.ic{color:#eee}
+.arch-flow-label{font-size:9px;letter-spacing:.16em;color:#858585}
+.arch-automation-flow b{font-size:18px;font-weight:400}
+.arch-automation-flow p{color:#9b9b9b;font-size:13px;line-height:1.7}
+.arch-automation-flow> .ic{align-self:center;justify-self:center;color:#858585}
+.arch-status-note{display:flex;align-items:flex-start;gap:12px;margin-top:18px;padding:18px 20px;border-radius:16px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.025);color:#b0b0b0}
+.arch-status-note>.ic{flex:none;margin-top:2px;color:#d7d7d7}
+.arch-status-note p{font-size:13px;line-height:1.75}
+.arch-status-note b{font-weight:500;color:#fff}
+.arch-principles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.arch-principles>div{padding:22px;border:1px solid var(--arch-line);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.015))}
+.arch-principles .ic{color:#e1e1e1}
+.arch-principles h3{margin-top:18px;font-weight:400;font-size:17px}
+.arch-principles p{margin-top:9px;color:#9c9c9c;font-size:13px;line-height:1.7}
+.arch-footer{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;flex-wrap:wrap;margin-top:104px;padding:32px 0;border-top:1px solid var(--arch-line)}
+.arch-footer h2{font-size:clamp(28px,4vw,42px);margin-top:13px}
+.arch-footer p{max-width:510px;margin-top:12px;color:#999;line-height:1.7;font-size:14px}
+.arch-footer .arch-hero-actions{margin-top:0}
+@media(max-width:800px){.arch-section{margin-top:72px}.arch-system-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.arch-automation-flow{grid-template-columns:1fr;gap:9px}.arch-automation-flow>.ic{transform:rotate(90deg);height:20px}.arch-principles{grid-template-columns:1fr}.arch-brand{margin-bottom:42px}.arch-hero{padding-top:22px}}
+@media(max-width:520px){.arch-page{padding-bottom:32px}.arch-hero h1{font-size:clamp(40px,13vw,60px)}.arch-hero-foot{margin-top:38px;gap:12px}.arch-journey{padding:4px 14px}.arch-journey-item{grid-template-columns:54px minmax(0,1fr);gap:11px;padding:22px 0 32px}.arch-icon{width:40px;height:40px;border-radius:13px}.arch-connector{left:11px}.arch-system-cap{padding:16px}.arch-system-grid{padding:12px;gap:8px}.arch-system-module{padding:15px 12px}.arch-system-band{grid-template-columns:1fr;padding:0 12px}.arch-system-grid--services{grid-template-columns:1fr;padding-top:12px;padding-bottom:14px}.arch-automation-flow>div{padding:20px}.arch-footer{margin-top:72px}.arch-footer .arch-hero-actions{width:100%}.arch-footer .btn{flex:1}}
