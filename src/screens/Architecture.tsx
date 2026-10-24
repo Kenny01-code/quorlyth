@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useApp } from '../data/AppProvider'
+import type { WorkflowDefinition } from '../lib/automation'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
 import '../styles/architecture-live.css'
@@ -68,7 +70,12 @@ function DiagramNode({ x, y, w, h, title, detail, kind = 'app', shape = 'box' }:
   )
 }
 
-function SystemArchitectureMap() {
+function SystemArchitectureMap({ workflows, workflowDataReady, onOpenAutomations }: { workflows: WorkflowDefinition[]; workflowDataReady: boolean; onOpenAutomations: () => void }) {
+  const activeWorkflows = workflows.filter(workflow => workflow.status === 'active').length
+  const latestWorkflow = [...workflows].sort((first, second) => (second.updatedAt || 0) - (first.updatedAt || 0))[0]
+  const automationDetails = workflowDataReady
+    ? [workflows.length + ' saved · ' + activeWorkflows + ' active', latestWorkflow ? 'Latest: ' + latestWorkflow.name.slice(0, 26) : 'Create your first workflow']
+    : ['Sign in to view private workflows']
   return (
     <section className="arch-section arch-map-section" aria-labelledby="arch-system-title" data-arch-reveal>
       <div className="arch-section-heading">
@@ -143,7 +150,7 @@ function SystemArchitectureMap() {
             <DiagramNode x={80} y={115} w={205} h={80} title="React + TypeScript" detail={['Web client screens']} kind="app" />
             <DiagramNode x={355} y={115} w={230} h={80} title="AppProvider + adapters" detail={['Local / demo / Supabase data']} kind="app" />
             <DiagramNode x={80} y={275} w={205} h={80} title="QuorlythBot" detail={['Chat · voice · context']} kind="app" />
-            <DiagramNode x={355} y={275} w={230} h={80} title="Automation Studio" detail={['Events and workflow runtime']} kind="automation" />
+            <DiagramNode x={355} y={275} w={230} h={80} title="Automation Studio" detail={workflowDataReady ? automationDetails : ['Events and workflow runtime', 'Sign in to view your workflows']} kind="automation" />
 
             <DiagramNode x={680} y={95} w={190} h={75} title="Supabase Auth" detail={['Identity and sessions']} kind="data" />
             <DiagramNode x={960} y={95} w={220} h={75} title="Supabase Postgres" detail={['Shared app records']} kind="data" shape="cylinder" />
@@ -167,16 +174,52 @@ function SystemArchitectureMap() {
           <span><i className="arch-map-legend-dot arch-map-legend-dot--optional" /> Optional integration path</span>
           <span><i className="arch-map-legend-line" /> Product event flow</span>
         </div>
+        <div className="arch-my-automations" aria-live="polite">
+          <div>
+            <span className="arch-overline">YOUR AUTOMATION LAYER</span>
+            <strong>{workflowDataReady ? workflows.length + ' saved · ' + activeWorkflows + ' active' : 'Private workflow status'}</strong>
+            <p>{workflowDataReady
+              ? latestWorkflow ? 'Most recently changed: ' + latestWorkflow.name + '. The map shows the shared system with your own saved workflow status layered on top.' : 'No saved workflows yet. Create one in Automation Studio and return here to see it reflected in this map.'
+              : 'Sign in to Quorlyth to view your private automations here. Other visitors cannot see your saved workflows.'}</p>
+          </div>
+          <button type="button" className="btn" onClick={onOpenAutomations}>Manage automations <Icon name="arrow-up-right" size={15} /></button>
+        </div>
       </div>
-      <p className="arch-caption">Map reproduced from the repository’s technical architecture diagram. The Railway route and YouTube evidence are optional; automations currently require an active Quorlyth session. The map shows connections and boundaries, not a promise that every external provider is currently healthy.</p>
+      <p className="arch-caption">Map reproduced from the repository’s technical architecture diagram. Your saved workflow count is specific to the signed-in account; it is not a platform-wide total. Event-triggered automations currently run while a Quorlyth session is active; the map does not promise an always-on worker or healthy external services.</p>
     </section>
   )
 }
 
 export function Architecture() {
   const nav = useNavigate()
+  const location = useLocation()
+  const app = useApp()
+  const [workflows, setWorkflows] = useState<WorkflowDefinition[]>([])
+  const [workflowDataReady, setWorkflowDataReady] = useState(false)
+  const automationCreatedId = new URLSearchParams(location.search).get('automationCreated') || ''
+  const createdWorkflow = workflows.find(workflow => workflow.id === automationCreatedId)
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
   const [statusError, setStatusError] = useState(false)
+
+  useEffect(() => {
+    setWorkflows([])
+    setWorkflowDataReady(false)
+    const store = app.backend?.store
+    const userId = app.me?.id
+    if (!store || !userId) return
+    return store.subscribe('data/users/' + userId + '/automations', docs => {
+      setWorkflows(docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id }) as WorkflowDefinition))
+      setWorkflowDataReady(true)
+    }, error => {
+      console.warn('Private architecture workflow summary could not refresh:', error)
+      setWorkflowDataReady(true)
+    })
+  }, [app.backend?.store, app.me?.id, app.demo])
+
+  useEffect(() => {
+    if (!automationCreatedId) return
+    document.getElementById('arch-system-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [automationCreatedId])
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -288,7 +331,11 @@ export function Architecture() {
         </div>
       </section>
 
-      <SystemArchitectureMap />
+      {automationCreatedId && <div className="arch-automation-created" role="status">
+        <div><span className="arch-overline">AUTOMATION SAVED</span><strong>{createdWorkflow ? createdWorkflow.name : 'Your new workflow'}</strong><p>{createdWorkflow ? 'This saved workflow is now reflected in the QUORLYTH / SYSTEM ARCHITECTURE map below.' : workflowDataReady ? 'The architecture map is open, but the saved workflow is not visible in the refreshed account list yet. Check Automation Studio for the saved status.' : 'Checking your saved workflow and updating the architecture view…'}</p></div>
+        <button className="btn p" type="button" onClick={() => nav('/automations')}>Open Automation Studio <Icon name="arrow-up-right" size={15} /></button>
+      </div>}
+      <SystemArchitectureMap workflows={workflows} workflowDataReady={workflowDataReady} onOpenAutomations={() => nav('/automations')} />
 
       <section className="arch-section arch-brain-section" aria-labelledby="arch-brain-title" data-arch-reveal>
         <div className="arch-section-heading">
