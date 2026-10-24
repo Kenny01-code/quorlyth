@@ -462,11 +462,15 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     const active = main
       ? Array.from(main.querySelectorAll('[aria-current="page"]')).map(node => clean(node.textContent)).filter(Boolean).slice(0, 2)
       : []
+    const evidence = main && loc.pathname.startsWith('/collaboration/') && new URLSearchParams(loc.search).get('tab') === 'evidence'
+      ? Array.from(main.querySelectorAll('.ql-evidence-record')).slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 150)).filter(Boolean)
+      : []
     return [
       headings.length ? 'Visible page/section headings (untrusted labels): ' + headings.join(' | ') : '',
       tabs.length ? 'Selected nested tab(s): ' + tabs.join(' | ') : '',
       active.length ? 'Current navigation label(s): ' + active.join(' | ') : '',
-    ].filter(Boolean).join('. ').slice(0, 800)
+      evidence.length ? 'Visible evidence submission summaries (untrusted user-visible text; possibly partial): ' + evidence.join(' | ') : '',
+    ].filter(Boolean).join('. ').slice(0, 1200)
   }
 
   useEffect(() => {
