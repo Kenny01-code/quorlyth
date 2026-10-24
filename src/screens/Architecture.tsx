@@ -37,6 +37,135 @@ const LAYERS = [
   { number: '04', title: 'Workflow automation', detail: 'Triggers can run conditions and actions such as creating an in-app notification, creating a task or calling an HTTPS webhook.' },
 ]
 
+
+interface DiagramNodeProps {
+  x: number
+  y: number
+  w: number
+  h: number
+  title: string
+  detail: string[]
+  kind?: 'app' | 'data' | 'api' | 'optional' | 'automation'
+}
+
+function DiagramNode({ x, y, w, h, title, detail, kind = 'app' }: DiagramNodeProps) {
+  return (
+    <g className={'arch-map-node arch-map-node--' + kind}>
+      <rect x={x} y={y} width={w} height={h} rx="13" />
+      <text className="arch-map-node-title" x={x + w / 2} y={y + 29}>{title}</text>
+      {detail.map((line, index) => (
+        <text key={line} className="arch-map-node-detail" x={x + w / 2} y={y + 51 + index * 15}>{line}</text>
+      ))}
+    </g>
+  )
+}
+
+function SystemArchitectureMap() {
+  return (
+    <section className="arch-section arch-map-section" aria-labelledby="arch-system-title" data-arch-reveal>
+      <div className="arch-section-heading">
+        <span className="arch-overline">02 / THE GITHUB SYSTEM MAP</span>
+        <h2 id="arch-system-title">The actual system architecture.</h2>
+        <p>This is the repository architecture map recreated as a real, responsive diagram on the site: the web client, Supabase identity and data, server-side AI boundary, provider services, Railway option, and the in-session automation path.</p>
+      </div>
+      <div className="arch-map-shell">
+        <div className="arch-map-toolbar">
+          <span><i /> QUORLYTH / SYSTEM ARCHITECTURE</span>
+          <span>LIVE MAP · INTERACTIVE CANVAS</span>
+        </div>
+        <div className="arch-map-scroll" tabIndex={0} aria-label="Scrollable technical architecture map">
+          <svg className="arch-map-svg" viewBox="0 0 1440 1200" role="img" aria-labelledby="arch-map-svg-title arch-map-svg-desc">
+            <title id="arch-map-svg-title">Quorlyth technical architecture map</title>
+            <desc id="arch-map-svg-desc">A diagram of the React web client and QuorlythBot, Supabase authentication and shared Postgres data with row-level security, Vercel server API routes and AI providers, optional Railway service, and event-driven workflow automation.</desc>
+            <defs>
+              <marker id="arch-map-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 Z" />
+              </marker>
+              <marker id="arch-map-arrow-start" markerWidth="8" markerHeight="8" refX="1" refY="3.5" orient="auto">
+                <path d="M7,0 L0,3.5 L7,7 Z" />
+              </marker>
+            </defs>
+
+            <rect className="arch-map-group arch-map-group--client" x="38" y="42" width="590" height="422" rx="20" />
+            <text className="arch-map-group-title" x="62" y="75">WEB CLIENT</text>
+            <text className="arch-map-group-subtitle" x="62" y="94">React interface and client-side data adapters</text>
+
+            <rect className="arch-map-group arch-map-group--automation" x="38" y="525" width="590" height="625" rx="20" />
+            <text className="arch-map-group-title" x="62" y="558">AUTOMATION RUNTIME</text>
+            <text className="arch-map-group-subtitle" x="62" y="577">Session-driven product events and follow-up actions</text>
+
+            <rect className="arch-map-group arch-map-group--api" x="640" y="392" width="440" height="285" rx="20" />
+            <text className="arch-map-group-title" x="664" y="425">SERVER-SIDE API BOUNDARY</text>
+            <text className="arch-map-group-subtitle" x="664" y="444">Provider secrets stay on the server</text>
+
+            <g className="arch-map-edges">
+              <path className="arch-map-edge" d="M285 155 H355" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge" d="M182 195 V275" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge" d="M285 155 H320 V315 H355" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--data" d="M285 137 H630 V132 H680" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--data" d="M585 155 H950" markerStart="url(#arch-map-arrow-start)" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--data" d="M1070 170 V230" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge" d="M182 355 V425 H665 V485 H700" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge" d="M865 515 V560" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--data" d="M1030 595 H1095 V190 H870 V170" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--ai" d="M1030 580 H1100 V458 H1120" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--ai" d="M1030 595 H1120 V568" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--optional" d="M1030 610 H1100 V678 H1120" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--automation" d="M470 355 V610" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--automation" d="M325 688 V780" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--automation" d="M325 855 V935" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--optional" d="M285 320 H600 V840 H720" markerEnd="url(#arch-map-arrow)" />
+              <path className="arch-map-edge arch-map-edge--data" d="M560 980 H640 V1140 H1400 V132 H1180" markerEnd="url(#arch-map-arrow)" />
+            </g>
+
+            <g className="arch-map-edge-labels">
+              <text x="305" y="127">components</text>
+              <text x="194" y="238">bot context</text>
+              <text x="450" y="127">data adapter</text>
+              <text x="448" y="145">read / write</text>
+              <text x="365" y="413">same-origin /api</text>
+              <text x="875" y="180">authenticated context</text>
+              <text x="1110" y="440">chat / reasoning</text>
+              <text x="1110" y="550">speech</text>
+              <text x="1110" y="660">optional evidence</text>
+              <text x="480" y="589">emit event</text>
+              <text x="515" y="758">optional direct API</text>
+              <text x="655" y="1125">persist action / records</text>
+            </g>
+
+            <DiagramNode x={80} y={115} w={205} h={80} title="React + TypeScript" detail={['Web client screens']} kind="app" />
+            <DiagramNode x={355} y={115} w={230} h={80} title="AppProvider + adapters" detail={['Local / demo / Supabase data']} kind="app" />
+            <DiagramNode x={80} y={275} w={205} h={80} title="QuorlythBot" detail={['Chat · voice · context']} kind="app" />
+            <DiagramNode x={355} y={275} w={230} h={80} title="Automation Studio" detail={['Events and workflow runtime']} kind="automation" />
+
+            <DiagramNode x={680} y={95} w={190} h={75} title="Supabase Auth" detail={['Identity and sessions']} kind="data" />
+            <DiagramNode x={960} y={95} w={220} h={75} title="Supabase Postgres" detail={['Shared app records']} kind="data" />
+            <DiagramNode x={960} y={230} w={220} h={75} title="RLS + ownership" detail={['Private data access rules']} kind="data" />
+
+            <DiagramNode x={700} y={455} w={330} h={60} title="Vercel /api routes" detail={['Chat · structured AI · speech']} kind="api" />
+            <DiagramNode x={700} y={560} w={330} h={75} title="Server AI handlers" detail={['openai.mjs · bot-context']} kind="api" />
+            <DiagramNode x={1120} y={420} w={260} h={75} title="Configured AI providers" detail={['Gemini · Grok · OpenAI']} kind="api" />
+            <DiagramNode x={1120} y={530} w={260} h={75} title="Speech pipeline" detail={['ElevenLabs-first · fallbacks']} kind="api" />
+            <DiagramNode x={1120} y={640} w={260} h={75} title="YouTube Data API" detail={['Optional review evidence']} kind="optional" />
+
+            <DiagramNode x={90} y={610} w={470} h={78} title="Product events" detail={['Idea created · task completed · workspace created']} kind="automation" />
+            <DiagramNode x={90} y={780} w={470} h={75} title="Trigger → condition → action" detail={['Runs while a Quorlyth session is active']} kind="automation" />
+            <DiagramNode x={90} y={935} w={470} h={90} title="Automation actions" detail={['In-app notification · create task · HTTPS webhook']} kind="automation" />
+            <DiagramNode x={720} y={795} w={560} h={90} title="Railway Node AI service" detail={['Optional direct API path when VITE_AI_API_BASE_URL is configured']} kind="optional" />
+          </svg>
+        </div>
+        <div className="arch-map-legend">
+          <span><i className="arch-map-legend-dot arch-map-legend-dot--data" /> Identity and shared records</span>
+          <span><i className="arch-map-legend-dot arch-map-legend-dot--ai" /> AI and speech services</span>
+          <span><i className="arch-map-legend-dot arch-map-legend-dot--optional" /> Optional integration path</span>
+          <span><i className="arch-map-legend-line" /> Product event flow</span>
+        </div>
+      </div>
+      <p className="arch-caption">Map reproduced from the repository’s technical architecture diagram. The Railway route and YouTube evidence are optional; automations currently require an active Quorlyth session. The map shows connections and boundaries, not a promise that every external provider is currently healthy.</p>
+    </section>
+  )
+}
+
 export function Architecture() {
   const nav = useNavigate()
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
@@ -152,41 +281,7 @@ export function Architecture() {
         </div>
       </section>
 
-      <section className="arch-section" aria-labelledby="arch-system-title" data-arch-reveal>
-        <div className="arch-section-heading">
-          <span className="arch-overline">02 / THE SYSTEM LAYERS</span>
-          <h2 id="arch-system-title">One product. Connected layers.</h2>
-          <p>The screens people use connect to shared records and server-side intelligence. The layers have different jobs, but work together to keep the creator workflow in one place.</p>
-        </div>
-        <div className="arch-system">
-          <div className="arch-system-cap">
-            <span><Icon name="home" size={17} /> THE QUORLYTH EXPERIENCE</span>
-            <small>What members and creators interact with</small>
-          </div>
-          <div className="arch-system-grid">
-            <div className="arch-system-module"><Icon name="community" size={21} /><b>Communities</b><span>People and shared interests</span></div>
-            <div className="arch-system-module"><Icon name="idea" size={21} /><b>Ideas</b><span>Submissions and discussions</span></div>
-            <div className="arch-system-module"><Icon name="queue" size={21} /><b>Creator workspace</b><span>Review, collaboration and action</span></div>
-            <div className="arch-system-module"><Icon name="spark" size={21} /><b>QuorlythBot</b><span>Contextual AI assistance</span></div>
-          </div>
-          <div className="arch-system-link"><span /><b className="arch-down-arrow" aria-hidden="true">↓</b><span /></div>
-          <div className="arch-system-band">
-            <div><span className="arch-layer-index">A / IDENTITY</span><b>Supabase authentication</b><p>Connect each person to their account and permissions.</p></div>
-            <div><span className="arch-layer-index">B / SHARED DATA</span><b>Supabase database</b><p>Store community activity, ideas and work records.</p></div>
-          </div>
-          <div className="arch-system-link"><span /><b className="arch-down-arrow" aria-hidden="true">↓</b><span /></div>
-          <div className="arch-system-grid arch-system-grid--services">
-            <div className="arch-system-module"><Icon name="spark" size={21} /><b>AI services</b><span>Summaries and idea review</span></div>
-            <div className="arch-system-module"><Icon name="voice" size={21} /><b>Voice services</b><span>Optional generated speech</span></div>
-            <div className="arch-system-module"><Icon name="timeline" size={21} /><b>Automation runtime</b><span>Trigger → condition → action</span></div>
-          </div>
-          <div className="arch-system-cap arch-system-cap--bottom">
-            <span><Icon name="private" size={17} /> SECURITY AND OWNERSHIP</span>
-            <small>Authenticated access, server-side credentials and data-access rules</small>
-          </div>
-        </div>
-        <p className="arch-caption">This is a high-level map. Provider credentials, private member records and deployment secrets are deliberately not part of a public architecture page.</p>
-      </section>
+      <SystemArchitectureMap />
 
       <section className="arch-section arch-brain-section" aria-labelledby="arch-brain-title" data-arch-reveal>
         <div className="arch-section-heading">
