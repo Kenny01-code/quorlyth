@@ -755,6 +755,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         robot.current?.think(true)
         try {
           const batch = await planUniversalActionBatch(t)
+          if (batch.type !== 'batchActions') throw new Error('I could not prepare a valid one-click organization plan.')
           const draft = add(cur, { r: 'u', t })
           const message = 'I prepared one coordinated plan with ' + batch.actions.length + ' validated change(s). Review the exact targets below, then apply everything with one confirmation. I will recheck permissions for every write; destructive actions, evidence decisions, publishing, workflow runs and activation are only included when explicitly requested. Nothing has changed yet.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
