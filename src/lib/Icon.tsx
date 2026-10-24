@@ -33,6 +33,7 @@ const GLYPH_FOR_ICON: Record<string, QuorlythGlyphName> = {
   'decline': 'close',
   'queue': 'review',
   'insight': 'progress',
+  'timeline': 'timeline',
   'home': 'brand',
   'discuss': 'message',
   'support': 'add',
