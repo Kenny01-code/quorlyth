@@ -6,3 +6,5 @@
 @keyframes arch-map-flow{to{stroke-dashoffset:-56}}
 @media(max-width:700px){.arch-map-toolbar{padding:14px}.arch-map-toolbar>span:last-child{font-size:8px}.arch-map-svg{min-width:1020px}.arch-map-legend{padding:14px;gap:10px 16px}.arch-map-legend span{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.arch-map-toolbar i,.arch-map-edges .arch-map-edge--ai,.arch-map-edges .arch-map-edge--automation{animation:none!important}.arch-map-node rect{transition:none}}
+
+.arch-map-cylinder rect,.arch-map-cylinder ellipse{fill:#121a21;stroke:#577087;stroke-width:1.2}
