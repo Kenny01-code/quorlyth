@@ -2,6 +2,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { Backend, createBackend } from '../backend'
 import { Comment, Community, CommunityAIOrganizerRequest, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkSubmission } from '../lib/types'
 import { slug } from '../lib/util'
+import { emitWorkflowEvent } from '../lib/automation'
 import { createDemoBackend, DEMO_ME } from './demo'
 
 type Rec<T> = Record<string, T>
@@ -398,7 +399,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!i.title.trim()) return { ok: false, error: 'An idea title is required.' }
       if (!data.communities.some(c => c.id === i.cid && !c.arch)) return { ok: false, error: 'The selected community does not exist or is archived.' }
       try {
-        await st!.create('ideas/' + slug(), { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me.id, tags: i.tags || [], at: Date.now() })
+        const ideaId = slug()
+        const at = Date.now()
+        await st!.create('ideas/' + ideaId, { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me.id, tags: i.tags || [], at })
+        emitWorkflowEvent('idea.created', { id: ideaId, title: i.title.trim(), body: i.body || '', communityId: i.cid, at })
         toast('Idea shared')
         return { ok: true }
       } catch (e: any) {
@@ -495,7 +499,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await st!.delete('communities/' + id)
       }, 'Community and its linked ideas deleted'),
       join: (cid, on) => w(() => up('members/' + me!.id, { c: { [cid]: on } }), on ? 'You joined' : 'You left'),
-      postIdea: i => w(() => st!.create('ideas/' + slug(), { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me!.id, tags: i.tags || [], at: Date.now() }), 'Idea shared'),
+      postIdea: i => w(async () => {
+        const ideaId = slug()
+        const at = Date.now()
+        await st!.create('ideas/' + ideaId, { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me!.id, tags: i.tags || [], at })
+        emitWorkflowEvent('idea.created', { id: ideaId, title: i.title.trim(), body: i.body || '', communityId: i.cid, at })
+      }, 'Idea shared'),
       postIdeaDetailed,
       vote: id => {
         const idea = data.ideas.find(item => item.id === id)
