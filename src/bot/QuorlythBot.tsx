@@ -457,9 +457,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         {
           accent: bs.accent || 'auto',
           signal: controller.signal,
-          // Use the selected ElevenLabs voice first, then the browser's built-in
-          // SpeechSynthesis voice directly. Do not substitute another AI TTS provider.
-          elevenLabsOnly: true,
+          // Try ElevenLabs first, then the server's configured voice providers.
+          // If no server provider can speak, use the device/browser voice as a final fallback.
           allowBrowserFallback: true,
           preferElevenLabsVoice: true,
           // Keep the same expressive ElevenLabs delivery in ordinary read-aloud
@@ -827,7 +826,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               robot.current?.talk(true)
             },
             finish,
-            { accent: bs.accent || 'auto', signal: controller.signal, elevenLabsOnly: true, allowBrowserFallback: true, preferElevenLabsVoice: true, liveTalk: true },
+            { accent: bs.accent || 'auto', signal: controller.signal, allowBrowserFallback: true, preferElevenLabsVoice: true, liveTalk: true },
           )
           if (!liveFallback.current || controller.signal.aborted) {
             playback.stop()
