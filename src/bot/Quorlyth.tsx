@@ -503,20 +503,22 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     const active = main
       ? Array.from(main.querySelectorAll('[aria-current="page"]')).map(node => clean(node.textContent)).filter(Boolean).slice(0, 2)
       : []
-    const evidence = main && ((loc.pathname.startsWith('/collaboration/') && new URLSearchParams(loc.search).get('tab') === 'evidence')
-      || (loc.pathname.startsWith('/workspaces/') && new URLSearchParams(loc.search).get('tab') === 'evidence'))
+    const evidenceTabSelected = tabs.some(tab => /evidence|reviews/i.test(tab)) || new URLSearchParams(loc.search).get('tab') === 'evidence'
+    const runsTabSelected = tabs.some(tab => /run history/i.test(tab)) || new URLSearchParams(loc.search).get('tab') === 'runs'
+    const evidence = main && ((loc.pathname.startsWith('/collaboration/') && evidenceTabSelected)
+      || (loc.pathname.startsWith('/workspaces/') && evidenceTabSelected))
       ? Array.from(main.querySelectorAll('.ql-evidence-record, .sw-artifact')).slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160)).filter(Boolean)
       : []
-    const workflowCards = main && loc.pathname === '/automations'
+    const workflowCards = main && loc.pathname === '/automations' && !runsTabSelected
       ? Array.from(main.querySelectorAll('.wa-workflow-card')).slice(0, 8).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 220)).filter(Boolean)
       : []
-    const workflowRuns = main && loc.pathname === '/automations' && new URLSearchParams(loc.search).get('tab') === 'runs'
+    const workflowRuns = main && loc.pathname === '/automations' && runsTabSelected
       ? Array.from(main.querySelectorAll('.wa-run-row')).slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200)).filter(Boolean)
       : []
     const standaloneProjects = main && loc.pathname === '/workspaces'
       ? Array.from(main.querySelectorAll('.sw-project-card')).slice(0, 6).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 180)).filter(Boolean)
       : []
-    const standaloneTasks = main && loc.pathname.startsWith('/workspaces/') && new URLSearchParams(loc.search).get('tab') !== 'evidence'
+    const standaloneTasks = main && loc.pathname.startsWith('/workspaces/') && !evidenceTabSelected
       ? Array.from(main.querySelectorAll('.sw-task, .sw-mini-task')).slice(0, 8).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 170)).filter(Boolean)
       : []
     const architectureAutomation = main && loc.pathname === '/architecture'
