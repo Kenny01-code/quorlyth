@@ -2039,6 +2039,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     if (!action) return
     setBusy(true); setStatus('Applying action')
     let ok = false
+    let successOverride = ''
     try {
       if (action.type === 'community') {
         if (!a.me) throw new Error('Sign in before creating a community.')
@@ -2103,6 +2104,58 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         if (!a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can review submitted work.')
         if (submission.submittedBy === a.me.id) throw new Error('You cannot review your own submission.')
         ok = await a.reviewMilestoneWork(action.submissionId, action.decision, action.reviewNote)
+      } else if (action.type === 'createAutomation') {
+        if (!a.me || !a.backend) throw new Error('Sign in before saving an automation.')
+        const path = 'data/users/' + a.me.id + '/automations/' + action.workflow.id
+        const existing = await a.backend.store.get(path)
+        if (existing) throw new Error('This workflow ID already exists. Rebuild the preview and try again.')
+        await a.backend.store.create(path, { ...action.workflow, ownerId: a.me.id, updatedAt: Date.now() })
+        ok = true
+      } else if (action.type === 'updateAutomation') {
+        if (!a.me || !a.backend) throw new Error('Sign in before editing an automation.')
+        const path = 'data/users/' + a.me.id + '/automations/' + action.workflowId
+        const current = await a.backend.store.get(path) as WorkflowDefinition | null
+        if (!current || current.ownerId !== a.me.id) throw new Error('That saved automation is no longer available in your account.')
+        const next: WorkflowDefinition = {
+          ...action.workflow,
+          id: current.id,
+          ownerId: a.me.id,
+          runHistory: current.runHistory || [],
+          createdAt: current.createdAt || action.workflow.createdAt,
+          updatedAt: Date.now(),
+          ...(current.lastRunAt ? { lastRunAt: current.lastRunAt } : {}),
+        }
+        await a.backend.store.set(path, next)
+        ok = true
+        successOverride = 'Automation updated. Its saved run history has been preserved.'
+      } else if (action.type === 'toggleAutomation') {
+        if (!a.me || !a.backend) throw new Error('Sign in before changing an automation.')
+        const path = 'data/users/' + a.me.id + '/automations/' + action.workflowId
+        const current = await a.backend.store.get(path) as WorkflowDefinition | null
+        if (!current || current.ownerId !== a.me.id) throw new Error('That saved automation is no longer available in your account.')
+        await a.backend.store.set(path, { ...current, status: action.status, updatedAt: Date.now() })
+        ok = true
+        successOverride = action.status === 'active' ? 'Automation activated and listening for its configured trigger while Quorlyth is open.' : 'Automation paused. Its definition and run history were kept.'
+      } else if (action.type === 'deleteAutomation') {
+        if (!a.me || !a.backend) throw new Error('Sign in before deleting an automation.')
+        const path = 'data/users/' + a.me.id + '/automations/' + action.workflowId
+        const current = await a.backend.store.get(path) as WorkflowDefinition | null
+        if (!current || current.ownerId !== a.me.id || current.name !== action.name) throw new Error('That automation changed or is no longer available. Refresh before trying again.')
+        await a.backend.store.delete(path)
+        ok = true
+        successOverride = 'Automation and its saved run history deleted.'
+      } else if (action.type === 'runAutomation') {
+        if (!a.me || !a.backend) throw new Error('Sign in before running an automation.')
+        const path = 'data/users/' + a.me.id + '/automations/' + action.workflowId
+        const current = await a.backend.store.get(path) as WorkflowDefinition | null
+        if (!current || current.ownerId !== a.me.id || current.name !== action.name) throw new Error('That automation changed or is no longer available. Refresh before running it.')
+        const event = { type: 'manual' as const, payload: { title: 'QuorlythBot-confirmed manual run', summary: 'Run requested in QuorlythBot after reviewing the action preview.', at: Date.now() } }
+        const run = await executeWorkflowActions(current, a.me.id, a.backend.store, event, message => a.toast(message))
+        await persistWorkflowRun(a.backend.store, path, run)
+        ok = true
+        successOverride = run.status === 'success'
+          ? 'Automation test run succeeded. Every configured action reported success.'
+          : 'Automation test run finished with status: ' + run.status + '. Check Automations → Run history for each step and its result.'
       }
       if (!ok) throw new Error('Quorlyth could not confirm that this change was saved. Check the permission notice and refresh before trying again.')
       if (ok) {
@@ -2121,11 +2174,12 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           deleteMilestone: 'Milestone and linked work submissions deleted successfully.',
           reviewSubmission: 'Evidence submission reviewed successfully.',
         }
-        const next = add(cur, { r: 'a', t: labels[action.type] })
+        const next = add(cur, { r: 'a', t: successOverride || labels[action.type] })
         persist(next); setPendingAction(null)
         if (action.type === 'community' || action.type === 'deleteCommunity') nav('/communities')
         if (action.type === 'idea') nav('/communities/' + action.cid)
         if (action.type === 'deleteIdea') nav('/communities/' + action.cid)
+        if (action.type === 'createAutomation') nav('/architecture?automationCreated=' + encodeURIComponent(action.workflow.id) + '#arch-system-title')
       }
     } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
     finally { setBusy(false); setStatus('Online') }
