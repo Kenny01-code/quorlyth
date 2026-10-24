@@ -2173,6 +2173,11 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           updateMilestone: 'Milestone updated successfully.',
           deleteMilestone: 'Milestone and linked work submissions deleted successfully.',
           reviewSubmission: 'Evidence submission reviewed successfully.',
+          createAutomation: 'Automation saved successfully.',
+          updateAutomation: 'Automation updated successfully.',
+          toggleAutomation: 'Automation status updated successfully.',
+          deleteAutomation: 'Automation deleted successfully.',
+          runAutomation: 'Automation test run completed.',
         }
         const next = add(cur, { r: 'a', t: successOverride || labels[action.type] })
         persist(next); setPendingAction(null)
