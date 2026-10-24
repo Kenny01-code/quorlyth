@@ -97,6 +97,9 @@ type PendingAction =
   | { type: 'createStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; title: string; description: string; acceptanceCriteria: string }
   | { type: 'updateStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; currentTitle: string; patch: { title?: string; description?: string; acceptanceCriteria?: string } }
   | { type: 'startStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; currentTitle: string }
+  | { type: 'setStandaloneWorkspaceStatus'; workspaceId: string; currentTitle: string; currentStatus: 'active' | 'completed'; status: 'active' | 'completed' }
+  | { type: 'deleteStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; currentTitle: string; linkedArtifactCount: number; attachmentCount: number }
+  | { type: 'deleteStandaloneWorkspace'; workspaceId: string; name: string; counts: { tasks: number; artifacts: number; attachments: number; members: number; comments: number; repos: number; activity: number } }
 
 function describeWorkflow(workflow: WorkflowDefinition): string {
   const trigger = workflow.trigger === 'manual' ? 'Manual trigger'
@@ -142,6 +145,9 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'createStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.title) + (action.description ? ' · ' + JSON.stringify(action.description.slice(0, 180)) : '') + (action.acceptanceCriteria ? ' · Done when: ' + JSON.stringify(action.acceptanceCriteria.slice(0, 100)) : '')
     case 'updateStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.description ? ' · Task details will change' : '') + (action.patch.acceptanceCriteria ? ' · Definition of done will change' : '')
     case 'startStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + ' · Status → In progress'
+    case 'setStandaloneWorkspaceStatus': return JSON.stringify(action.currentTitle) + ' · Status: ' + action.currentStatus + ' → ' + action.status
+    case 'deleteStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + ' · removes ' + action.linkedArtifactCount + ' linked evidence item' + (action.linkedArtifactCount === 1 ? '' : 's') + ' and ' + action.attachmentCount + ' private file attachment' + (action.attachmentCount === 1 ? '' : 's')
+    case 'deleteStandaloneWorkspace': return JSON.stringify(action.name) + ' · ' + action.counts.tasks + ' tasks · ' + action.counts.artifacts + ' evidence items · ' + action.counts.members + ' team memberships · ' + action.counts.attachments + ' private file attachments
   }
 }
 
