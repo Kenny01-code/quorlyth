@@ -49,6 +49,10 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
         { path: 'settings/space', data: { name: 'Quorlyth Test Space' } },
         { path: 'communities/community-1', data: { name: 'Fan Lab', ownerId: 'user-private-uuid', purpose: 'Develop ideas with fans' } },
         { path: 'ideas/idea-1', data: { title: 'A fan-led live show', body: 'Let fans shape the next live event.', cid: 'community-1', authorId: 'user-private-uuid', at: 100 } },
+        { path: 'profiles/user-private-uuid', data: { name: 'Divine Example' } },
+        { path: 'projects/idea-1', data: { ideaId: 'idea-1', summary: 'Build a fan-led prototype', status: 'active', dueAt: '2030-05-01', createdBy: 'user-private-uuid', at: 110 } },
+        { path: 'milestones/milestone-1', data: { projectId: 'idea-1', title: 'Launch prototype', description: 'Prepare and validate the first version.', status: 'in_progress', priority: 'high', dueAt: '2030-04-20', at: 115, assigneeId: 'user-private-uuid' } },
+        { path: 'ideas/idea-1/comments/comment-1', data: { authorId: 'user-private-uuid', text: 'Can we test the prototype with five fans?', at: 118 } },
         { path: 'ideaOutcomes/idea-1', data: { status: 'selected', at: 120 } },
         { path: 'reviews/idea-1', data: { score: 84 } },
         { path: 'members/user-private-uuid', data: { c: { 'community-1': true } } },
@@ -57,8 +61,10 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
     if (parsed.pathname === '/rest/v1/docs' && (parsed.searchParams.get('or') || '').includes('data/users/user-private-uuid/botset')) {
       assert.match(parsed.searchParams.get('or') || '', /data\/users\/user-private-uuid\/botset/)
       assert.match(parsed.searchParams.get('or') || '', /p_\*/)
+      assert.match(parsed.searchParams.get('or') || '', /automations\/\*/)
       return json([
         { path: 'data/users/user-private-uuid/botset', data: { tone: 'warm', len: 'medium', emo: false } },
+        { path: 'data/users/user-private-uuid/automations/workflow-test-1', data: { name: 'New idea triage', description: 'Notify and create a review task.', status: 'active', trigger: 'idea.created', condition: 'prototype', actions: [{ type: 'notify', title: 'Notification', message: 'New: {{event.title}}' }, { type: 'create_task', title: 'Create task', projectId: 'workspace-1' }], runHistory: [{ status: 'success', error: '' }] } },
         { path: 'data/users/user-private-uuid/p_strategy', data: { name: 'Launch plan', ins: 'Focus on accessible launch steps.' } },
       ])
     }
@@ -68,7 +74,8 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
   const system = await buildAuthenticatedBotContext({
     authorization: 'Bearer user-session-token',
     context: {
-      route: '/communities/community-1',
+      route: '/collaboration/idea-1?tab=plan',
+      pageContext: 'Collaboration workspace. Project plan tab is selected.',
       projectId: 'p_strategy',
       tone: 'warm',
       length: 'medium',
@@ -82,8 +89,16 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
   assert.match(system, /Quorlyth Test Space/)
   assert.match(system, /Fan Lab/)
   assert.match(system, /A fan-led live show/)
+  assert.match(system, /Build a fan-led prototype/)
+  assert.match(system, /Launch prototype/)
+  assert.match(system, /Can we test the prototype with five fans/)
+  assert.match(system, /Project plan tab is selected/)
+  assert.match(system, /Current route: \/collaboration\/idea-1\?tab=plan/)
   assert.match(system, /selected/)
   assert.match(system, /Launch plan/)
+  assert.match(system, /New idea triage/)
+  assert.match(system, /idea.created/)
+  assert.match(system, /Private automations in the current user-scoped context/)
   assert.match(system, /caller.s Supabase session|authenticated user/i)
   assert.doesNotMatch(system, /secret@example\.com/)
   assert.doesNotMatch(system, /user-private-uuid/)

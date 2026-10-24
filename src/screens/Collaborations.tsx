@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import type { Comment, WorkAttachment } from '../lib/types'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { MilestoneBoard } from '../components/MilestoneBoard'
@@ -256,6 +256,7 @@ function Workspace() {
   const { id = '' } = useParams()
   const a = useApp()
   const nav = useNavigate()
+  const loc = useLocation()
   const comments = useComments(id || null)
   const [reply, setReply] = useState('')
   const [replyTo, setReplyTo] = useState<string | null>(null)
@@ -266,7 +267,19 @@ function Workspace() {
   const [mentionPeople, setMentionPeople] = useState<{ id: string; name: string }[]>([])
   const [mentionLoading, setMentionLoading] = useState(false)
   const [discussionMode, setDiscussionMode] = useState<'inline' | 'expanded' | 'minimized'>('inline')
-  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview')
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => {
+    const requested = new URLSearchParams(loc.search).get('tab')
+    return requested === 'plan' || requested === 'evidence' || requested === 'team' ? requested : 'overview'
+  })
+  useEffect(() => {
+    const params = new URLSearchParams(loc.search)
+    const desired = workspaceTab === 'overview' ? null : workspaceTab
+    if (params.get('tab') === desired) return
+    if (desired) params.set('tab', desired)
+    else params.delete('tab')
+    const query = params.toString()
+    nav({ pathname: loc.pathname, search: query ? '?' + query : '', hash: loc.hash }, { replace: true })
+  }, [workspaceTab, loc.pathname, loc.search, loc.hash, nav])
   const [workspaceSummary, setWorkspaceSummary] = useState('Collaboration workspace ready. Add a project plan and milestones to coordinate the work.')
   const [projectDueDate, setProjectDueDate] = useState('')
   const [busy, setBusy] = useState(false)

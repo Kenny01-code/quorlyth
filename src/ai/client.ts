@@ -5,7 +5,7 @@ function aiApiUrl(path: string): string {
   return AI_API_BASE_URL ? `${AI_API_BASE_URL}${path}` : path
 }
 
-export interface BotContextRequest { route?: string; projectId?: string; tone?: string; length?: string; emojis?: boolean; browserContext?: string; liveContext?: string; /** Marks requests as part of continuous Live Talk, never as a privileged role. */ liveTalk?: boolean }
+export interface BotContextRequest { route?: string; pageContext?: string; projectId?: string; tone?: string; length?: string; emojis?: boolean; browserContext?: string; liveContext?: string; /** Marks requests as part of continuous Live Talk, never as a privileged role. */ liveTalk?: boolean }
 export interface StreamOpts { system?: string; tier?: 'quick' | 'smart'; signal?: AbortSignal; onText?: (full: string, piece: string) => void; accessToken?: string; context?: BotContextRequest }
 
 const SPEECH_PRESETS: Record<string, { gender: 'female' | 'male'; rate: number; pitch: number; names: RegExp }> = {

@@ -154,7 +154,8 @@ function AutomationWorkspace() {
       else await app.backend.store.create(path, next)
       app.toast(next.status === 'active' ? 'Workflow saved and activated.' : 'Workflow saved as a draft.')
       setEditing(null)
-        setTab('workflows')
+      setTab('workflows')
+      if (!current) nav('/architecture?automationCreated=' + encodeURIComponent(next.id) + '#arch-system-title')
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not save this workflow. Check your access and try again.')
     } finally {
