@@ -2033,20 +2033,6 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     return null
   }
 
-    if (a.me && /\b(profile|bio|about me|headline|display name|my name)\b/i.test(s)
-      && /\b(edit|update|change|set|rewrite|revise|rename)\b/i.test(s)
-      && !isDeleteRequest) {
-      const patch: Partial<Pick<Profile, 'name' | 'head' | 'bio'>> = {}
-      const quotedAfter = (pattern: RegExp) => (s.match(pattern)?.[1] || '').trim().replace(/^["“]|["”]$/g, '')
-      const name = quotedAfter(/\b(?:profile name|display name|my name|rename(?:\s+my)?\s+profile(?:\s+name)?|name)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
-      const headline = quotedAfter(/\b(?:profile headline|headline|role line)\s+(?:to|as|with|into)\s*["“]([^"”]+)["”]/i)
-      const bio = quotedAfter(/\b(?:bio|about me|profile description)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
-      if (name) patch.name = name.slice(0, 80)
-      if (headline) patch.head = headline.slice(0, 180)
-      if (bio) patch.bio = bio.slice(0, 280)
-      if (Object.keys(patch).length) return { type: 'updateProfile', patch }
-    }
-
   function planAction(text: string): PendingAction | null {
     const s = text.trim()
     const lower = s.toLowerCase()
@@ -2080,6 +2066,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       return (match?.[1] || '').trim().replace(/^["“]|["”]$/g, '')
     }
     const isDeleteRequest = /\b(delete|remove|permanently delete|destroy)\b/i.test(s)
+    if (a.me && /\b(profile|bio|about me|headline|display name|my name)\b/i.test(s)
+      && /\b(edit|update|change|set|rewrite|revise|rename)\b/i.test(s)
+      && !isDeleteRequest) {
+      const profilePatch: Partial<Pick<Profile, 'name' | 'head' | 'bio'>> = {}
+      const name = quotedAfter(/\b(?:profile name|display name|my name|rename(?:\s+my)?\s+profile(?:\s+name)?|name)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
+      const headline = quotedAfter(/\b(?:profile headline|headline|role line)\s+(?:to|as|with|into)\s*["“]([^"”]+)["”]/i)
+      const bio = quotedAfter(/\b(?:bio|about me|profile description)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+      if (name) profilePatch.name = name.slice(0, 80)
+      if (headline) profilePatch.head = headline.slice(0, 180)
+      if (bio) profilePatch.bio = bio.slice(0, 280)
+      if (Object.keys(profilePatch).length) return { type: 'updateProfile', patch: profilePatch }
+    }
     const ideaMention = /\b(?:idea|post)\b/i.test(s) && !/\b(?:milestone|submission|submitted work|deliverable|evidence)\b/i.test(s)
     if (a.me && isDeleteRequest && ideaMention) {
       const idea = targetIdea
