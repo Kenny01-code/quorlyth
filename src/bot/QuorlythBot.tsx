@@ -3218,6 +3218,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           toggleAutomation: 'Automation status updated successfully.',
           deleteAutomation: 'Automation deleted successfully.',
           runAutomation: 'Automation test run completed.',
+          createStandaloneWorkspace: 'Workspace created successfully.',
+          updateStandaloneWorkspace: 'Workspace details updated successfully.',
+          toggleStandaloneWorkspace: 'Workspace status changed successfully.',
+          deleteStandaloneWorkspace: 'Workspace and linked records deleted successfully.',
+          addStandaloneTask: 'Task added to the workspace successfully.',
+          updateStandaloneTask: 'Task details updated successfully.',
+          startStandaloneTask: 'Task started successfully.',
+          completeStandaloneTask: 'Task completed with approved evidence.',
+          deleteStandaloneTask: 'Task and linked evidence deleted successfully.',
+          postWorkspaceComment: 'Workspace message posted successfully.',
+          inviteWorkspaceMember: 'Workspace invitation sent successfully.',
+          reviewWorkspaceArtifact: 'Workspace evidence review recorded successfully.',
         }
         const next = add(cur, { r: 'a', t: successOverride || labels[action.type] })
         persist(next); setPendingAction(null)
@@ -3473,6 +3485,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           applyCollaboration: 'Apply to collaborate',
           reviewCollaboration: 'Review collaboration application',
           setIdeaStatus: 'Change idea review status',
+          createStandaloneWorkspace: 'Create standalone workspace',
+          updateStandaloneWorkspace: 'Edit standalone workspace',
+          toggleStandaloneWorkspace: 'Change workspace status',
+          deleteStandaloneWorkspace: 'Delete standalone workspace',
+          addStandaloneTask: 'Add workspace task',
+          updateStandaloneTask: 'Edit workspace task',
+          startStandaloneTask: 'Start workspace task',
+          completeStandaloneTask: 'Complete workspace task',
+          deleteStandaloneTask: 'Delete workspace task',
+          postWorkspaceComment: 'Post to workspace team room',
+          inviteWorkspaceMember: 'Invite workspace member',
+          reviewWorkspaceArtifact: 'Review workspace evidence',
                 } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity'
                   ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.'
                   : pendingAction.type === 'deleteIdea'
