@@ -800,9 +800,9 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         setPendingAction(action)
         return
       }
-      const contextualIntent = /\b(edit|rewrite|improve|update|change|revise|rename|comment|reply|respond|post|back|vote|unvote|unback|join|leave|apply|collaborat|accept|decline|approve|select|hold|reject|mark|set)\b/i.test(t)
-        && (/\b(idea|community|profile|bio|headline|name|about me|this account|collaboration|application|review queue|comment|reply|discussion|status|this page|this idea|this community|my profile)\b/i.test(t)
-          || /^(?:\/idea\/|\/communities\/|\/collaboration\/|\/queue|\/me(?:\/|$))/.test(loc.pathname))
+      const contextualIntent = /\b(create|build|add|edit|rewrite|improve|update|change|revise|rename|comment|reply|respond|post|back|vote|unvote|unback|join|leave|apply|collaborat|accept|decline|approve|select|hold|reject|mark|set|start|complete|finish|delete|remove|invite|reopen|close|review|submit)\b/i.test(t)
+        && (/\b(idea|community|profile|bio|headline|name|about me|this account|collaboration|application|review queue|comment|reply|discussion|status|this page|this idea|this community|my profile|workspace|standalone project|project space|task|deliverable|evidence|team room|workspace member|workspace evidence)\b/i.test(t)
+          || /^(?:\/idea\/|\/communities\/|\/collaboration\/|\/queue|\/me(?:\/|$)|\/workspaces(?:\/|$))/.test(loc.pathname))
       if (!raw && contextualIntent) {
         stopVoice(); setView('chat')
         setBusy(true); setStatus('Planning action'); setThinkingTask('Checking the current page and your permissions')
@@ -3137,6 +3137,195 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         successOverride = action.decision === 'approved'
           ? 'Evidence approved. The linked task can now be completed.'
           : 'Changes requested from the contributor.'
+      } else if (action.type === 'createStandaloneWorkspace') {
+        if (!a.me || !a.backend) throw new Error('Sign in before creating a workspace.')
+        const store = a.backend.store
+        const title = action.title.trim().slice(0, 100)
+        const summary = action.summary.trim().slice(0, 4000)
+        if (title.length < 2 || summary.length < 8) throw new Error('Workspace title or brief is no longer valid.')
+        if (action.dueAt != null && action.dueAt < new Date(new Date().setHours(0, 0, 0, 0)).getTime()) throw new Error('That due date is now in the past. Rebuild the preview.')
+        const id = slug()
+        const now = Date.now()
+        await store.create('standaloneProjects/' + id, { id, title, summary, status: 'active', createdBy: a.me.id, at: now, updatedAt: now, dueAt: action.dueAt ?? null, visibility: 'team' })
+        try {
+          await store.create('standaloneProjectMembers/' + id + '__' + a.me.id, { id: id + '__' + a.me.id, projectId: id, userId: a.me.id, role: 'owner', status: 'active', invitedBy: a.me.id, at: now, updatedAt: now })
+        } catch (error) {
+          await store.delete('standaloneProjects/' + id).catch(() => undefined)
+          throw error
+        }
+        emitWorkflowEvent('workspace.created', { id, title, summary, projectId: id, at: now })
+        ok = true
+        successOverride = 'Workspace created successfully. Opening your new workspace now.'
+      } else if (action.type === 'updateStandaloneWorkspace') {
+        if (!a.me || !a.backend) throw new Error('Sign in before editing a workspace.')
+        const store = a.backend.store
+        const current = await store.get('standaloneProjects/' + action.workspaceId) as any
+        if (!current || current.title !== action.oldTitle) throw new Error('That workspace changed or is no longer available. Refresh and review the changes again.')
+        const membership = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = current.createdBy === a.me.id || (membership?.status === 'active' && ['owner', 'manager'].includes(membership.role))
+        if (!manager || current.status !== 'active') throw new Error('Only a workspace manager can edit the details of an active workspace.')
+        if (action.patch.title !== undefined && action.patch.title.trim().length < 2) throw new Error('Workspace title must contain at least two characters.')
+        if (action.patch.summary !== undefined && action.patch.summary.trim().length < 8) throw new Error('Workspace brief must contain at least eight characters.')
+        if (action.patch.dueAt != null && action.patch.dueAt < new Date(new Date().setHours(0, 0, 0, 0)).getTime()) throw new Error('That due date is now in the past. Rebuild the preview.')
+        await store.update('standaloneProjects/' + action.workspaceId, {
+          ...(action.patch.title !== undefined ? { title: action.patch.title.trim().slice(0, 100) } : {}),
+          ...(action.patch.summary !== undefined ? { summary: action.patch.summary.trim().slice(0, 4000) } : {}),
+          ...(action.patch.dueAt !== undefined ? { dueAt: action.patch.dueAt ?? null } : {}),
+          updatedAt: Date.now(),
+        })
+        ok = true
+      } else if (action.type === 'toggleStandaloneWorkspace') {
+        if (!a.me || !a.backend) throw new Error('Sign in before changing a workspace status.')
+        const store = a.backend.store
+        const current = await store.get('standaloneProjects/' + action.workspaceId) as any
+        if (!current) throw new Error('That workspace no longer exists.')
+        const membership = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = current.createdBy === a.me.id || (membership?.status === 'active' && ['owner', 'manager'].includes(membership.role))
+        if (!manager) throw new Error('Only a workspace manager can close or reopen it.')
+        if (current.status !== action.previous || !['active', 'completed'].includes(action.status)) throw new Error('The workspace status changed since the preview. Refresh and try again.')
+        await store.update('standaloneProjects/' + action.workspaceId, { status: action.status, updatedAt: Date.now() })
+        ok = true
+        successOverride = action.status === 'completed' ? 'Workspace closed.' : 'Workspace reopened.'
+      } else if (action.type === 'deleteStandaloneWorkspace') {
+        if (!a.me || !a.backend) throw new Error('Sign in before deleting a workspace.')
+        const store = a.backend.store
+        const current = await store.get('standaloneProjects/' + action.workspaceId) as any
+        if (!current || current.createdBy !== a.me.id || current.title !== action.title) throw new Error('Only the workspace creator can delete it, and the workspace must still match the preview.')
+        const fresh = await store.exportAll()
+        const collections = ['standaloneArtifacts', 'standaloneTasks', 'standaloneComments', 'standaloneGithubRepos', 'standaloneActivity', 'standaloneProjectMembers']
+        const linked = fresh.filter(row => collections.some(collection => row.path.startsWith(collection + '/') && !row.path.slice((collection + '/').length).includes('/') && row.data?.projectId === action.workspaceId))
+        const artifacts = linked.filter(row => row.path.startsWith('standaloneArtifacts/'))
+        const attachments = [...new Set(artifacts.flatMap(row => Array.isArray(row.data?.attachments) ? row.data.attachments.map((file: any) => file?.path).filter((path: any): path is string => typeof path === 'string' && !!path) : []))]
+        const failedFiles: string[] = []
+        for (const path of attachments) {
+          try { if (!a.backend.deleteWorkFile) throw new Error('File removal is not configured.'); await a.backend.deleteWorkFile(path) }
+          catch { failedFiles.push(path) }
+        }
+        if (failedFiles.length) throw new Error('Some private attachments could not be removed. Workspace records were left in place; check storage access and retry.')
+        for (const row of linked) await store.delete(row.path)
+        await store.delete('standaloneProjects/' + action.workspaceId)
+        ok = true
+        successOverride = 'Workspace and linked task, evidence, comments, team and activity records deleted.'
+      } else if (action.type === 'addStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before adding a workspace task.')
+        const store = a.backend.store
+        const workspace = await store.get('standaloneProjects/' + action.workspaceId) as any
+        const membership = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = !!workspace && (workspace.createdBy === a.me.id || (membership?.status === 'active' && ['owner', 'manager'].includes(membership.role)))
+        if (!manager || workspace.status !== 'active') throw new Error('Only a manager can add tasks to an active workspace.')
+        const title = action.title.trim().slice(0, 140)
+        if (title.length < 2) throw new Error('Task title must contain at least two characters.')
+        if (action.dueAt != null && action.dueAt < new Date(new Date().setHours(0, 0, 0, 0)).getTime()) throw new Error('That task deadline is now in the past. Rebuild the preview.')
+        const fresh = await store.exportAll()
+        const activeMembers = fresh.filter(row => row.path.startsWith('standaloneProjectMembers/') && row.data?.projectId === action.workspaceId && row.data?.status === 'active').map(row => row.data)
+        const allowedAssignees = new Set([workspace.createdBy, ...activeMembers.filter(member => member.role !== 'viewer').map(member => member.userId)])
+        if (action.assigneeId && !allowedAssignees.has(action.assigneeId)) throw new Error('The selected assignee is no longer eligible to receive this task.')
+        const id = slug(); const now = Date.now()
+        await store.create('standaloneTasks/' + id, { id, projectId: action.workspaceId, title, description: action.description.trim().slice(0, 2000), acceptanceCriteria: action.acceptanceCriteria.trim().slice(0, 1000), status: 'todo', createdBy: a.me.id, at: now, updatedAt: now, dueAt: action.dueAt ?? null, assigneeId: action.assigneeId || null })
+        ok = true
+        successOverride = 'Task added to the workspace plan.'
+      } else if (action.type === 'updateStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before editing a task.')
+        const store = a.backend.store
+        const task = await store.get('standaloneTasks/' + action.taskId) as any
+        const workspace = await store.get('standaloneProjects/' + action.workspaceId) as any
+        const membership = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = !!workspace && (workspace.createdBy === a.me.id || (membership?.status === 'active' && ['owner', 'manager'].includes(membership.role)))
+        if (!task || task.projectId !== action.workspaceId || task.title !== action.oldTitle || !manager || workspace.status !== 'active') throw new Error('Only a manager can edit the matching task in an active workspace.')
+        if (action.patch.title !== undefined && action.patch.title.trim().length < 2) throw new Error('Task title must contain at least two characters.')
+        if (action.patch.dueAt != null && action.patch.dueAt < new Date(new Date().setHours(0, 0, 0, 0)).getTime()) throw new Error('That task deadline is now in the past.')
+        if (action.patch.assigneeId !== undefined) {
+          const fresh = await store.exportAll()
+          const activeMembers = fresh.filter(row => row.path.startsWith('standaloneProjectMembers/') && row.data?.projectId === action.workspaceId && row.data?.status === 'active').map(row => row.data)
+          const permitted = new Set([workspace.createdBy, ...activeMembers.filter(member => member.role !== 'viewer').map(member => member.userId)])
+          if (action.patch.assigneeId && !permitted.has(action.patch.assigneeId)) throw new Error('The selected assignee is no longer eligible to receive this task.')
+        }
+        await store.update('standaloneTasks/' + action.taskId, { ...(action.patch.title !== undefined ? { title: action.patch.title.trim().slice(0, 140) } : {}), ...(action.patch.description !== undefined ? { description: action.patch.description.trim().slice(0, 2000) } : {}), ...(action.patch.acceptanceCriteria !== undefined ? { acceptanceCriteria: action.patch.acceptanceCriteria.trim().slice(0, 1000) } : {}), ...(action.patch.dueAt !== undefined ? { dueAt: action.patch.dueAt ?? null } : {}), ...(action.patch.assigneeId !== undefined ? { assigneeId: action.patch.assigneeId || null } : {}), updatedAt: Date.now() })
+        ok = true
+      } else if (action.type === 'startStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before starting a task.')
+        const store = a.backend.store
+        const task = await store.get('standaloneTasks/' + action.taskId) as any
+        const workspace = await store.get('standaloneProjects/' + action.workspaceId) as any
+        const membership = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = !!workspace && (workspace.createdBy === a.me.id || (membership?.status === 'active' && ['owner', 'manager'].includes(membership.role)))
+        const contributor = !!workspace && (manager || (membership?.status === 'active' && membership.role === 'contributor'))
+        if (!task || task.projectId !== action.workspaceId || task.status !== 'todo' || workspace?.status !== 'active' || !contributor) throw new Error('This task can no longer be started by your current workspace role.')
+        if (task.assigneeId && task.assigneeId !== a.me.id && !manager) throw new Error('That task is assigned to another team member.')
+        await store.update('standaloneTasks/' + action.taskId, { status: 'in_progress', ...(!task.assigneeId ? { assigneeId: a.me.id } : {}), updatedAt: Date.now() })
+        ok = true
+      } else if (action.type === 'completeStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before completing a task.')
+        const store = a.backend.store
+        const task = await store.get('standaloneTasks/' + action.taskId) as any
+        const workspace = await store.get('standaloneProjects/' + action.workspaceId) as any
+        const membership = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = !!workspace && (workspace.createdBy === a.me.id || (membership?.status === 'active' && ['owner', 'manager'].includes(membership.role)))
+        if (!task || task.projectId !== action.workspaceId || task.status === 'done' || workspace?.status !== 'active' || !manager) throw new Error('This task can no longer be completed by your current workspace role.')
+        const fresh = await store.exportAll()
+        const artifacts = fresh.filter(row => row.path.startsWith('standaloneArtifacts/') && row.data?.projectId === action.workspaceId && row.data?.taskId === action.taskId).map(row => row.data)
+        const approved = artifacts.filter(item => item.status === 'approved' && ((item.provider === 'github' && item.verificationStatus === 'source_verified') || (item.provider === 'manual' && item.verificationStatus === 'submitted_evidence')))
+        if (!approved.length) throw new Error('This task cannot be completed until linked evidence is reviewed and approved.')
+        const at = Date.now()
+        await store.update('standaloneTasks/' + action.taskId, { status: 'done', updatedAt: at })
+        emitWorkflowEvent('task.completed', { id: action.taskId, taskId: action.taskId, projectId: action.workspaceId, title: task.title, summary: task.description || '', at })
+        ok = true
+        successOverride = 'Task completed with approved evidence.'
+      } else if (action.type === 'deleteStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before deleting a task.')
+        const store = a.backend.store
+        const task = await store.get('standaloneTasks/' + action.taskId) as any
+        const workspace = await store.get('standaloneProjects/' + action.workspaceId) as any
+        const membership = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = !!workspace && (workspace.createdBy === a.me.id || (membership?.status === 'active' && ['owner', 'manager'].includes(membership.role)))
+        if (!task || task.projectId !== action.workspaceId || task.title !== action.title || !manager || workspace.status !== 'active') throw new Error('Only a manager can delete this matching task in an active workspace.')
+        const fresh = await store.exportAll()
+        const linked = fresh.filter(row => row.path.startsWith('standaloneArtifacts/') && row.data?.projectId === action.workspaceId && row.data?.taskId === action.taskId)
+        const attachments = [...new Set(linked.flatMap(row => Array.isArray(row.data?.attachments) ? row.data.attachments.map((file: any) => file?.path).filter((path: any): path is string => typeof path === 'string' && !!path) : []))]
+        const failed: string[] = []
+        for (const path of attachments) {
+          try { if (!a.backend.deleteWorkFile) throw new Error('File deletion is not configured.'); await a.backend.deleteWorkFile(path) }
+          catch { failed.push(path) }
+        }
+        if (failed.length) throw new Error('Some private evidence files could not be removed. The task and evidence records were left in place; check storage access and retry.')
+        for (const row of linked) await store.delete(row.path)
+        await store.delete('standaloneTasks/' + action.taskId)
+        ok = true
+      } else if (action.type === 'postWorkspaceComment') {
+        if (!a.me || !a.backend) throw new Error('Sign in before posting a workspace message.')
+        const store = a.backend.store
+        const workspace = await store.get('standaloneProjects/' + action.workspaceId) as any
+        const member = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        if (!workspace || !(workspace.createdBy === a.me.id || member?.status === 'active')) throw new Error('Only active workspace members can post in the team room.')
+        const message = action.text.trim().slice(0, 3000)
+        if (!message) throw new Error('Write a message before posting.')
+        const id = slug()
+        await store.create('standaloneComments/' + id, { id, projectId: action.workspaceId, authorId: a.me.id, text: message, at: Date.now() })
+        ok = true
+      } else if (action.type === 'inviteWorkspaceMember') {
+        if (!a.me || !a.backend) throw new Error('Sign in before inviting a workspace member.')
+        const store = a.backend.store
+        const workspace = await store.get('standaloneProjects/' + action.workspaceId) as any
+        const member = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = !!workspace && (workspace.createdBy === a.me.id || (member?.status === 'active' && ['owner', 'manager'].includes(member.role)))
+        if (!manager || workspace.status !== 'active' || !a.data.profiles[action.memberId] || action.memberId === a.me.id) throw new Error('Only an active workspace manager can invite an existing Quorlyth member.')
+        const fresh = await store.exportAll()
+        if (fresh.some(row => row.path.startsWith('standaloneProjectMembers/') && row.data?.projectId === action.workspaceId && row.data?.userId === action.memberId && row.data?.status !== 'removed')) throw new Error('That person already has a membership or pending invitation.')
+        const id = action.workspaceId + '__' + action.memberId
+        await store.create('standaloneProjectMembers/' + id, { id, projectId: action.workspaceId, userId: action.memberId, role: action.role, status: 'invited', invitedBy: a.me.id, at: Date.now(), updatedAt: Date.now() })
+        ok = true
+      } else if (action.type === 'reviewWorkspaceArtifact') {
+        if (!a.me || !a.backend) throw new Error('Sign in before reviewing workspace evidence.')
+        const store = a.backend.store
+        const artifact = await store.get('standaloneArtifacts/' + action.artifactId) as any
+        const workspace = await store.get('standaloneProjects/' + action.workspaceId) as any
+        const member = await store.get('standaloneProjectMembers/' + action.workspaceId + '__' + a.me.id) as any
+        const manager = !!workspace && (workspace.createdBy === a.me.id || (member?.status === 'active' && ['owner', 'manager'].includes(member.role)))
+        if (!artifact || artifact.projectId !== action.workspaceId || artifact.taskId !== action.taskId || artifact.status !== 'submitted' || !manager || artifact.submittedBy === a.me.id || workspace.status !== 'active') throw new Error('This evidence is no longer pending or your workspace role cannot review it.')
+        if (!['approved', 'changes_requested'].includes(action.decision) || (action.decision === 'changes_requested' && action.note.trim().length < 4)) throw new Error('A valid evidence review decision and note are required.')
+        await store.update('standaloneArtifacts/' + action.artifactId, { status: action.decision, reviewNote: action.note.trim().slice(0, 1600), reviewedAt: Date.now(), reviewedBy: a.me.id, updatedAt: Date.now() })
+        ok = true
+        successOverride = action.decision === 'approved' ? 'Evidence approved. The linked task can now be completed.' : 'Changes requested from the contributor.'
       } else if (action.type === 'createAutomation') {
         if (!a.me || !a.backend) throw new Error('Sign in before saving an automation.')
         const path = 'data/users/' + a.me.id + '/automations/' + action.workflow.id
