@@ -1580,6 +1580,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       return go('/communities', 'I opened the communities list. Choose the community you want, or tell me its exact name and I will open it if it is available to your account.')
     }
     const routeRules: [RegExp,string,string][] = [
+      [/\b(open|show|take me to|go to|view|visit|browse)\b[\s\S]*\b(automation studio|automations|automation workflows|workflows)\b/i, '/automations', 'Opening Automation Studio.'],
+      [/\b(open|show|take me to|go to|view|visit|browse)\b[\s\S]*\b(system architecture|system map|architecture map|architecture page)\b/i, '/architecture', 'Opening the QUORLYTH / SYSTEM ARCHITECTURE map.'],
       [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(dashboard|home)\b/i, '/dashboard', 'Opening your dashboard.'],
       [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(review queue|queue|ideas to review)\b/i, '/queue', 'Opening the review queue.'],
       [/\b(open|show|take me to|go to|view)\b[\s\S]*\b(analytics|insights)\b/i, '/analytics', 'Opening analytics.'],
