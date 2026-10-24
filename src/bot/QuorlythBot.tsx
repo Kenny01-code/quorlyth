@@ -5,7 +5,7 @@ import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { Chat, ChatMsg, Community, Idea } from '../lib/types'
-import { executeWorkflowActions, newWorkflowId, persistWorkflowRun } from '../lib/automation'
+import { emitWorkflowEvent, executeWorkflowActions, newWorkflowId, persistWorkflowRun } from '../lib/automation'
 import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTrigger } from '../lib/automation'
 import { cn, slug, when } from '../lib/util'
 import { askJson, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
@@ -92,6 +92,11 @@ type PendingAction =
   | { type: 'toggleAutomation'; workflowId: string; currentName: string; status: 'active' | 'draft' }
   | { type: 'deleteAutomation'; workflowId: string; name: string }
   | { type: 'runAutomation'; workflowId: string; name: string }
+  | { type: 'createStandaloneWorkspace'; workspaceId: string; title: string; summary: string }
+  | { type: 'updateStandaloneWorkspace'; workspaceId: string; currentTitle: string; patch: { title?: string; summary?: string } }
+  | { type: 'createStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; title: string; description: string; acceptanceCriteria: string }
+  | { type: 'updateStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; currentTitle: string; patch: { title?: string; description?: string; acceptanceCriteria?: string } }
+  | { type: 'startStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; currentTitle: string }
 
 function describeWorkflow(workflow: WorkflowDefinition): string {
   const trigger = workflow.trigger === 'manual' ? 'Manual trigger'
@@ -132,6 +137,11 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'toggleAutomation': return action.currentName + ' → ' + (action.status === 'active' ? 'Active' : 'Draft / paused')
     case 'deleteAutomation': return JSON.stringify(action.name) + ' · saved run history will also be deleted'
     case 'runAutomation': return JSON.stringify(action.name) + ' · test run will execute configured actions'
+    case 'createStandaloneWorkspace': return JSON.stringify(action.title) + ' · private workspace · ' + JSON.stringify(action.summary.slice(0, 220))
+    case 'updateStandaloneWorkspace': return action.currentTitle + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.summary ? ' · Brief → ' + JSON.stringify(action.patch.summary.slice(0, 180)) : '')
+    case 'createStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.title) + (action.description ? ' · ' + JSON.stringify(action.description.slice(0, 180)) : '') + (action.acceptanceCriteria ? ' · Done when: ' + JSON.stringify(action.acceptanceCriteria.slice(0, 100)) : '')
+    case 'updateStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.description ? ' · Task details will change' : '') + (action.patch.acceptanceCriteria ? ' · Definition of done will change' : '')
+    case 'startStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + ' · Status → In progress'
   }
 }
 
