@@ -2337,6 +2337,55 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         if (!a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can review submitted work.')
         if (submission.submittedBy === a.me.id) throw new Error('You cannot review your own submission.')
         ok = await a.reviewMilestoneWork(action.submissionId, action.decision, action.reviewNote)
+      } else if (action.type === 'updateProfile') {
+        if (!a.me) throw new Error('Sign in before editing your profile.')
+        ok = await a.saveProfile(action.patch)
+      } else if (action.type === 'addIdeaComment') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!a.me || !idea || !action.text.trim()) throw new Error('That idea discussion is no longer available. Refresh and try again.')
+        if (idea.cid !== a.data.communities.find(community => community.id === idea.cid)?.id) throw new Error('The idea community is no longer available.')
+        ok = await a.addComment(idea.id, action.text)
+      } else if (action.type === 'voteIdea') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        const community = idea && a.data.communities.find(item => item.id === idea.cid)
+        if (!a.me || !idea || !community || community.arch) throw new Error('That idea is no longer open for backing.')
+        if (a.iVoted(idea.id) === action.backing) throw new Error('Your backing state changed since the preview. Refresh the idea and try again.')
+        ok = await a.vote(idea.id)
+      } else if (action.type === 'communityMembership') {
+        const community = a.data.communities.find(item => item.id === action.cid)
+        if (!a.me || !community || community.arch) throw new Error('That community is no longer available for membership changes.')
+        const joined = a.joined(community.id)
+        if (action.mode === 'leave') {
+          if (!joined) throw new Error('You are no longer a member of that community.')
+          ok = await a.join(community.id, false)
+        } else if (joined) {
+          throw new Error('You are already a member of that community.')
+        } else if (action.mode === 'request') {
+          if (!community.joinApproval) {
+            ok = await a.join(community.id, true)
+          } else {
+            ok = await a.requestCommunityJoin(community.id, action.message)
+          }
+        } else {
+          if (community.joinApproval && !a.canManageCommunity(community.id)) throw new Error('This community requires an approval request rather than an instant join.')
+          ok = await a.join(community.id, true)
+        }
+      } else if (action.type === 'applyCollaboration') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!a.me || !idea || idea.authorId === a.me.id) throw new Error('You cannot apply to collaborate on this idea.')
+        if (!a.canManageCommunity(idea.cid) && !a.joined(idea.cid)) throw new Error('Join the idea community before applying to collaborate.')
+        ok = await a.applyToCollaborate(idea.id, action.message)
+      } else if (action.type === 'reviewCollaboration') {
+        const application = a.data.volunteers.find(item => item.id === action.applicationId && item.status === 'pending')
+        const idea = application && a.data.ideas.find(item => item.id === application.ideaId)
+        if (!application || !idea || !a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can review a pending application.')
+        ok = await a.decideVolunteer(application.id, action.decision)
+      } else if (action.type === 'setIdeaStatus') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!idea || a.statusOf(idea.id) !== action.previous) throw new Error('That idea’s review status changed since the preview. Refresh the queue and try again.')
+        if (!a.owner && !a.canManageCommunity(idea.cid)) throw new Error('Only the platform owner or community manager can update this idea’s review status.')
+        if (!(['review', 'selected', 'held', 'declined'] as string[]).includes(action.status)) throw new Error('That review status is not supported by QuorlythBot.')
+        ok = await a.setStatus(idea.id, action.status, action.reason ? { reason: action.reason } : undefined)
       } else if (action.type === 'createAutomation') {
         if (!a.me || !a.backend) throw new Error('Sign in before saving an automation.')
         const path = 'data/users/' + a.me.id + '/automations/' + action.workflow.id
@@ -2406,6 +2455,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           updateMilestone: 'Milestone updated successfully.',
           deleteMilestone: 'Milestone and linked work submissions deleted successfully.',
           reviewSubmission: 'Evidence submission reviewed successfully.',
+          updateProfile: 'Your profile was updated successfully.',
+          addIdeaComment: 'Your comment was posted successfully.',
+          voteIdea: 'Your backing choice was updated successfully.',
+          communityMembership: 'Your community membership request was processed successfully.',
+          applyCollaboration: 'Your collaboration application was submitted successfully.',
+          reviewCollaboration: 'The collaboration application was reviewed successfully.',
+          setIdeaStatus: 'The idea review status was updated successfully.',
           createAutomation: 'Automation saved successfully.',
           updateAutomation: 'Automation updated successfully.',
           toggleAutomation: 'Automation status updated successfully.',
@@ -2417,6 +2473,10 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         if (action.type === 'community' || action.type === 'deleteCommunity') nav('/communities')
         if (action.type === 'idea') nav('/communities/' + action.cid)
         if (action.type === 'deleteIdea') nav('/communities/' + action.cid)
+        if (action.type === 'addIdeaComment' || action.type === 'voteIdea' || action.type === 'applyCollaboration' || action.type === 'reviewCollaboration') nav('/idea/' + action.ideaId)
+        if (action.type === 'communityMembership') nav('/communities/' + action.cid)
+        if (action.type === 'setIdeaStatus') nav('/queue')
+        if (action.type === 'updateProfile') nav('/me')
         if (action.type === 'createAutomation') nav('/architecture?automationCreated=' + encodeURIComponent(action.workflow.id) + '#arch-system-title')
       }
     } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
