@@ -84,6 +84,7 @@ type PendingAction =
   | { type: 'addMilestone'; projectId: string; ideaTitle: string; title: string; description: string; priority: 'low' | 'normal' | 'high' | 'critical'; acceptanceCriteria: string }
   | { type: 'updateMilestone'; milestoneId: string; projectId: string; oldTitle: string; patch: { title?: string; description?: string; status?: 'in_progress' } }
   | { type: 'deleteMilestone'; milestoneId: string; projectId: string; title: string; ideaTitle: string }
+  | { type: 'reviewSubmission'; submissionId: string; projectId: string; ideaTitle: string; milestoneTitle: string; revision: number; submitterName: string; decision: 'approved' | 'changes_requested'; reviewNote: string }
 
 function pendingActionDetail(action: PendingAction, communities: { id: string; name: string }[], ideas: { id: string; title: string }[]): string {
   switch (action.type) {
@@ -99,6 +100,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'addMilestone': return action.ideaTitle + ' · ' + JSON.stringify(action.title) + ' · ' + action.priority + ' priority' + (action.description ? ' · ' + JSON.stringify(action.description.slice(0, 150)) : '')
     case 'updateMilestone': return 'Milestone: ' + JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.status ? ' · Status → In progress' : '') + (action.patch.description ? ' · Description updated' : '')
     case 'deleteMilestone': return JSON.stringify(action.title) + ' · ' + action.ideaTitle + ' · linked work submissions and private attachments may be removed'
+    case 'reviewSubmission': return (action.decision === 'approved' ? 'Approve' : 'Request changes to') + ' revision ' + action.revision + ' for ' + action.milestoneTitle + ' · submitted by ' + action.submitterName + (action.reviewNote ? ' · reviewer note: ' + JSON.stringify(action.reviewNote.slice(0, 240)) : '')
   }
 }
 
