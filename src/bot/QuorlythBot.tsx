@@ -768,6 +768,38 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         }
       }
 
+      const workspaceCommand = /\b(workspace|project space|standalone task|workspace task|independent project|task)\b/i.test(t)
+        && /\b(create|build|set up|make|add|edit|update|rename|rewrite|revise|organize|improve|start|begin|mark|complete|close|reopen|reactivate|delete|remove)\b/i.test(t)
+        && (!loc.pathname.startsWith('/collaboration/') || /\b(standalone|independent workspace|project space)\b/i.test(t) || loc.pathname.startsWith('/workspaces/'))
+      if (workspaceCommand) {
+        stopVoice()
+        setView('chat')
+        setBusy(true); setStatus('Planning workspace action'); setThinkingTask('Checking the current workspace and its access rules')
+        robot.current?.think(true)
+        try {
+          const workspaceAction = await planStandaloneWorkspaceAction(t)
+          if (workspaceAction) {
+            const draft = add(cur, { r: 'u', t })
+            const isDeletion = workspaceAction.type === 'deleteStandaloneTask' || workspaceAction.type === 'deleteStandaloneWorkspace'
+            const prompt = isDeletion
+              ? 'I found the exact workspace item and prepared a deletion preview, including linked records. Nothing will be deleted until you review it and confirm.'
+              : workspaceAction.type === 'startStandaloneTask'
+                ? 'I prepared the task status change. The task will not be marked complete; completion still requires reviewed evidence.'
+                : 'I prepared this workspace change using your visible project data and access level. Review the exact workspace and task details below; nothing has been saved yet.'
+            persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            setPendingAction(workspaceAction)
+            return
+          }
+        } catch (failure) {
+          const draft = add(cur, { r: 'u', t })
+          const message = failure instanceof Error ? failure.message : 'I could not prepare that workspace action safely.'
+          persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          return
+        } finally {
+          setBusy(false); setStatus('Online'); setThinkingTask(''); robot.current?.think(false)
+        }
+      }
+
       const action = planAction(t)
       if (action) {
         stopVoice()
