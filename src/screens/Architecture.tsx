@@ -53,9 +53,9 @@ export function Architecture() {
               <div className="arch-journey-copy">
                 <h3>{step.title}</h3>
                 <p>{step.text}</p>
-                <div className="arch-output"><Icon name="arrow-right" size={14} /><span>{step.output}</span></div>
+                <div className="arch-output"><Icon name="arrow" size={14} /><span>{step.output}</span></div>
               </div>
-              {index < JOURNEY.length - 1 && <div className="arch-connector" aria-hidden="true"><Icon name="arrow-down" size={18} /></div>}
+              {index < JOURNEY.length - 1 && <div className="arch-connector" aria-hidden="true"><b className="arch-down-arrow" aria-hidden="true">↓</b></div>}
             </div>
           ))}
         </div>
@@ -69,7 +69,7 @@ export function Architecture() {
         </div>
         <div className="arch-system">
           <div className="arch-system-cap">
-            <span><Icon name="monitor" size={17} /> THE QUORLYTH EXPERIENCE</span>
+            <span><Icon name="home" size={17} /> THE QUORLYTH EXPERIENCE</span>
             <small>What members and creators interact with</small>
           </div>
           <div className="arch-system-grid">
@@ -78,19 +78,19 @@ export function Architecture() {
             <div className="arch-system-module"><Icon name="queue" size={21} /><b>Creator workspace</b><span>Review, collaboration and action</span></div>
             <div className="arch-system-module"><Icon name="spark" size={21} /><b>QuorlythBot</b><span>Contextual AI assistance</span></div>
           </div>
-          <div className="arch-system-link"><span /><Icon name="arrow-down" size={20} /><span /></div>
+          <div className="arch-system-link"><span /><b className="arch-down-arrow" aria-hidden="true">↓</b><span /></div>
           <div className="arch-system-band">
             <div><span className="arch-layer-index">A / IDENTITY</span><b>Supabase authentication</b><p>Connect each person to their account and permissions.</p></div>
             <div><span className="arch-layer-index">B / SHARED DATA</span><b>Supabase database</b><p>Store community activity, ideas and work records.</p></div>
           </div>
-          <div className="arch-system-link"><span /><Icon name="arrow-down" size={20} /><span /></div>
+          <div className="arch-system-link"><span /><b className="arch-down-arrow" aria-hidden="true">↓</b><span /></div>
           <div className="arch-system-grid arch-system-grid--services">
             <div className="arch-system-module"><Icon name="spark" size={21} /><b>AI services</b><span>Summaries and idea review</span></div>
             <div className="arch-system-module"><Icon name="voice" size={21} /><b>Voice services</b><span>Optional generated speech</span></div>
             <div className="arch-system-module"><Icon name="timeline" size={21} /><b>Automation runtime</b><span>Trigger → condition → action</span></div>
           </div>
           <div className="arch-system-cap arch-system-cap--bottom">
-            <span><Icon name="shield" size={17} /> SECURITY AND OWNERSHIP</span>
+            <span><Icon name="private" size={17} /> SECURITY AND OWNERSHIP</span>
             <small>Authenticated access, server-side credentials and data-access rules</small>
           </div>
         </div>
@@ -104,11 +104,11 @@ export function Architecture() {
           <p>Automations connect events to useful follow-up actions, so the creator spends less time manually moving information between screens.</p>
         </div>
         <div className="arch-automation-flow">
-          <div><span className="arch-flow-label">WHEN</span><Icon name="zap" size={22} /><b>Trigger</b><p>An idea is created, a task is completed, a workspace is created, or someone runs it manually.</p></div>
-          <Icon name="arrow-right" size={22} />
-          <div><span className="arch-flow-label">IF NEEDED</span><Icon name="filter" size={22} /><b>Condition</b><p>Check the workflow's configured filter before continuing.</p></div>
-          <Icon name="arrow-right" size={22} />
-          <div><span className="arch-flow-label">THEN</span><Icon name="check-circle" size={22} /><b>Action</b><p>Create a task, save an in-app notification, or send an HTTPS webhook.</p></div>
+          <div><span className="arch-flow-label">WHEN</span><Icon name="timeline" size={22} /><b>Trigger</b><p>An idea is created, a task is completed, a workspace is created, or someone runs it manually.</p></div>
+          <Icon name="arrow" size={22} />
+          <div><span className="arch-flow-label">IF NEEDED</span><Icon name="settings" size={22} /><b>Condition</b><p>Check the workflow's configured filter before continuing.</p></div>
+          <Icon name="arrow" size={22} />
+          <div><span className="arch-flow-label">THEN</span><Icon name="check" size={22} /><b>Action</b><p>Create a task, save an in-app notification, or send an HTTPS webhook.</p></div>
         </div>
         <div className="arch-status-note">
           <Icon name="info" size={19} />
@@ -122,9 +122,9 @@ export function Architecture() {
           <h2 id="arch-status-title">Built around trust and momentum.</h2>
         </div>
         <div className="arch-principles">
-          <div><Icon name="user-check" size={22} /><h3>Creator stays in control</h3><p>AI suggestions support decisions; they do not replace creator judgment.</p></div>
-          <div><Icon name="scan-eye" size={22} /><h3>Reasons over mystery scores</h3><p>Idea review is intended to be understandable, not a black box that makes the final call.</p></div>
-          <div><Icon name="heart-handshake" size={22} /><h3>Credit travels with ideas</h3><p>Contributor attribution remains part of the promotion-preparation workflow.</p></div>
+          <div><Icon name="member" size={22} /><h3>Creator stays in control</h3><p>AI suggestions support decisions; they do not replace creator judgment.</p></div>
+          <div><Icon name="eye" size={22} /><h3>Reasons over mystery scores</h3><p>Idea review is intended to be understandable, not a black box that makes the final call.</p></div>
+          <div><Icon name="collab" size={22} /><h3>Credit travels with ideas</h3><p>Contributor attribution remains part of the promotion-preparation workflow.</p></div>
         </div>
       </section>
 
