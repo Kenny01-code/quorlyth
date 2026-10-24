@@ -2417,6 +2417,174 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         successOverride = run.status === 'success'
           ? 'Automation test run succeeded. Every configured action reported success.'
           : 'Automation test run finished with status: ' + run.status + '. Check Automations → Run history for each step and its result.'
+      } else if (action.type === 'createStandaloneWorkspace') {
+        if (!a.me || !a.backend) throw new Error('Sign in before creating a private workspace.')
+        const projectPath = 'standaloneProjects/' + action.workspaceId
+        if (await a.backend.store.get(projectPath)) throw new Error('That workspace ID already exists. Rebuild the preview and try again.')
+        const now = Date.now()
+        const project = {
+          id: action.workspaceId, title: action.title.trim().slice(0, 100), summary: action.summary.trim().slice(0, 4000),
+          status: 'active' as const, createdBy: a.me.id, at: now, updatedAt: now, dueAt: null, visibility: 'team' as const,
+        }
+        await a.backend.store.create(projectPath, project)
+        try {
+          const membershipId = action.workspaceId + '__' + a.me.id
+          await a.backend.store.create('standaloneProjectMembers/' + membershipId, {
+            id: membershipId, projectId: action.workspaceId, userId: a.me.id, role: 'owner', status: 'active',
+            invitedBy: a.me.id, at: now, updatedAt: now,
+          })
+        } catch (error) {
+          try { await a.backend.store.delete(projectPath) } catch { /* retain original failure; do not report success */ }
+          throw error
+        }
+        emitWorkflowEvent('workspace.created', { id: action.workspaceId, title: project.title, summary: project.summary, projectId: action.workspaceId, at: now })
+        ok = true
+        successOverride = 'Private workspace created. Opening your new project space now.'
+      } else if (action.type === 'updateStandaloneWorkspace') {
+        if (!a.me || !a.backend) throw new Error('Sign in before editing a private workspace.')
+        const projectPath = 'standaloneProjects/' + action.workspaceId
+        const current = await a.backend.store.get(projectPath) as any
+        if (!current || current.title !== action.currentTitle) throw new Error('That workspace changed or is no longer visible. Refresh before editing it.')
+        const rows = await a.backend.store.exportAll()
+        const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
+        const canManage = current.createdBy === a.me.id || member?.role === 'owner' || member?.role === 'manager'
+        if (!canManage) throw new Error('Only the workspace owner or an active manager can edit this workspace.')
+        const patch = {
+          ...(action.patch.title !== undefined ? { title: action.patch.title.trim().slice(0, 100) } : {}),
+          ...(action.patch.summary !== undefined ? { summary: action.patch.summary.trim().slice(0, 4000) } : {}),
+          updatedAt: Date.now(),
+        }
+        if (patch.title !== undefined && patch.title.length < 2) throw new Error('Workspace names need at least two characters.')
+        if (patch.summary !== undefined && patch.summary.length < 8) throw new Error('Project briefs need at least eight characters.')
+        await a.backend.store.update(projectPath, patch)
+        ok = true
+      } else if (action.type === 'setStandaloneWorkspaceStatus') {
+        if (!a.me || !a.backend) throw new Error('Sign in before changing a workspace status.')
+        const projectPath = 'standaloneProjects/' + action.workspaceId
+        const current = await a.backend.store.get(projectPath) as any
+        if (!current || current.title !== action.currentTitle || (current.status === 'completed' ? 'completed' : 'active') !== action.currentStatus) throw new Error('That workspace changed or is no longer visible. Refresh before changing its status.')
+        const rows = await a.backend.store.exportAll()
+        const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
+        if (current.createdBy !== a.me.id && member?.role !== 'owner' && member?.role !== 'manager') throw new Error('Only the workspace owner or an active manager can change its status.')
+        await a.backend.store.update(projectPath, { status: action.status, updatedAt: Date.now() })
+        ok = true
+      } else if (action.type === 'createStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before adding a workspace task.')
+        const projectPath = 'standaloneProjects/' + action.workspaceId
+        const current = await a.backend.store.get(projectPath) as any
+        if (!current || current.status === 'completed' || current.title !== action.workspaceTitle) throw new Error('That workspace is no longer active. Reopen it or refresh before adding tasks.')
+        const rows = await a.backend.store.exportAll()
+        const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
+        if (current.createdBy !== a.me.id && member?.role !== 'owner' && member?.role !== 'manager') throw new Error('Only the workspace owner or an active manager can add tasks.')
+        const taskPath = 'standaloneTasks/' + action.taskId
+        if (await a.backend.store.get(taskPath)) throw new Error('That task ID already exists. Rebuild the preview and try again.')
+        const now = Date.now()
+        await a.backend.store.create(taskPath, {
+          id: action.taskId, projectId: action.workspaceId, title: action.title.trim().slice(0, 140),
+          description: action.description.trim().slice(0, 2000), acceptanceCriteria: action.acceptanceCriteria.trim().slice(0, 1000),
+          status: 'todo', createdBy: a.me.id, at: now, updatedAt: now, dueAt: null, assigneeId: null,
+        })
+        ok = true
+      } else if (action.type === 'updateStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before editing a workspace task.')
+        const projectPath = 'standaloneProjects/' + action.workspaceId
+        const taskPath = 'standaloneTasks/' + action.taskId
+        const currentProject = await a.backend.store.get(projectPath) as any
+        const currentTask = await a.backend.store.get(taskPath) as any
+        if (!currentProject || currentProject.title !== action.workspaceTitle || !currentTask || currentTask.projectId !== action.workspaceId || currentTask.title !== action.currentTitle) throw new Error('That task changed or is no longer in the selected workspace.')
+        const rows = await a.backend.store.exportAll()
+        const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
+        if (currentProject.createdBy !== a.me.id && member?.role !== 'owner' && member?.role !== 'manager') throw new Error('Only the workspace owner or an active manager can edit task details.')
+        const patch = {
+          ...(action.patch.title !== undefined ? { title: action.patch.title.trim().slice(0, 140) } : {}),
+          ...(action.patch.description !== undefined ? { description: action.patch.description.trim().slice(0, 2000) } : {}),
+          ...(action.patch.acceptanceCriteria !== undefined ? { acceptanceCriteria: action.patch.acceptanceCriteria.trim().slice(0, 1000) } : {}),
+          updatedAt: Date.now(),
+        }
+        if (patch.title !== undefined && patch.title.length < 2) throw new Error('Task titles need at least two characters.')
+        await a.backend.store.update(taskPath, patch)
+        ok = true
+      } else if (action.type === 'startStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before starting a workspace task.')
+        const projectPath = 'standaloneProjects/' + action.workspaceId
+        const taskPath = 'standaloneTasks/' + action.taskId
+        const currentProject = await a.backend.store.get(projectPath) as any
+        const currentTask = await a.backend.store.get(taskPath) as any
+        if (!currentProject || currentProject.status === 'completed' || !currentTask || currentTask.projectId !== action.workspaceId || currentTask.title !== action.currentTitle) throw new Error('That task is no longer available to start.')
+        const rows = await a.backend.store.exportAll()
+        const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
+        const canManage = currentProject.createdBy === a.me.id || member?.role === 'owner' || member?.role === 'manager'
+        const canContribute = canManage || member?.role === 'contributor'
+        if (!canContribute) throw new Error('Only an active project owner, manager or contributor can start tasks.')
+        if (currentTask.status === 'done') throw new Error('This task is already completed through the approved evidence flow.')
+        if (currentTask.assigneeId && currentTask.assigneeId !== a.me.id && !canManage) throw new Error('This task is assigned to another teammate.')
+        await a.backend.store.update(taskPath, { status: 'in_progress', ...(currentTask.assigneeId ? {} : { assigneeId: a.me.id }), updatedAt: Date.now() })
+        ok = true
+      } else if (action.type === 'deleteStandaloneTask') {
+        if (!a.me || !a.backend) throw new Error('Sign in before deleting a workspace task.')
+        const projectPath = 'standaloneProjects/' + action.workspaceId
+        const taskPath = 'standaloneTasks/' + action.taskId
+        const currentProject = await a.backend.store.get(projectPath) as any
+        const currentTask = await a.backend.store.get(taskPath) as any
+        if (!currentProject || currentProject.title !== action.workspaceTitle || !currentTask || currentTask.projectId !== action.workspaceId || currentTask.title !== action.currentTitle) throw new Error('That task changed or is no longer in this workspace.')
+        const rows = await a.backend.store.exportAll()
+        const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
+        if (currentProject.createdBy !== a.me.id && member?.role !== 'owner' && member?.role !== 'manager') throw new Error('Only the workspace owner or an active manager can delete tasks.')
+        const linked = rows.filter(row => row.path.startsWith('standaloneArtifacts/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.taskId === action.taskId)
+        if (linked.length !== action.linkedArtifactCount || linked.reduce((sum, row) => sum + (Array.isArray((row.data as any)?.attachments) ? (row.data as any).attachments.length : 0), 0) !== action.attachmentCount) throw new Error('The linked evidence changed after you reviewed the preview. Rebuild the deletion preview and check it again.')
+        const attachments = linked.flatMap(row => Array.isArray((row.data as any)?.attachments) ? (row.data as any).attachments : [])
+        let cleanupFailed = 0
+        for (const attachment of attachments) {
+          try {
+            if (!a.backend.deleteWorkFile) throw new Error('Private file deletion is not configured.')
+            await a.backend.deleteWorkFile(attachment.path)
+          } catch (error) {
+            cleanupFailed += 1
+            console.warn('QuorlythBot could not delete a task evidence attachment:', error)
+          }
+        }
+        for (const row of linked) await a.backend.store.delete(row.path)
+        await a.backend.store.delete(taskPath)
+        ok = true
+        successOverride = cleanupFailed
+          ? 'Task and linked evidence deleted. Some private attachments could not be removed; check storage permissions.'
+          : 'Task and linked evidence deleted successfully.'
+      } else if (action.type === 'deleteStandaloneWorkspace') {
+        if (!a.me || !a.backend) throw new Error('Sign in before deleting a workspace.')
+        const projectPath = 'standaloneProjects/' + action.workspaceId
+        const currentProject = await a.backend.store.get(projectPath) as any
+        if (!currentProject || currentProject.title !== action.name || currentProject.createdBy !== a.me.id) throw new Error('Only the workspace creator can delete this workspace, and its details must still match the preview.')
+        const rows = await a.backend.store.exportAll()
+        const tasks = rows.filter(row => row.path.startsWith('standaloneTasks/') && (row.data as any)?.projectId === action.workspaceId)
+        const artifacts = rows.filter(row => row.path.startsWith('standaloneArtifacts/') && (row.data as any)?.projectId === action.workspaceId)
+        const members = rows.filter(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId)
+        const comments = rows.filter(row => row.path.startsWith('standaloneComments/') && (row.data as any)?.projectId === action.workspaceId)
+        const repos = rows.filter(row => row.path.startsWith('standaloneGithubRepos/') && (row.data as any)?.projectId === action.workspaceId)
+        const activity = rows.filter(row => row.path.startsWith('standaloneActivity/') && (row.data as any)?.projectId === action.workspaceId)
+        const attachments = artifacts.flatMap(row => Array.isArray((row.data as any)?.attachments) ? (row.data as any).attachments : [])
+        const counts = { tasks: tasks.length, artifacts: artifacts.length, members: members.length, comments: comments.length, repos: repos.length, activity: activity.length, attachments: attachments.length }
+        if (JSON.stringify(counts) !== JSON.stringify(action.counts)) throw new Error('Workspace-linked records changed after you reviewed the preview. Rebuild the deletion preview to inspect the new counts.')
+        let cleanupFailed = 0
+        for (const attachment of attachments) {
+          try {
+            if (!a.backend.deleteWorkFile) throw new Error('Private file deletion is not configured.')
+            await a.backend.deleteWorkFile(attachment.path)
+          } catch (error) {
+            cleanupFailed += 1
+            console.warn('QuorlythBot could not delete a workspace evidence attachment:', error)
+          }
+        }
+        for (const row of artifacts) await a.backend.store.delete(row.path)
+        for (const row of tasks) await a.backend.store.delete(row.path)
+        for (const row of comments) await a.backend.store.delete(row.path)
+        for (const row of repos) await a.backend.store.delete(row.path)
+        for (const row of activity) await a.backend.store.delete(row.path)
+        for (const row of members) await a.backend.store.delete(row.path)
+        await a.backend.store.delete(projectPath)
+        ok = true
+        successOverride = cleanupFailed
+          ? 'Workspace and linked records deleted. Some private attachments could not be removed; check storage permissions.'
+          : 'Workspace and all linked records deleted successfully.'
       }
       if (!ok) throw new Error('Quorlyth could not confirm that this change was saved. Check the permission notice and refresh before trying again.')
       if (ok) {
