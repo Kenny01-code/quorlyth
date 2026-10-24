@@ -61,8 +61,10 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
     if (parsed.pathname === '/rest/v1/docs' && (parsed.searchParams.get('or') || '').includes('data/users/user-private-uuid/botset')) {
       assert.match(parsed.searchParams.get('or') || '', /data\/users\/user-private-uuid\/botset/)
       assert.match(parsed.searchParams.get('or') || '', /p_\*/)
+      assert.match(parsed.searchParams.get('or') || '', /automations\/\*/)
       return json([
         { path: 'data/users/user-private-uuid/botset', data: { tone: 'warm', len: 'medium', emo: false } },
+        { path: 'data/users/user-private-uuid/automations/workflow-test-1', data: { name: 'New idea triage', description: 'Notify and create a review task.', status: 'active', trigger: 'idea.created', condition: 'prototype', actions: [{ type: 'notify', title: 'Notification', message: 'New: {{event.title}}' }, { type: 'create_task', title: 'Create task', projectId: 'workspace-1' }], runHistory: [{ status: 'success', error: '' }] } },
         { path: 'data/users/user-private-uuid/p_strategy', data: { name: 'Launch plan', ins: 'Focus on accessible launch steps.' } },
       ])
     }
@@ -94,6 +96,9 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
   assert.match(system, /Current route: \/collaboration\/idea-1\?tab=plan/)
   assert.match(system, /selected/)
   assert.match(system, /Launch plan/)
+  assert.match(system, /New idea triage/)
+  assert.match(system, /idea.created/)
+  assert.match(system, /Private automations in the current user-scoped context/)
   assert.match(system, /caller.s Supabase session|authenticated user/i)
   assert.doesNotMatch(system, /secret@example\.com/)
   assert.doesNotMatch(system, /user-private-uuid/)
