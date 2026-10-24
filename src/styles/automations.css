@@ -254,3 +254,15 @@
  .wa-action-palette{gap:5px}
  .wa-action-palette button{padding:8px;font-size:8px}
 }
+
+
+.wa-notice-inbox{margin-bottom:18px;padding:17px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.02)}
+.wa-notice-inbox .wa-section-title{margin-bottom:5px}
+.wa-notice-list{display:grid}
+.wa-notice-row{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.wa-notice-row:last-child{border-bottom:0}
+.wa-notice-icon{display:grid;place-items:center;flex:0 0 auto;width:30px;height:30px;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(255,255,255,.65);background:rgba(255,255,255,.045)}
+.wa-notice-row>div{min-width:0;flex:1}
+.wa-notice-row strong{display:block;font-size:11px;font-weight:500}
+.wa-notice-row p{font-size:10px;line-height:1.65;color:rgba(255,255,255,.62);overflow-wrap:anywhere;margin-top:3px}
+.wa-notice-row small{display:block;font-size:9px;color:rgba(255,255,255,.35);margin-top:5px}
