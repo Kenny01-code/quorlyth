@@ -4,7 +4,7 @@ import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
-import { Chat, ChatMsg, Community, Idea, Profile } from '../lib/types'
+import { Chat, ChatMsg, Community, Idea } from '../lib/types'
 import { cn, slug, when } from '../lib/util'
 import { askJson, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
@@ -85,8 +85,6 @@ type PendingAction =
   | { type: 'updateMilestone'; milestoneId: string; projectId: string; oldTitle: string; patch: { title?: string; description?: string; status?: 'in_progress' } }
   | { type: 'deleteMilestone'; milestoneId: string; projectId: string; title: string; ideaTitle: string }
   | { type: 'reviewSubmission'; submissionId: string; projectId: string; ideaTitle: string; milestoneTitle: string; revision: number; submitterName: string; decision: 'approved' | 'changes_requested'; reviewNote: string }
-  | { type: 'updateProfile'; patch: Partial<Pick<Profile, 'name' | 'bio' | 'head'>> }
-  | { type: 'updateProjectStatus'; projectId: string; ideaTitle: string; oldStatus: 'active' | 'completed'; status: 'active' | 'completed' }
 
 function actionDecisionDescription(action: Extract<PendingAction, { type: 'reviewSubmission' }>): string {
   return action.decision === 'approved'
@@ -109,8 +107,6 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'updateMilestone': return 'Milestone: ' + JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.status ? ' · Status → In progress' : '') + (action.patch.description ? ' · Description updated' : '')
     case 'deleteMilestone': return JSON.stringify(action.title) + ' · ' + action.ideaTitle + ' · linked work submissions and private attachments may be removed'
     case 'reviewSubmission': return (action.decision === 'approved' ? 'Approve' : 'Request changes to') + ' revision ' + action.revision + ' for ' + action.milestoneTitle + ' · submitted by ' + action.submitterName + (action.reviewNote ? ' · reviewer note: ' + JSON.stringify(action.reviewNote.slice(0, 240)) : '')
-    case 'updateProfile': return (action.patch.name ? 'Display name → ' + JSON.stringify(action.patch.name) : '') + (action.patch.bio !== undefined ? 'Bio → ' + JSON.stringify(action.patch.bio.slice(0, 220)) : '') + (action.patch.head !== undefined ? ' · Headline → ' + JSON.stringify(action.patch.head.slice(0, 140)) : '')
-    case 'updateProjectStatus': return action.ideaTitle + ' · Project status: ' + action.oldStatus + ' → ' + action.status
   }
 }
 
@@ -1885,6 +1881,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           addMilestone: 'Milestone added successfully.',
           updateMilestone: 'Milestone updated successfully.',
           deleteMilestone: 'Milestone and linked work submissions deleted successfully.',
+          reviewSubmission: 'Evidence submission reviewed successfully.',
         }
         const next = add(cur, { r: 'a', t: labels[action.type] })
         persist(next); setPendingAction(null)
