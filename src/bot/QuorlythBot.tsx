@@ -99,6 +99,18 @@ type PendingAction =
   | { type: 'applyCollaboration'; ideaId: string; ideaTitle: string; message: string }
   | { type: 'reviewCollaboration'; applicationId: string; ideaId: string; ideaTitle: string; applicantName: string; decision: 'accepted' | 'declined' }
   | { type: 'setIdeaStatus'; ideaId: string; ideaTitle: string; previous: Status; status: Exclude<Status, 'promoted'>; reason: string }
+  | { type: 'createStandaloneWorkspace'; title: string; summary: string; dueAt: number | null }
+  | { type: 'updateStandaloneWorkspace'; workspaceId: string; oldTitle: string; patch: { title?: string; summary?: string; dueAt?: number | null } }
+  | { type: 'toggleStandaloneWorkspace'; workspaceId: string; title: string; previous: 'active' | 'completed'; status: 'active' | 'completed' }
+  | { type: 'deleteStandaloneWorkspace'; workspaceId: string; title: string; taskCount: number; evidenceCount: number; memberCount: number; commentCount: number; attachmentCount: number }
+  | { type: 'addStandaloneTask'; workspaceId: string; workspaceTitle: string; title: string; description: string; acceptanceCriteria: string; dueAt: number | null; assigneeId: string | null; assigneeName: string }
+  | { type: 'updateStandaloneTask'; workspaceId: string; workspaceTitle: string; taskId: string; oldTitle: string; patch: { title?: string; description?: string; acceptanceCriteria?: string; dueAt?: number | null; assigneeId?: string | null } }
+  | { type: 'startStandaloneTask'; workspaceId: string; workspaceTitle: string; taskId: string; title: string; currentAssigneeId: string | null }
+  | { type: 'completeStandaloneTask'; workspaceId: string; workspaceTitle: string; taskId: string; title: string; approvedEvidenceCount: number }
+  | { type: 'deleteStandaloneTask'; workspaceId: string; workspaceTitle: string; taskId: string; title: string; evidenceCount: number; attachmentCount: number }
+  | { type: 'postWorkspaceComment'; workspaceId: string; workspaceTitle: string; text: string }
+  | { type: 'inviteWorkspaceMember'; workspaceId: string; workspaceTitle: string; memberId: string; memberName: string; role: 'contributor' | 'viewer' }
+  | { type: 'reviewWorkspaceArtifact'; workspaceId: string; workspaceTitle: string; artifactId: string; taskId: string; taskTitle: string; decision: 'approved' | 'changes_requested'; note: string }
 
 function describeWorkflow(workflow: WorkflowDefinition, workspaceNames: Record<string, string> = {}): string {
   const trigger = workflow.trigger === 'manual' ? 'Manual trigger'
@@ -162,6 +174,18 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'applyCollaboration': return 'Apply to collaborate on ' + JSON.stringify(action.ideaTitle) + ' · Message: ' + JSON.stringify(action.message.slice(0, 260))
     case 'reviewCollaboration': return (action.decision === 'accepted' ? 'Accept' : 'Decline') + ' ' + JSON.stringify(action.applicantName) + ' for ' + JSON.stringify(action.ideaTitle)
     case 'setIdeaStatus': return JSON.stringify(action.ideaTitle) + ' · ' + action.previous + ' → ' + action.status + (action.reason ? ' · ' + JSON.stringify(action.reason.slice(0, 240)) : '')
+    case 'createStandaloneWorkspace': return JSON.stringify(action.title) + ' · ' + JSON.stringify(action.summary.slice(0, 240)) + (action.dueAt ? ' · Due ' + new Date(action.dueAt).toLocaleDateString() : ' · No due date')
+    case 'updateStandaloneWorkspace': return JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.summary ? ' · Brief: ' + JSON.stringify(action.patch.summary.slice(0, 220)) : '') + (action.patch.dueAt ? ' · Due ' + new Date(action.patch.dueAt).toLocaleDateString() : action.patch.dueAt === null ? ' · Clear due date' : '')
+    case 'toggleStandaloneWorkspace': return JSON.stringify(action.title) + ' · ' + action.previous + ' → ' + action.status
+    case 'deleteStandaloneWorkspace': return JSON.stringify(action.title) + ' · ' + action.taskCount + ' tasks, ' + action.evidenceCount + ' evidence items, ' + action.memberCount + ' team records, ' + action.commentCount + ' comments, ' + action.attachmentCount + ' private attachments
+    case 'addStandaloneTask': return JSON.stringify(action.title) + ' · Workspace ' + JSON.stringify(action.workspaceTitle) + (action.description ? ' · ' + JSON.stringify(action.description.slice(0, 180)) : '') + (action.acceptanceCriteria ? ' · Done when: ' + JSON.stringify(action.acceptanceCriteria.slice(0, 140)) : '') + (action.assigneeName ? ' · Assigned to ' + action.assigneeName : ' · Unassigned') + (action.dueAt ? ' · Due ' + new Date(action.dueAt).toLocaleDateString() : '')
+    case 'updateStandaloneTask': return JSON.stringify(action.oldTitle) + ' · ' + JSON.stringify(action.workspaceTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.description ? ' · Description updated' : '') + (action.patch.acceptanceCriteria ? ' · Criteria updated' : '') + (action.patch.assigneeId !== undefined ? ' · Assignee changed' : '') + (action.patch.dueAt !== undefined ? ' · Due date changed' : '')
+    case 'startStandaloneTask': return JSON.stringify(action.title) + ' · ' + JSON.stringify(action.workspaceTitle) + ' · Mark task In progress'
+    case 'completeStandaloneTask': return JSON.stringify(action.title) + ' · ' + JSON.stringify(action.workspaceTitle) + ' · ' + action.approvedEvidenceCount + ' approved evidence item(s)'
+    case 'deleteStandaloneTask': return JSON.stringify(action.title) + ' · ' + JSON.stringify(action.workspaceTitle) + ' · ' + action.evidenceCount + ' linked evidence items and ' + action.attachmentCount + ' private attachments
+    case 'postWorkspaceComment': return JSON.stringify(action.workspaceTitle) + ' · ' + JSON.stringify(action.text.slice(0, 300))
+    case 'inviteWorkspaceMember': return action.memberName + ' · ' + JSON.stringify(action.workspaceTitle) + ' · Role: ' + action.role
+    case 'reviewWorkspaceArtifact': return (action.decision === 'approved' ? 'Approve' : 'Request changes to') + ' ' + JSON.stringify(action.taskTitle) + ' · ' + JSON.stringify(action.workspaceTitle) + (action.note ? ' · Note: ' + JSON.stringify(action.note.slice(0, 220)) : '')
   }
 }
 
