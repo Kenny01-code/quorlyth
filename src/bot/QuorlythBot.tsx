@@ -2412,6 +2412,11 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   updateMilestone: 'Edit milestone',
                   deleteMilestone: 'Delete milestone',
           reviewSubmission: 'Review evidence submission',
+          createAutomation: 'Create automation workflow',
+          updateAutomation: 'Update saved automation',
+          toggleAutomation: 'Change automation status',
+          deleteAutomation: 'Delete automation',
+          runAutomation: 'Run automation test',
                 } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity'
                   ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.'
                   : pendingAction.type === 'deleteIdea'
@@ -2420,7 +2425,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                       ? 'This is permanent. Confirming deletes the milestone and linked submissions and attachments. Private file cleanup must complete first.'
                       : pendingAction.type === 'reviewSubmission'
                         ? actionDecisionDescription(pendingAction)
-                      : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+                        : pendingAction.type === 'deleteAutomation'
+                          ? 'This is permanent. Confirming deletes this workflow definition and its saved run history from your account.'
+                          : pendingAction.type === 'runAutomation'
+                            ? 'A test run may create real tasks, store notifications, or send data to its configured HTTPS webhook. Confirm only if you have reviewed those destinations.'
+                            : pendingAction.type === 'createAutomation' || pendingAction.type === 'updateAutomation' || pendingAction.type === 'toggleAutomation'
+                              ? 'Review the trigger, optional text filter, action order, target workspace and final status. Saving or activating a workflow does not guarantee runs while Quorlyth is closed; the current runtime runs in an active session.'
+                              : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
                 <div className="bc">
