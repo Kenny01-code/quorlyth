@@ -1764,19 +1764,61 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can delete it.')
         if (!a.data.communities.some(c => c.id === action.cid)) throw new Error('That community no longer exists.')
         ok = await a.deleteCommunity(action.cid)
+      } else if (action.type === 'updateIdea') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!a.me || !idea || (idea.authorId !== a.me.id && !a.canManageCommunity(idea.cid))) throw new Error('Your account cannot edit that idea anymore.')
+        ok = await a.updateIdea(action.ideaId, action.patch)
+      } else if (action.type === 'deleteIdea') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!idea || idea.cid !== action.cid || !a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can delete this idea and its linked workspace.')
+        ok = await a.deleteIdea(action.ideaId)
+      } else if (action.type === 'updateCommunity') {
+        if (!a.canManageCommunity(action.cid) || !a.data.communities.some(item => item.id === action.cid)) throw new Error('Only this community’s owner or a platform administrator can edit its settings.')
+        ok = await a.saveCommunity(action.cid, action.patch)
+      } else if (action.type === 'updateProject') {
+        const idea = a.data.ideas.find(item => item.id === action.projectId)
+        if (!idea || (!a.canManageCommunity(idea.cid) && !a.canOrganizeIdeaWithAI(idea.id))) throw new Error('Your account cannot edit this collaboration project brief.')
+        ok = await a.updateProject(action.projectId, { summary: action.summary })
+      } else if (action.type === 'addMilestone') {
+        const idea = a.data.ideas.find(item => item.id === action.projectId)
+        if (!idea || (!a.canManageCommunity(idea.cid) && !a.canOrganizeIdeaWithAI(idea.id))) throw new Error('Your account cannot add milestones in this workspace.')
+        ok = await a.addMilestone(action.projectId, action.title, action.description, {
+          priority: action.priority,
+          acceptanceCriteria: action.acceptanceCriteria,
+        })
+      } else if (action.type === 'updateMilestone') {
+        const milestone = a.data.milestones.find(item => item.id === action.milestoneId)
+        const idea = a.data.ideas.find(item => item.id === action.projectId)
+        if (!milestone || !idea || milestone.projectId !== action.projectId) throw new Error('This milestone is no longer available in the active workspace.')
+        if (!a.canManageCommunity(idea.cid) && !(action.patch.status === 'in_progress' && (!milestone.assigneeId || milestone.assigneeId === a.me?.id))) throw new Error('Your account cannot make those changes to this milestone.')
+        ok = await a.updateMilestone(action.milestoneId, action.patch)
+      } else if (action.type === 'deleteMilestone') {
+        const milestone = a.data.milestones.find(item => item.id === action.milestoneId)
+        const idea = a.data.ideas.find(item => item.id === action.projectId)
+        if (!milestone || !idea || milestone.projectId !== action.projectId || !a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can delete this milestone.')
+        ok = await a.deleteMilestone(action.milestoneId)
       }
+      if (!ok) throw new Error('Quorlyth could not confirm that this change was saved. Check the permission notice and refresh before trying again.')
       if (ok) {
         const labels: Record<PendingAction['type'], string> = {
           community: 'Community created successfully.',
           idea: 'Idea submitted successfully.',
           promote: 'Idea marked as promoted in Quorlyth. It has not been posted to an external platform.',
           cover: 'Community cover updated successfully.',
-          deleteCommunity: 'Community and its linked ideas deleted successfully.'
+          deleteCommunity: 'Community and its linked ideas deleted successfully.',
+          updateIdea: 'Idea updated successfully.',
+          deleteIdea: 'Idea and linked workspace records deleted successfully.',
+          updateCommunity: 'Community settings updated successfully.',
+          updateProject: 'Project brief updated successfully.',
+          addMilestone: 'Milestone added successfully.',
+          updateMilestone: 'Milestone updated successfully.',
+          deleteMilestone: 'Milestone and linked work submissions deleted successfully.',
         }
         const next = add(cur, { r: 'a', t: labels[action.type] })
         persist(next); setPendingAction(null)
         if (action.type === 'community' || action.type === 'deleteCommunity') nav('/communities')
         if (action.type === 'idea') nav('/communities/' + action.cid)
+        if (action.type === 'deleteIdea') nav('/communities/' + action.cid)
       }
     } catch (e: any) { a.toast(e?.message || 'That action could not be completed.') }
     finally { setBusy(false); setStatus('Online') }
