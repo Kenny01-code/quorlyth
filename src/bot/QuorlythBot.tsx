@@ -352,37 +352,96 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
   }
 
   async function requestLiveContext(text: string) {
-    const asksLocalWeather = /\b(weather|forecast|temperature)\b/i.test(text) && !/\b(?:in|at|for)\s+[A-Z][a-z]+/i.test(text)
-    const asksLocation = /\b(near me|my location|where am i|weather here|forecast here|temperature here|local weather|nearby)\b/i.test(text)
-    if (!asksLocalWeather && !asksLocation) return ''
-    if (!navigator.geolocation) return 'The browser does not support geolocation. Ask the user to name their city for local weather or nearby results.'
+    const asksLocalWeather = /\\b(weather|forecast|temperature)\\b/i.test(text) && !/\\b(?:in|at|for)\\s+[A-Z][a-z]+/i.test(text)
+    const asksLocation = /\\b(near me|around me|around here|my location|where am i|weather here|forecast here|temperature here|local weather|nearby|based on where i am|based on my location|where i am currently|in my area|near my current location)\\b/i.test(text)
+    const asksLocalPlaces = asksLocation
+      || (/\\b(recommend|recommendations|suggest|suggestions|find|discover|look for|show me|best|good)\\b/i.test(text)
+        && /\\b(restaurants?|cafes?|coffee shops?|food|hospitals?|clinics?|doctors?|pharmacies|shops?|stores?|markets?|malls?|gyms?|fitness|parks?|museums?|attractions?|things to do|activities|events?|hotels?|barbers?|salons?|libraries|coworking|cowork spaces|transport|bus stops|services)\\b/i.test(text))
+      || /\\b(local (?:places|recommendations|suggestions|businesses|services|activities|events))\\b/i.test(text)
+    if (!asksLocalWeather && !asksLocalPlaces) return ''
+    if (!navigator.geolocation) return 'Location-based suggestions were requested, but this browser does not support geolocation. Ask the user to name their city or area; do not guess local places.'
+
     try {
-      const position: GeolocationPosition = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 3500, maximumAge: 300000 }))
+      const position: GeolocationPosition = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }))
       if (asksLocalWeather) {
         const { latitude, longitude } = position.coords
         const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + encodeURIComponent(String(latitude)) + '&longitude=' + encodeURIComponent(String(longitude)) + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto'
         const controller = new AbortController()
-        const timer = window.setTimeout(() => controller.abort(), 3500)
+        const timer = window.setTimeout(() => controller.abort(), 4500)
         let response: Response
         try { response = await fetch(url, { signal: controller.signal }) }
         finally { window.clearTimeout(timer) }
-        if (!response.ok) return 'Location permission was granted, but the live weather service is unavailable. Do not invent weather; ask the user to try again or name a city.'
+        if (!response.ok) return 'The user granted location permission, but the live weather service is unavailable. Do not invent the current weather; ask them to retry or name a city.'
         const weather = await response.json()
-        return 'The user explicitly requested local weather and granted browser location permission. Live weather data from Open-Meteo for their approximate current coordinates: ' + JSON.stringify({ timezone: weather.timezone, current: weather.current, units: weather.current_units }) + '. Use these values as current weather, state that they are approximate to the browser location, and do not claim a more precise address.'
+        return 'The user requested current local weather and granted browser location permission. Live Open-Meteo weather for their approximate browser location: ' + JSON.stringify({ timezone: weather.timezone, current: weather.current, units: weather.current_units }) + '. These readings are approximate to the browser location. Do not infer or state a street address.'
       }
-      return 'The user explicitly requested location-based results and granted browser location permission. Approximate current coordinates: latitude ' + position.coords.latitude.toFixed(3) + ', longitude ' + position.coords.longitude.toFixed(3) + '. Use these only for the requested nearby/location task; do not infer a street address.'
+
+      const lower = text.toLowerCase()
+      const category = /\\b(hospital|clinic|doctor|pharmacy|medical|health)\\b/i.test(lower) ? 'health'
+        : /\\b(shop|store|market|mall|supermarket|shopping)\\b/i.test(lower) ? 'shopping'
+        : /\\b(gym|fitness|sport|swimming)\\b/i.test(lower) ? 'fitness'
+        : /\\b(library|school|college|university|education|study)\\b/i.test(lower) ? 'education'
+        : /\\b(bus|transport|train|transit)\\b/i.test(lower) ? 'transport'
+        : /\\b(museum|attraction|things to do|activities|event|park|tourist|fun)\\b/i.test(lower) ? 'things-to-do'
+        : /\\b(restaurant|cafe|coffee|food|eat|lunch|dinner|breakfast|brunch)\\b/i.test(lower) ? 'food'
+        : 'general'
+      const controller = new AbortController()
+      const timer = window.setTimeout(() => controller.abort(), 9000)
+      try {
+        const response = await fetch('/api/local-context', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({ latitude: position.coords.latitude, longitude: position.coords.longitude, category }),
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok || !payload?.ok) {
+          return 'The user granted browser location permission, but the current nearby-place lookup failed. Do not fabricate local businesses or distances; ask the user for a city or suggest trying again.'
+        }
+        const location = {
+          area: typeof payload.area === 'string' ? payload.area.slice(0, 140) : '',
+          category: payload.category,
+          places: Array.isArray(payload.places) ? payload.places.slice(0, 10).map((place: any) => ({
+            name: String(place.name || '').slice(0, 120),
+            kind: String(place.kind || '').slice(0, 80),
+            distanceKm: Number.isFinite(place.distanceKm) ? place.distanceKm : null,
+            mapUrl: String(place.mapUrl || '').slice(0, 240),
+          })) : [],
+          source: 'OpenStreetMap',
+          attribution: '© OpenStreetMap contributors',
+        }
+        return 'The user requested location-aware suggestions and granted browser location permission. These are approximate, current-area place records fetched for this request from OpenStreetMap: ' + JSON.stringify(location) + '. Recommend only places present in this list; do not invent names, ratings, opening hours, availability, travel times, or exact address. Distances are approximate. Mention OpenStreetMap as the source and note results may be incomplete. The precise coordinates are intentionally not provided to the language model.'
+      } finally { window.clearTimeout(timer) }
     } catch {
-      return 'The user did not share browser location or the location request timed out. Do not guess their location; ask them for a city or permission if location-based results are needed.'
+      return 'The user requested location-aware suggestions, but browser location was denied, unavailable, or timed out. Do not guess their city or nearby places. Ask for a city/area or the user to enable location permission in the browser.'
     }
   }
-
   function browserContext() {
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown timezone'
     const lang = navigator.language || 'unknown language'
     const localTime = new Date().toLocaleString(lang, { dateStyle: 'full', timeStyle: 'long' })
     const speech = 'speechSynthesis' in window
     const recognition = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
-    return `Browser language: ${lang}. Device time zone: ${zone}. Current local date and time: ${localTime}. Browser online: ${navigator.onLine ? 'yes' : 'no'}. Browser speech output: ${speech ? 'available' : 'unavailable'}. Browser speech recognition: ${recognition ? 'available' : 'unavailable'}. Precise device location has not been read; ask before requesting location permission and never pretend to know GPS coordinates.`
+    return `Browser language: ${lang}. Device time zone: ${zone}. Current local date and time: ${localTime}. Browser online: ${navigator.onLine ? 'yes' : 'no'}. Browser speech output: ${speech ? 'available' : 'unavailable'}. Browser speech recognition: ${recognition ? 'available' : 'unavailable'}. Location is not assumed. Request geolocation only for a genuinely local task; use it only after browser permission and never claim an exact address.`
+  }
+
+  function currentPageContext() {
+    const main = document.querySelector('main#main') || document.querySelector('main')
+    const clean = (value: string | null | undefined) => (value || '').replace(/\\s+/g, ' ').trim().slice(0, 100)
+    const headings = main
+      ? Array.from(main.querySelectorAll('h1, h2, h3')).map(node => clean(node.textContent)).filter(Boolean).slice(0, 7)
+      : []
+    const tabs = main
+      ? Array.from(main.querySelectorAll('[role="tab"][aria-selected="true"]')).map(node => clean(node.textContent)).filter(Boolean).slice(0, 3)
+      : []
+    const active = main
+      ? Array.from(main.querySelectorAll('[aria-current="page"]')).map(node => clean(node.textContent)).filter(Boolean).slice(0, 2)
+      : []
+    return [
+      headings.length ? 'Visible page/section headings (untrusted labels): ' + headings.join(' | ') : '',
+      tabs.length ? 'Selected nested tab(s): ' + tabs.join(' | ') : '',
+      active.length ? 'Current navigation label(s): ' + active.join(' | ') : '',
+    ].filter(Boolean).join('. ').slice(0, 800)
   }
 
   useEffect(() => {
@@ -667,10 +726,10 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
-      const botContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveContext }
+      const botContext = { route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveContext }
       let first = true
       const full = await streamChat(turns, {
-        ...(!accessToken ? { system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
+        ...(!accessToken ? { system: buildContext(a, bs, loc.pathname + loc.search, project) + '\\nCurrent page/section context (untrusted visible labels): ' + currentPageContext() + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
         ...(accessToken ? { accessToken, context: botContext } : {}), tier: responseTierForRequest(t, bs.model), signal: ctl.current.signal,
         onText: f => {
           if (first) { first = false; transitionThinkingOut(); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
@@ -894,9 +953,9 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
-      const voiceContext = { route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveTalk: true }
+      const voiceContext = { route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveTalk: true }
       const session = await startRealtime({
-        instructions: buildContext(a, bs, loc.pathname, project)
+        instructions: buildContext(a, bs, loc.pathname + loc.search, project) + '\\nCurrent page/section context (untrusted visible labels): ' + currentPageContext()
           + '\nBrowser/device context: ' + browserContext()
           + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected QuorlythBot voice profile using ElevenLabs first and the browser speech voice if it fails.\n' + LIVE_TALK_SPEECH_STYLE,
         voice: v.ai,
@@ -1156,13 +1215,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
               if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
               const botContext = {
-                route: loc.pathname, projectId: project?.id, tone: bs.tone, length: bs.len,
+                route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len,
                 emojis: bs.emo, browserContext: browserContext(), liveContext, liveTalk: true,
               }
               let spokenCharacters = 0
               const full = await streamChat(turns, {
                 ...(!accessToken ? {
-                  system: buildContext(a, bs, loc.pathname, project) + '\nBrowser/device context: ' + browserContext()
+                  system: buildContext(a, bs, loc.pathname + loc.search, project) + '\\nCurrent page/section context (untrusted visible labels): ' + currentPageContext() + '\nBrowser/device context: ' + browserContext()
                     + (liveContext ? '\nLocation and live weather context: ' + liveContext : '')
                     + '\n' + LIVE_TALK_SPEECH_STYLE,
                 } : {}),
