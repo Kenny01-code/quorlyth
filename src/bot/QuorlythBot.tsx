@@ -2342,8 +2342,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         ok = await a.saveProfile(action.patch)
       } else if (action.type === 'addIdeaComment') {
         const idea = a.data.ideas.find(item => item.id === action.ideaId)
-        if (!a.me || !idea || !action.text.trim()) throw new Error('That idea discussion is no longer available. Refresh and try again.')
-        if (idea.cid !== a.data.communities.find(community => community.id === idea.cid)?.id) throw new Error('The idea community is no longer available.')
+        const community = idea && a.data.communities.find(item => item.id === idea.cid)
+        if (!a.me || !idea || !community || community.arch || !action.text.trim()) throw new Error('That idea discussion is no longer available or is read-only.')
         ok = await a.addComment(idea.id, action.text)
       } else if (action.type === 'voteIdea') {
         const idea = a.data.ideas.find(item => item.id === action.ideaId)
