@@ -2115,7 +2115,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   addMilestone: 'Add milestone',
                   updateMilestone: 'Edit milestone',
                   deleteMilestone: 'Delete milestone',
-          reviewSubmission: action.decision === 'approved' ? 'Approve submitted work' : 'Request submission changes',
+          reviewSubmission: 'Review evidence submission',
                 } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity'
                   ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.'
                   : pendingAction.type === 'deleteIdea'
