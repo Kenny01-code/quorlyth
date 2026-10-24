@@ -70,7 +70,7 @@ function runLabel(status: WorkflowRun['status']) {
 }
 
 function TriggerGlyph({ trigger }: { trigger: WorkflowTrigger }) {
-  const glyph = trigger === 'idea.created' ? 'idea' : trigger === 'task.completed' ? 'complete' : trigger === 'workspace.created' ? 'workspace' : 'play'
+  const glyph = trigger === 'idea.created' ? 'idea' : trigger === 'task.completed' ? 'complete' : trigger === 'workspace.created' ? 'workspace' : 'start'
   return <QuorlythGlyph name={glyph} size={18} />
 }
 
