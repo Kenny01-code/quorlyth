@@ -4,7 +4,7 @@ import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
-import { Chat, ChatMsg, Community, Idea } from '../lib/types'
+import { Chat, ChatMsg, Community, Idea, Profile } from '../lib/types'
 import { emitWorkflowEvent, executeWorkflowActions, newWorkflowId, persistWorkflowRun } from '../lib/automation'
 import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTrigger } from '../lib/automation'
 import { cn, slug, when } from '../lib/util'
@@ -100,6 +100,7 @@ type PendingAction =
   | { type: 'setStandaloneWorkspaceStatus'; workspaceId: string; currentTitle: string; currentStatus: 'active' | 'completed'; status: 'active' | 'completed' }
   | { type: 'deleteStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; currentTitle: string; linkedArtifactCount: number; attachmentCount: number }
   | { type: 'deleteStandaloneWorkspace'; workspaceId: string; name: string; counts: { tasks: number; artifacts: number; attachments: number; members: number; comments: number; repos: number; activity: number } }
+  | { type: 'updateProfile'; patch: Partial<Pick<Profile, 'name' | 'head' | 'bio'>> }
 
 function describeWorkflow(workflow: WorkflowDefinition): string {
   const trigger = workflow.trigger === 'manual' ? 'Manual trigger'
@@ -148,6 +149,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'setStandaloneWorkspaceStatus': return JSON.stringify(action.currentTitle) + ' · Status: ' + action.currentStatus + ' → ' + action.status
     case 'deleteStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + ' · removes ' + action.linkedArtifactCount + ' linked evidence item' + (action.linkedArtifactCount === 1 ? '' : 's') + ' and ' + action.attachmentCount + ' private file attachment' + (action.attachmentCount === 1 ? '' : 's')
     case 'deleteStandaloneWorkspace': return JSON.stringify(action.name) + ' · ' + action.counts.tasks + ' tasks · ' + action.counts.artifacts + ' evidence items · ' + action.counts.members + ' team memberships · ' + action.counts.attachments + ' private file attachments'
+    case 'updateProfile': return (action.patch.name ? 'Display name → ' + JSON.stringify(action.patch.name) : '') + (action.patch.head !== undefined ? ' · Headline → ' + JSON.stringify(action.patch.head) : '') + (action.patch.bio !== undefined ? ' · Bio → ' + JSON.stringify(action.patch.bio.slice(0, 220)) : '')
   }
 }
 
@@ -2064,6 +2066,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       return (match?.[1] || '').trim().replace(/^["“]|["”]$/g, '')
     }
     const isDeleteRequest = /\b(delete|remove|permanently delete|destroy)\b/i.test(s)
+    if (a.me && /\b(profile|bio|about me|headline|display name|my name)\b/i.test(s)
+      && /\b(edit|update|change|set|rewrite|revise|rename)\b/i.test(s)
+      && !isDeleteRequest) {
+      const profilePatch: Partial<Pick<Profile, 'name' | 'head' | 'bio'>> = {}
+      const name = quotedAfter(/\b(?:profile name|display name|my name|rename(?:\s+my)?\s+profile(?:\s+name)?|name)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
+      const headline = quotedAfter(/\b(?:profile headline|headline|role line)\s+(?:to|as|with|into)\s*["“]([^"”]+)["”]/i)
+      const bio = quotedAfter(/\b(?:bio|about me|profile description)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+      if (name) profilePatch.name = name.slice(0, 80)
+      if (headline) profilePatch.head = headline.slice(0, 180)
+      if (bio) profilePatch.bio = bio.slice(0, 280)
+      if (Object.keys(profilePatch).length) return { type: 'updateProfile', patch: profilePatch }
+    }
     const ideaMention = /\b(?:idea|post)\b/i.test(s) && !/\b(?:milestone|submission|submitted work|deliverable|evidence)\b/i.test(s)
     if (a.me && isDeleteRequest && ideaMention) {
       const idea = targetIdea
@@ -2418,6 +2432,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         successOverride = run.status === 'success'
           ? 'Automation test run succeeded. Every configured action reported success.'
           : 'Automation test run finished with status: ' + run.status + '. Check Automations → Run history for each step and its result.'
+      } else if (action.type === 'updateProfile') {
+        if (!a.me) throw new Error('Sign in before updating your profile.')
+        const allowed: Partial<Pick<Profile, 'name' | 'head' | 'bio'>> = {}
+        if (action.patch.name !== undefined) {
+          const value = action.patch.name.trim().slice(0, 80)
+          if (value.length < 2) throw new Error('Your display name needs at least two characters.')
+          allowed.name = value
+        }
+        if (action.patch.head !== undefined) allowed.head = action.patch.head.trim().slice(0, 180)
+        if (action.patch.bio !== undefined) allowed.bio = action.patch.bio.trim().slice(0, 280)
+        if (!Object.keys(allowed).length) throw new Error('No profile changes were included in this review.')
+        ok = await a.saveProfile(allowed)
       } else if (action.type === 'createStandaloneWorkspace') {
         if (!a.me || !a.backend) throw new Error('Sign in before creating a private workspace.')
         const projectPath = 'standaloneProjects/' + action.workspaceId
@@ -2616,6 +2642,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           setStandaloneWorkspaceStatus: 'Workspace status updated successfully.',
           deleteStandaloneTask: 'Workspace task and linked evidence deleted.',
           deleteStandaloneWorkspace: 'Workspace and linked project records deleted.',
+          updateProfile: 'Profile updated successfully.',
         }
         const next = add(cur, { r: 'a', t: successOverride || labels[action.type] })
         persist(next); setPendingAction(null)
@@ -2872,6 +2899,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           setStandaloneWorkspaceStatus: 'Change workspace status',
           deleteStandaloneTask: 'Delete task and linked evidence',
           deleteStandaloneWorkspace: 'Delete workspace and linked records',
+          updateProfile: 'Update your profile',
                 } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity'
                   ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.'
                   : pendingAction.type === 'deleteIdea'
