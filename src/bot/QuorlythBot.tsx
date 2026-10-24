@@ -13,6 +13,7 @@ import { ChatMenu } from './ChatMenu'
 import { BotViews } from './views'
 import { SKILLS, THEMES, TOUR_MEMBER, TOUR_OWNER, VOICES } from './config'
 import { buildContext } from './context'
+import { createBotGreeting } from './greetings'
 import { useBotData } from './useBotData'
 import { reviewIdeas } from '../ai/review'
 
@@ -259,26 +260,43 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       setMinimized(false)
       return
     }
-    let first = false
+
+    const identity = a.me?.id || 'visitor'
+    const guideKey = `qbot:welcomed:v1:${identity}`
+    const lastOpenedKey = `qbot:last-opened-at:v2:${identity}`
+    const now = Date.now()
+    let lastOpenedAt = 0
+    let firstTime = true
     try {
-      // Keep first-use guidance per account: a visitor opening the bot must not consume a member's tour.
-      const guideKey = `qbot:welcomed:v1:${a.me?.id || 'visitor'}`
-      first = localStorage.getItem(guideKey) !== '1'
-      if (first) localStorage.setItem(guideKey, '1')
+      // Keep the first welcome per account and use a quiet window for repeat opens.
+      // This keeps visitors and signed-in members from consuming one another's greeting.
+      lastOpenedAt = Number(localStorage.getItem(lastOpenedKey) || 0) || 0
+      firstTime = localStorage.getItem(guideKey) !== '1' && lastOpenedAt === 0
+      localStorage.setItem(guideKey, '1')
+      localStorage.setItem(lastOpenedKey, String(now))
       localStorage.setItem('qseen', '1')
-    } catch { first = true }
-    const name = a.me?.name.split(' ')[0]
-    const msg = !a.me
-      ? first
-        ? 'Welcome to Quorlyth. I can help you explore communities, ideas, analytics, workspaces, and collaborations. Sign in when you are ready to enter your space.'
-        : 'Welcome back to Quorlyth. You can explore the site or sign in to enter your space.'
-      : first
-        ? `Welcome, ${name}. I am QuorlythBot, your concierge. I can help with communities, ideas, analytics, workspaces, and collaborations. Ask me anything, or say “show me around” for a quick tour.`
-        : `Welcome back, ${name}.`
-    setCaption(msg)
-    first ? robot.current?.welcome() : robot.current?.wave()
-    say(msg)
-    window.setTimeout(() => setCaption(''), 6000)
+    } catch {
+      // Storage can be unavailable in private/restricted browser contexts; still greet once per open.
+      firstTime = true
+    }
+
+    const greeting = createBotGreeting({
+      name: a.me?.name?.trim().split(' ')[0],
+      firstTime,
+      lastOpenedAt,
+      now,
+    })
+    if (greeting.kind === 'quiet') {
+      setCaption('')
+      robot.current?.wave()
+      return
+    }
+
+    setCaption(greeting.text)
+    greeting.kind === 'first' ? robot.current?.welcome() : robot.current?.wave()
+    // Speak the greeting automatically when the chat frame opens; the preview button is only for voice testing.
+    say(greeting.text)
+    window.setTimeout(() => setCaption(''), 6500)
   }
 
   // The app defers loading this module until the lightweight launcher is clicked.
