@@ -168,6 +168,11 @@ function safeHandlerError(error, feature = 'QuorlythBot') {
   if (error?.contextError) return { status: 503, message: 'I couldn’t securely load the app context for that request. Please retry in a moment.' }
   if (status === 400 || status === 413) return { status, message: String(error?.message || 'The request could not be processed.').slice(0, 200) }
   if (status === 401) return { status: 401, message: 'QuorlythBot could not authenticate this request. Please refresh and try again.' }
+  // Keep a missing-provider configuration error actionable instead of hiding it
+  // behind the generic 503 message. This does not expose credentials or values.
+  if (status === 503 && /No text AI provider is configured/i.test(String(error?.message || ''))) {
+    return { status, message: 'QuorlythBot is temporarily unavailable because no text AI provider is configured on the server. Please try again later.' }
+  }
   if (status === 503) return { status, message: 'QuorlythBot is temporarily unavailable. Please try again shortly.' }
   return { status: 500, message: feature + ' hit a temporary snag. Please try again.' }
 }

@@ -175,6 +175,18 @@ function WorkspaceProjectList() {
   return <>
     <Head kicker="Independent projects" title="A place to actually build." right={<button className="btn p" type="button" onClick={() => { setCreating(v => !v); setError('') }}><QuorlythGlyph name={creating ? 'close' : 'add'} size={15} />{creating ? 'Close form' : 'Create workspace'}</button>} />
     <p className="mut sw-intro">Create a private team space that does not depend on a community idea. Invite collaborators, break the goal into tasks, connect a GitHub repository, and submit source-checked evidence before work is approved.</p>
+
+    <section className="glass pad sw-create sw-first-work" aria-labelledby="sw-first-work-title">
+      <div className="sw-section-heading"><div><p className="ql-eyebrow">START HERE</p><h3 id="sw-first-work-title">Not sure what to do first?</h3><p>Quorlyth keeps your plan, tasks, people and proof of work together. You do the actual coding, design, writing or research in the tools you already use.</p></div></div>
+      <ol className="sw-first-work__steps">
+        <li><strong>Set one clear goal.</strong> Say what you want to finish and who it is for.</li>
+        <li><strong>Make a small task.</strong> Choose the first thing you can realistically complete.</li>
+        <li><strong>Do the task in your usual tools.</strong> For example, use your code editor, Figma, or a document.</li>
+        <li><strong>Submit proof of the work.</strong> Attach a GitHub link, demo, document, or file under Evidence &amp; reviews.</li>
+      </ol>
+      <div className="acts"><button className="btn p" type="button" onClick={() => { setCreating(true); setError('') }}><QuorlythGlyph name="add" size={15} />Start my own project</button><button className="btn" type="button" onClick={() => nav('/collaborations')}>Join a community idea <QuorlythGlyph name="arrow" size={14} /></button></div>
+    </section>
+
     <div className="sw-principles">
       <div><span><QuorlythGlyph name="workspace" size={16} /></span><strong>One shared goal</strong><small>Brief, deadlines and assigned tasks.</small></div>
       <div><span><QuorlythGlyph name="link" size={16} /></span><strong>Evidence attached</strong><small>Real public GitHub commits and pull requests.</small></div>
