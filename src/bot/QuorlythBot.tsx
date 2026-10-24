@@ -1569,6 +1569,153 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       }
     }
 
+    const activeIdeaId = loc.pathname.match(/^\/(?:idea|collaboration)\/([^/]+)/)?.[1]
+      || (loc.pathname === '/projects' ? new URLSearchParams(loc.search).get('idea') || '' : '')
+    const activeIdea = a.data.ideas.find(idea => idea.id === activeIdeaId)
+    const mentionedIdea = a.data.ideas
+      .filter(idea => idea.title && lower.includes(idea.title.toLowerCase()))
+      .sort((first, second) => second.title.length - first.title.length)[0]
+    const targetIdea = mentionedIdea || activeIdea
+    const activeCommunityId = loc.pathname.match(/^\/communities\/([^/]+)/)?.[1] || targetIdea?.cid || project?.cid || ''
+    const mentionedCommunity = a.data.communities
+      .filter(community => community.name && lower.includes(community.name.toLowerCase()))
+      .sort((first, second) => second.name.length - first.name.length)[0]
+    const targetCommunity = mentionedCommunity || a.data.communities.find(community => community.id === activeCommunityId)
+
+    const quotedValues = [...s.matchAll(/["“]([^"”]+)["”]/g)].map(match => match[1].trim()).filter(Boolean)
+    const quotedAfter = (pattern: RegExp) => {
+      const match = s.match(pattern)
+      return (match?.[1] || '').trim().replace(/^["“]|["”]$/g, '')
+    }
+    const isDeleteRequest = /\b(delete|remove|permanently delete|destroy)\b/i.test(s)
+    const ideaMention = /\b(idea|post|submission)\b/i.test(s)
+    if (a.me && isDeleteRequest && ideaMention) {
+      const idea = targetIdea
+      if (idea && a.canManageCommunity(idea.cid)) {
+        return {
+          type: 'deleteIdea',
+          ideaId: idea.id,
+          cid: idea.cid,
+          title: idea.title,
+          communityName: a.data.communities.find(community => community.id === idea.cid)?.name || 'Community',
+        }
+      }
+      if (idea) a.toast('Only the community owner or a platform administrator can delete this idea and its linked workspace.')
+    }
+
+    const editVerb = /\b(edit|update|change|rename|rewrite|replace|revise)\b/i.test(s)
+    if (a.me && !isDeleteRequest && editVerb && ideaMention && targetIdea) {
+      const patch: Partial<Pick<Idea, 'title' | 'body' | 'tags'>> = {}
+      const title = quotedAfter(/\b(?:rename(?:\s+the)?\s+idea|(?:idea\s+)?title|call\s+the\s+idea)\s+(?:to|as|with|into)?\s*["“]([^"”]+)["”]/i)
+        || quotedAfter(/\b(?:rename|retitle)\s+(?:this|the|my)?\s*idea\s+to\s*["“]([^"”]+)["”]/i)
+      const body = quotedAfter(/\b(?:description|body|idea text|content)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+        || quotedAfter(/\b(?:replace|rewrite)\s+(?:the\s+)?(?:description|body)\s+(?:with|as)\s*["“]([\s\S]+?)["”]\s*$/i)
+      if (title) patch.title = title.slice(0, 120)
+      if (body) patch.body = body.slice(0, 2000)
+      if (Object.keys(patch).length) {
+        if (targetIdea.authorId !== a.me.id && !a.canManageCommunity(targetIdea.cid)) {
+          a.toast('Only the idea creator or the community owner/platform administrator can edit this idea.')
+          return null
+        }
+        return { type: 'updateIdea', ideaId: targetIdea.id, cid: targetIdea.cid, oldTitle: targetIdea.title, patch }
+      }
+    }
+
+    if (a.me && isDeleteRequest && /\bmilestone\b/i.test(s)) {
+      const idea = activeIdea
+      const projectRecord = idea && a.data.projects[idea.id]
+      const milestones = idea ? a.data.milestones.filter(item => item.projectId === idea.id) : []
+      const named = milestones.filter(item => lower.includes(item.title.toLowerCase())).sort((first, second) => second.title.length - first.title.length)[0]
+      const milestone = named || (milestones.length === 1 ? milestones[0] : undefined)
+      if (idea && projectRecord && milestone && a.canManageCommunity(idea.cid)) {
+        return { type: 'deleteMilestone', milestoneId: milestone.id, projectId: idea.id, title: milestone.title, ideaTitle: idea.title }
+      }
+      if (idea && milestone) a.toast('Only the community owner or platform administrator can delete a milestone.')
+    }
+
+    if (a.me && !isDeleteRequest && editVerb && /\b(?:project brief|project summary|workspace summary)\b/i.test(s)) {
+      const idea = activeIdea
+      const projectRecord = idea && a.data.projects[idea.id]
+      const summary = quotedAfter(/\b(?:project brief|project summary|workspace summary)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+      if (idea && projectRecord && summary) {
+        if (!a.canManageCommunity(idea.cid) && !a.canOrganizeIdeaWithAI(idea.id)) {
+          a.toast('You do not have permission to edit this project brief.')
+          return null
+        }
+        return { type: 'updateProject', projectId: idea.id, ideaTitle: idea.title, oldSummary: projectRecord.summary || '', summary: summary.slice(0, 2000) }
+      }
+    }
+
+    if (a.me && !isDeleteRequest && editVerb && /\bcommunity\b/i.test(s) && targetCommunity) {
+      const patch: Partial<Pick<Community, 'name' | 'purpose' | 'welcome' | 'rules' | 'vis' | 'post' | 'joinApproval'>> = {}
+      const name = quotedAfter(/\b(?:rename|community name|name)\s+(?:the\s+)?(?:community\s+)?(?:to|as)\s*["“]([^"”]+)["”]/i)
+      const purpose = quotedAfter(/\b(?:purpose|description)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+      const welcome = quotedAfter(/\b(?:welcome message|welcome text)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+      const rules = quotedAfter(/\b(?:community rules|rules)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+      if (name) patch.name = name.slice(0, 80)
+      if (purpose) patch.purpose = purpose.slice(0, 1000)
+      if (welcome) patch.welcome = welcome.slice(0, 1500)
+      if (rules) patch.rules = rules.slice(0, 2000)
+      if (/\b(?:make|set)\s+(?:the\s+)?community\s+public\b/i.test(s)) patch.vis = 'listed'
+      if (/\b(?:make|set)\s+(?:the\s+)?community\s+unlisted\b/i.test(s)) patch.vis = 'unlisted'
+      if (/\b(?:allow|let)\s+(?:everyone|anyone)\s+to\s+post\b/i.test(s)) patch.post = 'anyone'
+      if (/\b(?:only\s+members|members\s+only)\s+(?:can\s+)?post\b/i.test(s)) patch.post = 'members'
+      if (/\b(?:only\s+the\s+owner|owner\s+only)\s+(?:can\s+)?post\b/i.test(s)) patch.post = 'owner'
+      if (/\b(?:require|turn on|enable)\s+(?:approval|join approval)\b/i.test(s)) patch.joinApproval = true
+      if (/\b(?:disable|turn off)\s+(?:approval|join approval)\b/i.test(s)) patch.joinApproval = false
+      if (Object.keys(patch).length) {
+        if (!a.canManageCommunity(targetCommunity.id)) {
+          a.toast('Only this community’s owner or a platform administrator can edit its settings.')
+          return null
+        }
+        return { type: 'updateCommunity', cid: targetCommunity.id, name: targetCommunity.name, patch }
+      }
+    }
+
+    if (a.me && !isDeleteRequest && /\b(?:add|create|make)\b/i.test(s) && /\bmilestone\b/i.test(s)) {
+      const idea = activeIdea
+      const projectRecord = idea && a.data.projects[idea.id]
+      const title = quotedAfter(/\bmilestone\s+(?:called|named|titled)\s*["“]([^"”]+)["”]/i)
+        || quotedAfter(/\b(?:add|create|make)\s+(?:a\s+)?milestone\s+["“]([^"”]+)["”]/i)
+      const description = quotedAfter(/\b(?:milestone description|description)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+      const criteria = quotedAfter(/\b(?:acceptance criteria|definition of done)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+      const priorityMatch = s.match(/\b(low|normal|high|critical)\s+priority\b/i)
+      if (idea && projectRecord && title) {
+        if (!a.canManageCommunity(idea.cid) && !a.canOrganizeIdeaWithAI(idea.id)) {
+          a.toast('You do not have permission to add milestones in this workspace.')
+          return null
+        }
+        return {
+          type: 'addMilestone', projectId: idea.id, ideaTitle: idea.title, title: title.slice(0, 120),
+          description: description.slice(0, 2000), priority: (priorityMatch?.[1]?.toLowerCase() || 'normal') as 'low' | 'normal' | 'high' | 'critical',
+          acceptanceCriteria: criteria.slice(0, 800),
+        }
+      }
+    }
+
+    const updateMilestoneVerb = editVerb || /\b(start|begin|mark)\b/i.test(s)
+    if (a.me && !isDeleteRequest && updateMilestoneVerb && /\bmilestone\b/i.test(s) && !/\b(?:add|create|make)\b/i.test(s)) {
+      const idea = activeIdea
+      const milestones = idea ? a.data.milestones.filter(item => item.projectId === idea.id) : []
+      const named = milestones.filter(item => lower.includes(item.title.toLowerCase())).sort((first, second) => second.title.length - first.title.length)[0]
+      const milestone = named || (milestones.length === 1 ? milestones[0] : undefined)
+      if (idea && milestone) {
+        const patch: { title?: string; description?: string; status?: 'in_progress' } = {}
+        const title = quotedAfter(/\b(?:milestone title|rename(?:\s+the)?\s+milestone|retitle(?:\s+the)?\s+milestone)\s+(?:to|as)?\s*["“]([^"”]+)["”]/i)
+        const description = quotedAfter(/\b(?:milestone description|description)\s+(?:to|as|with|into)\s*["“]([\s\S]+?)["”]\s*$/i)
+        if (title) patch.title = title.slice(0, 120)
+        if (description) patch.description = description.slice(0, 2000)
+        if (/\b(?:start|begin|mark|set)\b[\s\S]*\b(?:in progress|started)\b/i.test(s)) patch.status = 'in_progress'
+        if (Object.keys(patch).length) {
+          if (!a.canManageCommunity(idea.cid) && !(patch.status === 'in_progress' && (!milestone.assigneeId || milestone.assigneeId === a.me.id))) {
+            a.toast('Only the project manager can edit this milestone, or the assigned collaborator can start an available task.')
+            return null
+          }
+          return { type: 'updateMilestone', milestoneId: milestone.id, projectId: idea.id, oldTitle: milestone.title, patch }
+        }
+      }
+    }
+
     const createCommunity = /\b(create|make|start|set up)\b/i.test(s) && /\bcommunity\b/i.test(s) && !!a.me
     if (createCommunity) {
       const quoted = s.match(/\b(?:called|named)\s+["“]([^"”]+)["”]/i)
