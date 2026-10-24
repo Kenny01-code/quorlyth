@@ -171,7 +171,7 @@ function safeHandlerError(error, feature = 'QuorlythBot') {
   // Keep a missing-provider configuration error actionable instead of hiding it
   // behind the generic 503 message. This does not expose credentials or values.
   if (status === 503 && /No text AI provider is configured/i.test(String(error?.message || ''))) {
-    return { status, message: String(error.message).slice(0, 200) }
+    return { status, message: 'QuorlythBot is temporarily unavailable because no text AI provider is configured on the server. Please try again later.' }
   }
   if (status === 503) return { status, message: 'QuorlythBot is temporarily unavailable. Please try again shortly.' }
   return { status: 500, message: feature + ' hit a temporary snag. Please try again.' }
