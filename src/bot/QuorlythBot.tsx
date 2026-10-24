@@ -4,7 +4,7 @@ import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
-import { Chat, ChatMsg, Community, Idea } from '../lib/types'
+import { Chat, ChatMsg, Community, Idea, Profile, Status } from '../lib/types'
 import { executeWorkflowActions, newWorkflowId, persistWorkflowRun } from '../lib/automation'
 import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTrigger } from '../lib/automation'
 import { cn, slug, when } from '../lib/util'
@@ -92,6 +92,13 @@ type PendingAction =
   | { type: 'toggleAutomation'; workflowId: string; currentName: string; status: 'active' | 'draft' }
   | { type: 'deleteAutomation'; workflowId: string; name: string }
   | { type: 'runAutomation'; workflowId: string; name: string }
+  | { type: 'updateProfile'; patch: Partial<Pick<Profile, 'name' | 'bio' | 'head'>> }
+  | { type: 'addIdeaComment'; ideaId: string; ideaTitle: string; text: string }
+  | { type: 'voteIdea'; ideaId: string; ideaTitle: string; backing: boolean }
+  | { type: 'communityMembership'; cid: string; communityName: string; mode: 'join' | 'leave' | 'request'; message: string }
+  | { type: 'applyCollaboration'; ideaId: string; ideaTitle: string; message: string }
+  | { type: 'reviewCollaboration'; applicationId: string; ideaId: string; ideaTitle: string; applicantName: string; decision: 'accepted' | 'declined' }
+  | { type: 'setIdeaStatus'; ideaId: string; ideaTitle: string; previous: Status; status: Exclude<Status, 'promoted'>; reason: string }
 
 function describeWorkflow(workflow: WorkflowDefinition, workspaceNames: Record<string, string> = {}): string {
   const trigger = workflow.trigger === 'manual' ? 'Manual trigger'
@@ -148,6 +155,13 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'toggleAutomation': return action.currentName + ' → ' + (action.status === 'active' ? 'Active' : 'Draft / paused')
     case 'deleteAutomation': return JSON.stringify(action.name) + ' · saved run history will also be deleted'
     case 'runAutomation': return JSON.stringify(action.name) + ' · test run will execute configured actions'
+    case 'updateProfile': return (action.patch.name ? 'Display name → ' + JSON.stringify(action.patch.name) : '') + (action.patch.head ? ' · Headline → ' + JSON.stringify(action.patch.head) : '') + (action.patch.bio ? ' · Bio → ' + JSON.stringify(action.patch.bio.slice(0, 220)) : '')
+    case 'addIdeaComment': return JSON.stringify(action.ideaTitle) + ' · Comment: ' + JSON.stringify(action.text.slice(0, 350))
+    case 'voteIdea': return (action.backing ? 'Back' : 'Remove your backing from') + ' ' + JSON.stringify(action.ideaTitle)
+    case 'communityMembership': return (action.mode === 'join' ? 'Join' : action.mode === 'leave' ? 'Leave' : 'Request to join') + ' ' + JSON.stringify(action.communityName) + (action.message ? ' · Message: ' + JSON.stringify(action.message.slice(0, 220)) : '')
+    case 'applyCollaboration': return 'Apply to collaborate on ' + JSON.stringify(action.ideaTitle) + ' · Message: ' + JSON.stringify(action.message.slice(0, 260))
+    case 'reviewCollaboration': return (action.decision === 'accepted' ? 'Accept' : 'Decline') + ' ' + JSON.stringify(action.applicantName) + ' for ' + JSON.stringify(action.ideaTitle)
+    case 'setIdeaStatus': return JSON.stringify(action.ideaTitle) + ' · ' + action.previous + ' → ' + action.status + (action.reason ? ' · ' + JSON.stringify(action.reason.slice(0, 240)) : '')
   }
 }
 
