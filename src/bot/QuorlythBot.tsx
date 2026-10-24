@@ -86,6 +86,12 @@ type PendingAction =
   | { type: 'deleteMilestone'; milestoneId: string; projectId: string; title: string; ideaTitle: string }
   | { type: 'reviewSubmission'; submissionId: string; projectId: string; ideaTitle: string; milestoneTitle: string; revision: number; submitterName: string; decision: 'approved' | 'changes_requested'; reviewNote: string }
 
+function actionDecisionDescription(action: Extract<PendingAction, { type: 'reviewSubmission' }>): string {
+  return action.decision === 'approved'
+    ? 'Confirming records the review and completes the linked milestone when allowed by the app. Check the submission and its attachments before approving.'
+    : 'Confirming records “changes requested” with the reviewer note shown above. The contributor will need to revise and resubmit their work.'
+}
+
 function pendingActionDetail(action: PendingAction, communities: { id: string; name: string }[], ideas: { id: string; title: string }[]): string {
   switch (action.type) {
     case 'community': return action.name + (action.purpose ? ' · ' + action.purpose : '') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
@@ -1849,6 +1855,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         const idea = a.data.ideas.find(item => item.id === action.projectId)
         if (!milestone || !idea || milestone.projectId !== action.projectId || !a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can delete this milestone.')
         ok = await a.deleteMilestone(action.milestoneId)
+      } else if (action.type === 'reviewSubmission') {
+        const submission = a.data.workSubmissions.find(item => item.id === action.submissionId)
+        const idea = a.data.ideas.find(item => item.id === action.projectId)
+        if (!a.me || !submission || !idea || submission.status !== 'submitted' || (submission.ideaId !== idea.id && submission.projectId !== idea.id)) throw new Error('That evidence submission is no longer pending review. Refresh the Evidence tab and check its current status.')
+        if (!a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can review submitted work.')
+        if (submission.submittedBy === a.me.id) throw new Error('You cannot review your own submission.')
+        ok = await a.reviewMilestoneWork(action.submissionId, action.decision, action.reviewNote)
       }
       if (!ok) throw new Error('Quorlyth could not confirm that this change was saved. Check the permission notice and refresh before trying again.')
       if (ok) {
@@ -2102,12 +2115,15 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   addMilestone: 'Add milestone',
                   updateMilestone: 'Edit milestone',
                   deleteMilestone: 'Delete milestone',
+          reviewSubmission: action.decision === 'approved' ? 'Approve submitted work' : 'Request submission changes',
                 } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity'
                   ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.'
                   : pendingAction.type === 'deleteIdea'
                     ? 'This is permanent. Confirming deletes the idea, its nested discussion, and linked project, milestones, submissions, and collaboration records.'
                     : pendingAction.type === 'deleteMilestone'
                       ? 'This is permanent. Confirming deletes the milestone and linked submissions and attachments. Private file cleanup must complete first.'
+                      : pendingAction.type === 'reviewSubmission'
+                        ? actionDecisionDescription(pendingAction)
                       : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
