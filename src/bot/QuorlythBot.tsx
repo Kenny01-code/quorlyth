@@ -374,11 +374,14 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
   }
 
   async function requestLiveContext(text: string) {
-    const asksLocalWeather = /\b(weather|forecast|temperature)\b/i.test(text) && !/\b(?:in|at|for)\s+[A-Z][a-z]+/i.test(text)
-    const asksLocation = /\b(near me|around me|around here|my location|where am i|weather here|forecast here|temperature here|local weather|nearby|based on where i am|based on my location|where i am currently|in my area|near my current location)\b/i.test(text)
-    const asksLocalPlaces = asksLocation
-      || (/\b(recommend|recommendations|suggest|suggestions|find|discover|look for|show me|best|good)\b/i.test(text)
-        && /\b(restaurants?|cafes?|coffee shops?|food|hospitals?|clinics?|doctors?|pharmacies|shops?|stores?|markets?|malls?|gyms?|fitness|parks?|museums?|attractions?|things to do|activities|events?|hotels?|barbers?|salons?|libraries|coworking|cowork spaces|transport|bus stops|services)\b/i.test(text))
+    const asksLocalWeather = /\b(weather|forecast|temperature)\b/i.test(text)
+      && (!/\b(?:in|at|for)\s+(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}|[A-Z]{2,})(?:,\s*[A-Z]{2})?\b/.test(text)
+        || /\b(?:near me|around me|my location|weather here|forecast here|local weather|based on my location|where i am currently)\b/i.test(text))
+    const asksCurrentLocation = /\b(near me|around me|around here|my location|where am i|weather here|forecast here|temperature here|local weather|based on where i am|based on my location|where i am currently|in my area|near my current location)\b/i.test(text)
+    const explicitPlace = /\b(?:in|near|around|at|from|for)\s+(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}|[A-Z]{2,})(?:,\s*[A-Z]{2})?\b/.test(text)
+    const asksLocalPlaces = asksCurrentLocation
+      || (!explicitPlace && (/\b(nearby|recommend|recommendations|suggest|suggestions|find|discover|look for|show me|best|good)\b/i.test(text)
+        && /\b(restaurants?|cafes?|coffee shops?|food|hospitals?|clinics?|doctors?|pharmacies|shops?|stores?|markets?|malls?|gyms?|fitness|parks?|museums?|attractions?|things to do|activities|events?|hotels?|barbers?|salons?|libraries|coworking|cowork spaces|transport|bus stops|services)\b/i.test(text)))
       || /\b(local (?:places|recommendations|suggestions|businesses|services|activities|events))\b/i.test(text)
     if (!asksLocalWeather && !asksLocalPlaces) return ''
     if (!navigator.geolocation) return 'Location-based suggestions were requested, but this browser does not support geolocation. Ask the user to name their city or area; do not guess local places.'
