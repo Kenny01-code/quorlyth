@@ -5,6 +5,7 @@
 - **Live app:** https://quorlyth.vercel.app
 - **Source:** https://github.com/Kenny01-code/quorlyth
 - **Assessment brief and acceptance checklist:** [ASSESSMENT.md](./ASSESSMENT.md)
+- **System architecture and workflow diagrams:** [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
 ## The problem
 
