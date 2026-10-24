@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
+import '../styles/architecture-live.css'
 
 type HealthState = 'online' | 'connected' | 'configured' | 'browser_fallback' | 'not_configured' | 'needs_attention' | 'degraded' | 'unreachable' | 'unknown'
 
