@@ -1555,7 +1555,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       return (match?.[1] || '').trim().replace(/^["“]|["”]$/g, '')
     }
     const isDeleteRequest = /\b(delete|remove|permanently delete|destroy)\b/i.test(s)
-    const ideaMention = /\b(idea|post|submission)\b/i.test(s)
+    const ideaMention = /\b(?:idea|post)\b/i.test(s) && !/\b(?:milestone|submission|submitted work|deliverable|evidence)\b/i.test(s)
     if (a.me && isDeleteRequest && ideaMention) {
       const idea = targetIdea
       if (idea && a.canManageCommunity(idea.cid)) {
@@ -1680,6 +1680,56 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           }
           return { type: 'updateMilestone', milestoneId: milestone.id, projectId: idea.id, oldTitle: milestone.title, patch }
         }
+      }
+    }
+
+    const requestsEvidenceReview = /\b(approve|accept|sign off|request changes|ask for changes|send back|needs revisions)\b/i.test(s)
+      && (/\b(submission|submitted work|deliverable|evidence)\b/i.test(s) || new URLSearchParams(loc.search).get('tab') === 'evidence')
+    if (a.me && activeIdea && requestsEvidenceReview) {
+      const allMilestones = a.data.milestones.filter(item => item.projectId === activeIdea.id)
+      const explicitlyNamedMilestone = allMilestones
+        .filter(item => lower.includes(item.title.toLowerCase()))
+        .sort((first, second) => second.title.length - first.title.length)[0]
+      const pendingSubmissions = a.data.workSubmissions
+        .filter(item => (item.ideaId === activeIdea.id || item.projectId === activeIdea.id) && item.status === 'submitted')
+        .filter(item => !explicitlyNamedMilestone || item.milestoneId === explicitlyNamedMilestone.id)
+        .sort((first, second) => (Number(second.submittedAt) || 0) - (Number(first.submittedAt) || 0) || (Number(second.revision) || 0) - (Number(first.revision) || 0))
+      const asksLatest = /\b(latest|newest|most recent|last submission)\b/i.test(s)
+      if (!pendingSubmissions.length) {
+        a.toast('There is no pending evidence submission in this workspace for that target.')
+        return null
+      }
+      if (pendingSubmissions.length > 1 && !explicitlyNamedMilestone && !asksLatest) {
+        a.toast('More than one submission is awaiting review. Name the milestone or ask me to review the latest submission so I do not choose the wrong one.')
+        return null
+      }
+      const submission = pendingSubmissions[0]
+      const milestone = allMilestones.find(item => item.id === submission.milestoneId)
+      if (!a.canManageCommunity(activeIdea.cid)) {
+        a.toast('Only the community owner or a platform administrator can review submitted work.')
+        return null
+      }
+      if (submission.submittedBy === a.me.id) {
+        a.toast('You cannot review your own submission. Another authorized reviewer must decide.')
+        return null
+      }
+      const requestsChanges = /\b(request changes|ask for changes|send back|needs revisions)\b/i.test(s)
+      const reviewNote = quotedAfter(/\b(?:review note|note|feedback|reason)\s*(?:to|:|because|is)?\s*["“]([^"”]+)["”]/i)
+      if (requestsChanges && reviewNote.trim().length < 4) {
+        a.toast('Add a short quoted reviewer note explaining what must change, for example: request changes with note "Please include the test results."')
+        return null
+      }
+      const submitterName = a.nm(submission.submittedBy)
+      return {
+        type: 'reviewSubmission',
+        submissionId: submission.id,
+        projectId: submission.projectId,
+        ideaTitle: activeIdea.title,
+        milestoneTitle: milestone?.title || 'Project deliverable',
+        revision: Number(submission.revision) || 1,
+        submitterName,
+        decision: requestsChanges ? 'changes_requested' : 'approved',
+        reviewNote: requestsChanges ? reviewNote.slice(0, 1600) : '',
       }
     }
 
