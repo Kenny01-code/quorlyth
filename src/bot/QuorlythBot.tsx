@@ -147,7 +147,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'startStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + ' · Status → In progress'
     case 'setStandaloneWorkspaceStatus': return JSON.stringify(action.currentTitle) + ' · Status: ' + action.currentStatus + ' → ' + action.status
     case 'deleteStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + ' · removes ' + action.linkedArtifactCount + ' linked evidence item' + (action.linkedArtifactCount === 1 ? '' : 's') + ' and ' + action.attachmentCount + ' private file attachment' + (action.attachmentCount === 1 ? '' : 's')
-    case 'deleteStandaloneWorkspace': return JSON.stringify(action.name) + ' · ' + action.counts.tasks + ' tasks · ' + action.counts.artifacts + ' evidence items · ' + action.counts.members + ' team memberships · ' + action.counts.attachments + ' private file attachments
+    case 'deleteStandaloneWorkspace': return JSON.stringify(action.name) + ' · ' + action.counts.tasks + ' tasks · ' + action.counts.artifacts + ' evidence items · ' + action.counts.members + ' team memberships · ' + action.counts.attachments + ' private file attachments'
   }
 }
 
