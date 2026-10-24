@@ -2863,6 +2863,14 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           toggleAutomation: 'Change automation status',
           deleteAutomation: 'Delete automation',
           runAutomation: 'Run automation test',
+          createStandaloneWorkspace: 'Create private workspace',
+          updateStandaloneWorkspace: 'Edit workspace details',
+          createStandaloneTask: 'Add workspace task',
+          updateStandaloneTask: 'Edit workspace task',
+          startStandaloneTask: 'Start workspace task',
+          setStandaloneWorkspaceStatus: 'Change workspace status',
+          deleteStandaloneTask: 'Delete task and linked evidence',
+          deleteStandaloneWorkspace: 'Delete workspace and linked records',
                 } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'deleteCommunity'
                   ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.'
                   : pendingAction.type === 'deleteIdea'
@@ -2877,7 +2885,15 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                             ? 'A test run may create real tasks, store notifications, or send data to its configured HTTPS webhook. Confirm only if you have reviewed those destinations.'
                             : pendingAction.type === 'createAutomation' || pendingAction.type === 'updateAutomation' || pendingAction.type === 'toggleAutomation'
                               ? 'Review the trigger, optional text filter, action order, target workspace and final status. Saving or activating a workflow does not guarantee runs while Quorlyth is closed; the current runtime runs in an active session.'
-                              : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+                              : pendingAction.type === 'deleteStandaloneTask'
+                                ? 'This is permanent. It removes the task, its linked evidence records and associated private file attachments. QuorlythBot will recheck the current project role and linked evidence counts before deletion.'
+                                : pendingAction.type === 'deleteStandaloneWorkspace'
+                                  ? 'This is permanent. It removes the workspace, all tasks, evidence records, team memberships, comments, repository links and activity records. Private file cleanup is attempted first; the preview counts are checked again before deletion.'
+                                  : pendingAction.type === 'setStandaloneWorkspaceStatus'
+                                    ? 'This changes whether the workspace is active or completed. This does not mark unfinished tasks as complete; task completion still depends on the evidence review flow.'
+                                    : pendingAction.type === 'startStandaloneTask'
+                                      ? 'This starts the task but does not mark it complete. A completed status requires evidence approval through the existing workflow.'
+                                      : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={confirmPendingAction}>Confirm action</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
                 <div className="bc">
