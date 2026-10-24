@@ -188,7 +188,7 @@ export function Architecture() {
         <p className="arch-caption">This is a high-level map. Provider credentials, private member records and deployment secrets are deliberately not part of a public architecture page.</p>
       </section>
 
-      <section className="arch-section arch-brain-section" aria-labelledby="arch-brain-title" data-arch-reveal">
+      <section className="arch-section arch-brain-section" aria-labelledby="arch-brain-title" data-arch-reveal>
         <div className="arch-section-heading">
           <span className="arch-overline">03 / QUORLYTHBOT’S BRAIN</span>
           <h2 id="arch-brain-title">Context in. Useful action out.</h2>
@@ -207,7 +207,7 @@ export function Architecture() {
         <p className="arch-caption">This is the real processing design, not a claim that the AI has human consciousness. The live status panel above reports configuration and connectivity separately from answer quality.</p>
       </section>
 
-      <section className="arch-section" aria-labelledby="arch-automation-title" data-arch-reveal">
+      <section className="arch-section" aria-labelledby="arch-automation-title" data-arch-reveal>
         <div className="arch-section-heading">
           <span className="arch-overline">04 / WORKFLOW AUTOMATION</span>
           <h2 id="arch-automation-title">Let routine work move itself forward.</h2>
