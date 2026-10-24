@@ -23,6 +23,7 @@ const Projects = lazy(() => import('./screens/Projects').then(m => ({ default: m
 const StandaloneWorkspaceList = lazy(() => import('./screens/StandaloneWorkspaces').then(m => ({ default: m.StandaloneWorkspaceList })))
 const StandaloneWorkspaceDetail = lazy(() => import('./screens/StandaloneWorkspaces').then(m => ({ default: m.StandaloneWorkspaceDetail })))
 const Automations = lazy(() => import('./screens/Automations').then(m => ({ default: m.Automations })))
+const Architecture = lazy(() => import('./screens/Architecture').then(m => ({ default: m.Architecture })))
 const Collaborations = lazy(() => import('./screens/Collaborations').then(m => ({ default: m.Collaborations })))
 const CollaborationWorkspace = lazy(() => import('./screens/Collaborations').then(m => ({ default: m.CollaborationWorkspace })))
 const Promote = lazy(() => import('./screens/Promote').then(m => ({ default: m.Promote })))
@@ -331,6 +332,7 @@ export default function App() {
           <Suspense fallback={<DelayedRouteLoader />}>
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/architecture" element={<Architecture />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/demo" element={<DemoRedirect onBeforeRedirect={() => { skipNextPageTransition.current = true }} />} />

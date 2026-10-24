@@ -8,6 +8,7 @@ import { Av } from './ui'
 
 const ITEMS: { path: string; label: string; icon: string; owner?: boolean; communityOwner?: boolean; platformOwnerOnly?: boolean; platformAdminOnly?: boolean; guest?: boolean }[] = [
   { path: '/', label: 'Home', icon: 'audience' },
+  { path: '/architecture', label: 'How it works', icon: 'info' },
   { path: '/demo', label: 'Try demo', icon: 'spark', guest: true },
   { path: '/signin', label: 'Sign in', icon: 'private', guest: true },
   { path: '/dashboard', label: 'Dashboard', icon: 'home' },
@@ -38,6 +39,7 @@ function preloadRoute(path: string) {
     : path
   const loaders: Record<string, () => Promise<unknown>> = {
     '/': () => import('../screens/Landing'),
+    '/architecture': () => import('../screens/Architecture'),
     '/dashboard': () => import('../screens/Dashboard'),
     '/access': () => import('../screens/Access'),
     '/analytics': () => import('../screens/Analytics'),
@@ -134,7 +136,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
             if (i.path === '/access' && me && app.data.decisions[me.id]?.status === 'approved' && !accessSent) return false
             if (demo) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             if (me) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
-            return ['/', '/demo', '/signin'].includes(i.path)
+            return ['/', '/architecture', '/demo', '/signin'].includes(i.path)
           }).map(i => {
             const navLabel = i.label
             return (

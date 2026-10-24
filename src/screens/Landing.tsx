@@ -120,6 +120,7 @@ export function Landing() {
             const analyticsWindow = window as Window & { gtag?: (command: string, eventName: string, parameters?: Record<string, unknown>) => void }
             analyticsWindow.gtag?.('event', 'how_it_works_click', { page_path: '/' })
           }}>See how it works</a>
+          <button className="btn" onClick={() => nav('/architecture')}>How Quorlyth works</button>
         </div>
         <p className="hero-note">Explore with sample data. No account needed.</p>
         <i className="hz" />
@@ -179,6 +180,7 @@ export function Landing() {
           <a className="footer-brand" href="/" aria-label="Quorlyth home">QUORLYTH</a>
           <span className="dim footer-description">Built for creators and their communities.</span>
           <nav className="footer-links" aria-label="Legal links">
+            <a href="/architecture">How it works</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
           </nav>
