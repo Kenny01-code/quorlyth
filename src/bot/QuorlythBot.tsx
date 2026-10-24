@@ -4,7 +4,7 @@ import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
-import { Chat, ChatMsg } from '../lib/types'
+import { Chat, ChatMsg, Community, Idea } from '../lib/types'
 import { cn, slug, when } from '../lib/util'
 import { askJson, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
@@ -77,6 +77,13 @@ type PendingAction =
   | { type: 'promote'; ideaId: string; text: string; credits: string[] }
   | { type: 'cover'; cid: string; cover: string }
   | { type: 'deleteCommunity'; cid: string; name: string; ideaCount: number }
+  | { type: 'updateIdea'; ideaId: string; cid: string; oldTitle: string; patch: Partial<Pick<Idea, 'title' | 'body' | 'tags'>> }
+  | { type: 'deleteIdea'; ideaId: string; cid: string; title: string; communityName: string }
+  | { type: 'updateCommunity'; cid: string; name: string; patch: Partial<Pick<Community, 'name' | 'purpose' | 'welcome' | 'rules' | 'vis' | 'post' | 'joinApproval'>> }
+  | { type: 'updateProject'; projectId: string; ideaTitle: string; oldSummary: string; summary: string }
+  | { type: 'addMilestone'; projectId: string; ideaTitle: string; title: string; description: string; priority: 'low' | 'normal' | 'high' | 'critical'; acceptanceCriteria: string }
+  | { type: 'updateMilestone'; milestoneId: string; projectId: string; oldTitle: string; patch: { title?: string; description?: string; status?: 'in_progress' } }
+  | { type: 'deleteMilestone'; milestoneId: string; projectId: string; title: string; ideaTitle: string }
 
 function pendingActionDetail(action: PendingAction, communities: { id: string; name: string }[], ideas: { id: string; title: string }[]): string {
   switch (action.type) {
@@ -85,6 +92,13 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'promote': return ideas.find(x => x.id === action.ideaId)?.title || 'Selected idea'
     case 'cover': return (communities.find(x => x.id === action.cid)?.name || 'Community') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
     case 'deleteCommunity': return action.name + ' · ' + action.ideaCount + ' linked idea' + (action.ideaCount === 1 ? '' : 's')
+    case 'updateIdea': return 'Idea: ' + JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.body !== undefined ? ' · Description: ' + JSON.stringify(action.patch.body.slice(0, 180)) : '')
+    case 'deleteIdea': return JSON.stringify(action.title) + ' · ' + action.communityName + ' · linked discussions and workspace records will be removed'
+    case 'updateCommunity': return (action.patch.name ? 'Name → ' + JSON.stringify(action.patch.name) : 'Community') + (action.patch.purpose !== undefined ? ' · Purpose → ' + JSON.stringify(action.patch.purpose.slice(0, 140)) : '') + (action.patch.welcome !== undefined ? ' · Welcome message updated' : '') + (action.patch.rules !== undefined ? ' · Community rules updated' : '')
+    case 'updateProject': return action.ideaTitle + ' · Project brief: ' + JSON.stringify(action.oldSummary.slice(0, 140)) + ' → ' + JSON.stringify(action.summary.slice(0, 180))
+    case 'addMilestone': return action.ideaTitle + ' · ' + JSON.stringify(action.title) + ' · ' + action.priority + ' priority' + (action.description ? ' · ' + JSON.stringify(action.description.slice(0, 150)) : '')
+    case 'updateMilestone': return 'Milestone: ' + JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.status ? ' · Status → In progress' : '') + (action.patch.description ? ' · Description updated' : '')
+    case 'deleteMilestone': return JSON.stringify(action.title) + ' · ' + action.ideaTitle + ' · linked work submissions and private attachments may be removed'
   }
 }
 
