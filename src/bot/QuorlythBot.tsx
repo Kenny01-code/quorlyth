@@ -777,8 +777,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         return
       }
       const contextualIntent = /\b(edit|rewrite|improve|update|change|revise|rename|comment|reply|respond|post|back|vote|unvote|unback|join|leave|apply|collaborat|accept|decline|approve|select|hold|reject|mark|set)\b/i.test(t)
-        && (/\b(idea|community|profile|bio|headline|collaboration|application|review queue|comment|reply|discussion|status|this page|this idea|this community|my profile)\b/i.test(t)
-          || /^(?:\/idea\/|\/communities\/|\/collaboration\/|\/queue)/.test(loc.pathname))
+        && (/\b(idea|community|profile|bio|headline|name|about me|this account|collaboration|application|review queue|comment|reply|discussion|status|this page|this idea|this community|my profile)\b/i.test(t)
+          || /^(?:\/idea\/|\/communities\/|\/collaboration\/|\/queue|\/me(?:\/|$))/.test(loc.pathname))
       if (!raw && contextualIntent) {
         stopVoice(); setView('chat')
         setBusy(true); setStatus('Planning action'); setThinkingTask('Checking the current page and your permissions')
@@ -1805,7 +1805,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       const idea = findIdea(response.ideaId) || activeIdea
       const allowedStatuses: Exclude<Status, 'promoted'>[] = ['review', 'selected', 'held', 'declined']
       const status = allowedStatuses.includes(response.status as Exclude<Status, 'promoted'>) ? response.status as Exclude<Status, 'promoted'> : null
-      if (!idea || !status || status === 'promoted') return null
+      if (!idea || !status) return null
       if (!a.owner && !a.canManageCommunity(idea.cid)) throw new Error('Only the platform owner or community manager can update this idea’s review status.')
       const previous = a.statusOf(idea.id)
       if (previous === status) return null
