@@ -19,7 +19,7 @@ async function withTimeout(url, options = {}, timeoutMs = 3500) {
 }
 
 async function checkDatabase() {
-  const base = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim().replace(/\\/+$/, '')
+  const base = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '')
   const key = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim()
   if (!base || !key) return { state: 'not_configured', label: 'Supabase connection is not configured in the runtime environment' }
 
