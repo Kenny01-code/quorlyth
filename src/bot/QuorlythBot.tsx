@@ -5,6 +5,7 @@ import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { Chat, ChatMsg, Community, Idea } from '../lib/types'
+import { executeWorkflowActions, newWorkflowId, persistWorkflowRun, WorkflowActionType, WorkflowDefinition, WorkflowTrigger } from '../lib/automation'
 import { cn, slug, when } from '../lib/util'
 import { askJson, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
@@ -85,6 +86,24 @@ type PendingAction =
   | { type: 'updateMilestone'; milestoneId: string; projectId: string; oldTitle: string; patch: { title?: string; description?: string; status?: 'in_progress' } }
   | { type: 'deleteMilestone'; milestoneId: string; projectId: string; title: string; ideaTitle: string }
   | { type: 'reviewSubmission'; submissionId: string; projectId: string; ideaTitle: string; milestoneTitle: string; revision: number; submitterName: string; decision: 'approved' | 'changes_requested'; reviewNote: string }
+  | { type: 'createAutomation'; workflow: WorkflowDefinition }
+  | { type: 'updateAutomation'; workflowId: string; currentName: string; workflow: WorkflowDefinition }
+  | { type: 'toggleAutomation'; workflowId: string; currentName: string; status: 'active' | 'draft' }
+  | { type: 'deleteAutomation'; workflowId: string; name: string }
+  | { type: 'runAutomation'; workflowId: string; name: string }
+
+function describeWorkflow(workflow: WorkflowDefinition): string {
+  const trigger = workflow.trigger === 'manual' ? 'Manual trigger'
+    : workflow.trigger === 'idea.created' ? 'When an idea is created'
+      : workflow.trigger === 'task.completed' ? 'When a task is completed'
+        : 'When a workspace is created'
+  const actions = workflow.actions.map(action => {
+    if (action.type === 'notify') return 'notify'
+    if (action.type === 'create_task') return 'create task' + (action.projectId ? ' in a selected workspace' : '')
+    return 'HTTPS webhook'
+  }).join(' → ')
+  return JSON.stringify(workflow.name) + ' · ' + trigger + ' → ' + actions + ' · ' + workflow.status
+}
 
 function actionDecisionDescription(action: Extract<PendingAction, { type: 'reviewSubmission' }>): string {
   return action.decision === 'approved'
@@ -107,6 +126,11 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'updateMilestone': return 'Milestone: ' + JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.status ? ' · Status → In progress' : '') + (action.patch.description ? ' · Description updated' : '')
     case 'deleteMilestone': return JSON.stringify(action.title) + ' · ' + action.ideaTitle + ' · linked work submissions and private attachments may be removed'
     case 'reviewSubmission': return (action.decision === 'approved' ? 'Approve' : 'Request changes to') + ' revision ' + action.revision + ' for ' + action.milestoneTitle + ' · submitted by ' + action.submitterName + (action.reviewNote ? ' · reviewer note: ' + JSON.stringify(action.reviewNote.slice(0, 240)) : '')
+    case 'createAutomation': return describeWorkflow(action.workflow)
+    case 'updateAutomation': return action.currentName + ' → ' + describeWorkflow(action.workflow)
+    case 'toggleAutomation': return action.currentName + ' → ' + (action.status === 'active' ? 'Active' : 'Draft / paused')
+    case 'deleteAutomation': return JSON.stringify(action.name) + ' · saved run history will also be deleted'
+    case 'runAutomation': return JSON.stringify(action.name) + ' · test run will execute configured actions'
   }
 }
 
