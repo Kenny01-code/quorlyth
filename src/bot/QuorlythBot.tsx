@@ -153,10 +153,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'deleteStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + ' · removes ' + action.linkedArtifactCount + ' linked evidence item' + (action.linkedArtifactCount === 1 ? '' : 's') + ' and ' + action.attachmentCount + ' private file attachment' + (action.attachmentCount === 1 ? '' : 's')
     case 'deleteStandaloneWorkspace': return JSON.stringify(action.name) + ' · ' + action.counts.tasks + ' tasks · ' + action.counts.artifacts + ' evidence items · ' + action.counts.members + ' team memberships · ' + action.counts.attachments + ' private file attachments'
     case 'updateProfile': return (action.patch.name ? 'Display name → ' + JSON.stringify(action.patch.name) : '') + (action.patch.head !== undefined ? ' · Headline → ' + JSON.stringify(action.patch.head) : '') + (action.patch.bio !== undefined ? ' · Bio → ' + JSON.stringify(action.patch.bio.slice(0, 220)) : '')
-    case 'batchActions': return action.title + ' · ' + action.actions.length + ' coordinated changes
-' + action.actions.map((item, index) => (index + 1) + '. ' + pendingActionDetail(item.action, communities, ideas) + (item.rationale ? ' — ' + item.rationale : '')).join('
-') + (action.summary ? '
-' + action.summary : '')
+    case 'batchActions': return action.title + ' · ' + action.actions.length + ' coordinated changes' + String.fromCharCode(10) + action.actions.map((item, index) => (index + 1) + '. ' + pendingActionDetail(item.action, communities, ideas) + (item.rationale ? ' — ' + item.rationale : '')).join(String.fromCharCode(10)) + (action.summary ? String.fromCharCode(10) + action.summary : '')
   }
 }
 
