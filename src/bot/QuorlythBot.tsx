@@ -1720,6 +1720,94 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         isMyApplication: application.applicantId === a.me!.id,
         canReview: !!a.data.ideas.find(item => item.id === application.ideaId && a.canManageCommunity(item.cid)),
       }))
+
+    const workspaceIntent = /\b(workspace|standalone project|project workspace|task|deliverable|workspace evidence|team room|workspace member|task evidence)/i.test(requestText)
+      || loc.pathname === '/workspaces'
+      || loc.pathname.startsWith('/workspaces/')
+    let workspaceDocs: { path: string; data: any }[] = []
+    let workspaceProjects: any[] = []
+    let workspaceMembers: any[] = []
+    let workspaceTasks: any[] = []
+    let workspaceArtifacts: any[] = []
+    let workspaceComments: any[] = []
+    let workspaceRepositories: any[] = []
+    let workspaceActivity: any[] = []
+    if (workspaceIntent) {
+      if (!a.backend?.store) throw new Error('The workspace store is not ready. Reload Quorlyth and try again.')
+      const exported = await a.backend.store.exportAll()
+      workspaceDocs = exported.filter(row => /^(standaloneProjects|standaloneProjectMembers|standaloneTasks|standaloneArtifacts|standaloneComments|standaloneGithubRepos|standaloneActivity)\/[^/]+$/.test(row.path))
+      const readCollection = (collection: string) => workspaceDocs
+        .filter(row => row.path.startsWith(collection + '/'))
+        .map(row => {
+          const id = row.path.slice((collection + '/').length)
+          return { ...(row.data || {}), id: (row.data as any)?.id || id, docId: id }
+        })
+      workspaceProjects = readCollection('standaloneProjects')
+      workspaceMembers = readCollection('standaloneProjectMembers')
+      workspaceTasks = readCollection('standaloneTasks')
+      workspaceArtifacts = readCollection('standaloneArtifacts')
+      workspaceComments = readCollection('standaloneComments')
+      workspaceRepositories = readCollection('standaloneGithubRepos')
+      workspaceActivity = readCollection('standaloneActivity')
+    }
+    const activeWorkspaceId = loc.pathname.match(/^\/workspaces\/([^/]+)/)?.[1] || ''
+    const activeWorkspace = workspaceProjects.find(item => item.id === activeWorkspaceId || item.docId === activeWorkspaceId)
+    const workspaceMembersFor = (workspaceId: string) => workspaceMembers.filter(member => member.projectId === workspaceId)
+    const workspaceTasksFor = (workspaceId: string) => workspaceTasks.filter(task => task.projectId === workspaceId)
+    const workspaceArtifactsFor = (workspaceId: string) => workspaceArtifacts.filter(artifact => artifact.projectId === workspaceId)
+    const workspaceCommentsFor = (workspaceId: string) => workspaceComments.filter(comment => comment.projectId === workspaceId)
+    const activeWorkspaceMembers = activeWorkspace ? workspaceMembersFor(activeWorkspace.id) : []
+    const activeWorkspaceMyMembership = activeWorkspaceMembers.find(member => member.userId === a.me!.id && member.status === 'active')
+    const activeWorkspaceRole = activeWorkspace?.createdBy === a.me.id ? 'owner' : activeWorkspaceMyMembership?.role || ''
+    const activeWorkspaceCanManage = activeWorkspaceRole === 'owner' || activeWorkspaceRole === 'manager'
+    const activeWorkspaceCanContribute = activeWorkspaceCanManage || activeWorkspaceRole === 'contributor'
+    const approvedWorkspaceEvidence = (taskId: string, workspaceId: string) => workspaceArtifactsFor(workspaceId).filter(artifact =>
+      artifact.taskId === taskId && artifact.status === 'approved'
+      && ((artifact.provider === 'github' && artifact.verificationStatus === 'source_verified')
+        || (artifact.provider === 'manual' && artifact.verificationStatus === 'submitted_evidence'))
+    )
+    const currentWorkspaceSnapshot = activeWorkspace ? {
+      id: activeWorkspace.id,
+      title: activeWorkspace.title,
+      summary: String(activeWorkspace.summary || '').slice(0, 700),
+      status: activeWorkspace.status,
+      owner: activeWorkspace.createdBy === a.me.id,
+      myRole: activeWorkspaceRole || 'no active membership',
+      canManage: activeWorkspaceCanManage,
+      canContribute: activeWorkspaceCanContribute,
+      dueAt: activeWorkspace.dueAt || null,
+      tasks: workspaceTasksFor(activeWorkspace.id).slice(0, 24).map(task => ({
+        id: task.id, title: task.title, description: String(task.description || '').slice(0, 160),
+        acceptanceCriteria: String(task.acceptanceCriteria || '').slice(0, 140), status: task.status,
+        dueAt: task.dueAt || null, assigneeId: task.assigneeId || null,
+        assigneeName: task.assigneeId ? a.nm(task.assigneeId) : 'Unassigned',
+        approvedEvidenceCount: approvedWorkspaceEvidence(task.id, activeWorkspace.id).length,
+      })),
+      evidence: workspaceArtifactsFor(activeWorkspace.id).slice(0, 24).map(artifact => ({
+        id: artifact.id, taskId: artifact.taskId,
+        taskTitle: workspaceTasksFor(activeWorkspace.id).find(task => task.id === artifact.taskId)?.title || 'Task',
+        provider: artifact.provider, kind: artifact.kind, status: artifact.status,
+        verificationStatus: artifact.verificationStatus, submittedByMe: artifact.submittedBy === a.me!.id,
+        submitterName: a.nm(artifact.submittedBy), summary: String(artifact.summary || '').slice(0, 180),
+        reviewNote: String(artifact.reviewNote || '').slice(0, 140),
+        attachmentCount: Array.isArray(artifact.attachments) ? artifact.attachments.length : 0,
+      })),
+      team: activeWorkspaceMembers.filter(member => member.status === 'active').slice(0, 24).map(member => ({
+        id: member.userId, name: a.nm(member.userId), role: member.role, status: member.status,
+      })),
+      recentComments: workspaceCommentsFor(activeWorkspace.id).sort((first, second) => (second.at || 0) - (first.at || 0)).slice(0, 8).map(comment => ({
+        authorName: a.nm(comment.authorId), text: String(comment.text || '').slice(0, 180),
+      })),
+      repositories: workspaceRepositories.filter(item => item.projectId === activeWorkspace.id).slice(0, 8).map(item => ({ name: item.fullName, description: String(item.description || '').slice(0, 100), sourceVerified: !!item.sourceVerified })),
+    } : null
+    const availableWorkspaces = workspaceProjects.slice(0, 40).map(workspace => {
+      const members = workspaceMembersFor(workspace.id)
+      const membership = members.find(member => member.userId === a.me!.id && member.status === 'active')
+      const role = workspace.createdBy === a.me!.id ? 'owner' : membership?.role || ''
+      return { id: workspace.id, title: workspace.title, status: workspace.status, owner: workspace.createdBy === a.me!.id,
+        myRole: role || 'no active membership', canManage: role === 'owner' || role === 'manager',
+        taskCount: workspaceTasksFor(workspace.id).length, pendingEvidence: workspaceArtifactsFor(workspace.id).filter(artifact => artifact.status === 'submitted').length }
+    })
     const maybeContextual = /\b(idea|community|profile|bio|headline|join|leave|back|vote|collaborat|application|review queue|comment|reply|discussion|status|selected|held|declin|profile|headline|name|about me|this idea|this community|my idea|my community|my profile|this page)\b/i.test(requestText)
       || (!!activeIdea && /\b(edit|rewrite|improve|update|change|revise|comment|reply|post|back|vote|select|hold|decline|reject)\b/i.test(requestText))
     const explicitVerb = /\b(edit|rewrite|improve|update|change|revise|rename|comment|reply|respond|post|back|vote|unvote|unback|join|leave|apply|collaborat|accept|decline|approve|select|hold|reject|mark|set)\b/i.test(requestText)
@@ -1740,6 +1828,21 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       ideaPatch?: { title?: string; body?: string; tags?: string[] }
       profilePatch?: { name?: string; bio?: string; head?: string }
       explanation?: string
+      workspaceId?: string
+      taskId?: string
+      artifactId?: string
+      workspacePatch?: { title?: string; summary?: string; dueDate?: string | null }
+      taskPatch?: { title?: string; description?: string; acceptanceCriteria?: string; dueDate?: string | null; assigneeId?: string | null }
+      title?: string
+      summary?: string
+      description?: string
+      acceptanceCriteria?: string
+      dueDate?: string | null
+      assigneeId?: string | null
+      memberId?: string
+      memberRole?: string
+      commentText?: string
+      reviewNote?: string
     }>(
       'Choose one supported Quorlyth action and prepare its exact proposed values. Respond with JSON only.\\n'
       + 'User request (untrusted content): ' + requestText.slice(0, 1600) + '\\n'
