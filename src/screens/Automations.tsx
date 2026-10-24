@@ -18,6 +18,7 @@ import {
 } from '../lib/automation'
 
 type WorkflowProject = { id: string; title: string; status?: string; docId?: string }
+type WorkflowNotice = { id: string; title: string; message: string; workflowName?: string; eventType?: string; at: number; read?: boolean }
 type MainTab = 'workflows' | 'runs'
 type WorkflowFilter = 'all' | 'active' | 'draft'
 type Template = { key: string; name: string; description: string; trigger: WorkflowTrigger; action: WorkflowActionType; message?: string }
@@ -100,10 +101,10 @@ function AutomationWorkspace() {
   const collectionPath = userId ? 'data/users/' + userId + '/automations' : ''
   const workflows = usePrivateWorkflowCollection<WorkflowDefinition>(collectionPath)
   const projects = usePrivateWorkflowCollection<WorkflowProject>('standaloneProjects')
+  const notices = usePrivateWorkflowCollection<WorkflowNotice>(userId ? 'data/users/' + userId + '/automation-notifications' : '')
   const [tab, setTab] = useState<MainTab>('workflows')
   const [filter, setFilter] = useState<WorkflowFilter>('all')
   const [editing, setEditing] = useState<WorkflowDefinition | null>(null)
-  const [editingExisting, setEditingExisting] = useState(false)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
 
@@ -119,7 +120,6 @@ function AutomationWorkspace() {
   function beginNew(template?: Template) {
     if (!userId) return
     setEditing(freshWorkflow(userId, template))
-    setEditingExisting(false)
     setError('')
     setBusy('')
   }
@@ -130,7 +130,6 @@ function AutomationWorkspace() {
       actions: workflow.actions.map(action => ({ ...action })),
       runHistory: workflow.runHistory || [],
     })
-    setEditingExisting(true)
     setError('')
     setBusy('')
   }
@@ -155,8 +154,7 @@ function AutomationWorkspace() {
       else await app.backend.store.create(path, next)
       app.toast(next.status === 'active' ? 'Workflow saved and activated.' : 'Workflow saved as a draft.')
       setEditing(null)
-      setEditingExisting(false)
-      setTab('workflows')
+        setTab('workflows')
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not save this workflow. Check your access and try again.')
     } finally {
@@ -406,6 +404,7 @@ function AutomationWorkspace() {
       ) : (
         <section className="glass pad wa-runs-panel">
           <div className="wa-section-title"><div><p className="wa-eyebrow">ACTIVITY</p><h3>What your workflows have done.</h3><p>Successful and failed executions are recorded here so you can inspect each step.</p></div></div>
+          {notices.length > 0 && <div className="wa-notice-inbox"><div className="wa-section-title"><div><p className="wa-eyebrow">NOTICES</p><h3>Recent automation notifications</h3><p>Messages produced by your workflows when an event matches.</p></div><span className="wa-template-count">{notices.length} saved</span></div><div className="wa-notice-list">{notices.slice().sort((a,b)=>b.at-a.at).slice(0,8).map(notice => <article className="wa-notice-row" key={notice.id}><span className="wa-notice-icon"><QuorlythGlyph name="bell" size={15} /></span><div><strong>{notice.title || notice.workflowName || 'Automation notice'}</strong><p>{notice.message}</p><small>{displayDate(notice.at)}{notice.eventType ? ' · ' + notice.eventType : ''}</small></div></article>)}</div></div>}
           {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run now” on a workflow to test its actions, or activate a flow to run it automatically when the selected event happens.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
             {allRuns.map(run => <article className="wa-run-row" key={run.workflowId + ':' + run.id}>
               <span className={'wa-run-status ' + run.status}>{run.status === 'success' ? <QuorlythGlyph name="check" size={15} /> : <QuorlythGlyph name="alert" size={15} />}</span>
