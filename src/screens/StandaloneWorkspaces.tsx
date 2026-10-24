@@ -5,6 +5,7 @@ import { Av, Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
+import { emitWorkflowEvent } from '../lib/automation'
 
 type WorkspaceTab = 'overview' | 'tasks' | 'evidence' | 'team'
 type WorkspaceProject = {
@@ -162,6 +163,7 @@ function WorkspaceProjectList() {
         invitedBy: a.me.id, at: now, updatedAt: now,
       }
       await a.backend.store.create('standaloneProjectMembers/' + ownerMembership.id, ownerMembership)
+      emitWorkflowEvent('workspace.created', { id, title: cleanTitle, summary: cleanSummary, projectId: id, at: now })
       a.toast('Project workspace created.')
       nav('/workspaces/' + id)
     } catch (error) {
@@ -353,7 +355,9 @@ function WorkspaceProjectView() {
   async function completeTask(task: WorkspaceTask) {
     if (!a.backend) return
     await runAction('complete-'+task.id, async () => {
-      await a.backend!.store.update('standaloneTasks/' + task.id, { status: 'done', updatedAt: Date.now() })
+      const completedAt = Date.now()
+      await a.backend!.store.update('standaloneTasks/' + task.id, { status: 'done', updatedAt: completedAt })
+      emitWorkflowEvent('task.completed', { id: task.id, taskId: task.id, projectId: id, title: task.title, summary: task.description, at: completedAt })
       a.toast('Task completed with approved evidence.')
     })
   }

@@ -1,6 +1,7 @@
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Nav } from './components/Nav'
+import { AutomationRuntime } from './components/AutomationRuntime'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
 import { Palette } from './components/Palette'
@@ -21,6 +22,7 @@ const Queue = lazy(() => import('./screens/Queue').then(m => ({ default: m.Queue
 const Projects = lazy(() => import('./screens/Projects').then(m => ({ default: m.Projects })))
 const StandaloneWorkspaceList = lazy(() => import('./screens/StandaloneWorkspaces').then(m => ({ default: m.StandaloneWorkspaceList })))
 const StandaloneWorkspaceDetail = lazy(() => import('./screens/StandaloneWorkspaces').then(m => ({ default: m.StandaloneWorkspaceDetail })))
+const Automations = lazy(() => import('./screens/Automations').then(m => ({ default: m.Automations })))
 const Collaborations = lazy(() => import('./screens/Collaborations').then(m => ({ default: m.Collaborations })))
 const CollaborationWorkspace = lazy(() => import('./screens/Collaborations').then(m => ({ default: m.CollaborationWorkspace })))
 const Promote = lazy(() => import('./screens/Promote').then(m => ({ default: m.Promote })))
@@ -321,6 +323,7 @@ export default function App() {
         try { localStorage.setItem('qintro', '1') } catch {}
         try { sessionStorage.setItem('qintro', '1') } catch {}
       }} />}
+      <AutomationRuntime />
       <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main" tabIndex={-1}>
@@ -343,6 +346,7 @@ export default function App() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/workspaces" element={<StandaloneWorkspaceList />} />
               <Route path="/workspaces/:id" element={<StandaloneWorkspaceDetail />} />
+              <Route path="/automations" element={<Automations />} />
               <Route path="/collaborations" element={<Collaborations />} />
               <Route path="/collaboration/:id" element={<CollaborationWorkspace />} />
               <Route path="/promote" element={<Promote />} />
