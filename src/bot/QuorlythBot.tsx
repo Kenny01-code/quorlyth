@@ -1808,9 +1808,9 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         myRole: role || 'no active membership', canManage: role === 'owner' || role === 'manager',
         taskCount: workspaceTasksFor(workspace.id).length, pendingEvidence: workspaceArtifactsFor(workspace.id).filter(artifact => artifact.status === 'submitted').length }
     })
-    const maybeContextual = /\b(idea|community|profile|bio|headline|join|leave|back|vote|collaborat|application|review queue|comment|reply|discussion|status|selected|held|declin|profile|headline|name|about me|this idea|this community|my idea|my community|my profile|this page)\b/i.test(requestText)
+    const maybeContextual = /\b(idea|community|profile|bio|headline|join|leave|back|vote|collaborat|application|review queue|comment|reply|discussion|status|selected|held|declin|profile|headline|name|about me|this idea|this community|my idea|my community|my profile|this page|workspace|task|deliverable|evidence|team room|team member|project)\b/i.test(requestText)
       || (!!activeIdea && /\b(edit|rewrite|improve|update|change|revise|comment|reply|post|back|vote|select|hold|decline|reject)\b/i.test(requestText))
-    const explicitVerb = /\b(edit|rewrite|improve|update|change|revise|rename|comment|reply|respond|post|back|vote|unvote|unback|join|leave|apply|collaborat|accept|decline|approve|select|hold|reject|mark|set)\b/i.test(requestText)
+    const explicitVerb = /\b(create|build|add|edit|rewrite|improve|update|change|revise|rename|comment|reply|respond|post|back|vote|unvote|unback|join|leave|apply|collaborat|accept|decline|approve|select|hold|reject|mark|set|start|complete|finish|delete|remove|invite|reopen|close|review|submit|send)\b/i.test(requestText)
     if (!maybeContextual || !explicitVerb) return null
 
     const response = await askJson<{
@@ -1841,7 +1841,6 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       assigneeId?: string | null
       memberId?: string
       memberRole?: string
-      commentText?: string
       reviewNote?: string
     }>(
       'Choose one supported Quorlyth action and prepare its exact proposed values. Respond with JSON only.\\n'
