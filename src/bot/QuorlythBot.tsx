@@ -366,12 +366,12 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
   }
 
   async function requestLiveContext(text: string) {
-    const asksLocalWeather = /\\b(weather|forecast|temperature)\\b/i.test(text) && !/\\b(?:in|at|for)\\s+[A-Z][a-z]+/i.test(text)
-    const asksLocation = /\\b(near me|around me|around here|my location|where am i|weather here|forecast here|temperature here|local weather|nearby|based on where i am|based on my location|where i am currently|in my area|near my current location)\\b/i.test(text)
+    const asksLocalWeather = /\b(weather|forecast|temperature)\b/i.test(text) && !/\b(?:in|at|for)\s+[A-Z][a-z]+/i.test(text)
+    const asksLocation = /\b(near me|around me|around here|my location|where am i|weather here|forecast here|temperature here|local weather|nearby|based on where i am|based on my location|where i am currently|in my area|near my current location)\b/i.test(text)
     const asksLocalPlaces = asksLocation
-      || (/\\b(recommend|recommendations|suggest|suggestions|find|discover|look for|show me|best|good)\\b/i.test(text)
-        && /\\b(restaurants?|cafes?|coffee shops?|food|hospitals?|clinics?|doctors?|pharmacies|shops?|stores?|markets?|malls?|gyms?|fitness|parks?|museums?|attractions?|things to do|activities|events?|hotels?|barbers?|salons?|libraries|coworking|cowork spaces|transport|bus stops|services)\\b/i.test(text))
-      || /\\b(local (?:places|recommendations|suggestions|businesses|services|activities|events))\\b/i.test(text)
+      || (/\b(recommend|recommendations|suggest|suggestions|find|discover|look for|show me|best|good)\b/i.test(text)
+        && /\b(restaurants?|cafes?|coffee shops?|food|hospitals?|clinics?|doctors?|pharmacies|shops?|stores?|markets?|malls?|gyms?|fitness|parks?|museums?|attractions?|things to do|activities|events?|hotels?|barbers?|salons?|libraries|coworking|cowork spaces|transport|bus stops|services)\b/i.test(text))
+      || /\b(local (?:places|recommendations|suggestions|businesses|services|activities|events))\b/i.test(text)
     if (!asksLocalWeather && !asksLocalPlaces) return ''
     if (!navigator.geolocation) return 'Location-based suggestions were requested, but this browser does not support geolocation. Ask the user to name their city or area; do not guess local places.'
 
@@ -391,13 +391,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       }
 
       const lower = text.toLowerCase()
-      const category = /\\b(hospital|clinic|doctor|pharmacy|medical|health)\\b/i.test(lower) ? 'health'
-        : /\\b(shop|store|market|mall|supermarket|shopping)\\b/i.test(lower) ? 'shopping'
-        : /\\b(gym|fitness|sport|swimming)\\b/i.test(lower) ? 'fitness'
-        : /\\b(library|school|college|university|education|study)\\b/i.test(lower) ? 'education'
-        : /\\b(bus|transport|train|transit)\\b/i.test(lower) ? 'transport'
-        : /\\b(museum|attraction|things to do|activities|event|park|tourist|fun)\\b/i.test(lower) ? 'things-to-do'
-        : /\\b(restaurant|cafe|coffee|food|eat|lunch|dinner|breakfast|brunch)\\b/i.test(lower) ? 'food'
+      const category = /\b(hospital|clinic|doctor|pharmacy|medical|health)\b/i.test(lower) ? 'health'
+        : /\b(shop|store|market|mall|supermarket|shopping)\b/i.test(lower) ? 'shopping'
+        : /\b(gym|fitness|sport|swimming)\b/i.test(lower) ? 'fitness'
+        : /\b(library|school|college|university|education|study)\b/i.test(lower) ? 'education'
+        : /\b(bus|transport|train|transit)\b/i.test(lower) ? 'transport'
+        : /\b(museum|attraction|things to do|activities|event|park|tourist|fun)\b/i.test(lower) ? 'things-to-do'
+        : /\b(restaurant|cafe|coffee|food|eat|lunch|dinner|breakfast|brunch)\b/i.test(lower) ? 'food'
         : 'general'
       const controller = new AbortController()
       const timer = window.setTimeout(() => controller.abort(), 9000)
@@ -441,7 +441,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
 
   function currentPageContext() {
     const main = document.querySelector('main#main') || document.querySelector('main')
-    const clean = (value: string | null | undefined) => (value || '').replace(/\\s+/g, ' ').trim().slice(0, 100)
+    const clean = (value: string | null | undefined) => (value || '').replace(/\s+/g, ' ').trim().slice(0, 100)
     const headings = main
       ? Array.from(main.querySelectorAll('h1, h2, h3')).map(node => clean(node.textContent)).filter(Boolean).slice(0, 7)
       : []
