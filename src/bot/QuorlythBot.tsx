@@ -700,12 +700,43 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: msg }] })
         return
       }
+      const automationCommand = /\b(?:automation|automations|workflow|workflows|automate)\b/i.test(t)
+        && /\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute)\b/i.test(t)
+      if (automationCommand) {
+        stopVoice()
+        setView('chat')
+        setBusy(true); setStatus('Planning automation'); setThinkingTask('Designing a workflow from your current Quorlyth setup')
+        robot.current?.think(true)
+        try {
+          const automationAction = await planAutomationAction(t)
+          if (automationAction) {
+            const draft = add(cur, { r: 'u', t })
+            const isDeletion = automationAction.type === 'deleteAutomation'
+            const prompt = isDeletion
+              ? 'I found the exact saved workflow and prepared a deletion preview. Its run history will also be removed. Nothing changes until you confirm.'
+              : automationAction.type === 'runAutomation'
+                ? 'I prepared a manual test run of this workflow. Review the actions first; confirming may create tasks, send notifications, or call the configured HTTPS webhook.'
+                : 'I designed this automation using your available Quorlyth triggers and actions. Review the exact trigger, conditions, workspace targets, and actions below. It has not been saved or run yet.'
+            persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            setPendingAction(automationAction)
+            return
+          }
+        } catch (failure) {
+          const draft = add(cur, { r: 'u', t })
+          const message = failure instanceof Error ? failure.message : 'I could not prepare that automation safely.'
+          persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          return
+        } finally {
+          setBusy(false); setStatus('Online'); setThinkingTask(''); robot.current?.think(false)
+        }
+      }
+
       const action = planAction(t)
       if (action) {
         stopVoice()
         setView('chat')
         const draft = add(cur, { r: 'u', t })
-        const isDestructive = action.type === 'deleteCommunity' || action.type === 'deleteIdea' || action.type === 'deleteMilestone'
+        const isDestructive = action.type === 'deleteCommunity' || action.type === 'deleteIdea' || action.type === 'deleteMilestone' || action.type === 'deleteAutomation'
         const prompt = isDestructive
           ? 'I have identified the target and prepared a deletion preview below. Check the exact item and linked records carefully. Nothing will be deleted unless you confirm.'
           : action.type === 'promote'
