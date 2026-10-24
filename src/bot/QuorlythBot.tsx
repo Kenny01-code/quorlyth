@@ -662,53 +662,18 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       }
       const action = planAction(t)
       if (action) {
-        stopVoice(); setView('chat')
-        if (action.type === 'deleteCommunity') {
-          const draft = add(cur, { r: 'u', t })
-          const prompt = `I found ${action.name}. It has ${action.ideaCount} linked idea${action.ideaCount === 1 ? '' : 's'}. Review the confirmation below before I delete the community.`
-          persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
-          setPendingAction(action)
-          return
-        }
-        if (action.type === 'community' || action.type === 'idea' || action.type === 'cover') {
-          const draft = add(cur, { r: 'u', t })
-          setBusy(true); setStatus('Applying action'); setThinkingTask(taskPreview(t)); robot.current?.think(true)
-          try {
-            let ok = false
-            let message = ''
-            if (action.type === 'community') {
-              if (!a.owner) throw new Error('Only the space owner can create a community. Sign in with the owner account and try again.')
-              const result = await a.createCommunityDetailed(action)
-              ok = result.ok
-              message = ok ? `Created ${action.name}. Opening your communities now so you can enter it and add ideas.` : `I couldn't save ${action.name}: ${result.error || 'The save failed for an unknown reason.'}`
-            } else if (action.type === 'idea') {
-              const community = a.data.communities.find(x => x.id === action.cid)
-              if (!a.me || !community || community.arch || !a.canPost() || (!a.owner && (community.post === 'owner' || (community.post === 'members' && !a.joined(community.id))))) throw new Error('Your account does not currently have permission to post in that community.')
-              const result = await a.postIdeaDetailed({ title: action.title, body: action.body, cid: action.cid, tags: action.tags })
-              ok = result.ok
-              message = ok ? `Submitted “${action.title}”. Opening ${community.name} now.` : `I couldn't submit “${action.title}”: ${result.error || 'The database rejected the write.'}`
-            } else {
-              if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can change its cover.')
-              ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
-              message = ok ? 'Community cover updated.' : 'I could not update that cover.'
-            }
-            if (ok) {
-              const next = { ...draft, msgs: [...draft.msgs, { r: 'a' as const, t: message }] }
-              persist(next)
-              if (action.type === 'community') nav('/communities')
-              if (action.type === 'idea') nav('/communities/' + action.cid)
-            } else {
-              persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
-            }
-          } catch (e: any) {
-            persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: e?.message || 'That action could not be completed.' }] })
-          } finally { setBusy(false); setThinkingTask(''); setStatus('Online'); robot.current?.think(false) }
-          return
-        }
-        let draft = add(cur, { r: 'u', t })
-        const summary = `I have prepared this in-app promotion for review. It will not be posted to an external social network. Confirm to mark the idea as promoted inside Quorlyth.`
-        draft = { ...draft, msgs: [...draft.msgs, { r: 'a', t: summary }] }
-        persist(draft); setPendingAction(action); return
+        stopVoice()
+        setView('chat')
+        const draft = add(cur, { r: 'u', t })
+        const isDestructive = action.type === 'deleteCommunity' || action.type === 'deleteIdea' || action.type === 'deleteMilestone'
+        const prompt = isDestructive
+          ? 'I have identified the target and prepared a deletion preview below. Check the exact item and linked records carefully. Nothing will be deleted unless you confirm.'
+          : action.type === 'promote'
+            ? 'I prepared the in-app promotion for review. It will not publish to an external social network. Confirm only if the target and wording are correct.'
+            : 'I prepared the changes for review below. Nothing has been saved yet. Confirm to apply them, or cancel to leave everything unchanged.'
+        persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+        setPendingAction(action)
+        return
       }
     }
     // Greetings are deterministic, so do not pay an API round trip just to say hello.
