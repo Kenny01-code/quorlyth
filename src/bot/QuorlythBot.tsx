@@ -1501,6 +1501,36 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     }
     const openList = /\b(open|show|take me to|go to|view|browse)\b/i.test(s) && /\b(communities|all communities|community list)\b/i.test(s) && !/\bcommunity\s+(?:called|named)\b/i.test(s)
     if (openList) return go('/communities', 'Opening the communities page now.')
+
+    const workspaceMatch = loc.pathname.match(/^\/collaboration\/([^/]+)/)
+    if (workspaceMatch && /\b(open|show|take me to|go to|view|switch to|enter|visit)\b/i.test(s)) {
+      const base = '/collaboration/' + workspaceMatch[1]
+      const tabRules: [RegExp, string, string][] = [
+        [/\b(evidence|submissions?|uploaded files?|deliverables?|review files?)\b/i, 'evidence', 'Opening the workspace evidence and submissions section.'],
+        [/\b(milestones?|project plan|tasks?|planning|plan)\b/i, 'plan', 'Opening the workspace plan and milestones.'],
+        [/\b(team|people|collaborators?|members|team discussion|discussion|messages?)\b/i, 'team', 'Opening the workspace team section.'],
+        [/\b(overview|project overview|workspace home|summary)\b/i, 'overview', 'Opening the workspace overview.'],
+      ]
+      for (const [pattern, tab, reply] of tabRules) {
+        if (pattern.test(s)) return go(tab === 'overview' ? base : base + '?tab=' + tab, reply)
+      }
+    }
+
+    const directIdeaOpen = /\b(open|show|take me to|go to|view|enter|visit)\b/i.test(s) && /\bidea\b/i.test(s)
+    if (directIdeaOpen) {
+      const matchedIdea = a.data.ideas
+        .filter(idea => lower.includes(idea.title.toLowerCase()))
+        .sort((first, second) => second.title.length - first.title.length)[0]
+      if (matchedIdea) return go('/idea/' + matchedIdea.id, 'Opening the idea “' + matchedIdea.title + '”.')
+    }
+
+    const directRouteRules: [RegExp, string, string][] = [
+      [/\b(open|show|take me to|go to|view|browse)\b[\s\S]*\b(collaborations?|shared workspaces?)\b/i, '/collaborations', 'Opening your collaborations.'],
+      [/\b(open|show|take me to|go to|view|browse)\b[\s\S]*\b(messages|inbox|chat inbox)\b/i, '/messages', 'Opening messages.'],
+      [/\b(open|show|take me to|go to|view|browse)\b[\s\S]*\b(workspaces?)\b/i, '/workspaces', 'Opening workspaces.'],
+      [/\b(open|show|take me to|go to|view|browse)\b[\s\S]*\b(projects?)\b/i, '/projects', 'Opening projects.'],
+    ]
+    for (const [pattern, path, reply] of directRouteRules) if (pattern.test(s)) return go(path, reply)
     const wantsOpen = /\b(open|show|take me to|go to|view|enter|visit)\b/i.test(s)
     const matchedNamedCommunity = wantsOpen ? a.data.communities.filter(x => lower.includes(x.name.toLowerCase())).sort((x,y) => y.name.length-x.name.length)[0] : undefined
     if (matchedNamedCommunity && !/\b(community list|all communities)\b/i.test(s)) return go('/communities/' + matchedNamedCommunity.id, 'Opening ' + matchedNamedCommunity.name + ' now.')
