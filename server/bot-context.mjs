@@ -112,9 +112,9 @@ function buildSystem({ user, records, userDocs, route, projectId, preferences, i
   const routePath = activeRoute.split(/[?#]/, 1)[0] || '/'
   const queryText = activeRoute.includes('?') ? activeRoute.slice(activeRoute.indexOf('?') + 1).split('#')[0] : ''
   const query = new URLSearchParams(queryText)
-  const communityMatch = routePath.match(/^\\/communities\\/([^/?#]+)/)
-  const ideaMatch = routePath.match(/^\\/idea\\/([^/?#]+)/)
-  const collaborationMatch = routePath.match(/^\\/collaboration\\/([^/?#]+)/)
+  const communityMatch = routePath.match(/^\/communities\/([^/?#]+)/)
+  const ideaMatch = routePath.match(/^\/idea\/([^/?#]+)/)
+  const collaborationMatch = routePath.match(/^\/collaboration\/([^/?#]+)/)
   const projectIdeaId = routePath === '/projects' ? validId(query.get('idea')) : ''
   const activeIdeaId = ideaMatch?.[1] || collaborationMatch?.[1] || projectIdeaId
   const activeIdea = activeIdeaId ? ideas.find(i => i.id === activeIdeaId) : null
