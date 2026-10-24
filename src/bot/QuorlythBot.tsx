@@ -1666,7 +1666,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     const explicitName = workflows
       .filter(workflow => workflow.name && lower.includes(workflow.name.toLowerCase()))
       .sort((first, second) => second.name.length - first.name.length)[0]
-    const target = findWorkflow(response.targetWorkflowId) || explicitName || (workflows.length === 1 ? workflows[0] : undefined)
+    const target = explicitName || (workflows.length === 1 ? workflows[0] : undefined)
     const needsTarget = ['update', 'activate', 'pause', 'run', 'delete'].includes(operation)
     if (needsTarget && !target) {
       if (workflows.length > 1) throw new Error('I found multiple saved automations. Name the exact workflow you want me to change, run, or remove so I do not touch the wrong one.')
