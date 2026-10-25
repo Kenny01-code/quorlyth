@@ -47,8 +47,9 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
     if (!summary.trim()) return a.toast('Add a short project summary first.')
     if (isPastDateInput(projectDueDate)) return a.toast(PAST_DATE_MESSAGE)
     setBusy('project')
-    await a.createProject(idea.id, summary.trim(), dateEnd(projectDueDate))
+    const created = await a.createProject(idea.id, summary.trim(), dateEnd(projectDueDate))
     setBusy('')
+    if (created) nav('/collaboration/' + idea.id + '?tab=plan')
   }
 
   async function saveSummary(event: FormEvent) {
@@ -84,7 +85,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
           <Av id={idea.authorId} size={28} />Idea by {a.nm(idea.authorId)}
         </button>
         <button type="button" className="chip" onClick={() => nav('/idea/' + idea.id)}><QuorlythGlyph name="idea" size={14} />Open idea</button>
-        {project && canCollaborate && <button type="button" className="chip" onClick={() => nav('/collaboration/' + idea.id)}><QuorlythGlyph name="workspace" size={14} />Collaboration space</button>}
+        {project && canCollaborate && <button type="button" className="chip" onClick={() => nav('/collaboration/' + idea.id + '?tab=plan')}><QuorlythGlyph name="workspace" size={14} />Open workspace</button>}
       </div>
 
       {!project ? (
@@ -95,8 +96,8 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
               <textarea value={summary} onChange={e => setSummary(e.target.value)} maxLength={1200} required placeholder="What are you going to deliver, and how will the contributors help?" />
             </label>
             <label className="field"><span>Target delivery date <small>Optional</small></span><input type="date" min={minimumDateInput()} value={projectDueDate} onChange={e => setProjectDueDate(e.target.value)} /></label>
-            <p className="dim" style={{ marginTop: -6, marginBottom: 12 }}>Create a tracked project from this selected idea. You can then add milestones and share progress with community members.</p>
-            <button className="btn p" disabled={busy === 'project'}><QuorlythGlyph name="plan" size={16} />{busy === 'project' ? 'Creating project…' : 'Create project'}</button>
+            <p className="dim" style={{ marginTop: -6, marginBottom: 12 }}>Starting this project opens its workspace. Define concrete milestones, do the work there, submit the real deliverable as evidence, and wait for an authorized reviewer to approve it. An upload alone does not complete a milestone.</p>
+            <button className="btn p" disabled={busy === 'project'}><QuorlythGlyph name="plan" size={16} />{busy === 'project' ? 'Creating workspace…' : 'Start project & open workspace'}</button>
           </form>
         ) : <p className="mut">This idea has been selected. The community creator has not created a project plan yet.</p>
       ) : (
