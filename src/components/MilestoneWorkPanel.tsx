@@ -82,6 +82,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
 }) {
   const a = useApp()
   const [summary, setSummary] = useState('')
+  const [attested, setAttested] = useState(false)
   const [attachments, setAttachments] = useState<WorkAttachment[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadLabel, setUploadLabel] = useState('')
@@ -185,10 +186,15 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
   async function submitWork(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canSubmit) return
+    if (!attested) {
+      a.toast('Confirm that the summary and evidence reflect work you actually completed.')
+      return
+    }
     setSubmitting(true)
     const ok = await a.submitMilestoneWork(milestone.id, summary, attachments)
     if (ok) {
       setSummary('')
+      setAttested(false)
       setAttachments([])
     }
     setSubmitting(false)
@@ -242,6 +248,11 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
             <textarea id={'q-work-summary-' + milestone.id} className="q-work-summary" value={summary} onChange={event => setSummary(event.target.value)} maxLength={6000} minLength={8} required placeholder="Summarize what you built, changed, tested, or delivered. Mention anything the reviewer should know." />
             {milestone.acceptanceCriteria && <p className="q-work-hint"><QuorlythGlyph name="check" size={14} />Use the milestone's definition of done as your checklist before submitting.</p>}
 
+            <label className="q-work-attestation" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 14, cursor: 'pointer' }}>
+              <input type="checkbox" checked={attested} onChange={event => setAttested(event.target.checked)} disabled={submitting || uploading} style={{ marginTop: 4, flexShrink: 0 }} />
+              <span><strong>I confirm this is work I actually completed.</strong><br />My summary and evidence accurately represent the deliverable I worked on. Submitting it does not mean it is approved; an authorized reviewer still needs to check it.</span>
+            </label>
+
             <input ref={fileInput} className="q-work-file-input" type="file" multiple accept={acceptedTypes} onChange={event => void handleFileChange(event)} aria-label="Choose files, images, documents or media" />
             <div className={'q-work-dropzone' + (dragging ? ' is-dragging' : '') + (uploading ? ' is-uploading' : '')}
               onDragEnter={event => { event.preventDefault(); if (canSubmit) setDragging(true) }}
@@ -265,7 +276,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
 
             <div className="q-work-submit-row">
               <span className="q-work-hint">{attachments.length ? 'Your evidence is saved with this revision. The milestone completes only after an authorized reviewer approves it.' : 'Attach at least one screenshot, document, demo recording, or other deliverable. A progress note alone cannot complete this milestone.'}</span>
-              <button className="q-work-submit-btn" disabled={submitting || uploading || summary.trim().length < 8 || attachments.length === 0} title={attachments.length ? 'Submit evidence for review' : 'Attach at least one evidence file to submit'}>
+              <button className="q-work-submit-btn" disabled={submitting || uploading || !attested || summary.trim().length < 8 || attachments.length === 0} title={!attested ? 'Confirm your summary and evidence reflect work you actually completed' : attachments.length ? 'Submit evidence for review' : 'Attach at least one evidence file to submit'}>
                 <QuorlythGlyph name="send" size={15} />{submitting ? 'Submitting…' : mine?.status === 'changes_requested' ? 'Submit revision' : 'Submit for review'}
               </button>
             </div>
