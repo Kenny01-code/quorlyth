@@ -99,8 +99,9 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
   const blocked = !!milestone.blocked && milestone.status !== 'done'
   const uploadAvailable = typeof a.backend?.uploadWorkFile === 'function' && typeof a.backend?.deleteWorkFile === 'function'
   const maximumSize = a.backend?.auth.mode === 'local' ? MAX_LOCAL_BYTES : MAX_UPLOAD_BYTES
-  const canSubmit = canCollaborate && !canManage && !assignedElsewhere && milestone.status !== 'done' && !blocked && mine?.status !== 'submitted'
-  const canStart = canCollaborate && !canManage && !assignedElsewhere && milestone.status === 'todo' && !blocked
+  // Managers can contribute real work too. The provider forbids them from approving their own submissions.
+  const canSubmit = canCollaborate && !assignedElsewhere && milestone.status !== 'done' && !blocked && mine?.status !== 'submitted'
+  const canStart = canCollaborate && !assignedElsewhere && milestone.status === 'todo' && !blocked
   const acceptedTypes = 'image/*,video/*,audio/*,.pdf,.txt,.md,.csv,.json,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip'
   const displayedSubmissions = [...submissions].sort((first, second) => second.submittedAt - first.submittedAt || second.revision - first.revision)
 
@@ -233,7 +234,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
       {canSubmit && (
         <div className="q-work-composer">
           <div className="q-work-composer__title">
-            <div><h6>{mine?.status === 'changes_requested' ? 'Submit a revised deliverable' : milestone.status === 'in_progress' ? 'Submit completed work' : 'Start with your deliverable'}</h6><p>{milestone.assigneeId ? 'Assigned to you' : 'This milestone is unassigned; any accepted team member can contribute.'}</p></div>
+            <div><h6>{mine?.status === 'changes_requested' ? 'Submit a revised deliverable' : milestone.status === 'in_progress' ? 'Submit completed work' : 'Start with your deliverable'}</h6><p>{canManage ? 'You can submit your own work too; another authorized manager must review it.' : milestone.assigneeId ? 'Assigned to you' : 'This milestone is unassigned; any accepted team member can contribute.'}</p></div>
             {canStart && <button type="button" className="q-work-quiet-btn" disabled={submitting} onClick={() => void startWork()}><QuorlythGlyph name="start" size={14} />Start work</button>}
           </div>
           <form onSubmit={submitWork}>
@@ -274,7 +275,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
 
       {assignedElsewhere && !canManage && <div className="q-work-readonly"><QuorlythGlyph name="lock" size={16} /><span>This milestone is assigned to <strong>{a.nm(milestone.assigneeId!)}</strong>. Ask the project manager to reassign it if you need to take over the work.</span></div>}
       {blocked && <div className="q-work-readonly"><QuorlythGlyph name="blocked" size={16} /><span>Work submission is paused until the project manager clears this blocker.</span></div>}
-      {mine?.status === 'submitted' && <div className="q-work-readonly"><QuorlythGlyph name="progress" size={16} /><span>Your latest revision was submitted on {dateTime(mine.submittedAt)} and is waiting for review.</span></div>}
+      {mine?.status === 'submitted' && <div className="q-work-readonly"><QuorlythGlyph name="progress" size={16} /><span>Your latest revision was submitted on {dateTime(mine.submittedAt)} and is waiting for review. An authorized reviewer must approve it; you cannot approve your own submission.</span></div>}
       {!canCollaborate && !canManage && <p className="q-work-muted">You can read work updates shared by the collaboration team, but only team members can submit files.</p>}
 
       {canManage && !projectActive && pendingReviewCount > 0 && <div className="q-work-readonly"><QuorlythGlyph name="lock" size={16} /><span>This project is closed. Reopen it before reviewing the pending submissions.</span></div>}
@@ -292,7 +293,10 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
               <p className="q-work-submission__summary">{submission.summary}</p>
               {submission.attachments.length > 0 && <div className="q-work-submission__files">{submission.attachments.map(attachment => <AttachmentLink key={attachment.path} attachment={attachment} />)}</div>}
               {submission.reviewNote && <div className={'q-work-feedback ' + (submission.status === 'changes_requested' ? 'is-changes' : 'is-approved')}><QuorlythGlyph name={submission.status === 'changes_requested' ? 'alert' : 'complete'} size={16} /><div><strong>{submission.status === 'changes_requested' ? 'Changes requested' : 'Review note'}</strong><p>{submission.reviewNote}</p>{submission.reviewedAt ? <small>Reviewed {dateTime(submission.reviewedAt)}{submission.reviewedBy ? ' by ' + a.nm(submission.reviewedBy) : ''}</small> : null}</div></div>}
-              {canManage && projectActive && submission.status === 'submitted' && (
+              {canManage && projectActive && submission.status === 'submitted' && submission.submittedBy === a.me?.id && (
+                <p className="q-work-hint">This is your submission. A different authorized manager must review it; you cannot approve your own work.</p>
+              )}
+              {canManage && projectActive && submission.status === 'submitted' && submission.submittedBy !== a.me?.id && (
                 <div className="q-work-review">
                   <label className="q-work-label" htmlFor={'q-work-review-' + submission.id}>Feedback for contributor <small>Optional for approval; required for requested changes.</small></label>
                   <textarea id={'q-work-review-' + submission.id} className="q-work-review__textarea" value={reviewNotes[submission.id] || ''} onChange={event => setReviewNotes(current => ({ ...current, [submission.id]: event.target.value }))} maxLength={1600} placeholder="What is good, or what still needs to change?" />
