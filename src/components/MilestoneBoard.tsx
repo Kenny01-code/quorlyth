@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Av } from './ui'
 import { QuorlythGlyph } from './QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
@@ -51,7 +51,7 @@ const dateLabel = (timestamp?: number | null) => timestamp
   : ''
 const isOverdue = (milestone: Milestone) => !!milestone.dueAt && milestone.status !== 'done' && milestone.dueAt < Date.now()
 
-export function MilestoneBoard({ idea, projectId, projectStatus, milestones, teamMemberIds, canCollaborate, canManage }: {
+export function MilestoneBoard({ idea, projectId, projectStatus, milestones, teamMemberIds, canCollaborate, canManage, createMilestoneRequest }: {
   idea: Idea
   projectId: string
   projectStatus: 'active' | 'completed'
@@ -59,6 +59,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   teamMemberIds: string[]
   canCollaborate: boolean
   canManage: boolean
+  createMilestoneRequest?: number
 }) {
   const a = useApp()
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -68,6 +69,12 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   const [busyId, setBusyId] = useState('')
   const active = projectStatus === 'active'
   const canEdit = canManage && active
+  useEffect(() => {
+    if (!createMilestoneRequest || createMilestoneRequest < 1 || !canEdit) return
+    setEditingId(null)
+    setDraft(blankDraft())
+    setComposerOpen(true)
+  }, [createMilestoneRequest, canEdit])
   const completed = milestones.filter(item => item.status === 'done').length
   const blocked = milestones.filter(item => item.blocked && item.status !== 'done').length
   const overdue = milestones.filter(isOverdue).length
@@ -198,7 +205,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
         {canEdit && <button type="button" className="ql-primary-action" onClick={beginCreate}><QuorlythGlyph name="add" size={17} />New milestone</button>}
       </div>
 
-      {composerOpen && canEdit && <form className="ql-milestone-editor" onSubmit={saveMilestone}>
+      {composerOpen && canEdit && <form id="ql-milestone-editor" className="ql-milestone-editor" onSubmit={saveMilestone}>
         <div className="ql-milestone-editor__head">
           <div><p className="ql-eyebrow">{editingId ? 'Refine the plan' : 'Define the next outcome'}</p><h4>{editingId ? 'Edit milestone' : 'Create milestone'}</h4></div>
           <button type="button" className="ql-quiet-action" onClick={closeComposer}>Close</button>

@@ -286,6 +286,7 @@ function Workspace() {
   const [aiPlan, setAiPlan] = useState<AIProjectPlan | null>(null)
   const [aiBusy, setAiBusy] = useState(false)
   const [applyingPlan, setApplyingPlan] = useState(false)
+  const [createMilestoneRequest, setCreateMilestoneRequest] = useState(0)
   const idea = a.data.ideas.find(item => item.id === id)
   const project = a.data.projects[id]
   useEffect(() => setProjectDueDate(dateInput(project?.dueAt)), [project?.dueAt])
@@ -650,7 +651,33 @@ function Workspace() {
             <p className="dim" style={{ fontSize: 11 }}>AI-generated estimates and plans are suggestions. Check the source evidence and confirm assignments before acting.</p>
           </div>}
         </section>}
-      <MilestoneBoard idea={idea} projectId={id} projectStatus={project.status} milestones={milestones} teamMemberIds={workspaceTeamIds} canCollaborate={canAccess} canManage={canManage} />
+      {canAccess && project.status === 'active' && milestones.length === 0 && !aiPlan && <section className="glass pad" aria-labelledby="ql-first-project-step-title" style={{ display: 'grid', gap: 14 }}>
+        <div>
+          <span className="chip"><QuorlythGlyph name="milestone" size={14} />First project step</span>
+          <h3 id="ql-first-project-step-title" style={{ fontSize: 19, marginTop: 12 }}>Give your team a real outcome to work toward</h3>
+          <p className="mut" style={{ marginTop: 6, maxWidth: 780 }}>{canManage
+            ? 'This workspace is ready, but no milestones have been defined yet. Start with one concrete deliverable, an owner, and clear acceptance criteria.'
+            : 'This workspace is ready, but the project owner has not added a milestone yet. Once an outcome is defined, contributors can complete the work and submit it for review.'}</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+          <div className="glass pad" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span className="score" style={{ width: 34, height: 34, flexShrink: 0, fontSize: 12 }}>01</span>
+            <div><strong>Define the outcome</strong><p className="mut" style={{ marginTop: 4, fontSize: 13 }}>Set an owner, optional due date, and definition of done.</p></div>
+          </div>
+          <div className="glass pad" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span className="score" style={{ width: 34, height: 34, flexShrink: 0, fontSize: 12 }}>02</span>
+            <div><strong>Do the real work</strong><p className="mut" style={{ marginTop: 4, fontSize: 13 }}>Contributors complete the deliverable and submit evidence.</p></div>
+          </div>
+          <div className="glass pad" style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span className="score" style={{ width: 34, height: 34, flexShrink: 0, fontSize: 12 }}>03</span>
+            <div><strong>Review before completion</strong><p className="mut" style={{ marginTop: 4, fontSize: 13 }}>Another authorized reviewer checks the submission; an upload alone never completes the work.</p></div>
+          </div>
+        </div>
+        {canManage
+          ? <div><button type="button" className="btn p" onClick={() => setCreateMilestoneRequest(current => current + 1)}><QuorlythGlyph name="add" size={15} />Define first milestone</button></div>
+          : <p className="dim" style={{ fontSize: 12 }}>Next step: ask the community manager to define the first milestone.</p>}
+      </section>}
+      <MilestoneBoard idea={idea} projectId={id} projectStatus={project.status} milestones={milestones} teamMemberIds={workspaceTeamIds} canCollaborate={canAccess} canManage={canManage} createMilestoneRequest={createMilestoneRequest} />
     </div>}
     {workspaceTab === 'evidence' && <section id="ql-workspace-panel-evidence" role="tabpanel" aria-labelledby="ql-workspace-tab-evidence" className="ql-workspace-tab-panel glass pad ql-evidence-ledger">
       <div className="ql-evidence-ledger__heading"><div><p className="ql-eyebrow">DELIVERABLE REGISTER</p><h3>Evidence & reviews</h3><p className="ql-muted">Every record keeps its revision, contributor, submitted files, and reviewer decision together.</p></div><span className="ql-evidence-ledger__count">{projectSubmissions.length} submission{projectSubmissions.length === 1 ? '' : 's'}</span></div>
