@@ -484,7 +484,7 @@ function Workspace() {
       'Changes requested: ' + changesRequestedEvidenceCount,
       '',
       'Integrity note: These counts describe records in this workspace at capture time. They do not by themselves establish creator endorsement, audience satisfaction, or causal impact. Describe the activity as creator validation only when a real creator/audience has participated with permission. AI signal scores are estimates, not measured outcomes.',
-    ].join('\\n')
+    ].join('\n')
     try {
       if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
       await navigator.clipboard.writeText(summary)
