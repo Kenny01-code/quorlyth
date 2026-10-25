@@ -306,6 +306,11 @@ function Workspace() {
     .sort((first, second) => second.submittedAt - first.submittedAt || second.revision - first.revision)
   const pendingEvidenceReviews = projectSubmissions.filter(item => item.status === 'submitted').length
   const approvedEvidenceCount = projectSubmissions.filter(item => item.status === 'approved').length
+  const changesRequestedEvidenceCount = projectSubmissions.filter(item => item.status === 'changes_requested').length
+  const audienceCommenterCount = new Set(comments.map(comment => comment.authorId)).size
+  const ideaSupporterCount = Object.entries(a.data.votes).filter(([, votes]) => !!votes?.[id]).length
+  const acceptedContributorCount = new Set(acceptedApplications.map(application => application.applicantId)).size
+  const evidenceContributorCount = new Set(projectSubmissions.map(item => item.submittedBy)).size
   const workspaceTeamIds = [...new Set([idea?.authorId, community?.ownerId, community?.createdBy, ...acceptedApplications.map(application => application.applicantId)].filter((uid): uid is string => !!uid))]
   const communityIdeaIds = new Set(a.data.ideas.filter(item => item.cid === idea?.cid).map(item => item.id))
   const discussionParticipantIds = [...new Set([
@@ -451,6 +456,41 @@ function Workspace() {
       a.toast(error?.message || 'Quorlyth could not organize this discussion. Please try again.')
     } finally {
       setAiBusy(false)
+    }
+  }
+
+  async function copyValidationSnapshot() {
+    const completionLine = milestones.length
+      ? completed + '/' + milestones.length + ' outcomes approved complete (' + progress + '%)'
+      : 'No milestones defined yet'
+    const summary = [
+      'QUORLYTH VALIDATION SNAPSHOT',
+      'Project: ' + (idea?.title || 'Untitled idea'),
+      'Community: ' + (community?.name || 'Community'),
+      'Captured: ' + new Date().toLocaleString(),
+      '',
+      'OBSERVED PARTICIPATION',
+      'Discussion comments: ' + comments.length,
+      'Unique commenters: ' + audienceCommenterCount,
+      'Recorded idea supporters: ' + ideaSupporterCount,
+      'Accepted contributors: ' + acceptedContributorCount,
+      '',
+      'OBSERVED EXECUTION',
+      'Milestones: ' + completionLine,
+      'Evidence submission records: ' + projectSubmissions.length,
+      'Contributors with submissions: ' + evidenceContributorCount,
+      'Approved submissions: ' + approvedEvidenceCount,
+      'Awaiting review: ' + pendingEvidenceReviews,
+      'Changes requested: ' + changesRequestedEvidenceCount,
+      '',
+      'Integrity note: These counts describe records in this workspace at capture time. They do not by themselves establish creator endorsement, audience satisfaction, or causal impact. Describe the activity as creator validation only when a real creator/audience has participated with permission. AI signal scores are estimates, not measured outcomes.',
+    ].join('\n')
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(summary)
+      a.toast('Validation snapshot copied. The summary uses observed workspace records only.')
+    } catch {
+      a.toast('Clipboard access is unavailable. You can still use the observed figures shown in this snapshot.')
     }
   }
 
@@ -614,6 +654,30 @@ function Workspace() {
           <div className="ql-workspace-pulse__actions"><button type="button" className="ql-primary-action" onClick={() => setWorkspaceTab(pendingEvidenceReviews ? 'evidence' : 'plan')}><QuorlythGlyph name={pendingEvidenceReviews ? 'upload' : 'milestone'} size={15} />{pendingEvidenceReviews ? 'Review evidence' : 'Open plan'}</button><button type="button" className="ql-quiet-action" onClick={() => setWorkspaceTab('team')}><QuorlythGlyph name="team" size={14} />Go to team room</button></div>
         </section>
       </div>
+      <section className="glass pad" aria-labelledby="ql-validation-snapshot-title" style={{ marginTop: 16, display: 'grid', gap: 14 }}>
+        <div className="head" style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 0 }}>
+          <div style={{ minWidth: 0 }}>
+            <p className="ql-eyebrow">MEASURED WORKSPACE RECORDS</p>
+            <h3 id="ql-validation-snapshot-title" style={{ fontSize: 20, marginTop: 5 }}>Creator validation snapshot</h3>
+            <p className="mut" style={{ marginTop: 5, maxWidth: 760 }}>A factual readout of participation and delivery for your assessment. These are live workspace counts, not AI estimates or proof of creator endorsement.</p>
+          </div>
+          <button type="button" className="ql-primary-action" onClick={() => void copyValidationSnapshot()}><QuorlythGlyph name="document" size={15} />Copy validation snapshot</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(138px, 1fr))', gap: 10 }}>
+          <div className="glass pad"><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em' }}>Discussion comments</p><strong style={{ fontSize: 26, fontWeight: 400 }}>{comments.length}</strong><p className="mut" style={{ fontSize: 12 }}>Recorded on this idea</p></div>
+          <div className="glass pad"><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em' }}>Unique commenters</p><strong style={{ fontSize: 26, fontWeight: 400 }}>{audienceCommenterCount}</strong><p className="mut" style={{ fontSize: 12 }}>Distinct discussion authors</p></div>
+          <div className="glass pad"><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em' }}>Recorded supporters</p><strong style={{ fontSize: 26, fontWeight: 400 }}>{ideaSupporterCount}</strong><p className="mut" style={{ fontSize: 12 }}>Accounts with an active idea vote</p></div>
+          <div className="glass pad"><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em' }}>Accepted contributors</p><strong style={{ fontSize: 26, fontWeight: 400 }}>{acceptedContributorCount}</strong><p className="mut" style={{ fontSize: 12 }}>Accepted collaboration members</p></div>
+          <div className="glass pad"><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em' }}>Approved outcomes</p><strong style={{ fontSize: 26, fontWeight: 400 }}>{completed}<span className="dim" style={{ fontSize: 14 }}>/{milestones.length}</span></strong><p className="mut" style={{ fontSize: 12 }}>{milestones.length ? progress + '% of defined milestones approved complete' : 'No milestones defined yet'}</p></div>
+          <div className="glass pad"><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.06em' }}>Evidence records</p><strong style={{ fontSize: 26, fontWeight: 400 }}>{projectSubmissions.length}</strong><p className="mut" style={{ fontSize: 12 }}>{evidenceContributorCount} contributor{evidenceContributorCount === 1 ? '' : 's'} represented</p></div>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+          <span className="chip"><QuorlythGlyph name="complete" size={13} />{approvedEvidenceCount} approved</span>
+          <span className="chip"><QuorlythGlyph name="upload" size={13} />{pendingEvidenceReviews} awaiting review</span>
+          <span className="chip">{changesRequestedEvidenceCount} changes requested</span>
+        </div>
+        <p className="dim" style={{ fontSize: 11 }}>Integrity note: only describe this as creator validation when a real creator or audience has participated with permission. These workspace records alone do not prove endorsement, satisfaction, or causal impact.</p>
+      </section>
     </div>}
     {workspaceTab === 'plan' && <div id="ql-workspace-panel-plan" role="tabpanel" aria-labelledby="ql-workspace-tab-plan" className="ql-workspace-tab-panel ql-workspace-plan-panel">
               {canAccess && project && <section className="glass pad ql-ai-plan">
