@@ -59,7 +59,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   teamMemberIds: string[]
   canCollaborate: boolean
   canManage: boolean
-  createMilestoneRequest: number
+  createMilestoneRequest?: number
 }) {
   const a = useApp()
   const [filter, setFilter] = useState<FilterKey>('all')
@@ -70,7 +70,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   const active = projectStatus === 'active'
   const canEdit = canManage && active
   useEffect(() => {
-    if (createMilestoneRequest < 1 || !canEdit) return
+    if (!createMilestoneRequest || createMilestoneRequest < 1 || !canEdit) return
     setEditingId(null)
     setDraft(blankDraft())
     setComposerOpen(true)
