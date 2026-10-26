@@ -306,7 +306,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
         </div>
       )}
 
-      {assignedElsewhere && !canManage && <div className="q-work-readonly"><QuorlythGlyph name="lock" size={16} /><span>This milestone is assigned to <strong>{a.nm(milestone.assigneeId!)}</strong>. Ask the project manager to reassign it if you need to take over the work.</span></div>}
+      {assignedElsewhere && <div className="q-work-readonly"><QuorlythGlyph name="lock" size={16} /><span>This milestone is assigned to <strong>{assignedIds.map(id => a.nm(id)).join(', ')}</strong>. Only the listed assignees can start the work and submit evidence for review. Ask the project manager to add you to the assignees if you need to contribute.</span></div>}
       {blocked && <div className="q-work-readonly"><QuorlythGlyph name="blocked" size={16} /><span>Work submission is paused until the project manager clears this blocker.</span></div>}
       {mine?.status === 'submitted' && <div className="q-work-readonly"><QuorlythGlyph name="progress" size={16} /><span>Your latest revision was submitted on {dateTime(mine.submittedAt)} and is waiting for review. An authorized reviewer must approve it; you cannot approve your own submission.</span></div>}
       {!canCollaborate && !canManage && <p className="q-work-muted">You can read work updates shared by the collaboration team, but only team members can submit files.</p>}
