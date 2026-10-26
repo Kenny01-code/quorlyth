@@ -6,6 +6,12 @@ function read<T>(key: string, fallback: T): T {
   try {
     const saved = JSON.parse(localStorage.getItem(key) || 'null') as Saved<T> | null
     if (!saved || Date.now() - saved.at > 30 * 24 * 60 * 60 * 1000) return fallback
+    // Saved drafts can predate newly added optional form fields. Merge object drafts
+    // with the current defaults so controlled inputs never receive missing values.
+    if (fallback && saved.value && typeof fallback === 'object' && typeof saved.value === 'object'
+      && !Array.isArray(fallback) && !Array.isArray(saved.value)) {
+      return { ...(fallback as object), ...(saved.value as object) } as T
+    }
     return saved.value
   } catch { return fallback }
 }

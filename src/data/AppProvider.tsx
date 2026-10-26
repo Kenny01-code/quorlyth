@@ -579,7 +579,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           toast('Idea and linked workspace records deleted.')
           return true
         } catch (error: any) {
-          const message = String(error?.message || error || 'Unknown error').slice(0, 300)
+          const message = userFacingMutationError(error, 'delete this idea')
           console.error('Quorlyth idea deletion failed:', error)
           toast(deleted ? 'Idea deleted, but some linked records may need cleanup.' : message)
           return deleted
@@ -898,7 +898,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             : 'Milestone and linked work submissions deleted.')
           return true
         } catch (error: any) {
-          const message = String(error?.message || error || 'Unknown error').slice(0, 280)
+          const message = userFacingMutationError(error, 'delete this milestone')
           console.error('Quorlyth milestone deletion failed:', error)
           toast(deleted ? 'Milestone deleted, but some linked records may need cleanup.' : message)
           return deleted
