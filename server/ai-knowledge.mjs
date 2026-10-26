@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
+import { buildVoiceTrainingExamples } from '../scripts/voice-training-catalog.mjs'
 import { fileURLToPath } from 'node:url'
 
 const DATA_ROOT = fileURLToPath(new URL('../data/ai-training/', import.meta.url))
@@ -56,6 +57,20 @@ function loadCorpus() {
     }
   } catch {
     // AI generation must keep working when an optional corpus is missing in a deployment.
+  }
+  // Generate the versioned voice guidance once per server instance; the same source can be materialized for review.
+  try {
+    for (const row of buildVoiceTrainingExamples()) {
+      if (!row || typeof row.id !== 'string' || seen.has(row.id)) continue
+      seen.add(row.id)
+      rows.push({
+        id: row.id, version: row.version, domain: row.domain, intent: row.intent,
+        tags: row.tags, input: row.input.slice(0, 1200), ideal_response: row.ideal_response.slice(0, 1600),
+        provenance: row.provenance, review_status: row.review_status,
+      })
+    }
+  } catch {
+    // Preserve the v1 corpus if a future voice catalogue is invalid.
   }
   cachedCorpus = rows
   return cachedCorpus
