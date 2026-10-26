@@ -764,7 +764,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           return
         } catch (failure) {
           const draft = add(cur, { r: 'u', t })
-          const message = failure instanceof Error ? failure.message : 'I could not prepare a site-wide plan safely.'
+          const message = userFacingMutationError(failure, 'prepare a site-wide plan')
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
           return
         } finally {
@@ -793,7 +793,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           }
         } catch (failure) {
           const draft = add(cur, { r: 'u', t })
-          const message = failure instanceof Error ? failure.message : 'I could not prepare that automation safely.'
+          const message = userFacingMutationError(failure, 'prepare that automation')
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
           return
         } finally {
@@ -825,7 +825,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           }
         } catch (failure) {
           const draft = add(cur, { r: 'u', t })
-          const message = failure instanceof Error ? failure.message : 'I could not prepare that workspace action safely.'
+          const message = userFacingMutationError(failure, 'prepare that workspace action')
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
           return
         } finally {
@@ -1220,7 +1220,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             return
           }
           if (event.type === 'error') {
-            a.toast(event.message || 'The live conversation hit a temporary error.')
+            a.toast(userFacingMutationError(event.message || 'The live conversation hit a temporary error.', 'continue the live conversation'))
           }
         },
       })
@@ -2526,7 +2526,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         keys.add(key)
         items.push({ action: planned, rationale: String(candidate.rationale || 'Prepared from current Quorlyth records and supported actions.').trim().slice(0, 240) })
       } catch (error) {
-        skipped.push(error instanceof Error ? error.message.slice(0, 180) : 'command could not be validated')
+        skipped.push(userFacingMutationError(error, 'validate that action'))
       }
     }
 
@@ -2552,7 +2552,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           if (applied) successes.push(item.action)
           else failures.push(pendingActionDetail(item.action, a.data.communities, a.data.ideas) + ' — did not report success')
         } catch (failure) {
-          failures.push(pendingActionDetail(item.action, a.data.communities, a.data.ideas) + ' — ' + (failure instanceof Error ? failure.message : 'could not be applied'))
+          failures.push(pendingActionDetail(item.action, a.data.communities, a.data.ideas) + ' — ' + userFacingMutationError(failure, 'apply this change'))
         }
       }
       const summaryLines = ['One-click organization finished: ' + successes.length + ' of ' + action.actions.length + ' changes applied.']
