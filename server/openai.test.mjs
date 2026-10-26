@@ -887,6 +887,7 @@ test('Realtime voice session includes restrained vocal-reaction guidance and bou
   await realtimeSession({ body: { instructions: 'Be helpful', voice: 'coral', textOnly: false } }, res)
   assert.equal(res.statusCode, 200)
   assert.equal(payload.session.output_modalities[0], 'audio')
+  assert.equal(payload.session.audio.input.turn_detection.create_response, true)
   assert.match(payload.session.instructions, /Live Talk delivery/i)
   assert.match(payload.session.instructions, /chuckle or laugh/i)
   assert.match(payload.session.instructions, /never laugh during distress/i)

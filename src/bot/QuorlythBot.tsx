@@ -1117,7 +1117,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       const session = await startRealtime({
         instructions: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext()
           + '\nBrowser/device context: ' + browserContext()
-          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected QuorlythBot voice profile using ElevenLabs first and the browser speech voice if it fails.\n' + LIVE_TALK_SPEECH_STYLE,
+          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The active Realtime session speaks through the selected QuorlythBot realtime voice. If Realtime cannot start, the app falls back to browser recognition and its configured TTS path.\n' + LIVE_TALK_SPEECH_STYLE,
         voice: v.ai,
         accent: bs.accent || 'auto',
         textOnly: false,
@@ -1131,6 +1131,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
               if (liveAbortRef.current === speechController) liveAbortRef.current = null
               speechController = null
               speechTail = ''
+              rt.current?.interrupt?.()
+              robot.current?.talk(false)
+            }
+            if (nativeAudioRealtime) {
               rt.current?.interrupt?.()
               robot.current?.talk(false)
             }
