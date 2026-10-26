@@ -874,3 +874,20 @@ test('buffered ElevenLabs retry never falls back to another voice provider', asy
   assert.equal(res.statusCode, 503)
   assert.match(JSON.parse(res.output).error, /No alternate voice/i)
 })
+
+
+test('Realtime voice session includes restrained vocal-reaction guidance and bounded voice retrieval', async () => {
+  process.env.OPENAI_API_KEY = 'test-openai-secret'
+  let payload
+  globalThis.fetch = async (_url, options) => {
+    payload = JSON.parse(options.body)
+    return new Response(JSON.stringify({ value: 'ephemeral-voice-token' }), { status: 200 })
+  }
+  const res = response()
+  await realtimeSession({ body: { instructions: 'Be helpful', voice: 'coral', textOnly: false } }, res)
+  assert.equal(res.statusCode, 200)
+  assert.equal(payload.session.output_modalities[0], 'audio')
+  assert.match(payload.session.instructions, /Live Talk delivery/i)
+  assert.match(payload.session.instructions, /chuckle or laugh/i)
+  assert.match(payload.session.instructions, /never laugh during distress/i)
+})

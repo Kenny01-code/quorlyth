@@ -91,6 +91,7 @@ export default function App() {
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
   // Download the full bot experience only after the user opens its lightweight launcher.
   const [botMounted, setBotMounted] = useState(false)
+  const [botVoiceRequest, setBotVoiceRequest] = useState(0)
   const [deferredLauncherHidden, setDeferredLauncherHidden] = useState(false)
   const [showDeferredLauncherRestore, setShowDeferredLauncherRestore] = useState(false)
   const deferredRestoreTimer = useRef<number | null>(null)
@@ -106,6 +107,22 @@ export default function App() {
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadQuorlythBot().catch(() => {}) }, 650)
     return () => window.clearTimeout(timer)
+  }, [])
+  useEffect(() => {
+    const summonLiveTalk = (event: KeyboardEvent) => {
+      if (!(event.altKey && event.shiftKey && event.code === 'KeyQ') || event.repeat || event.ctrlKey || event.metaKey) return
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName?.toUpperCase() || ''
+      if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
+      event.preventDefault()
+      setDeferredLauncherHidden(false)
+      setShowDeferredLauncherRestore(false)
+      setBotMounted(true)
+      setBotVoiceRequest(value => value + 1)
+      void loadQuorlythBot().catch(() => {})
+    }
+    window.addEventListener('keydown', summonLiveTalk)
+    return () => window.removeEventListener('keydown', summonLiveTalk)
   }, [])
   useEffect(() => {
     if (us.st.preferences?.sound !== undefined) setSound(us.st.preferences.sound)
@@ -412,7 +429,7 @@ export default function App() {
           <div className="qbot-open-fallback__copy"><strong>QuorlythBot</strong><span>Preparing your assistant…</span><small>Communities · ideas · analytics · workspaces · collaborations</small></div>
           <span className="qbot-open-fallback__signal" aria-hidden="true"><i /><i /><i /></span>
         </div>
-      </div>}><QuorlythBot initialOpen /></Suspense>}
+      </div>}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
       <Toast />
       <WritingAssistant />
     </>

@@ -300,7 +300,7 @@ export async function startRealtime(opts: {
       send({ type: 'conversation.item.create', item: { type: 'message', role: 'user', content: [{ type: 'input_text', text }] } })
       send({ type: 'response.create', ...(opts.textOnly ? { response: { output_modalities: ['text'] } } : {}) })
     },
-    respond: () => { send({ type: 'response.create', ...(opts.textOnly ? { response: { output_modalities: ['text'] } } : {}) }) },
+    respond: () => { if (opts.textOnly) send({ type: 'response.create', response: { output_modalities: ['text'] } }) },
     interrupt: () => {
       send({ type: 'response.cancel' })
       if (!opts.textOnly) send({ type: 'output_audio_buffer.clear' })
