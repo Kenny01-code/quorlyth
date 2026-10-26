@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 const DATA_ROOT = fileURLToPath(new URL('../data/ai-training/', import.meta.url))
 const STOP_WORDS = new Set((
-  'a an and are as at be been but by can could did do does for from had has have how i if in into is it its me my of on or our please should so that the their them then there these they this to up us was we were what when where which who why will with would you your help make turn idea ideas draft organize organize organize ai quorlythbot'
+  'a an and are as at be been but by can could did do does for from had has have how i if in into is it its me my of on or our please should so that the their them then there these they this to up us was we were what when where which who why will with would you your'
 ).split(/\s+/))
 let cachedCorpus
 let cachedIndex
