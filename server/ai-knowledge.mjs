@@ -92,8 +92,12 @@ function buildIndex() {
 export function getTrainingCorpusStats() {
   const documents = loadCorpus()
   const byDomain = {}
-  for (const row of documents) byDomain[row.domain] = (byDomain[row.domain] || 0) + 1
-  return { total: documents.length, domains: byDomain, versions: [...new Set(documents.map(row => row.version))].sort() }
+  const byVersion = {}
+  for (const row of documents) {
+    byDomain[row.domain] = (byDomain[row.domain] || 0) + 1
+    byVersion[row.version] = (byVersion[row.version] || 0) + 1
+  }
+  return { total: documents.length, domains: byDomain, versions: Object.keys(byVersion).sort(), byVersion }
 }
 
 export function retrieveTrainingExamples(query, options = {}) {
