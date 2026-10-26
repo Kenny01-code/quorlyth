@@ -181,6 +181,34 @@ test('a timed-out Gemini JSON request falls through to Grok', async () => {
   assert.equal(JSON.parse(res.output).title, 'A better idea')
 })
 
+test('structured JSON requests include relevant retrieved guidance examples', async () => {
+  process.env.AI_PROVIDER = 'gemini'
+  process.env.GEMINI_API_KEY = 'test-gemini-retrieval-key'
+  delete process.env.XAI_API_KEY
+  delete process.env.OPENAI_API_KEY
+  let requestBody
+  globalThis.fetch = async (url, options = {}) => {
+    requestBody = JSON.parse(options.body)
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: '{"title":"A testable idea","body":"Start with one low-cost validation step.","tags":["validation"]}' }] } }],
+    }), { status: 200 })
+  }
+
+  const res = response()
+  await json({
+    body: {
+      prompt: 'Organize a rough idea into a clear concept for a community and design a low-cost validation test.',
+      system: 'You are QuorlythBot. Return JSON only.',
+      tier: 'quick',
+    },
+  }, res)
+
+  assert.match(requestBody.systemInstruction.parts[0].text, /REFERENCE EXAMPLES FROM QUORLYTHBOT GUIDANCE CORPUS/)
+  assert.match(requestBody.systemInstruction.parts[0].text, /synthetic response patterns/i)
+  assert.equal(res.statusCode, 200)
+  assert.equal(JSON.parse(res.output).title, 'A testable idea')
+})
+
 test('structured JSON requests use Gemini JSON output mode', async () => {
   process.env.GEMINI_API_KEY = 'test-secret'
   let request
