@@ -13,6 +13,9 @@ interface Data {
 }
 const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], workSubmissions: [], settings: null, ownerId: null }
 
+const getMilestoneAssigneeIds = (milestone: Pick<Milestone, 'assigneeId' | 'assigneeIds'>): string[] =>
+  [...new Set([...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []), ...(milestone.assigneeId ? [milestone.assigneeId] : [])].filter(Boolean))]
+
 export interface App {
   ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data; settingsLoaded: boolean; platformRolesReady: boolean
   enterDemo: () => void; exitDemo: () => Promise<void>; signOut: () => Promise<void>
@@ -806,10 +809,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const manager = canManageCommunity(projectIdea.cid)
         const approvedAIOrganizer = canOrganizeIdeaWithAI(projectIdea.id)
         const aiOrganized = details.aiOrganized === true
-        if (aiOrganized && (!approvedAIOrganizer || !!details.assigneeId || details.dueAt != null || !!details.blocked || !!details.blockedNote)) {
+        if (aiOrganized && (!approvedAIOrganizer || !!details.assigneeId || !!details.assigneeIds?.length || details.dueAt != null || !!details.blocked || !!details.blockedNote)) {
           throw new Error('The community owner or an approved AI organizer must approve this AI plan before its milestones can be saved. AI-planned milestones must remain unassigned.')
         }
-        if (!aiOrganized && !manager && (!approvedAIOrganizer || !!details.assigneeId || details.dueAt != null || !!details.blocked || !!details.blockedNote)) {
+        if (!aiOrganized && !manager && (!approvedAIOrganizer || !!details.assigneeId || !!details.assigneeIds?.length || details.dueAt != null || !!details.blocked || !!details.blockedNote)) {
           throw new Error('Only the community owner/platform admin or an approved AI organizer can create AI-planned milestones. Organizers can add unassigned milestones only.')
         }
         if (details.priority && !['low', 'normal', 'high', 'critical'].includes(details.priority)) throw new Error('Choose a valid milestone priority.')
@@ -819,12 +822,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           projectIdea?.authorId, community?.ownerId, community?.createdBy,
           ...data.volunteers.filter(item => item.ideaId === project.ideaId && item.status === 'accepted').map(item => item.applicantId),
         ].filter((uid): uid is string => !!uid))
-        if (details.assigneeId && !allowedAssignees.has(details.assigneeId)) throw new Error('Milestones can only be assigned to people in this collaboration team.')
+        const assigneeIds = [...new Set([...(details.assigneeIds || []), ...(details.assigneeId ? [details.assigneeId] : [])].filter(Boolean))]
+        if (assigneeIds.some(assigneeId => !allowedAssignees.has(assigneeId))) throw new Error('Milestones can only be assigned to people in this collaboration team.')
         const id = slug()
         const at = Date.now()
         const extra = {
           priority: details.priority || 'normal' as const,
-          assigneeId: details.assigneeId || null,
+          assigneeIds,
+          assigneeId: assigneeIds[0] || null,
           dueAt: details.dueAt ?? null,
           acceptanceCriteria: (details.acceptanceCriteria || '').trim().slice(0, 800),
           blocked: !!details.blocked,
@@ -843,6 +848,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const projectIdea = data.ideas.find(item => item.id === (project?.ideaId || current.projectId))
         if (!projectIdea) throw new Error('The project idea could not be found.')
         const manager = canManageCommunity(projectIdea.cid)
+        const currentAssigneeIds = getMilestoneAssigneeIds(current)
         if (patch.status === 'done') {
           throw new Error('Milestones can only be completed after an authorized reviewer approves a work submission with attached evidence.')
         }
@@ -851,7 +857,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           || patch.status !== 'in_progress'
           || current.status !== 'todo'
           || current.blocked
-          || (!!current.assigneeId && current.assigneeId !== me?.id)
+          || (currentAssigneeIds.length > 0 && !currentAssigneeIds.includes(me?.id || ''))
         )) {
           throw new Error('Collaborators can start an available milestone assigned to them. Only the project manager can edit details or change its final status.')
         }
@@ -862,9 +868,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           projectIdea?.authorId, community?.ownerId, community?.createdBy,
           ...data.volunteers.filter(item => item.ideaId === current.projectId && item.status === 'accepted').map(item => item.applicantId),
         ].filter((uid): uid is string => !!uid))
-        if (patch.assigneeId && !allowedAssignees.has(patch.assigneeId)) throw new Error('Milestones can only be assigned to people in this collaboration team.')
+        const assignmentWasPatched = patch.assigneeIds !== undefined || patch.assigneeId !== undefined
+        const nextAssigneeIds = assignmentWasPatched
+          ? [...new Set([...(patch.assigneeIds !== undefined ? patch.assigneeIds : patch.assigneeId ? [patch.assigneeId] : []), ...(patch.assigneeIds !== undefined && patch.assigneeId ? [patch.assigneeId] : [])].filter(Boolean))]
+          : undefined
+        if (nextAssigneeIds?.some(assigneeId => !allowedAssignees.has(assigneeId))) throw new Error('Milestones can only be assigned to people in this collaboration team.')
         const safePatch: MilestonePatch = {
           ...patch,
+          ...(assignmentWasPatched ? { assigneeIds: nextAssigneeIds, assigneeId: nextAssigneeIds?.[0] || null } : {}),
           ...(patch.title !== undefined ? { title: patch.title.trim().slice(0, 120) } : {}),
           ...(patch.description !== undefined ? { description: patch.description.trim().slice(0, 2000) } : {}),
           ...(patch.acceptanceCriteria !== undefined ? { acceptanceCriteria: patch.acceptanceCriteria.trim().slice(0, 800) } : {}),
@@ -930,7 +941,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (project.status !== 'active') throw new Error('This project is closed. Ask the project manager to reopen it before submitting work.')
         if (milestone.status === 'done') throw new Error('This milestone has already been completed.')
         if (milestone.blocked) throw new Error('This milestone is blocked. Ask the project manager to clear the blocker first.')
-        if (milestone.assigneeId && milestone.assigneeId !== me.id) throw new Error('This milestone is assigned to another team member.')
+        const assignedTo = getMilestoneAssigneeIds(milestone)
+        if (assignedTo.length && !assignedTo.includes(me.id)) throw new Error('This milestone is assigned to other team members.')
         if (!canCollaborateOnIdea(ideaId)) throw new Error('Only this workspace’s team can submit work.')
         const cleanSummary = summary.trim().slice(0, 6000)
         if (cleanSummary.length < 8) throw new Error('Add a meaningful summary of what you completed before submitting.')
