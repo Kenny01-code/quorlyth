@@ -26,6 +26,21 @@ const dateEnd = (value: string) => {
 }
 const dateLabel = (timestamp?: number | null) => timestamp ? new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''
 
+const isAIProjectPlan = (value: unknown): value is AIProjectPlan => {
+  if (!value || typeof value !== 'object') return false
+  const plan = value as Partial<AIProjectPlan>
+  return typeof plan.project_title === 'string'
+    && typeof plan.project_summary === 'string'
+    && typeof plan.lead_collaborator === 'string'
+    && Array.isArray(plan.milestones)
+    && Array.isArray(plan.definition_of_done)
+    && typeof plan.signal_score === 'number'
+    && typeof plan.noise_reduction_ratio === 'number'
+    && typeof plan.evidence_summary === 'string'
+    && Array.isArray(plan.filtered_out)
+}
+
+
 export function Collaborations() {
   return <Gate><CollaborationList /></Gate>
 }
@@ -283,7 +298,10 @@ function Workspace() {
   const [workspaceSummary, setWorkspaceSummary] = useState('Collaboration workspace ready. Add a project plan and milestones to coordinate the work.')
   const [projectDueDate, setProjectDueDate] = useState('')
   const [busy, setBusy] = useState(false)
-  const [aiPlan, setAiPlan] = useState<AIProjectPlan | null>(null)
+  const [aiPlan, setAiPlan] = useState<AIProjectPlan | null>(() => {
+    const incomingPlan = (loc.state as { aiPlan?: unknown } | null)?.aiPlan
+    return isAIProjectPlan(incomingPlan) ? incomingPlan : null
+  })
   const [aiBusy, setAiBusy] = useState(false)
   const [applyingPlan, setApplyingPlan] = useState(false)
   const [createMilestoneRequest, setCreateMilestoneRequest] = useState(0)
