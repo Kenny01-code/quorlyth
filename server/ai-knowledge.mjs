@@ -104,6 +104,10 @@ function buildIndex() {
   return cachedIndex
 }
 
+export function isTrainingIndexReady() {
+  return Boolean(cachedIndex)
+}
+
 export function getTrainingCorpusStats() {
   const documents = loadCorpus()
   const byDomain = {}

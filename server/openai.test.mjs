@@ -876,7 +876,7 @@ test('buffered ElevenLabs retry never falls back to another voice provider', asy
 })
 
 
-test('Realtime voice session includes restrained vocal-reaction guidance and bounded voice retrieval', async () => {
+test('Realtime voice session includes native audio and restrained vocal-reaction guidance', async () => {
   process.env.OPENAI_API_KEY = 'test-openai-secret'
   let payload
   globalThis.fetch = async (_url, options) => {

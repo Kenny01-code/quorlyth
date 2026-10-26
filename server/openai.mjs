@@ -1,6 +1,6 @@
 import { fetchYouTubeSignalsForIdeas, formatYouTubeSignalsContext } from './youtube.mjs'
 import { buildAuthenticatedBotContext } from './bot-context.mjs'
-import { buildTrainingContext } from './ai-knowledge.mjs'
+import { buildTrainingContext, isTrainingIndexReady } from './ai-knowledge.mjs'
 // All OpenAI calls happen here, on the server. The key never reaches the browser.
 const KEY = () => process.env.OPENAI_API_KEY
 const ELEVENLABS_KEY = () => process.env.ELEVENLABS_API_KEY
@@ -878,10 +878,11 @@ export async function realtimeSession(req, res) {
       }
     }
     if (!/chuckle or laugh/i.test(instructions)) instructions += ' ' + LIVE_TALK_CONVERSATION_STYLE
-    const voiceTrainingContext = buildTrainingContext(
+    // Skip retrieval-index construction on a cold realtime session so the first microphone setup stays lean.
+    const voiceTrainingContext = isTrainingIndexReady() ? buildTrainingContext(
       'natural live voice turn taking, contextual laughter and chuckles, compassionate speech, interruptions, microphone privacy, realtime latency, and safe Quorlyth app actions',
       { limit: 1, maxChars: 700 },
-    )
+    ) : ''
     if (voiceTrainingContext && Buffer.byteLength(instructions + '\n\n' + voiceTrainingContext, 'utf8') <= MAX_CHAT_SYSTEM_BYTES) {
       instructions += '\n\n' + voiceTrainingContext
     }
