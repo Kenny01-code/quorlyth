@@ -405,10 +405,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const managesTargetCommunity = canManageCommunity(i.cid)
       const isTargetCommunityMember = !!data.members[me.id]?.[i.cid]
       if (postingRule === 'members' && !managesTargetCommunity && !isTargetCommunityMember) {
-        return { ok: false, error: 'Join this community to share ideas.' }
+        const error = 'Join this community to share ideas.'
+        toast(error)
+        return { ok: false, error }
       }
       if (postingRule === 'owner' && !managesTargetCommunity) {
-        return { ok: false, error: 'Only the community owner or an authorized platform administrator can post ideas here.' }
+        const error = 'Only the community owner or an authorized platform administrator can post ideas here.'
+        toast(error)
+        return { ok: false, error }
       }
       try {
         const ideaId = slug()
