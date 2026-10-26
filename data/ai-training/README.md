@@ -10,10 +10,10 @@ Domains include idea design, community design, project delivery, collaboration, 
 
 ## Add more data later
 
-1. Add or refine task-specific guidance in scripts/ai-training-catalog.mjs.
-2. For a new version, update DATASET_VERSION, the generator output directory, and manifest expectations deliberately.
+1. Add new task-specific guidance, niches, or scenarios in scripts/ai-training-catalog.mjs.
+2. Increase DATASET_VERSION to the next major version (for example 2.0.0) when creating a new snapshot. The generator automatically writes into data/ai-training/v2 and derives the expected row count from the catalogue dimensions.
 3. Run npm run ai:data:generate and npm run ai:data:validate.
-4. Review provenance, near-duplicates, coverage, safety, and evaluation scores before deploying new shards.
-5. Add source-backed or human-reviewed examples with review_status such as reviewed and accurate provenance. Do not put private member data or unverified feedback into shared retrieval/training data.
+4. Review provenance, near-duplicates, coverage, safety, and evaluation results before promoting new shards.
+5. Add source-backed or human-reviewed examples with review_status such as reviewed or source_verified and accurate provenance. Do not put private member data or unverified feedback into shared retrieval/training data.
 
-The runtime retriever loads versioned JSONL shards from data/ai-training/** with lexical matching, adds only a few relevant examples to the model context, and falls back cleanly if the corpus is missing. Weak retrieval should never prevent normal provider calls.
+Older versions stay in place for reproducibility. The server loads all versioned JSONL shards under data/ai-training/**, and Vercel is configured to bundle the matching data files. Retrieval adds only a few relevant examples to model context and falls back cleanly if the corpus is missing.
