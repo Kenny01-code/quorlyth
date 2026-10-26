@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Av, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import { cn } from '../lib/util'
 import DitherVeil from '../components/DitherVeil'
 
