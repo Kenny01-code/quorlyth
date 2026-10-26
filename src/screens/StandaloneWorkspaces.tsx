@@ -508,7 +508,7 @@ function WorkspaceProjectView() {
   }
 
   async function updateMemberRole(member: WorkspaceMember, nextRole: 'manager' | 'contributor' | 'viewer') {
-    if (!a.backend || !canManage || project.status !== 'active' || member.role === 'owner' || member.userId === a.me?.id) return
+    if (!a.backend || !project || !canManage || project.status !== 'active' || member.role === 'owner' || member.userId === a.me?.id) return
     if (nextRole === 'manager' && !isOwner) {
       setError('Only the workspace owner can grant manager permissions.')
       return
