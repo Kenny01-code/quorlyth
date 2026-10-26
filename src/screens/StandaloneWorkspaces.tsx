@@ -507,6 +507,24 @@ function WorkspaceProjectView() {
     })
   }
 
+  async function updateMemberRole(member: WorkspaceMember, nextRole: 'manager' | 'contributor' | 'viewer') {
+    if (!a.backend || !canManage || project.status !== 'active' || member.role === 'owner' || member.userId === a.me?.id) return
+    if (nextRole === 'manager' && !isOwner) {
+      setError('Only the workspace owner can grant manager permissions.')
+      return
+    }
+    if (nextRole === member.role) return
+    await runAction('role-' + member.userId, async () => {
+      await a.backend!.store.update('standaloneProjectMembers/' + (member.docId || member.id), {
+        role: nextRole,
+        updatedAt: Date.now(),
+      })
+      a.toast(nextRole === 'viewer'
+        ? a.nm(member.userId) + ' now has read-only access.'
+        : a.nm(member.userId) + ' can now be assigned workspace tasks.')
+    })
+  }
+
   async function inviteMember(event: FormEvent) {
     event.preventDefault()
     if (!project || !a.backend || !a.me || !inviteUser) return
@@ -788,7 +806,7 @@ function WorkspaceProjectView() {
 
     {tab === 'team' && <div className="sw-evidence-layout">
       <section className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">PEOPLE</p><h3>Project team</h3><p>Only active teammates have workspace access. Invites must be accepted by the invited account.</p></div><span className="sw-count">{team.length} active</span></div>
-        <div className="sw-team-list">{team.map(member=><div className="sw-team-member" key={member.userId}><Av id={member.userId} size={36}/><div><strong>{a.nm(member.userId)}{member.userId===a.me?.id?' · You':''}</strong><small>{member.role.charAt(0).toUpperCase()+member.role.slice(1)} · Joined {localDate(member.updatedAt||member.at)}</small></div><span className={'sw-role-pill role-'+member.role}>{member.role}</span></div>)}</div>
+        <div className="sw-team-list">{team.map(member=><div className="sw-team-member" key={member.userId}><Av id={member.userId} size={36}/><div><strong>{a.nm(member.userId)}{member.userId===a.me?.id?' · You':''}</strong><small>{member.role.charAt(0).toUpperCase()+member.role.slice(1)} · Joined {localDate(member.updatedAt||member.at)}</small></div><span className={'sw-role-pill role-'+member.role}>{member.role}</span>{canManage&&project.status==='active'&&member.role!=='owner'&&member.userId!==a.me?.id&&<label className="sw-member-role-control"><span>Role</span><select aria-label={'Change role for ' + a.nm(member.userId)} value={member.role} disabled={busy==='role-'+member.userId} onChange={e=>void updateMemberRole(member,e.target.value as 'manager'|'contributor'|'viewer')}><option value="contributor">Contributor · can be assigned work</option><option value="viewer">Viewer · read-only</option>{isOwner&&<option value="manager">Manager · can manage workspace</option>}{member.role==='manager'&&!isOwner&&<option value="manager" disabled>Manager · owner-managed</option>}</select></label>}</div>)}</div>
         {canManage&&project.status==='active'&&<form className="sw-invite-form" onSubmit={inviteMember}><p className="ql-eyebrow">INVITE A TEAMMATE</p><label className="sw-field"><span>Person</span><select value={inviteUser} onChange={e=>setInviteUser(e.target.value)} required><option value="">Select a Quorlyth member</option>{profilePeople.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label className="sw-field"><span>Permission</span><select value={inviteRole} onChange={e=>setInviteRole(e.target.value as 'contributor'|'viewer')}><option value="contributor">Contributor · can start assigned tasks</option><option value="viewer">Viewer · read-only</option></select></label><button className="btn p" disabled={busy.startsWith('invite-')}><QuorlythGlyph name="invite" size={14}/>Invite to workspace</button>{!profilePeople.length&&<p className="sw-muted">No other visible member profiles were found. The owner can invite someone once their public Quorlyth profile exists.</p>}</form>}
       </section>
       <section
