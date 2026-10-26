@@ -100,6 +100,13 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
   const linkedArtifacts = linkedWorkspace
     ? workspaceArtifacts.filter(item => item.projectId === linkedWorkspace.id).sort((x, y) => y.submittedAt - x.submittedAt)
     : []
+  const linkedMilestoneSubmissions = linkedWorkspace
+    ? a.data.workSubmissions
+      .filter(item => item.ideaId === idea.id || item.projectId === project?.id)
+      .sort((x, y) => y.submittedAt - x.submittedAt || y.revision - x.revision)
+    : []
+  const linkedPendingReviews = linkedArtifacts.filter(item => item.status === 'submitted').length
+    + linkedMilestoneSubmissions.filter(item => item.status === 'submitted').length
   const community = a.data.communities.find(c => c.id === idea.cid)
   const teamMemberIds = [idea.authorId, community?.ownerId, community?.createdBy, ...a.data.volunteers.filter(item => item.ideaId === idea.id && item.status === 'accepted').map(item => item.applicantId)].filter((uid): uid is string => !!uid)
   const canOrganizeWithAI = a.canOrganizeIdeaWithAI(idea.id)
@@ -358,19 +365,37 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
             </div>
             {linkedWorkspace ? <>
               <div className="ql-linked-workspace__stats">
-                <span><strong>{linkedArtifacts.length}</strong> workspace evidence item{linkedArtifacts.length === 1 ? '' : 's'}</span>
-                <span><strong>{linkedArtifacts.filter(item => item.status === 'submitted').length}</strong> awaiting review</span>
+                <span><strong>{linkedArtifacts.length}</strong> workspace task evidence item{linkedArtifacts.length === 1 ? '' : 's'}</span>
+                <span><strong>{linkedMilestoneSubmissions.length}</strong> milestone submission{linkedMilestoneSubmissions.length === 1 ? '' : 's'}</span>
+                <span><strong>{linkedPendingReviews}</strong> awaiting review across both views</span>
               </div>
               {linkedArtifacts.length > 0
                 ? <div className="ql-linked-workspace__artifacts">
-                    {linkedArtifacts.slice(0, 3).map(item => <article className="ql-linked-workspace__artifact" key={item.id}>
-                      <div><strong>{item.summary || (item.kind === 'pull_request' ? 'Pull request evidence' : 'Project deliverable')}</strong><small>{item.kind.replace(/_/g, ' ')} · {dateLabel(item.submittedAt)} · {a.nm(item.submittedBy)}</small></div>
+                    {linkedArtifacts.slice(0, 3).map(item => <article className="ql-linked-workspace__artifact" key={'workspace-' + item.id}>
+                      <div><strong>{item.summary || (item.kind === 'pull_request' ? 'Pull request evidence' : 'Project deliverable')}</strong><small>Workspace task · {item.kind.replace(/_/g, ' ')} · {dateLabel(item.submittedAt)} · {a.nm(item.submittedBy)}</small></div>
                       <span className={'sw-review-status status-' + item.status}>{item.status === 'approved' ? 'Approved' : item.status === 'changes_requested' ? 'Changes requested' : 'Awaiting review'}</span>
                       {item.url && <a href={item.url} target="_blank" rel="noreferrer">Open evidence</a>}
                       {!item.url && (item.attachments?.length || 0) > 0 && <small>{item.attachments!.length} private file{item.attachments!.length === 1 ? '' : 's'} · open workspace to view</small>}
                     </article>)}
                   </div>
-                : <p className="ql-linked-workspace__empty">No standalone evidence has been submitted yet. Upload a real deliverable in the workspace and it will appear here.</p>}
+                : <p className="ql-linked-workspace__empty">No workspace-task evidence has been submitted yet. Community milestone submissions are shown separately below from their original records.</p>}
+              {linkedMilestoneSubmissions.length > 0 && <>
+                <p className="ql-eyebrow ql-linked-workspace__subheading">COMMUNITY MILESTONE SUBMISSIONS</p>
+                <div className="ql-linked-workspace__artifacts">
+                  {linkedMilestoneSubmissions.slice(0, 3).map(submission => {
+                    const milestone = milestones.find(item => item.id === submission.milestoneId)
+                    return <article className="ql-linked-workspace__artifact" key={'milestone-' + submission.id}>
+                      <div>
+                        <strong>{milestone?.title || 'Milestone deliverable'}</strong>
+                        <p>{submission.summary}</p>
+                        <small>Milestone revision {submission.revision} · {dateLabel(submission.submittedAt)} · {a.nm(submission.submittedBy)}</small>
+                      </div>
+                      <span className={'sw-review-status status-' + submission.status}>{submission.status === 'approved' ? 'Approved' : submission.status === 'changes_requested' ? 'Changes requested' : 'Awaiting review'}</span>
+                      {(submission.attachments?.length || 0) > 0 && <small>{submission.attachments!.length} private file{submission.attachments!.length === 1 ? '' : 's'} · open milestone review to access</small>}
+                    </article>
+                  })}
+                </div>
+              </>}
               <button type="button" className="btn p" onClick={() => nav('/workspaces/' + linkedWorkspace.id)}><QuorlythGlyph name="workspace" size={14} />Open connected workspace</button>
             </> : canManage && project.status === 'active' ? <>
               {manageableWorkspaces.length > 0 && <form className="ql-linked-workspace__connect" onSubmit={event => { event.preventDefault(); void connectExistingWorkspace() }}>
