@@ -15,6 +15,7 @@ const originalXaiQuickModel = process.env.XAI_QUICK_MODEL
 const originalAiProvider = process.env.AI_PROVIDER
 const originalAiTtsProvider = process.env.AI_TTS_PROVIDER
 const originalFirstTokenTimeout = process.env.AI_FIRST_TOKEN_TIMEOUT_MS
+const originalGeminiProviderTimeout = process.env.AI_GEMINI_PROVIDER_TIMEOUT_MS
 const originalYoutubeKey = process.env.YOUTUBE_API_KEY
 
 function response() {
@@ -54,6 +55,8 @@ afterEach(() => {
   else process.env.AI_TTS_PROVIDER = originalAiTtsProvider
   if (originalFirstTokenTimeout === undefined) delete process.env.AI_FIRST_TOKEN_TIMEOUT_MS
   else process.env.AI_FIRST_TOKEN_TIMEOUT_MS = originalFirstTokenTimeout
+  if (originalGeminiProviderTimeout === undefined) delete process.env.AI_GEMINI_PROVIDER_TIMEOUT_MS
+  else process.env.AI_GEMINI_PROVIDER_TIMEOUT_MS = originalGeminiProviderTimeout
   if (originalYoutubeKey === undefined) delete process.env.YOUTUBE_API_KEY
   else process.env.YOUTUBE_API_KEY = originalYoutubeKey
 })
@@ -151,6 +154,33 @@ test('chat uses Gemini server-side and streams text as Quorlyth SSE', async () =
   assert.match(res.output, /"done":true/)
 })
 
+test('a timed-out Gemini JSON request falls through to Grok', async () => {
+  process.env.AI_PROVIDER = 'gemini'
+  process.env.AI_GEMINI_PROVIDER_TIMEOUT_MS = '1000'
+  process.env.GEMINI_API_KEY = 'test-gemini-secret'
+  process.env.XAI_API_KEY = 'test-xai-secret'
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push(String(url))
+    if (String(url).includes('generativelanguage.googleapis.com')) {
+      return new Promise((_, reject) => {
+        options.signal.addEventListener('abort', () => reject(new Error('aborted by timeout')), { once: true })
+      })
+    }
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"title":"A better idea","body":"A clear next step","tags":["test"]}' } }] }), { status: 200 })
+  }
+
+  const res = response()
+  await json({ body: { prompt: 'Organize a rough idea', system: 'Return JSON only', tier: 'quick' } }, res)
+
+  assert.equal(requested.length, 2)
+  assert.match(requested[0], /generativelanguage\.googleapis\.com/)
+  assert.match(requested[1], /api\.x\.ai\/v1\/chat\/completions/)
+  assert.equal(res.statusCode, 200)
+  assert.equal(JSON.parse(res.output).title, 'A better idea')
+})
+
 test('structured JSON requests use Gemini JSON output mode', async () => {
   process.env.GEMINI_API_KEY = 'test-secret'
   let request
@@ -166,6 +196,24 @@ test('structured JSON requests use Gemini JSON output mode', async () => {
   assert.equal(JSON.parse(request.options.body).generationConfig.maxOutputTokens, 2048)
   assert.equal(res.statusCode, 200)
   assert.deepEqual(JSON.parse(res.output), { ok: true })
+})
+
+test('structured JSON reports exhausted OpenAI credits with a useful retryable error', async () => {
+  process.env.AI_PROVIDER = 'openai'
+  process.env.OPENAI_API_KEY = 'test-openai-secret'
+  delete process.env.XAI_API_KEY
+  delete process.env.GEMINI_API_KEY
+  globalThis.fetch = async () => new Response(JSON.stringify({
+    error: { code: 'credit_balance_exhausted', message: 'credit balance is exhausted' },
+  }), { status: 429 })
+
+  const res = response()
+  await json({ body: { prompt: 'Organize a rough idea', system: 'Return JSON only', tier: 'quick' } }, res)
+
+  const payload = JSON.parse(res.output)
+  assert.equal(res.statusCode, 503)
+  assert.equal(payload.retryable, true)
+  assert.match(payload.error, /OpenAI account has no API credits remaining/i)
 })
 
 test('chat recovers with a structured JSON reply when streaming fails', async () => {
