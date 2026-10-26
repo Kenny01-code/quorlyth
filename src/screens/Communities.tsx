@@ -322,7 +322,7 @@ function Detail({ cid }: { cid: string }) {
       return
     }
     if (joined || own) return
-    if (c.joinApproval) {
+    if (c?.joinApproval) {
       if (myJoinRequest?.status === 'pending') return a.toast('Your request to join is awaiting approval.')
       await a.requestCommunityJoin(cid)
       return
