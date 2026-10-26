@@ -1,0 +1,22 @@
+{
+  "name": "QuorlythBot task-guidance corpus",
+  "version": "1.0.0",
+  "total_examples": 10000,
+  "domains": {
+    "idea_design": 1000,
+    "community_design": 1000,
+    "project_delivery": 1000,
+    "collaboration": 1000,
+    "analytics": 1000,
+    "automation": 1000,
+    "moderation": 1000,
+    "product_ux": 1000,
+    "ml_data_science": 1000,
+    "creator_growth": 1000
+  },
+  "provenance": "Generated from hand-authored task guidance templates and scenario variations.",
+  "status": "synthetic_unreviewed; retrieval guidance only; not a fine-tuned model or human-validated ground truth",
+  "format": "JSONL fields: id, domain, intent, tags, input, ideal_response, provenance, review_status",
+  "created_by": "scripts/generate-ai-training-data.mjs",
+  "created_at": "2026-10-26"
+}

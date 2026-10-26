@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test server/*.test.mjs",
     "dev:vite": "vite",
-    "start": "node server/railway-server.mjs"
+    "start": "node server/railway-server.mjs",
+    "ai:data:generate": "node scripts/generate-ai-training-data.mjs",
+    "ai:data:validate": "node scripts/validate-ai-training-data.mjs"
   },
   "dependencies": {
     "jspdf": "^4.2.1",

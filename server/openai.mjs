@@ -1,5 +1,6 @@
 import { fetchYouTubeSignalsForIdeas, formatYouTubeSignalsContext } from './youtube.mjs'
 import { buildAuthenticatedBotContext } from './bot-context.mjs'
+import { buildTrainingContext } from './ai-knowledge.mjs'
 // All OpenAI calls happen here, on the server. The key never reaches the browser.
 const KEY = () => process.env.OPENAI_API_KEY
 const ELEVENLABS_KEY = () => process.env.ELEVENLABS_API_KEY
@@ -94,6 +95,17 @@ async function readBody(req) {
   try { return JSON.parse(raw) } catch {
     throw requestError(400, 'Request body must be valid JSON.')
   }
+}
+
+function addTrainingGuidance(system, query) {
+  const training = buildTrainingContext(query, { limit: 3, maxChars: 2400 })
+  if (!training) return system
+  const base = typeof system === 'string' && system.trim()
+    ? system
+    : 'You are QuorlythBot, a helpful assistant inside the Quorlyth application.'
+  const combined = base + '\n\n' + training
+  // Leave large authenticated app context intact instead of exceeding the provider's system limit.
+  return Buffer.byteLength(combined, 'utf8') <= MAX_CHAT_SYSTEM_BYTES ? combined : system
 }
 
 function normalizeChatBody(value) {
@@ -720,6 +732,8 @@ export async function chat(req, res) {
       // The context builder re-authenticates the caller and reads data through user-scoped RLS.
       body.system = await buildAuthenticatedBotContext({ authorization, context: body.context })
     }
+    const recentUserQuery = body.messages.filter(message => message.role === 'user').slice(-3).map(message => message.content.slice(-1200)).join('\n')
+    body.system = addTrainingGuidance(body.system, recentUserQuery)
     const providers = needText()
     const failure = await chooseProvider(providers, provider => requestProviderChat(provider, body), true)
     if (!failure?.response?.ok || !failure.response.body) {
@@ -779,6 +793,10 @@ export async function json(req, res) {
         prompt: String(body.prompt || '') + String.fromCharCode(10, 10) + formatYouTubeSignalsContext(youtubeSignalsByIdea)
           + String.fromCharCode(10, 10) + 'Score the idea and write the main reason using idea text and supplied Quorlyth in-app data only; do not let YouTube data affect numeric scores or the main reason. If available, use youtubeRationale for at most one specific video and its exact title/channel/date/individual counts. Do not calculate averages or aggregate video metrics. YouTube counts are external platform data, never Quorlyth votes, members, or in-app activity; missing data cannot imply demand.',
       }
+    }
+    providerBody = {
+      ...providerBody,
+      system: addTrainingGuidance(providerBody.system, body.prompt),
     }
     let lastFailure = null
 
