@@ -343,6 +343,10 @@ function WorkspaceProjectView() {
   const [artifactUrl, setArtifactUrl] = useState('')
   const [artifactSummary, setArtifactSummary] = useState('')
   const [artifactFiles, setArtifactFiles] = useState<File[]>([])
+  const selectedEvidenceTask = projectTasks.find(task => task.id === artifactTask)
+  const selectedEvidenceAssignees = selectedEvidenceTask ? assignedTaskIds(selectedEvidenceTask) : []
+  const canSubmitSelectedTaskEvidence = !!selectedEvidenceTask
+    && (!selectedEvidenceAssignees.length || selectedEvidenceAssignees.includes(a.me?.id || ''))
   const [commentText, setCommentText] = useState('')
   // Keep discussion interactions consistent with the collaboration workspace panel.
   const [discussionMode, setDiscussionMode] = useState<'inline' | 'expanded' | 'minimized'>('inline')
@@ -407,6 +411,7 @@ function WorkspaceProjectView() {
 
   async function reassignTask(task: WorkspaceTask, assigneeIds: string[]) {
     if (!a.backend || !canManage || task.status === 'done') return
+    if (!a.me) return setError('Sign in again before changing task assignments.')
     const nextAssigneeIds = [...new Set(assigneeIds)]
     if (nextAssigneeIds.some(assigneeId => !taskAssignees.some(member => member.userId === assigneeId))) {
       setError('Tasks can only be assigned to active workspace owners, managers, or contributors. Read-only viewers cannot own work.')
@@ -428,6 +433,11 @@ function WorkspaceProjectView() {
 
   async function startTask(task: WorkspaceTask) {
     if (!a.backend || !a.me) return
+    const assignedUsers = assignedTaskIds(task)
+    if (assignedUsers.length && !assignedUsers.includes(a.me.id)) {
+      setError('Only a teammate assigned to this task can start it. Ask the project manager to add you to the assignees.')
+      return
+    }
     await runAction('start-'+task.id, async () => {
       const currentAssignees = assignedTaskIds(task)
       await a.backend!.store.update('standaloneTasks/' + task.id, {
@@ -597,6 +607,13 @@ function WorkspaceProjectView() {
   async function submitEvidence(event: FormEvent) {
     event.preventDefault()
     if (!artifactTask) return setError('Choose the task this evidence supports.')
+    if (!a.me) return setError('Sign in before submitting evidence.')
+    const evidenceTask = projectTasks.find(task => task.id === artifactTask)
+    if (!evidenceTask) return setError('This task is no longer available. Refresh and choose it again.')
+    const evidenceAssignees = assignedTaskIds(evidenceTask)
+    if (evidenceAssignees.length && !evidenceAssignees.includes(a.me.id)) {
+      return setError('This task is assigned to other teammates. Only an assigned teammate can submit evidence for review.')
+    }
     if (artifactType === 'file' ? artifactFiles.length === 0 : !artifactUrl.trim()) {
       return setError(artifactType === 'file' ? 'Attach at least one file.' : 'Add an evidence link.')
     }
@@ -802,7 +819,7 @@ function WorkspaceProjectView() {
               })}
             </div>
           </details>}
-          <div className="sw-task__actions">{canContribute && project.status==='active' && task.status==='todo' && (currentAssignee||!assignedTaskIds(task).length||canManage) && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{canManage&&project.status==='active'&&task.status!=='done'&&<button className="btn p" type="button" disabled={busy==='complete-'+task.id||approved===0} title={approved?'Complete with approved GitHub evidence':'A manager must approve evidence first'} onClick={()=>void completeTask(task)}><QuorlythGlyph name="complete" size={14}/>{busy==='complete-'+task.id?'Checking…':'Mark complete'}{approved===0?' · evidence needed':''}</button>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Evidence approved</span>}{canManage&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-'+task.id} onClick={()=>void removeTask(task)}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-'+task.id?'Deleting…':'Delete task'}</button>}</div>
+          <div className="sw-task__actions">{canContribute && project.status==='active' && task.status==='todo' && (currentAssignee||!assignedTaskIds(task).length) && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{canManage&&project.status==='active'&&task.status!=='done'&&<button className="btn p" type="button" disabled={busy==='complete-'+task.id||approved===0} title={approved?'Complete with approved GitHub evidence':'A manager must approve evidence first'} onClick={()=>void completeTask(task)}><QuorlythGlyph name="complete" size={14}/>{busy==='complete-'+task.id?'Checking…':'Mark complete'}{approved===0?' · evidence needed':''}</button>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Evidence approved</span>}{canManage&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-'+task.id} onClick={()=>void removeTask(task)}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-'+task.id?'Deleting…':'Delete task'}</button>}</div>
         </article>
       })}</div>}
     </section>}
@@ -831,7 +848,8 @@ function WorkspaceProjectView() {
             : <label className="sw-field"><span>{artifactType==='github'?'GitHub commit or pull request URL':'HTTPS evidence URL'}</span><input required type="url" value={artifactUrl} onChange={e=>setArtifactUrl(e.target.value)} placeholder={artifactType==='github'?'https://github.com/owner/repo/pull/42':'https://…'} /></label>}
           {artifactType!=='github'&&<label className="sw-field"><span>What does this evidence demonstrate?</span><textarea required rows={3} minLength={8} maxLength={1200} value={artifactSummary} onChange={e=>setArtifactSummary(e.target.value)} placeholder="Explain what the reviewer should look for and how it meets the task criteria." /></label>}
           <p className="sw-muted">{artifactType==='github'?'GitHub checks the connected public repository and source record. This confirms the record exists, not that its author owns the Quorlyth account.':artifactType==='file'?'These files are privately uploaded and are not independently source-verified. A manager must open them, compare them with the acceptance criteria and approve them before the task can be completed.':'This link is contributor-submitted evidence, not source-verified. A manager must open it, compare it with the acceptance criteria and approve it before the task can be completed.'}</p>
-          <button className="btn p" disabled={(artifactType==='github'&&(!projectRepos.length||busy==='verify-github'))||(artifactType==='file'&&(artifactFiles.length===0||busy==='upload-files'))||((artifactType==='link'||artifactType==='document'||artifactType==='demo')&&busy==='submit-link')||!canContribute||project.status!=='active'}><QuorlythGlyph name="check" size={14}/>{busy==='verify-github'?'Checking GitHub…':busy==='upload-files'?'Uploading…':busy==='submit-link'?'Submitting…':artifactType==='github'?'Verify source and submit':artifactType==='file'?'Upload private files':'Submit evidence for review'}</button>
+          {selectedEvidenceTask && selectedEvidenceAssignees.length > 0 && !canSubmitSelectedTaskEvidence && <p className="sw-error-banner" role="status">This task is assigned to {selectedEvidenceAssignees.map(uid => a.nm(uid)).join(', ')}. Only the assigned teammates can submit evidence for review.</p>}
+          <button className="btn p" disabled={(artifactType==='github'&&(!projectRepos.length||busy==='verify-github'))||(artifactType==='file'&&(artifactFiles.length===0||busy==='upload-files'))||((artifactType==='link'||artifactType==='document'||artifactType==='demo')&&busy==='submit-link')||!canContribute||project.status!=='active'||!canSubmitSelectedTaskEvidence}><QuorlythGlyph name="check" size={14}/>{busy==='verify-github'?'Checking GitHub…':busy==='upload-files'?'Uploading…':busy==='submit-link'?'Submitting…':artifactType==='github'?'Verify source and submit':artifactType==='file'?'Upload private files':'Submit evidence for review'}</button>
         </form>
       </section>
       <section className="glass pad sw-panel sw-evidence-register"><div className="sw-section-heading"><div><p className="ql-eyebrow">DELIVERABLE REGISTER</p><h3>Evidence and reviews</h3><p>GitHub source verification and human review are separate. External demo and document links stay marked as unverified until an authorised manager reviews them.</p></div><span className="sw-count">{projectArtifacts.length} records</span></div>
