@@ -2,6 +2,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import { Backend, createBackend } from '../backend'
 import { Comment, Community, CommunityAIOrganizerRequest, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkSubmission } from '../lib/types'
 import { slug } from '../lib/util'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import { emitWorkflowEvent } from '../lib/automation'
 import { createDemoBackend, DEMO_ME } from './demo'
 
@@ -63,21 +64,6 @@ const IDLE_LOGOUT_MS = 30 * 60 * 1000
 
 const asMap = <T,>(docs: { id: string; data: any }[]): Rec<T> => Object.fromEntries(docs.map(d => [d.id, { id: d.id, ...d.data }])) as Rec<T>
 const asList = <T,>(docs: { id: string; data: any }[]): T[] => docs.map(d => ({ id: d.id, ...d.data })) as T[]
-
-/** Convert database/transport failures into actionable UI copy without exposing raw RLS or SQL details. */
-const userFacingMutationError = (error: unknown, action = 'save this change') => {
-  const raw = String((error as { message?: unknown } | null)?.message || error || '').trim()
-  if (/42501|row.?level security|new row violates|violates .*policy|permission denied|not authorized|forbidden/i.test(raw)) {
-    return "Quorlyth couldn't confirm your access to " + action + ". Refresh and try again. If it keeps happening, contact the community owner or a platform administrator."
-  }
-  if (/failed to fetch|networkerror|network request|timeout|timed out|connection (?:lost|reset|refused)|fetch failed/i.test(raw)) {
-    return "A connection issue stopped Quorlyth from trying to " + action + ". Check your connection and try again."
-  }
-  if (/postgres|postgrest|sqlstate|duplicate key|foreign key constraint|check constraint|relation .* does not exist|column .* does not exist|violates .*constraint|supabase|apierror/i.test(raw)) {
-    return "Quorlyth couldn't " + action + " right now. Please try again. If it continues, contact support."
-  }
-  return raw.slice(0, 240) || "Quorlyth couldn't " + action + ". Please try again."
-}
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [backend, setBackend] = useState<Backend | null>(null)
@@ -406,7 +392,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (e: any) {
         console.error('Quorlyth community creation failed:', e)
         const error = userFacingMutationError(e, 'create this community')
-        toast('Community creation failed. ' + error)
+        toast(error)
         return { ok: false, error }
       }
     }
@@ -424,7 +410,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (e: any) {
         console.error('Quorlyth idea submission failed:', e)
         const error = userFacingMutationError(e, 'share this idea')
-        toast('Idea submission failed. ' + error)
+        toast(error)
         return { ok: false, error }
       }
     }
