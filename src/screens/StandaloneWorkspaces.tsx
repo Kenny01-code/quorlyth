@@ -308,7 +308,7 @@ function WorkspaceProjectView() {
   const role = isOwner ? 'owner' : myMembership?.role
   const canManage = !!role && ['owner','manager'].includes(role)
   const canContribute = !!role && ['owner','manager','contributor'].includes(role)
-  const taskAssignees = team.filter(member => member.role !== 'viewer')
+  const taskAssignees = team.filter(member => member.status === 'active' && member.role !== 'viewer')
   if (a.me?.id && canManage && !taskAssignees.some(member => member.userId === a.me!.id)) {
     const now = Date.now()
     taskAssignees.unshift({
