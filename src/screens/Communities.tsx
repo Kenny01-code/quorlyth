@@ -257,7 +257,8 @@ function Detail({ cid }: { cid: string }) {
   const joined = own ? false : preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid) || myJoinRequest?.status === 'approved'
   const spaceOk = preview ? preview === 'member' || !data.settings?.appr : a.canPost()
   const rule = c.post || 'members'
-  const canPost = !c.arch && (rule === 'owner' ? own : rule === 'members' ? own || joined : true) && (own || spaceOk)
+  const isCommunityModerator = !!a.me && joined && (c.moderatorIds || []).includes(a.me.id)
+  const canPost = !c.arch && (rule === 'owner' ? own || isCommunityModerator : rule === 'members' ? own || joined : true) && (own || spaceOk)
   const communityCreatorId = c.ownerId || c.createdBy || (a.owner ? a.me?.id || '' : '')
   const mem = memberIds.filter(u => u !== communityCreatorId)
   let list = data.ideas.filter(i => i.cid === cid)
@@ -414,8 +415,8 @@ function Detail({ cid }: { cid: string }) {
               <div className="glass pad" style={{ marginBottom: 22, display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                 <Icon name="private" size={22} />
                 <div>
-                  <h3 style={{ fontSize: 16 }}>{c.arch ? 'Community is read-only' : rule === 'owner' ? 'Posting is restricted' : 'Posting approval required'}</h3>
-                  <p className="mut" style={{ marginTop: 5 }}>{c.arch ? 'This community is archived. It is read only.' : rule === 'owner' ? 'Only the community owner or an authorized platform administrator can post here.' : !spaceOk ? 'Your account needs platform approval before posting.' : 'The community owner controls who can post.'}</p>
+                  <h3 style={{ fontSize: 16 }}>{c.arch ? 'Community is read-only' : !spaceOk && !own ? 'Posting approval required' : rule === 'owner' ? 'Posting is restricted' : 'Posting approval required'}</h3>
+                  <p className="mut" style={{ marginTop: 5 }}>{c.arch ? 'This community is archived. It is read only.' : !spaceOk && !own ? 'Your account needs platform approval before posting.' : rule === 'owner' ? 'Only the owner and selected community moderators can post here.' : 'The community owner controls who can post.'}</p>
                 </div>
               </div>
             )
