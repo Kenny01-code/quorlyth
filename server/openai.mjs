@@ -217,18 +217,31 @@ function shouldTryAnotherProvider(response) {
 
 async function fetchWithHeaderTimeout(url, options = {}) {
   // TTS uses a shorter header deadline so a stalled provider falls through quickly.
+  // Gemini can take longer to establish a response, so it has a separate configurable deadline.
   // Timeout only the wait for response headers, never a healthy streaming body.
   const isTtsRequest = /\/v1\/(?:tts|audio\/speech|text-to-speech)|\/v1beta\/interactions/.test(url)
+  const isGeminiRequest = /generativelanguage\.googleapis\.com/i.test(url)
   const configuredTimeout = Number(isTtsRequest
     ? process.env.AI_TTS_PROVIDER_TIMEOUT_MS
-    : process.env.AI_PROVIDER_TIMEOUT_MS)
+    : isGeminiRequest
+      ? process.env.AI_GEMINI_PROVIDER_TIMEOUT_MS
+      : process.env.AI_PROVIDER_TIMEOUT_MS)
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
     ? Math.min(configuredTimeout, 30000)
-    : isTtsRequest ? 8000 : 7000
+    : isTtsRequest ? 8000 : isGeminiRequest ? 15000 : 7000
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(new Error('AI provider timed out before returning headers')), timeoutMs)
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
     return await fetch(url, { ...options, signal: controller.signal })
+  } catch (error) {
+    if (controller.signal.aborted) {
+      const timeoutError = new Error(isGeminiRequest
+        ? 'Gemini timed out before returning response headers.'
+        : 'AI provider timed out before returning response headers.')
+      timeoutError.code = 'AI_PROVIDER_HEADER_TIMEOUT'
+      throw timeoutError
+    }
+    throw error
   } finally {
     clearTimeout(timer)
   }
@@ -416,12 +429,13 @@ async function chooseProvider(providers, request, requireStream = false) {
           continue
         }
       }
-      lastFailure = { provider, response }
+      const code = await safeAiErrorCode(response)
+      lastFailure = { provider, response, status: response.status, code }
       console.warn('[Quorlyth AI] provider returned an error', {
         provider,
         mode: requireStream ? 'chat_stream' : 'structured_json',
         status: response.status,
-        code: await safeAiErrorCode(response),
+        code,
       })
       if (!shouldTryAnotherProvider(response)) return lastFailure
       await discardResponse(response)
@@ -444,13 +458,30 @@ async function providerErrorMessage(provider, response) {
   return providerError(response)
 }
 
+function actionableProviderFailure(failure) {
+  const provider = failure?.provider
+  const code = failure?.code || failure?.error?.code
+  const status = Number(failure?.status ?? failure?.response?.status)
+
+  if (provider === 'openai' && (code === 'credit_balance_exhausted' || code === 'insufficient_quota')) {
+    return 'QuorlythBot is temporarily unavailable because the OpenAI account has no API credits remaining. Add credits to the OpenAI project connected to this site, or enable another working provider, then try again.'
+  }
+  if (provider === 'gemini' && code === 'AI_PROVIDER_HEADER_TIMEOUT') {
+    return 'Gemini did not respond within the configured provider timeout. Check the Gemini API key, model access, and quota, then try again.'
+  }
+  if (status === 401 || status === 403) {
+    return 'The AI service could not authenticate this request. Check the configured provider API key, permissions, and account usage status, then try again.'
+  }
+  return 'QuorlythBot could not get a response from the available AI services. Please try again shortly.'
+}
+
 async function sendProviderFailure(res, failure) {
   const response = failure?.response
   if (response && !shouldTryAnotherProvider(response)) {
     return send(res, response.status || 502, { error: await providerErrorMessage(failure.provider, response) })
   }
   return send(res, 503, {
-    error: 'QuorlythBot could not get a response from the available AI services. Please try again shortly.',
+    error: actionableProviderFailure(failure),
     retryable: true,
   })
 }
@@ -757,11 +788,23 @@ export async function json(req, res) {
         response = await requestProviderJson(provider, providerBody)
       } catch (error) {
         lastFailure = { provider, error }
+        console.warn('[Quorlyth AI] provider request failed', {
+          provider,
+          mode: 'structured_json',
+          reason: error?.code || (error instanceof Error ? error.name : 'UnknownError'),
+        })
         continue
       }
 
       if (!response.ok) {
-        lastFailure = { provider, response }
+        const code = await safeAiErrorCode(response)
+        lastFailure = { provider, response, status: response.status, code }
+        console.warn('[Quorlyth AI] provider returned an error', {
+          provider,
+          mode: 'structured_json',
+          status: response.status,
+          code,
+        })
         if (shouldTryAnotherProvider(response)) {
           await discardResponse(response)
           continue
@@ -779,6 +822,11 @@ export async function json(req, res) {
         return send(res, 200, parsed)
       } catch (error) {
         lastFailure = { provider, error }
+        console.warn('[Quorlyth AI] provider returned invalid structured JSON', {
+          provider,
+          mode: 'structured_json',
+          reason: error instanceof Error ? error.name : 'UnknownError',
+        })
       }
     }
 
