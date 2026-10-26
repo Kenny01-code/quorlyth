@@ -4,6 +4,7 @@ import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
 import { Av, Bar, Chip, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import { reviewIdeas } from '../ai/review'
 import { STATUS_LABEL, YouTubeSocialSignals } from '../lib/types'
 import { cn, when } from '../lib/util'
@@ -191,7 +192,7 @@ function Inner() {
         forceYoutubeRefresh,
       })
       a.toast(`${done} idea${done === 1 ? '' : 's'} reviewed`)
-    } catch (e: any) { if (e.name !== 'AbortError') setErr(e.message || 'The AI review could not finish.') }
+    } catch (e: any) { if (e.name !== 'AbortError') setErr(userFacingMutationError(e, 'review the selected ideas')) }
     setStatus(''); ctl.current = null
   }
 
