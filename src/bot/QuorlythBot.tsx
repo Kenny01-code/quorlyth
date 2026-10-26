@@ -4,6 +4,7 @@ import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import { Chat, ChatMsg, Community, Idea, Profile } from '../lib/types'
 import { emitWorkflowEvent, executeWorkflowActions, newWorkflowId, persistWorkflowRun } from '../lib/automation'
 import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTrigger } from '../lib/automation'
@@ -763,7 +764,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           return
         } catch (failure) {
           const draft = add(cur, { r: 'u', t })
-          const message = failure instanceof Error ? failure.message : 'I could not prepare a site-wide plan safely.'
+          const message = userFacingMutationError(failure, 'prepare a site-wide plan')
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
           return
         } finally {
@@ -792,7 +793,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           }
         } catch (failure) {
           const draft = add(cur, { r: 'u', t })
-          const message = failure instanceof Error ? failure.message : 'I could not prepare that automation safely.'
+          const message = userFacingMutationError(failure, 'prepare that automation')
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
           return
         } finally {
@@ -824,7 +825,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           }
         } catch (failure) {
           const draft = add(cur, { r: 'u', t })
-          const message = failure instanceof Error ? failure.message : 'I could not prepare that workspace action safely.'
+          const message = userFacingMutationError(failure, 'prepare that workspace action')
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
           return
         } finally {
@@ -950,7 +951,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         const o = await askJson<{ matches: { id: string; why: string }[] }>(`Find up to five ideas that best match the request. Reply with only JSON: {"matches":[{"id":"idea id","why":"one short sentence"}]}. Use only ids from the list.\nRequest: ${arg}\nIdeas: ${JSON.stringify(a.data.ideas.slice(0, 60).map(i => ({ id: i.id, title: i.title, details: (i.body || '').slice(0, 160) })))}`, { tier: 'quick' })
         const m = (o.matches || []).filter(x => a.data.ideas.some(i => i.id === x.id)).slice(0, 5)
         n = { ...n, msgs: [...n.msgs, { r: 'a', t: m.length ? 'Here is what I found:\n' + m.map(x => a.data.ideas.find(i => i.id === x.id)!.title + ': ' + String(x.why).slice(0, 120)).join('\n') : 'I did not find a close match.', btns: m.map(x => ({ a: 'idea', id: x.id, l: a.data.ideas.find(i => i.id === x.id)!.title.slice(0, 28) })) }] }; persist(n); say(n.msgs[n.msgs.length - 1].t)
-      } catch (e: any) { n = { ...n, msgs: [...n.msgs, { r: 'a', t: e.message }] }; setCur(n); say(e.message) }
+      } catch (e: any) { const message = friendlyBotError(e); n = { ...n, msgs: [...n.msgs, { r: 'a', t: message }] }; setCur(n); say(message) }
       setBusy(false); return
     }
     const best = [...a.data.ideas].sort((x, y) => ((a.data.reviews[y.id]?.score || 0) + a.votesOf(y.id)) - ((a.data.reviews[x.id]?.score || 0) + a.votesOf(x.id)))[0]
@@ -1219,7 +1220,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             return
           }
           if (event.type === 'error') {
-            a.toast(event.message || 'The live conversation hit a temporary error.')
+            a.toast(userFacingMutationError(event.message || 'The live conversation hit a temporary error.', 'continue the live conversation'))
           }
         },
       })
@@ -2525,7 +2526,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         keys.add(key)
         items.push({ action: planned, rationale: String(candidate.rationale || 'Prepared from current Quorlyth records and supported actions.').trim().slice(0, 240) })
       } catch (error) {
-        skipped.push(error instanceof Error ? error.message.slice(0, 180) : 'command could not be validated')
+        skipped.push(userFacingMutationError(error, 'validate that action'))
       }
     }
 
@@ -2551,7 +2552,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
           if (applied) successes.push(item.action)
           else failures.push(pendingActionDetail(item.action, a.data.communities, a.data.ideas) + ' — did not report success')
         } catch (failure) {
-          failures.push(pendingActionDetail(item.action, a.data.communities, a.data.ideas) + ' — ' + (failure instanceof Error ? failure.message : 'could not be applied'))
+          failures.push(pendingActionDetail(item.action, a.data.communities, a.data.ideas) + ' — ' + userFacingMutationError(failure, 'apply this change'))
         }
       }
       const summaryLines = ['One-click organization finished: ' + successes.length + ' of ' + action.actions.length + ' changes applied.']
@@ -2943,8 +2944,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         }
       }
     } catch (e: any) {
-      if (nested) throw new Error(e?.message || 'That action could not be completed.')
-      a.toast(e?.message || 'That action could not be completed.')
+      if (nested) throw new Error(userFacingMutationError(e, 'complete that action'))
+      a.toast(userFacingMutationError(e, 'complete that action'))
     } finally {
       if (!nested) { setBusy(false); setStatus('Online') }
     }

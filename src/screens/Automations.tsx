@@ -4,6 +4,7 @@ import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import {
   ACTION_INFO,
   TRIGGER_INFO,
@@ -157,7 +158,7 @@ function AutomationWorkspace() {
       setTab('workflows')
       if (!current) nav('/architecture?automationCreated=' + encodeURIComponent(next.id) + '#arch-system-title')
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Could not save this workflow. Check your access and try again.')
+      setError(userFacingMutationError(failure, 'save this workflow'))
     } finally {
       setBusy('')
     }
@@ -174,7 +175,7 @@ function AutomationWorkspace() {
       await app.backend.store.set(path, { ...current, ...patch, updatedAt: Date.now() })
       if (successMessage) app.toast(successMessage)
     } catch (failure) {
-      const message = failure instanceof Error ? failure.message : 'Could not update this workflow.'
+      const message = userFacingMutationError(failure, 'update this workflow')
       setError(message)
       app.toast(message)
     } finally {
@@ -195,10 +196,10 @@ function AutomationWorkspace() {
     try {
       const run = await executeWorkflowActions(workflow, userId, app.backend.store, event, app.toast)
       await persistWorkflowRun(app.backend.store, collectionPath + '/' + workflow.id, run)
-      app.toast(run.status === 'success' ? 'Workflow run finished.' : 'Workflow run stopped: ' + (run.error || 'an action failed'))
+      app.toast(run.status === 'success' ? 'Workflow run finished.' : userFacingMutationError(run.error || 'An action failed', 'run this workflow'))
       setTab('runs')
     } catch (failure) {
-      const message = failure instanceof Error ? failure.message : 'This workflow could not run.'
+      const message = userFacingMutationError(failure, 'run this workflow')
       setError(message)
       app.toast(message)
     } finally {
@@ -215,7 +216,7 @@ function AutomationWorkspace() {
       await app.backend.store.delete(collectionPath + '/' + workflow.id)
       app.toast('Workflow deleted.')
     } catch (failure) {
-      const message = failure instanceof Error ? failure.message : 'Could not delete the workflow.'
+      const message = userFacingMutationError(failure, 'delete this workflow')
       setError(message)
       app.toast(message)
     } finally {
@@ -409,7 +410,7 @@ function AutomationWorkspace() {
           {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run now” on a workflow to test its actions, or activate a flow to run it automatically when the selected event happens.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
             {allRuns.map(run => <article className="wa-run-row" key={run.workflowId + ':' + run.id}>
               <span className={'wa-run-status ' + run.status}>{run.status === 'success' ? <QuorlythGlyph name="check" size={15} /> : <QuorlythGlyph name="alert" size={15} />}</span>
-              <div className="wa-run-summary"><strong>{run.workflowName}</strong><p>{run.eventTitle || (run.trigger === 'manual' ? 'Manual test run' : TRIGGER_INFO[run.trigger as WorkflowTrigger]?.title || run.trigger)}</p><small>{displayDate(run.finishedAt)} · {run.steps.length} step{run.steps.length === 1 ? '' : 's'}</small>{run.steps.map(step => <div className="wa-run-step" key={step.id}><span className={step.status === 'success' ? 'wa-run-dot success' : 'wa-run-dot failed'} /><span>{step.title}</span><small>{step.detail}</small></div>)}{run.error && <p className="wa-run-error">{run.error}</p>}</div>
+              <div className="wa-run-summary"><strong>{run.workflowName}</strong><p>{run.eventTitle || (run.trigger === 'manual' ? 'Manual test run' : TRIGGER_INFO[run.trigger as WorkflowTrigger]?.title || run.trigger)}</p><small>{displayDate(run.finishedAt)} · {run.steps.length} step{run.steps.length === 1 ? '' : 's'}</small>{run.steps.map(step => <div className="wa-run-step" key={step.id}><span className={step.status === 'success' ? 'wa-run-dot success' : 'wa-run-dot failed'} /><span>{step.title}</span><small>{step.status === 'success' ? step.detail : userFacingMutationError(step.detail, 'complete this workflow step')}</small></div>)}{run.error && <p className="wa-run-error">{userFacingMutationError(run.error, 'run this workflow')}</p>}</div>
               <span className={'wa-badge ' + (run.status === 'success' ? 'is-active' : '')}>{runLabel(run.status)}</span>
             </article>)}
           </div>}

@@ -6,6 +6,7 @@ import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 import { emitWorkflowEvent } from '../lib/automation'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 
 type WorkspaceTab = 'overview' | 'tasks' | 'evidence' | 'team'
 type WorkspaceProject = {
@@ -64,7 +65,7 @@ const dateEnd = (value: string) => {
   const d = new Date(year, month - 1, day, 23, 59, 59, 999)
   return Number.isFinite(d.getTime()) ? d.getTime() : null
 }
-const errorText = (error: unknown) => error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+const errorText = (error: unknown) => userFacingMutationError(error, 'complete this workspace action')
 
 function WorkspaceEvidenceAttachment({ attachment }: { attachment: WorkspaceAttachment }) {
   const a = useApp()
