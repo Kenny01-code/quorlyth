@@ -6,6 +6,7 @@ import { Tags } from '../components/IdeaCard'
 import { Av, Bar, Empty } from '../components/ui'
 import { useApp, useComments } from '../data/AppProvider'
 import { STATUS_LABEL } from '../lib/types'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import { when } from '../lib/util'
 import { useUserState } from '../lib/userState'
 import { reviewIdeas } from '../ai/review'
@@ -203,7 +204,7 @@ function Inner() {
           </div>}
           {a.owner && (
             <div className="acts">
-              <button className="btn" disabled={rev} onClick={async () => { setRev(true); try { await reviewIdeas(a, [idea]); a.toast('Reviewed') } catch (e: any) { a.toast(e.message || 'The review could not finish') } setRev(false) }}><span className="aiic"><Icon name="spark" size={16} /></span>{rev ? 'Reviewing...' : 'Review with AI'}</button>
+              <button className="btn" disabled={rev} onClick={async () => { setRev(true); try { await reviewIdeas(a, [idea]); a.toast('Reviewed') } catch (e: any) { console.error('Quorlyth AI idea review failed:', e); a.toast(userFacingMutationError(e, 'review this idea')) } setRev(false) }}><span className="aiic"><Icon name="spark" size={16} /></span>{rev ? 'Reviewing...' : 'Review with AI'}</button>
               <button className="btn p" onClick={() => a.setStatus(idea.id, 'selected')}><Icon name="approve" />Select</button>
               <button className="btn" onClick={() => a.setStatus(idea.id, 'held')}><Icon name="hold" />Hold</button>
               <button className="btn" onClick={() => a.setStatus(idea.id, 'declined')}><Icon name="decline" />Decline</button>
