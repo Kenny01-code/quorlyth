@@ -303,6 +303,7 @@ function Workspace() {
     return isAIProjectPlan(incomingPlan) ? incomingPlan : null
   })
   const [aiBusy, setAiBusy] = useState(false)
+  const [aiPlanAccepted, setAiPlanAccepted] = useState(false)
   const [applyingPlan, setApplyingPlan] = useState(false)
   const [createMilestoneRequest, setCreateMilestoneRequest] = useState(0)
   const idea = a.data.ideas.find(item => item.id === id)
@@ -421,13 +422,49 @@ function Workspace() {
         <p className="mut" style={{ marginTop: 8 }}>{canManage
           ? 'This collaboration was accepted, but its project record is missing. Create the project brief here to open the shared milestones and team discussion.'
           : 'The workspace is not initialized yet. The community manager can open this page and finish setup; you do not need to apply again if your application was already accepted.'}</p>
+        {canManage && <section className="glass pad" style={{ marginTop: 16, display: 'grid', gap: 12 }}>
+          <div>
+            <span className="chip"><QuorlythGlyph name="idea" size={14} />Quorlyth Signal Engine</span>
+            <h4 style={{ fontSize: 17, marginTop: 8 }}>Organize this collaboration with AI</h4>
+            <p className="mut" style={{ marginTop: 5 }}>Draft a project brief and milestones from the original idea, its discussion, and the available team. You review the draft before it changes the workspace.</p>
+          </div>
+          <div className="acts" style={{ margin: 0, flexWrap: 'wrap' }}>
+            <button type="button" className="btn p" disabled={aiBusy || organizerRequest?.status === 'pending'} onClick={() => void organizeWithAI()}>
+              <QuorlythGlyph name="idea" size={15} />
+              {aiBusy ? 'Organizing discussion…' : canOrganizeWithAI ? (aiPlan ? 'Regenerate AI draft' : 'Organize with AI') : organizerRequest?.status === 'pending' ? 'Approval pending' : organizerRequest?.status === 'declined' ? 'Request AI approval again' : 'Request AI organizer approval'}
+            </button>
+            {aiPlanAccepted && <span className="chip"><QuorlythGlyph name="check" size={13} />AI draft selected</span>}
+          </div>
+          {!canOrganizeWithAI && <p className="dim" style={{ fontSize: 12 }}>AI planning requires community-owner access or an approved organizer request. You can still write the project brief manually.</p>}
+          {aiPlan && <div style={{ display: 'grid', gap: 10, borderTop: '1px solid var(--line, rgba(255,255,255,.12))', paddingTop: 12 }}>
+            <div>
+              <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Suggested project brief</p>
+              <p className="mut" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p>
+              <p className="dim" style={{ fontSize: 11, marginTop: 5 }}>Signal score: {aiPlan.signal_score}/100 · AI estimate, not a measured engagement metric.</p>
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Proposed milestones · {aiPlan.milestones.length}</p>
+              {aiPlan.milestones.map((item, index) => <div key={item.title + index} className="glass pad" style={{ display: 'grid', gap: 5 }}>
+                <strong>{String(index + 1).padStart(2, '0')} · {item.title}</strong>
+                <p className="mut">{item.description}</p>
+                <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p>
+              </div>)}
+            </div>
+            <div className="acts" style={{ margin: 0, flexWrap: 'wrap' }}>
+              <button type="button" className="btn p" onClick={() => { setWorkspaceSummary(aiPlan.project_summary || workspaceSummary); setAiPlanAccepted(true); a.toast('AI draft selected. Initialize the workspace, then review the milestones in Plan & tasks.') }}><QuorlythGlyph name="check" size={14} />Use this draft</button>
+              <button type="button" className="btn" onClick={() => { setAiPlan(null); setAiPlanAccepted(false) }}>Discard draft</button>
+            </div>
+            <p className="dim" style={{ fontSize: 11 }}>Selecting this draft only fills the project brief. Milestones will remain a proposal until you review and apply them in the new workspace.</p>
+          </div>}
+        </section>}
         {canManage ? <form className="reason" style={{ marginTop: 16 }} onSubmit={async event => {
           event.preventDefault()
           if (!workspaceSummary.trim()) return a.toast('Add a short project brief first.')
           if (isPastDateInput(projectDueDate)) return a.toast(PAST_DATE_MESSAGE)
           setBusy(true)
           try {
-            await a.createProject(id, workspaceSummary.trim(), dateEnd(projectDueDate))
+            const created = await a.createProject(id, workspaceSummary.trim(), dateEnd(projectDueDate))
+            if (created && aiPlan && aiPlanAccepted) setWorkspaceTab('plan')
           } catch {
             a.toast('Could not initialize the collaboration workspace. Please try again.')
           } finally {
@@ -469,6 +506,7 @@ function Workspace() {
         team: workspaceTeamIds.map(memberId => ({ id: memberId, name: a.nm(memberId) })),
       })
       setAiPlan(plan)
+      setAiPlanAccepted(false)
       a.toast('AI project plan is ready to review.')
     } catch (error: any) {
       a.toast(error?.message || 'Quorlyth could not organize this discussion. Please try again.')
