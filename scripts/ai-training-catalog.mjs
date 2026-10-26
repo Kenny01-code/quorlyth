@@ -683,7 +683,7 @@ export function buildTrainingExamples() {
           const index = domain.tasks.indexOf(task) * NICHES.length * SITUATIONS.length
             + NICHES.indexOf(niche) * SITUATIONS.length + SITUATIONS.indexOf(situation) + 1;
           rows.push({
-            id: "qth-v1-" + domain.id + "-" + String(index).padStart(4, "0"),
+            id: "qth-v" + DATASET_VERSION.split(".")[0] + "-" + domain.id + "-" + String(index).padStart(4, "0"),
             version: DATASET_VERSION,
             domain: domain.id,
             intent: task.id,
