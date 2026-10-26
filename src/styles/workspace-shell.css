@@ -100,5 +100,8 @@ details.ql-milestone-reassign{display:block;color:rgba(244,244,246,.7);font-size
 .ql-milestone-reassign>summary{width:fit-content;max-width:100%;cursor:pointer;list-style:none;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 10px;overflow-wrap:anywhere}
 .ql-milestone-reassign>summary::-webkit-details-marker{display:none}
 .ql-milestone-reassign[open] .ql-assignee-picker__list{margin-top:8px}
+.ql-milestone-reassign>summary::after{content:'▾';margin-left:10px}
+.ql-milestone-reassign[open]>summary::after{content:'▴'}
+.ql-field-grid .ql-assignee-picker{grid-column:1 / -1}
 .ql-assignee-chip{max-width:100%;overflow-wrap:anywhere}
 @media(max-width:560px){.ql-assignee-picker__list{grid-template-columns:1fr}.ql-assignee-chip{flex-wrap:wrap}}
