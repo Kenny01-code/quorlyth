@@ -181,6 +181,16 @@ Deno.serve(async (req: Request) => {
       if (!task || task.data.projectId !== projectId || task.data.status === "done") {
         return respond(404, { error: "Choose an open task in this workspace." });
       }
+      if (task.data.blocked === true) {
+        return respond(409, { error: "This task is blocked. Ask the project manager to clear the blocker before submitting evidence." });
+      }
+      const assignedIds = [...new Set([
+        ...(Array.isArray(task.data.assigneeIds) ? task.data.assigneeIds.filter((id): id is string => typeof id === "string" && !!id) : []),
+        ...(typeof task.data.assigneeId === "string" && task.data.assigneeId ? [task.data.assigneeId] : []),
+      ])];
+      if (assignedIds.length > 0 && !assignedIds.includes(user.id)) {
+        return respond(403, { error: "This task is assigned to other teammates. Only an assigned teammate can submit evidence for review." });
+      }
       let url: URL;
       try { url = new URL(artifactUrl); } catch { return respond(400, { error: "Paste a GitHub commit or pull request URL." }); }
       if (url.protocol !== "https:" || url.hostname.toLowerCase() !== "github.com" || url.username || url.password) {
