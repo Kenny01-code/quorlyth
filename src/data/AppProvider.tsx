@@ -550,7 +550,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (!me || !backend || !st) throw new Error('Sign in again before deleting an idea.')
           const idea = data.ideas.find(item => item.id === ideaId)
           if (!idea) throw new Error('Idea not found. Refresh the page and try again.')
-          if (!canManageCommunity(idea.cid)) throw new Error('Only the community owner or a platform administrator can delete an idea and its linked workspace.')
+          if (!canManageCommunity(idea.cid) && idea.authorId !== me.id) throw new Error('Only the idea author, community owner, or a platform administrator can delete this idea and its linked workspace.')
           const milestoneIds = new Set(data.milestones.filter(item => item.projectId === ideaId).map(item => item.id))
           const submissions = data.workSubmissions.filter(item => item.ideaId === ideaId || item.projectId === ideaId || milestoneIds.has(item.milestoneId))
           const attachments = [...new Set(submissions.flatMap(item => item.attachments || []).map(file => file.path).filter(Boolean))]
