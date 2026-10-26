@@ -12,7 +12,7 @@ type MilestoneDraft = {
   description: string
   acceptanceCriteria: string
   dueDate: string
-  assigneeId: string
+  assigneeIds: string[]
   priority: MilestonePriority
   blocked: boolean
   blockedNote: string
@@ -29,7 +29,7 @@ const FILTERS: { value: FilterKey; label: string; glyph: 'workspace' | 'progress
   { value: 'blocked', label: 'Blocked', glyph: 'blocked' },
 ]
 const blankDraft = (): MilestoneDraft => ({
-  title: '', description: '', acceptanceCriteria: '', dueDate: '', assigneeId: '',
+  title: '', description: '', acceptanceCriteria: '', dueDate: '', assigneeIds: [],
   priority: 'normal', blocked: false, blockedNote: '',
 })
 const asDateInput = (timestamp?: number | null) => {
@@ -50,6 +50,9 @@ const dateLabel = (timestamp?: number | null) => timestamp
   ? new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
   : ''
 const isOverdue = (milestone: Milestone) => !!milestone.dueAt && milestone.status !== 'done' && milestone.dueAt < Date.now()
+
+const getMilestoneAssigneeIds = (milestone: Pick<Milestone, 'assigneeId' | 'assigneeIds'>): string[] =>
+  [...new Set([...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []), ...(milestone.assigneeId ? [milestone.assigneeId] : [])].filter(Boolean))]
 
 export function MilestoneBoard({ idea, projectId, projectStatus, milestones, teamMemberIds, canCollaborate, canManage, createMilestoneRequest }: {
   idea: Idea
@@ -89,7 +92,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   const visibleMilestones = useMemo(() => milestones
     .filter(item => {
       if (filter === 'open') return item.status !== 'done'
-      if (filter === 'mine') return !!a.me?.id && item.assigneeId === a.me.id
+      if (filter === 'mine') return !!a.me?.id && getMilestoneAssigneeIds(item).includes(a.me.id)
       if (filter === 'overdue') return isOverdue(item)
       if (filter === 'blocked') return !!item.blocked && item.status !== 'done'
       return true
@@ -117,7 +120,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
       description: milestone.description || '',
       acceptanceCriteria: milestone.acceptanceCriteria || '',
       dueDate: asDateInput(milestone.dueAt),
-      assigneeId: milestone.assigneeId || '',
+      assigneeIds: getMilestoneAssigneeIds(milestone),
       priority: milestone.priority || 'normal',
       blocked: !!milestone.blocked,
       blockedNote: milestone.blockedNote || '',
@@ -140,7 +143,8 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
     const details = {
       priority: draft.priority,
       dueAt: dateEnd(draft.dueDate),
-      assigneeId: draft.assigneeId || null,
+      assigneeIds: draft.assigneeIds,
+      assigneeId: draft.assigneeIds[0] || null,
       acceptanceCriteria: draft.acceptanceCriteria.trim(),
       blocked: draft.blocked,
       blockedNote: draft.blockedNote.trim(),
@@ -162,11 +166,25 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
     setBusyId('')
   }
 
-  async function changeAssignee(milestone: Milestone, assigneeId: string) {
-    if (!canEdit || milestone.status === 'done' || (milestone.assigneeId || '') === assigneeId) return
+  async function changeAssignees(milestone: Milestone, assigneeIds: string[]) {
+    if (!canEdit || milestone.status === 'done') return
+    const nextIds = [...new Set(assigneeIds)]
+    const currentIds = getMilestoneAssigneeIds(milestone)
+    if (currentIds.length === nextIds.length && currentIds.every(id => nextIds.includes(id))) return
+    if (nextIds.some(id => !people.some(person => person.id === id))) return a.toast('Only current project team members can be assigned.')
     setBusyId(milestone.id)
-    await a.updateMilestone(milestone.id, { assigneeId: assigneeId || null })
+    await a.updateMilestone(milestone.id, { assigneeIds: nextIds, assigneeId: nextIds[0] || null })
     setBusyId('')
+  }
+
+  function toggleDraftAssignee(assigneeId: string, checked: boolean) {
+    if (checked && !people.some(person => person.id === assigneeId)) return
+    setDraft(current => ({
+      ...current,
+      assigneeIds: checked
+        ? [...new Set([...current.assigneeIds, assigneeId])]
+        : current.assigneeIds.filter(id => id !== assigneeId),
+    }))
   }
 
   async function toggleBlocked(milestone: Milestone) {
@@ -223,7 +241,26 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
         <div className="ql-field-grid">
           <label className="ql-field"><span>Priority</span><select value={draft.priority} onChange={event => setDraft(current => ({ ...current, priority: event.target.value as MilestonePriority }))}><option value="low">Low</option><option value="normal">Standard</option><option value="high">High</option><option value="critical">Critical</option></select></label>
           <label className="ql-field"><span>Due date</span><input type="date" min={minimumDateInput(editingId ? asDateInput(milestones.find(item => item.id === editingId)?.dueAt) : '')} value={draft.dueDate} onChange={event => setDraft(current => ({ ...current, dueDate: event.target.value }))} /></label>
-          <label className="ql-field"><span>Assign to</span><select value={draft.assigneeId} onChange={event => setDraft(current => ({ ...current, assigneeId: event.target.value }))}><option value="">Unassigned</option>{people.map(person => <option key={person.id} value={person.id}>{person.name}{person.id === a.me?.id ? ' (you)' : ''}</option>)}</select></label>
+          <div className="ql-field ql-assignee-picker">
+            <span>Assign to everyone you select</span>
+            <div className="ql-assignee-picker__actions">
+              <button type="button" className="ql-quiet-action" onClick={() => setDraft(current => ({ ...current, assigneeIds: people.map(person => person.id) }))}>Select everyone ({people.length})</button>
+              <button type="button" className="ql-quiet-action" onClick={() => setDraft(current => ({ ...current, assigneeIds: [] }))}>Clear selection</button>
+            </div>
+            <div className="ql-assignee-picker__list">
+              {[
+                ...people,
+                ...draft.assigneeIds.filter(id => !people.some(person => person.id === id)).map(id => ({ id, name: a.nm(id) || 'Former team member' })),
+              ].map(person => {
+                const eligible = people.some(candidate => candidate.id === person.id)
+                return <label className="ql-assignee-option" key={person.id}>
+                  <input type="checkbox" checked={draft.assigneeIds.includes(person.id)} disabled={!eligible && !draft.assigneeIds.includes(person.id)} onChange={event => toggleDraftAssignee(person.id, event.target.checked)} />
+                  <span>{person.name}{person.id === a.me?.id ? ' (you)' : ''}{!eligible && <small> · no longer eligible</small>}</span>
+                </label>
+              })}
+            </div>
+            <small className="ql-muted">{draft.assigneeIds.length} selected · select everyone to assign this milestone to the whole collaboration team.</small>
+          </div>
         </div>
         <label className="ql-field"><span>Acceptance criteria <small>How the team knows it is done</small></span><textarea value={draft.acceptanceCriteria} onChange={event => setDraft(current => ({ ...current, acceptanceCriteria: event.target.value }))} rows={2} maxLength={800} placeholder="A reviewer can sign in, complete the flow, and see a persisted result…" /></label>
         {editingId && <div className="ql-blocker-editor">
@@ -248,15 +285,39 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
               <div className="ql-milestone-tags">
                 <span className={'ql-priority-chip priority-' + priority}><QuorlythGlyph name="priority" size={13} />{PRIORITY_LABEL[priority]}</span>
                 {milestone.dueAt ? <span className={'ql-meta-chip' + (milestoneOverdue ? ' is-alert' : '')}><QuorlythGlyph name="due" size={13} />{milestoneOverdue ? 'Overdue · ' : 'Due · '}{dateLabel(milestone.dueAt)}</span> : <span className="ql-meta-chip"><QuorlythGlyph name="calendar" size={13} />No due date</span>}
-                <span className="ql-assignee-chip">{milestone.assigneeId ? <><Av id={milestone.assigneeId} size={22} /><span>{a.nm(milestone.assigneeId)}{milestone.assigneeId === a.me?.id ? ' · You' : ''}</span></> : <><QuorlythGlyph name="team" size={14} /><span>Unassigned</span></>}</span>
+                {(() => {
+                  const assignedIds = getMilestoneAssigneeIds(milestone)
+                  const assignedNames = assignedIds.map(id => a.nm(id) || 'Team member')
+                  return <span className="ql-assignee-chip" title={assignedNames.join(', ')}>
+                    <QuorlythGlyph name="team" size={14} />
+                    <span>{assignedIds.length ? assignedIds.length + ' assigned · ' + assignedNames.join(', ') : 'Unassigned'}</span>
+                  </span>
+                })()}
               </div>
-              {canEdit && milestone.status !== 'done' && <label className="ql-milestone-reassign">
-                <span>Assign to</span>
-                <select aria-label={'Assign ' + milestone.title + ' to a teammate'} value={milestone.assigneeId || ''} disabled={busyId === milestone.id} onChange={event => void changeAssignee(milestone, event.target.value)}>
-                  <option value="">Unassigned</option>
-                  {people.map(person => <option key={person.id} value={person.id}>{person.name}{person.id === a.me?.id ? ' (you)' : ''}</option>)}
-                </select>
-              </label>}
+              {canEdit && milestone.status !== 'done' && <details className="ql-milestone-reassign">
+                <summary>{'Assign to teammates · ' + (getMilestoneAssigneeIds(milestone).length || 'none') + ' selected'}</summary>
+                <div className="ql-assignee-picker__actions">
+                  <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void changeAssignees(milestone, people.map(person => person.id))}>Select everyone</button>
+                  <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void changeAssignees(milestone, [])}>Clear</button>
+                </div>
+                <div className="ql-assignee-picker__list">
+                  {[
+                    ...people,
+                    ...getMilestoneAssigneeIds(milestone).filter(id => !people.some(person => person.id === id)).map(id => ({ id, name: a.nm(id) || 'Former team member' })),
+                  ].map(person => {
+                    const assignedIds = getMilestoneAssigneeIds(milestone)
+                    const checked = assignedIds.includes(person.id)
+                    const eligible = people.some(candidate => candidate.id === person.id)
+                    return <label className="ql-assignee-option" key={person.id}>
+                      <input type="checkbox" checked={checked} disabled={busyId === milestone.id || (!eligible && !checked)} onChange={event => {
+                        const next = event.target.checked ? [...assignedIds, person.id] : assignedIds.filter(id => id !== person.id)
+                        void changeAssignees(milestone, next)
+                      }} />
+                      <span>{person.name}{person.id === a.me?.id ? ' (you)' : ''}{!eligible && <small> · no longer eligible</small>}</span>
+                    </label>
+                  })}
+                </div>
+              </details>}
               {milestone.acceptanceCriteria && <div className="ql-acceptance"><QuorlythGlyph name="document" size={15} /><div><strong>Definition of done</strong><p>{milestone.acceptanceCriteria}</p></div></div>}
               {milestone.blocked && milestone.status !== 'done' && <div className="ql-blocker-note"><QuorlythGlyph name="blocked" size={16} /><div><strong>Blocked</strong><p>{milestone.blockedNote || 'Waiting on a dependency or decision.'}</p></div></div>}
               {(canEdit || canManage) && <div className="ql-milestone-actions">
