@@ -3227,7 +3227,6 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
                   {slash.length > 0 && <div className="bsl">{slash.map((s, i) => <button key={s.id} className={cn('bsi', i === slashSel && 'on')} onClick={() => { setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) }}><Icon name={s.icon} size={16} /><b>/{s.id}</b><span className="dim">{s.d}</span></button>)}</div>}
                   <div className="ast-q">
                     {tour >= 0 && <><button className="chip on" onClick={() => { const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; setTour(tour + 1); step(steps, tour + 1) }}>Next</button><button className="chip" onClick={() => { setTour(-1); robot.current?.set('rest') }}>End tour</button></>}
-                    {view === 'chat' && !pendingAction && <button className="chip on" disabled={busy} title="Review one coordinated plan across supported Quorlyth actions, using the current page and your linked site records." onClick={() => send('One-click organize my Quorlyth site, prioritizing the current page and its linked records')}><Icon name="sparkles" size={13} /> One-click organize</button>}
                   </div>
                   <div className="ast-in">
                     <textarea rows={1} value={input} placeholder={ph} aria-label="Message" onChange={e => setInput(e.target.value)}
