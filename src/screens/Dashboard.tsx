@@ -4,6 +4,7 @@ import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
 import { Av, Empty, Head, Num } from '../components/ui'
 import { useApp } from '../data/AppProvider'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import { when } from '../lib/util'
 import { AreaChart, ChartViewport } from '../components/Charts'
 import { ShareCard } from '../components/ShareCard'
@@ -153,7 +154,7 @@ function Briefing() {
       const o = await askJson<any>(`You are briefing a creator about what their fan community is saying. Read these ideas and return JSON only: {"summary":string (two or three plain sentences),"themes":[{"name":string,"note":string}] (up to 4),"steps":[string] (up to 3 concrete next steps)}. Be honest and specific and do not invent anything not in the ideas.\nIdeas: ${JSON.stringify(l.map(i => ({ title: i.title, details: (i.body || '').slice(0, 300), backers: a.votesOf(i.id), tags: i.tags || [] })))}`)
       await a.backend!.store.set('settings/briefing', { summary: String(o.summary || '').slice(0, 600), themes: (o.themes || []).slice(0, 4), steps: (o.steps || []).slice(0, 3).map(String), at: Date.now() })
       a.toast('Briefing ready')
-    } catch (e: any) { a.toast(e.message || 'The briefing could not finish') }
+    } catch (e: any) { console.error('Quorlyth briefing generation failed:', e); a.toast(userFacingMutationError(e, 'prepare the briefing')) }
     setBusy(false)
   }
   return (
