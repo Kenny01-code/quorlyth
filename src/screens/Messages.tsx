@@ -19,20 +19,7 @@ type MessageActionMenu = { messageId: string; x: number; y: number }
 const REACTIONS = ['👍', '❤️', '😂', '🔥', '👏', '👀']
 
 function readableChatError(error: unknown): string {
-  if (error && typeof error === 'object') {
-    const e = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown; status?: unknown; error_description?: unknown }
-    const message = [e.message, e.details, e.hint, e.error_description].filter(v => typeof v === 'string' && v.trim()).join(' · ')
-    if (message) return (e.code ? message + ' (code ' + String(e.code) + ')' : message).slice(0, 420)
-    try {
-      const json = JSON.stringify(error)
-      if (json && json !== '{}') return json.slice(0, 420)
-    } catch { /* use fallback below */ }
-    const props = Object.getOwnPropertyNames(error).map(k => {
-      try { return k + ': ' + String((error as any)[k]) } catch { return '' }
-    }).filter(Boolean)
-    if (props.length) return props.join(' · ').slice(0, 420)
-  }
-  return error instanceof Error ? error.message : String(error)
+  return userFacingMutationError(error, 'complete this chat action')
 }
 
 const makeId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2)
