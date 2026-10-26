@@ -87,3 +87,18 @@
 .ql-milestone-reassign select:disabled{opacity:.55;cursor:wait}
 @media(max-width:560px){.ql-milestone-reassign{align-items:stretch;flex-direction:column;gap:5px}.ql-milestone-reassign select{width:100%;min-width:0}}
 @media(prefers-reduced-motion:reduce){.ql-workspace-tab-panel{animation:none}.ql-workspace-tabs button{transition:none}}
+
+/* Multi-person collaboration milestone assignment. */
+.ql-assignee-picker{min-width:0}
+.ql-assignee-picker__actions{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.ql-assignee-picker__list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;max-height:220px;overflow:auto;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(0,0,0,.17)}
+.ql-assignee-option{display:flex;align-items:center;gap:9px;min-width:0;padding:8px;border:1px solid rgba(255,255,255,.075);border-radius:8px;background:rgba(255,255,255,.025);cursor:pointer;font-size:11px}
+.ql-assignee-option input{flex:none;accent-color:currentColor;width:15px;height:15px}
+.ql-assignee-option span{min-width:0;overflow-wrap:anywhere}
+.ql-assignee-option small{color:rgba(241,241,244,.46);font-size:9px}
+details.ql-milestone-reassign{display:block;color:rgba(244,244,246,.7);font-size:10px;padding-top:8px}
+.ql-milestone-reassign>summary{width:fit-content;max-width:100%;cursor:pointer;list-style:none;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 10px;overflow-wrap:anywhere}
+.ql-milestone-reassign>summary::-webkit-details-marker{display:none}
+.ql-milestone-reassign[open] .ql-assignee-picker__list{margin-top:8px}
+.ql-assignee-chip{max-width:100%;overflow-wrap:anywhere}
+@media(max-width:560px){.ql-assignee-picker__list{grid-template-columns:1fr}.ql-assignee-chip{flex-wrap:wrap}}
