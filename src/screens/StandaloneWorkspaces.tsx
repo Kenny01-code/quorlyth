@@ -72,7 +72,7 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
       <span className={'sw-review-status status-' + submission.status}>{status}</span>
     </div>
     <p className="sw-linked-submission__summary">{submission.summary}</p>
-    <div className="sw-linked-submission__meta"><span>Submitted by {a.nm(submission.submittedBy)}</span><span>{localDate(submission.submittedAt)}</span></div>
+    <div className="sw-linked-submission__meta"><span>Submitted by {a.nm(submission.submittedBy)}</span><span>{new Date(submission.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
     {submission.reviewNote && <p className="sw-review-note"><strong>{submission.status === 'approved' ? 'Reviewer note' : 'Requested changes'}</strong><br />{submission.reviewNote}</p>}
     {fileLinks.length > 0 && <div className="sw-linked-submission__files">{fileLinks.map(file => file.url
       ? <a key={file.path} href={file.url} target="_blank" rel="noreferrer"><QuorlythGlyph name="file" size={13}/>{file.name}<QuorlythGlyph name="open" size={12}/></a>
