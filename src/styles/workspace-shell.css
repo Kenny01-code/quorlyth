@@ -81,4 +81,9 @@
 .ql-evidence-file__copy{flex-basis:calc(100% - 45px)}
 .ql-evidence-file__open,.ql-evidence-file__state{margin-left:40px}
 }
+.ql-milestone-reassign{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:3px 0 0;color:rgba(244,244,246,.55);font-size:10px}
+.ql-milestone-reassign select{max-width:100%;min-width:180px;padding:8px 10px;border:1px solid rgba(255,255,255,.13);border-radius:9px;color:rgba(250,250,252,.9);background:rgba(0,0,0,.3);font:inherit;outline:none}
+.ql-milestone-reassign select:focus-visible{outline:2px solid rgba(255,255,255,.76);outline-offset:2px}
+.ql-milestone-reassign select:disabled{opacity:.55;cursor:wait}
+@media(max-width:560px){.ql-milestone-reassign{align-items:stretch;flex-direction:column;gap:5px}.ql-milestone-reassign select{width:100%;min-width:0}}
 @media(prefers-reduced-motion:reduce){.ql-workspace-tab-panel{animation:none}.ql-workspace-tabs button{transition:none}}
