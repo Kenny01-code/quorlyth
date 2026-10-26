@@ -26,6 +26,7 @@ function Inner() {
   const us = useUserState()
   const [rev, setRev] = useState(false)
   const [voting, setVoting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [applicationMessage, setApplicationMessage] = useState('')
   const [applying, setApplying] = useState(false)
   const [replyTo, setReplyTo] = useState<string | null>(null)
@@ -58,6 +59,7 @@ function Inner() {
   const myApplication = a.data.volunteers.filter(v => v.ideaId === idea.id && v.applicantId === a.me?.id).sort((x, y) => y.at - x.at)[0]
   const acceptedCollaborator = myApplication?.status === 'accepted'
   const canOpenWorkspace = communityOwner || acceptedCollaborator || idea.authorId === a.me?.id
+  const canDeleteIdea = communityOwner || idea.authorId === a.me?.id || a.platformAdmin || a.platformOwner
   const backers = Object.entries(a.data.votes)
     .filter(([, ideas]) => !!ideas?.[idea.id])
     .map(([uid]) => uid)
@@ -120,6 +122,20 @@ function Inner() {
     setVoting(true)
     try { await a.vote(idea.id) } finally { setVoting(false) }
   }
+  const deleteCurrentIdea = async () => {
+    if (!canDeleteIdea || deleting) return
+    const confirmed = window.confirm(
+      'Permanently delete "' + idea.title + '" and its discussion, collaboration applications, project milestones, submissions, and linked private evidence? This cannot be undone.'
+    )
+    if (!confirmed) return
+    setDeleting(true)
+    try {
+      const ok = await a.deleteIdea(idea.id)
+      if (ok) nav('/communities/' + idea.cid)
+    } finally {
+      setDeleting(false)
+    }
+  }
   const postReply = async () => {
     if (!text.trim()) return a.toast('Write a reply first')
     const ok = await a.addComment(idea.id, text.trim(), replyTo || undefined, mentionedUserIds)
@@ -149,7 +165,10 @@ function Inner() {
       {promotion && <PromotionPreview idea={idea} promotion={promotion} />}
       <div className="grid i2">
         <div className="glass pad">
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}><span className="chip">{STATUS_LABEL[s]}</span><span className="chip">{cname}</span></div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="chip">{STATUS_LABEL[s]}</span><span className="chip">{cname}</span>
+            {canDeleteIdea && <button className="btn" type="button" style={{ marginLeft: 'auto' }} disabled={deleting} onClick={() => void deleteCurrentIdea()}><Icon name="trash" size={14} />{deleting ? 'Deleting idea…' : 'Delete idea'}</button>}
+          </div>
           <div style={{ marginTop: 12 }}><Tags tags={idea.tags} /></div>
           <h2 style={{ margin: '18px 0 12px' }}>{idea.title}</h2>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16 }}>
