@@ -64,6 +64,21 @@ const IDLE_LOGOUT_MS = 30 * 60 * 1000
 const asMap = <T,>(docs: { id: string; data: any }[]): Rec<T> => Object.fromEntries(docs.map(d => [d.id, { id: d.id, ...d.data }])) as Rec<T>
 const asList = <T,>(docs: { id: string; data: any }[]): T[] => docs.map(d => ({ id: d.id, ...d.data })) as T[]
 
+/** Convert database/transport failures into actionable UI copy without exposing raw RLS or SQL details. */
+const userFacingMutationError = (error: unknown, action = 'save this change') => {
+  const raw = String((error as { message?: unknown } | null)?.message || error || '').trim()
+  if (/42501|row.?level security|new row violates|violates .*policy|permission denied|not authorized|forbidden/i.test(raw)) {
+    return "Quorlyth couldn't confirm your access to " + action + ". Refresh and try again. If it keeps happening, contact the community owner or a platform administrator."
+  }
+  if (/failed to fetch|networkerror|network request|timeout|timed out|connection (?:lost|reset|refused)|fetch failed/i.test(raw)) {
+    return "A connection issue stopped Quorlyth from trying to " + action + ". Check your connection and try again."
+  }
+  if (/postgres|postgrest|sqlstate|duplicate key|foreign key constraint|check constraint|relation .* does not exist|column .* does not exist|violates .*constraint|supabase|apierror/i.test(raw)) {
+    return "Quorlyth couldn't " + action + " right now. Please try again. If it continues, contact support."
+  }
+  return raw.slice(0, 240) || "Quorlyth couldn't " + action + ". Please try again."
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [backend, setBackend] = useState<Backend | null>(null)
   const [me, setMe] = useState<Me | null>(null)
@@ -351,9 +366,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const w = async (fn: () => Promise<any>, ok?: string) => {
       try { await fn(); ok && toast(ok); return true }
       catch (e: any) {
-        const message = String(e?.message || e || 'Unknown error').slice(0, 280)
         console.error('Quorlyth action failed:', e)
-        toast(/row.level security|permission denied|not authorized|forbidden/i.test(message) ? 'Permission denied: ' + message : message)
+        toast(userFacingMutationError(e, 'save this change'))
         return false
       }
     }
@@ -390,9 +404,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast('Community created')
         return { ok: true }
       } catch (e: any) {
-        const error = String(e?.message || e || 'Unknown database error').slice(0, 500)
-        console.error('Quorlyth community creation failed:', error)
-        toast('Community creation failed: ' + error)
+        console.error('Quorlyth community creation failed:', e)
+        const error = userFacingMutationError(e, 'create this community')
+        toast('Community creation failed. ' + error)
         return { ok: false, error }
       }
     }
@@ -408,9 +422,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast('Idea shared')
         return { ok: true }
       } catch (e: any) {
-        const error = String(e?.message || e || 'Unknown database error').slice(0, 500)
-        console.error('Quorlyth idea submission failed:', error)
-        toast('Idea submission failed: ' + error)
+        console.error('Quorlyth idea submission failed:', e)
+        const error = userFacingMutationError(e, 'share this idea')
+        toast('Idea submission failed. ' + error)
         return { ok: false, error }
       }
     }

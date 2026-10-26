@@ -4,7 +4,8 @@ import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { MilestoneBoard } from '../components/MilestoneBoard'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
-import { useApp } from '../data/AppProvider'
+import { useApp, useComments } from '../data/AppProvider'
+import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
 import { Idea, Milestone, Project } from '../lib/types'
 import { when } from '../lib/util'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
@@ -35,12 +36,58 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
   const [projectDueDate, setProjectDueDate] = useState(dateInput(project?.dueAt))
   const [editSummary, setEditSummary] = useState(false)
   const [busy, setBusy] = useState('')
+  const [aiPlan, setAiPlan] = useState<AIProjectPlan | null>(null)
+  const [aiPlanAccepted, setAiPlanAccepted] = useState(false)
+  const [aiBusy, setAiBusy] = useState(false)
+  const comments = useComments(idea.id)
   const completed = milestones.filter(m => m.status === 'done').length
   const progress = milestones.length ? Math.round(completed / milestones.length * 100) : 0
   const community = a.data.communities.find(c => c.id === idea.cid)
   const teamMemberIds = [idea.authorId, community?.ownerId, community?.createdBy, ...a.data.volunteers.filter(item => item.ideaId === idea.id && item.status === 'accepted').map(item => item.applicantId)].filter((uid): uid is string => !!uid)
+  const canOrganizeWithAI = a.canOrganizeIdeaWithAI(idea.id)
+  const organizerRequest = a.data.aiOrganizerRequests.find(request => request.cid === idea.cid && request.userId === a.me?.id)
+  const organizerApprovalPending = organizerRequest?.status === 'pending'
 
   useEffect(() => { setSummary(project?.summary || ''); setProjectDueDate(dateInput(project?.dueAt)) }, [project?.summary, project?.dueAt])
+
+  async function organizeProjectWithAI() {
+    if (!community) return a.toast('The community context for this idea could not be loaded. Refresh and try again.')
+    if (!canOrganizeWithAI) {
+      if (organizerApprovalPending) return a.toast('Your AI organizer request is still waiting for community approval.')
+      setAiBusy(true)
+      try {
+        await a.requestCommunityAIOrganizerApproval(idea.id, 'I would like to organize this project brief and collaboration plan with AI.')
+      } finally {
+        setAiBusy(false)
+      }
+      return
+    }
+
+    setAiBusy(true)
+    try {
+      const plan = await generateProjectPlan({
+        idea: { id: idea.id, title: idea.title, body: idea.body, tags: idea.tags },
+        community: { name: community.name, purpose: community.purpose, rules: community.rules },
+        comments: comments.slice(-24).map(comment => ({ id: comment.id, authorId: comment.authorId, text: comment.text, at: comment.at })),
+        team: teamMemberIds.slice(0, 30).map(memberId => ({ id: memberId, name: a.nm(memberId) })),
+      })
+      setAiPlan(plan)
+      setAiPlanAccepted(false)
+      a.toast('AI draft ready. Review it before adding it to the workspace.')
+    } catch (error) {
+      console.error('Quorlyth project-plan generation failed:', error)
+      a.toast("Quorlyth couldn't prepare an AI draft. You can keep writing the project plan manually and try again.")
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  function chooseAIProjectPlan() {
+    if (!aiPlan) return
+    setSummary(aiPlan.project_summary || summary)
+    setAiPlanAccepted(true)
+    a.toast('AI draft selected. Start the project to review its proposed milestones in the workspace.')
+  }
 
   async function createProject(event: FormEvent) {
     event.preventDefault()
@@ -49,7 +96,12 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
     setBusy('project')
     const created = await a.createProject(idea.id, summary.trim(), dateEnd(projectDueDate))
     setBusy('')
-    if (created) nav('/collaboration/' + idea.id + '?tab=plan')
+    if (created) {
+      const options = aiPlan && aiPlanAccepted
+        ? { state: { aiPlan: { ...aiPlan, project_summary: summary.trim() } } }
+        : undefined
+      nav('/collaboration/' + idea.id + '?tab=plan', options)
+    }
   }
 
   async function saveSummary(event: FormEvent) {
@@ -91,6 +143,41 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
       {!project ? (
         canManage ? (
           <form onSubmit={createProject}>
+            <div className="glass pad" style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
+              <div>
+                <span className="chip"><QuorlythGlyph name="idea" size={14} />Quorlyth Signal Engine</span>
+                <h4 style={{ fontSize: 17, marginTop: 8 }}>Organize this idea into a project</h4>
+                <p className="mut" style={{ marginTop: 4 }}>Use this idea, its discussion, and eligible collaborators to draft a brief and milestones. Nothing is saved until you review and choose to use the draft.</p>
+              </div>
+              <div className="acts" style={{ margin: 0, flexWrap: 'wrap' }}>
+                <button type="button" className="btn p" disabled={aiBusy || organizerApprovalPending} onClick={() => void organizeProjectWithAI()}>
+                  <QuorlythGlyph name="idea" size={15} />
+                  {aiBusy ? (canOrganizeWithAI ? 'Organizing discussion…' : 'Requesting approval…') : canOrganizeWithAI ? 'Organize with AI' : organizerApprovalPending ? 'Approval pending' : organizerRequest?.status === 'declined' ? 'Request AI approval again' : 'Request AI organizer approval'}
+                </button>
+                {aiPlanAccepted && <span className="chip"><QuorlythGlyph name="check" size={13} />AI draft selected</span>}
+              </div>
+              {!canOrganizeWithAI && <p className="dim" style={{ fontSize: 12 }}>AI organizing requires community-owner access or an approved request. Your project brief can still be written manually.</p>}
+              {aiPlan && <div style={{ display: 'grid', gap: 10, borderTop: '1px solid var(--line, rgba(255,255,255,.12))', paddingTop: 12 }}>
+                <div>
+                  <p className="dim" style={{ fontSize: 11, letterSpacing: '.07em', textTransform: 'uppercase' }}>Suggested project brief</p>
+                  <p className="mut" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p>
+                  <p className="dim" style={{ fontSize: 11, marginTop: 5 }}>Signal score: {aiPlan.signal_score}/100 · AI estimate, not a measured engagement metric.</p>
+                </div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Proposed milestones · {aiPlan.milestones.length}</p>
+                  {aiPlan.milestones.map((item, index) => <div key={item.title + index} className="glass pad" style={{ display: 'grid', gap: 5 }}>
+                    <strong>{String(index + 1).padStart(2, '0')} · {item.title}</strong>
+                    <p className="mut">{item.description}</p>
+                    <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p>
+                  </div>)}
+                </div>
+                <div className="acts" style={{ margin: 0, flexWrap: 'wrap' }}>
+                  <button type="button" className="btn p" onClick={chooseAIProjectPlan}><QuorlythGlyph name="check" size={14} />Use this draft</button>
+                  <button type="button" className="btn" onClick={() => { setAiPlan(null); setAiPlanAccepted(false) }}>Discard draft</button>
+                </div>
+                <p className="dim" style={{ fontSize: 11 }}>Choosing this draft passes it to the workspace for another review. Proposed milestones are not created or marked complete until you confirm the plan there.</p>
+              </div>}
+            </div>
             <label className="field">
               <span>Project plan</span>
               <textarea value={summary} onChange={e => setSummary(e.target.value)} maxLength={1200} required placeholder="What are you going to deliver, and how will the contributors help?" />
