@@ -233,5 +233,7 @@ details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7
 .sw-task-reassign>summary{width:fit-content;cursor:pointer;list-style:none;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 10px}
 .sw-task-reassign>summary::-webkit-details-marker{display:none}
 .sw-task-reassign[open] .sw-assignee-picker__list{margin-top:8px}
+.sw-task-reassign>summary::after{content:'▾';margin-left:10px}
+.sw-task-reassign[open]>summary::after{content:'▴'}
 .sw-task-reassign .sw-assignee-option{font-size:10px}
 @media(max-width:600px){.sw-assignee-picker__list{grid-template-columns:1fr}.sw-task-reassign .sw-assignee-picker__list{max-height:180px}}
