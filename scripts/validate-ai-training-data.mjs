@@ -20,7 +20,7 @@ for (const versionFolder of versions) {
   const counts = new Map()
   let versionTotal = 0
   const manifest = JSON.parse(await readFile(path.join(root, 'manifest.json'), 'utf8'))
-  assert.equal(Number(manifest.total_examples), Number.isInteger(manifest.total_examples) ? manifest.total_examples : Number(manifest.total_examples))
+  assert.ok(Number.isInteger(manifest.total_examples) && manifest.total_examples > 0, versionFolder + ': invalid manifest count')
   for (const name of names) {
     const lines = (await readFile(path.join(root, name), 'utf8')).split(/\r?\n/).filter(Boolean)
     for (const line of lines) {
