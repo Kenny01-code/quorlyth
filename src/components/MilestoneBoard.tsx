@@ -80,7 +80,8 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   const overdue = milestones.filter(isOverdue).length
   const open = milestones.length - completed
 
-  const people = useMemo(() => [...new Set([...teamMemberIds, ...(a.me?.id ? [a.me.id] : [])])]
+  // Match the assignment picker to the same collaboration members accepted by the data layer.
+  const people = useMemo(() => [...new Set(teamMemberIds)]
     .filter(id => !!id)
     .map(id => ({ id, name: a.nm(id) || (id === a.me?.id ? 'You' : 'Team member') }))
     .sort((x, y) => x.name.localeCompare(y.name)), [teamMemberIds, a.nm, a.me?.id])
@@ -158,6 +159,13 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   async function changeStatus(milestone: Milestone, status: Milestone['status']) {
     setBusyId(milestone.id)
     await a.updateMilestone(milestone.id, { status })
+    setBusyId('')
+  }
+
+  async function changeAssignee(milestone: Milestone, assigneeId: string) {
+    if (!canEdit || milestone.status === 'done' || (milestone.assigneeId || '') === assigneeId) return
+    setBusyId(milestone.id)
+    await a.updateMilestone(milestone.id, { assigneeId: assigneeId || null })
     setBusyId('')
   }
 
@@ -242,6 +250,13 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                 {milestone.dueAt ? <span className={'ql-meta-chip' + (milestoneOverdue ? ' is-alert' : '')}><QuorlythGlyph name="due" size={13} />{milestoneOverdue ? 'Overdue · ' : 'Due · '}{dateLabel(milestone.dueAt)}</span> : <span className="ql-meta-chip"><QuorlythGlyph name="calendar" size={13} />No due date</span>}
                 <span className="ql-assignee-chip">{milestone.assigneeId ? <><Av id={milestone.assigneeId} size={22} /><span>{a.nm(milestone.assigneeId)}{milestone.assigneeId === a.me?.id ? ' · You' : ''}</span></> : <><QuorlythGlyph name="team" size={14} /><span>Unassigned</span></>}</span>
               </div>
+              {canEdit && milestone.status !== 'done' && <label className="ql-milestone-reassign">
+                <span>Assign to</span>
+                <select aria-label={'Assign ' + milestone.title + ' to a teammate'} value={milestone.assigneeId || ''} disabled={busyId === milestone.id} onChange={event => void changeAssignee(milestone, event.target.value)}>
+                  <option value="">Unassigned</option>
+                  {people.map(person => <option key={person.id} value={person.id}>{person.name}{person.id === a.me?.id ? ' (you)' : ''}</option>)}
+                </select>
+              </label>}
               {milestone.acceptanceCriteria && <div className="ql-acceptance"><QuorlythGlyph name="document" size={15} /><div><strong>Definition of done</strong><p>{milestone.acceptanceCriteria}</p></div></div>}
               {milestone.blocked && milestone.status !== 'done' && <div className="ql-blocker-note"><QuorlythGlyph name="blocked" size={16} /><div><strong>Blocked</strong><p>{milestone.blockedNote || 'Waiting on a dependency or decision.'}</p></div></div>}
               {(canEdit || canManage) && <div className="ql-milestone-actions">
