@@ -402,6 +402,23 @@ function WorkspaceProjectView() {
     })
   }
 
+  async function reassignTask(task: WorkspaceTask, assigneeId: string) {
+    if (!a.backend || !canManage || task.status === 'done') return
+    const nextAssigneeId = assigneeId || null
+    if (nextAssigneeId && !taskAssignees.some(member => member.userId === nextAssigneeId)) {
+      setError('Tasks can only be assigned to active workspace owners, managers, or contributors. Read-only viewers cannot own work.')
+      return
+    }
+    if ((task.assigneeId || '') === (nextAssigneeId || '')) return
+    await runAction('assign-' + task.id, async () => {
+      await a.backend!.store.update('standaloneTasks/' + (task.docId || task.id), {
+        assigneeId: nextAssigneeId,
+        updatedAt: Date.now(),
+      })
+      a.toast(nextAssigneeId ? 'Task assigned to ' + a.nm(nextAssigneeId) + '.' : 'Task returned to the unassigned queue.')
+    })
+  }
+
   async function startTask(task: WorkspaceTask) {
     if (!a.backend || !a.me) return
     await runAction('start-'+task.id, async () => {
@@ -703,7 +720,7 @@ function WorkspaceProjectView() {
         <label className="sw-field"><span>Task title</span><input value={taskTitle} onChange={e=>setTaskTitle(e.target.value)} required maxLength={140} placeholder="What concrete result should be delivered?" /></label>
         <label className="sw-field"><span>Details <small>Optional</small></span><textarea value={taskDescription} onChange={e=>setTaskDescription(e.target.value)} maxLength={2000} rows={2} placeholder="Scope, approach or links the contributor needs." /></label>
         <label className="sw-field"><span>Definition of done</span><textarea value={taskCriteria} onChange={e=>setTaskCriteria(e.target.value)} maxLength={1000} rows={2} placeholder="Which behaviour, tests or changes must the evidence demonstrate?" /></label>
-        <div className="sw-form-row"><label className="sw-field"><span>Assign to</span><select value={taskAssignee} onChange={e=>setTaskAssignee(e.target.value)}><option value="">Unassigned</option>{taskAssignees.map(member=><option key={member.userId} value={member.userId}>{a.nm(member.userId)}{member.userId===a.me?.id?' (you)':''}</option>)}</select></label><label className="sw-field"><span>Due date</span><input type="date" min={minimumDateInput()} value={taskDueDate} onChange={e=>setTaskDueDate(e.target.value)} /></label></div>
+        <div className="sw-form-row"><label className="sw-field"><span>Assign to</span><select value={taskAssignee} onChange={e=>setTaskAssignee(e.target.value)}><option value="">Unassigned</option>{taskAssignees.map(member=><option key={member.userId} value={member.userId}>{a.nm(member.userId)} · {member.role}{member.userId===a.me?.id?' (you)':''}</option>)}</select><small className="sw-muted">Active owners, managers and contributors are assignable. Viewers stay read-only.</small></label><label className="sw-field"><span>Due date</span><input type="date" min={minimumDateInput()} value={taskDueDate} onChange={e=>setTaskDueDate(e.target.value)} /></label></div>
         <button className="btn p" disabled={busy==='add-task'||taskTitle.trim().length<2}><QuorlythGlyph name="add" size={14}/>{busy==='add-task'?'Adding…':'Add task'}</button>
       </form>}
       {!projectTasks.length ? <div className="sw-empty-inline"><QuorlythGlyph name="milestone" size={22}/><strong>Nothing planned yet</strong><p>Start by adding a task with clear acceptance criteria.</p></div> : <div className="sw-task-list">{projectTasks.map(task => {
@@ -715,6 +732,11 @@ function WorkspaceProjectView() {
           {task.description && <p className="sw-task__description">{task.description}</p>}
           {task.acceptanceCriteria && <div className="sw-criteria"><span><QuorlythGlyph name="check" size={14}/></span><div><strong>Definition of done</strong><p>{task.acceptanceCriteria}</p></div></div>}
           <div className="sw-task__meta"><span><QuorlythGlyph name="person" size={13}/>{task.assigneeId?a.nm(task.assigneeId):'Unassigned'}</span><span><QuorlythGlyph name="calendar" size={13}/>{task.dueAt?localDate(task.dueAt):'No deadline'}</span><button type="button" className="sw-link-button" onClick={()=>{setArtifactTask(task.id);setTab('evidence')}}><QuorlythGlyph name="link" size={13}/>{taskEvidence.length} evidence item{taskEvidence.length===1?'':'s'}</button></div>
+          {canManage && project.status==='active' && task.status!=='done' && <label className="sw-task-reassign"><span>Assign to</span><select aria-label={'Assign ' + task.title + ' to a teammate'} value={task.assigneeId || ''} disabled={busy==='assign-'+task.id} onChange={e=>void reassignTask(task,e.target.value)}>
+            <option value="">Unassigned</option>
+            {task.assigneeId && !taskAssignees.some(member=>member.userId===task.assigneeId) && <option value={task.assigneeId} disabled>{a.nm(task.assigneeId)} · no longer eligible</option>}
+            {taskAssignees.map(member=><option key={member.userId} value={member.userId}>{a.nm(member.userId)} · {member.role}{member.userId===a.me?.id?' (you)':''}</option>)}
+          </select></label>}
           <div className="sw-task__actions">{canContribute && project.status==='active' && task.status==='todo' && (currentAssignee||!task.assigneeId||canManage) && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{canManage&&project.status==='active'&&task.status!=='done'&&<button className="btn p" type="button" disabled={busy==='complete-'+task.id||approved===0} title={approved?'Complete with approved GitHub evidence':'A manager must approve evidence first'} onClick={()=>void completeTask(task)}><QuorlythGlyph name="complete" size={14}/>{busy==='complete-'+task.id?'Checking…':'Mark complete'}{approved===0?' · evidence needed':''}</button>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Evidence approved</span>}{canManage&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-'+task.id} onClick={()=>void removeTask(task)}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-'+task.id?'Deleting…':'Delete task'}</button>}</div>
         </article>
       })}</div>}
