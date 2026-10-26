@@ -25,6 +25,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Validate the versioned AI corpus
+        run: npm run ai:data:validate
       - name: Type-check
         run: npm run typecheck
       - name: Run tests
