@@ -268,6 +268,7 @@ function Detail({ cid }: { cid: string }) {
   const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'AI organizer requests', 'Insights', 'Settings'] : [])]
 
   async function organizeIdeaWithAI() {
+    if (!c) return a.toast('Community not found. Refresh and try again.')
     if (ideaAIBusy) return
     if (!f.title.trim() && !f.body.trim()) return a.toast('Add a rough idea title or description so the AI has something to organize.')
     if (preview) return a.toast('This is a preview. AI will not save changes.')
