@@ -220,3 +220,18 @@
 
 .sw-settings-form .sw-danger-button { border-color: rgba(255,255,255,.14); color: rgba(245,245,247,.66); }
 .sw-settings-form .sw-danger-button:hover:not(:disabled) { border-color: rgba(255,255,255,.28); color: rgba(255,255,255,.96); background: rgba(255,255,255,.045); }
+
+/* Multi-assignee picker shared by task creation and reassignment. */
+.sw-assignee-picker{min-width:0}
+.sw-assignee-picker__actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 8px}
+.sw-assignee-picker__list{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;max-height:220px;overflow:auto;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(0,0,0,.17)}
+.sw-assignee-option{display:flex;align-items:center;gap:9px;min-width:0;padding:8px;border:1px solid rgba(255,255,255,.075);border-radius:8px;background:rgba(255,255,255,.025);cursor:pointer;font-size:11px}
+.sw-assignee-option input{flex:none;accent-color:currentColor;width:15px;height:15px}
+.sw-assignee-option span{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
+.sw-assignee-option small{color:rgba(241,241,244,.46);font-size:9px}
+details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7);font-size:11px}
+.sw-task-reassign>summary{width:fit-content;cursor:pointer;list-style:none;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 10px}
+.sw-task-reassign>summary::-webkit-details-marker{display:none}
+.sw-task-reassign[open] .sw-assignee-picker__list{margin-top:8px}
+.sw-task-reassign .sw-assignee-option{font-size:10px}
+@media(max-width:600px){.sw-assignee-picker__list{grid-template-columns:1fr}.sw-task-reassign .sw-assignee-picker__list{max-height:180px}}
