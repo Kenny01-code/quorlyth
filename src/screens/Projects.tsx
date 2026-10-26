@@ -9,6 +9,7 @@ import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
 import { Idea, Milestone, Project } from '../lib/types'
 import { when } from '../lib/util'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 
 const dateInput = (timestamp?: number | null) => {
   if (!timestamp) return ''
@@ -23,12 +24,52 @@ const dateEnd = (value: string) => {
 }
 const dateLabel = (timestamp?: number | null) => timestamp ? new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : ''
 
-function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
+type ProjectWorkspace = {
+  id: string
+  docId?: string
+  title: string
+  summary: string
+  status: 'active' | 'completed'
+  createdBy: string
+  at: number
+  updatedAt: number
+  dueAt?: number | null
+  visibility?: 'team'
+  linkedIdeaId?: string
+  linkedIdeaProjectId?: string
+}
+type ProjectWorkspaceMember = {
+  id: string
+  projectId: string
+  userId: string
+  role: 'owner' | 'manager' | 'contributor' | 'viewer'
+  status: 'active' | 'invited' | 'removed'
+  docId?: string
+}
+type ProjectWorkspaceArtifact = {
+  id: string
+  projectId: string
+  taskId: string
+  provider: 'github' | 'manual'
+  kind: string
+  url?: string
+  attachments?: { path: string; name: string; size?: number }[]
+  summary: string
+  status: 'submitted' | 'approved' | 'changes_requested'
+  submittedBy: string
+  submittedAt: number
+  docId?: string
+}
+
+function ProjectCard({ idea, project, milestones, canManage, canCollaborate, workspaceProjects, workspaceMembers, workspaceArtifacts }: {
   idea: Idea
   project?: Project
   milestones: Milestone[]
   canManage: boolean
   canCollaborate: boolean
+  workspaceProjects: ProjectWorkspace[]
+  workspaceMembers: ProjectWorkspaceMember[]
+  workspaceArtifacts: ProjectWorkspaceArtifact[]
 }) {
   const a = useApp()
   const nav = useNavigate()
@@ -39,9 +80,26 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
   const [aiPlan, setAiPlan] = useState<AIProjectPlan | null>(null)
   const [aiPlanAccepted, setAiPlanAccepted] = useState(false)
   const [aiBusy, setAiBusy] = useState(false)
+  const [workspaceToConnect, setWorkspaceToConnect] = useState('')
   const comments = useComments(idea.id)
   const completed = milestones.filter(m => m.status === 'done').length
   const progress = milestones.length ? Math.round(completed / milestones.length * 100) : 0
+  const linkedWorkspace = project
+    ? workspaceProjects.find(item => item.linkedIdeaProjectId === project.id || item.linkedIdeaId === idea.id)
+    : undefined
+  const manageableWorkspaces = workspaceProjects.filter(item =>
+    item.status === 'active'
+    && !item.linkedIdeaId
+    && !item.linkedIdeaProjectId
+    && (item.createdBy === a.me?.id || workspaceMembers.some(member =>
+      member.projectId === item.id
+      && member.userId === a.me?.id
+      && member.status === 'active'
+      && (member.role === 'owner' || member.role === 'manager')))
+  )
+  const linkedArtifacts = linkedWorkspace
+    ? workspaceArtifacts.filter(item => item.projectId === linkedWorkspace.id).sort((x, y) => y.submittedAt - x.submittedAt)
+    : []
   const community = a.data.communities.find(c => c.id === idea.cid)
   const teamMemberIds = [idea.authorId, community?.ownerId, community?.createdBy, ...a.data.volunteers.filter(item => item.ideaId === idea.id && item.status === 'accepted').map(item => item.applicantId)].filter((uid): uid is string => !!uid)
   const canOrganizeWithAI = a.canOrganizeIdeaWithAI(idea.id)
@@ -112,6 +170,79 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
     const ok = await a.updateProject(project.id, { summary: summary.trim(), dueAt: dateEnd(projectDueDate) })
     if (ok) setEditSummary(false)
     setBusy('')
+  }
+
+  async function connectExistingWorkspace() {
+    if (!project || !a.backend || !a.me || !canManage || !workspaceToConnect) return
+    const target = manageableWorkspaces.find(item => item.id === workspaceToConnect)
+    if (!target) return a.toast('Choose a workspace you manage, then try again.')
+    setBusy('link-workspace')
+    try {
+      await a.backend.store.update('standaloneProjects/' + (target.docId || target.id), {
+        linkedIdeaId: idea.id,
+        linkedIdeaProjectId: project.id,
+        updatedAt: Date.now(),
+      })
+      setWorkspaceToConnect('')
+      a.toast('Workspace connected. Existing tasks and evidence now appear alongside this project where your permissions allow.')
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'connect this workspace'))
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function createConnectedWorkspace() {
+    if (!project || !a.backend || !a.me || !canManage || project.status !== 'active') return
+    if (linkedWorkspace) {
+      nav('/workspaces/' + linkedWorkspace.id)
+      return
+    }
+    setBusy('create-workspace')
+    const now = Date.now()
+    const id = crypto.randomUUID()
+    const rawSummary = (project.summary || '').trim()
+    const workspace: ProjectWorkspace = {
+      id,
+      title: (idea.title + ' — Workspace').slice(0, 100),
+      summary: (rawSummary.length >= 8 ? rawSummary : 'Delivery workspace for ' + idea.title).slice(0, 4000),
+      status: 'active',
+      createdBy: a.me.id,
+      at: now,
+      updatedAt: now,
+      dueAt: project.dueAt ?? null,
+      visibility: 'team',
+      linkedIdeaId: idea.id,
+      linkedIdeaProjectId: project.id,
+    }
+    const ownerMembership = {
+      id: id + '__' + a.me.id,
+      projectId: id,
+      userId: a.me.id,
+      role: 'owner' as const,
+      status: 'active' as const,
+      invitedBy: a.me.id,
+      at: now,
+      updatedAt: now,
+    }
+    let workspaceCreated = false
+    try {
+      await a.backend.store.create('standaloneProjects/' + id, workspace)
+      workspaceCreated = true
+      try {
+        await a.backend.store.create('standaloneProjectMembers/' + ownerMembership.id, ownerMembership)
+        a.toast('Connected workspace created. Open it to create real tasks, do the work in your tools, and submit evidence for review.')
+      } catch (membershipError) {
+        console.warn('Connected workspace exists but its owner membership record could not be written:', membershipError)
+        a.toast('The linked workspace was created and you remain its owner. Team membership setup needs attention; you can open it now.')
+      }
+    } catch (error) {
+      a.toast(workspaceCreated
+        ? 'Workspace created, but setup was incomplete. Open the workspace and check its team settings.'
+        : userFacingMutationError(error, 'create the connected workspace'))
+    } finally {
+      setBusy('')
+    }
   }
 
   async function toggleProjectStatus() {
@@ -213,6 +344,43 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate }: {
             {milestones.length > 0 && <p className="ql-muted ql-project-updated"><QuorlythGlyph name="timeline" size={13} />Last activity · {when(Math.max(project.updatedAt || project.at, ...milestones.map(m => m.updatedAt || m.at))) || 'not recorded'}</p>}
           </div>
           <MilestoneBoard idea={idea} projectId={project.id} projectStatus={project.status} milestones={milestones} teamMemberIds={teamMemberIds} canCollaborate={canCollaborate} canManage={canManage} />
+          <section className="ql-linked-workspace" aria-label="Connected delivery workspace">
+            <div className="ql-linked-workspace__top">
+              <span className="ql-linked-workspace__mark"><QuorlythGlyph name="workspace" size={18} /></span>
+              <div className="ql-linked-workspace__heading">
+                <p className="ql-eyebrow">CONNECTED DELIVERY SPACE</p>
+                <h4>{linkedWorkspace ? linkedWorkspace.title : 'Connect your project to real work'}</h4>
+                <p>{linkedWorkspace
+                  ? 'Community milestones and workspace tasks remain permission-controlled, with evidence surfaced from both systems.'
+                  : 'Keep the milestone plan and the hands-on task/evidence workspace connected instead of managing two unrelated project spaces.'}</p>
+              </div>
+              {linkedWorkspace && <span className={'sw-pill' + (linkedWorkspace.status === 'completed' ? ' is-done' : '')}>{linkedWorkspace.status === 'completed' ? 'Completed' : 'Active'}</span>}
+            </div>
+            {linkedWorkspace ? <>
+              <div className="ql-linked-workspace__stats">
+                <span><strong>{linkedArtifacts.length}</strong> workspace evidence item{linkedArtifacts.length === 1 ? '' : 's'}</span>
+                <span><strong>{linkedArtifacts.filter(item => item.status === 'submitted').length}</strong> awaiting review</span>
+              </div>
+              {linkedArtifacts.length > 0
+                ? <div className="ql-linked-workspace__artifacts">
+                    {linkedArtifacts.slice(0, 3).map(item => <article className="ql-linked-workspace__artifact" key={item.id}>
+                      <div><strong>{item.summary || (item.kind === 'pull_request' ? 'Pull request evidence' : 'Project deliverable')}</strong><small>{item.kind.replace(/_/g, ' ')} · {dateLabel(item.submittedAt)} · {a.nm(item.submittedBy)}</small></div>
+                      <span className={'sw-review-status status-' + item.status}>{item.status === 'approved' ? 'Approved' : item.status === 'changes_requested' ? 'Changes requested' : 'Awaiting review'}</span>
+                      {item.url && <a href={item.url} target="_blank" rel="noreferrer">Open evidence</a>}
+                      {!item.url && (item.attachments?.length || 0) > 0 && <small>{item.attachments!.length} private file{item.attachments!.length === 1 ? '' : 's'} · open workspace to view</small>}
+                    </article>)}
+                  </div>
+                : <p className="ql-linked-workspace__empty">No standalone evidence has been submitted yet. Upload a real deliverable in the workspace and it will appear here.</p>}
+              <button type="button" className="btn p" onClick={() => nav('/workspaces/' + linkedWorkspace.id)}><QuorlythGlyph name="workspace" size={14} />Open connected workspace</button>
+            </> : canManage && project.status === 'active' ? <>
+              {manageableWorkspaces.length > 0 && <form className="ql-linked-workspace__connect" onSubmit={event => { event.preventDefault(); void connectExistingWorkspace() }}>
+                <label className="field"><span>Connect an existing workspace</span><select value={workspaceToConnect} onChange={event => setWorkspaceToConnect(event.target.value)} required><option value="">Choose a workspace you manage</option>{manageableWorkspaces.map(item => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
+                <button type="submit" className="btn" disabled={busy === 'link-workspace' || !workspaceToConnect}><QuorlythGlyph name="link" size={14} />{busy === 'link-workspace' ? 'Connecting…' : 'Connect workspace'}</button>
+              </form>}
+              <button type="button" className="btn p" onClick={() => void createConnectedWorkspace()} disabled={busy === 'create-workspace'}><QuorlythGlyph name="add" size={14} />{busy === 'create-workspace' ? 'Creating connected workspace…' : 'Create connected workspace'}</button>
+              <p className="ql-linked-workspace__note">Connecting a workspace links the records; it does not bypass permissions. Invite teammates in the workspace team room as well if they need access to its private tasks and files.</p>
+            </> : <p className="ql-linked-workspace__empty">A connected workspace can be created or linked while the project is active by an authorized project manager.</p>}
+          </section>
           {canManage && <div className="acts" style={{ marginTop: 14 }}>
             <button type="button" className="btn" disabled={busy === 'project-status'} onClick={() => void toggleProjectStatus()}><QuorlythGlyph name={project.status === 'completed' ? 'progress' : 'complete'} size={15} />{project.status === 'completed' ? 'Reopen project' : 'Mark project complete'}</button>
           </div>}
@@ -231,6 +399,27 @@ function Inner() {
   const nav = useNavigate()
   const [params] = useSearchParams()
   const requestedIdeaId = params.get('idea') || ''
+  const [workspaceProjects, setWorkspaceProjects] = useState<ProjectWorkspace[]>([])
+  const [workspaceMembers, setWorkspaceMembers] = useState<ProjectWorkspaceMember[]>([])
+  const [workspaceArtifacts, setWorkspaceArtifacts] = useState<ProjectWorkspaceArtifact[]>([])
+
+  useEffect(() => {
+    setWorkspaceProjects([])
+    setWorkspaceMembers([])
+    setWorkspaceArtifacts([])
+    const store = a.backend?.store
+    if (!store || !a.me?.id) return
+    const offProjects = store.subscribe('standaloneProjects', docs => {
+      setWorkspaceProjects(docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id } as ProjectWorkspace)),
+        error => console.warn('Could not refresh connected workspaces:', error))
+    const offMembers = store.subscribe('standaloneProjectMembers', docs => {
+      setWorkspaceMembers(docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id } as ProjectWorkspaceMember))
+    }, error => console.warn('Could not refresh workspace memberships:', error))
+    const offArtifacts = store.subscribe('standaloneArtifacts', docs => {
+      setWorkspaceArtifacts(docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id } as ProjectWorkspaceArtifact))
+    }, error => console.warn('Could not refresh workspace evidence:', error))
+    return () => { offProjects(); offMembers(); offArtifacts() }
+  }, [a.backend?.store, a.me?.id])
   const canReview = a.owner || a.data.communities.some(community => a.ownsCommunity(community.id))
   const canSeeIdeaProject = (idea: Idea) => a.owner
     || a.canManageCommunity(idea.cid)
@@ -248,7 +437,7 @@ function Inner() {
       <p className="mut" style={{ maxWidth: 760, marginBottom: 18 }}>Turn selected ideas into real work. Community managers control the project brief and overall status; idea creators and accepted collaborators can add milestones and update shared progress.</p>
       <div className="acts" style={{ marginTop: -6, marginBottom: 18 }}><button type="button" className="btn p" onClick={() => nav('/workspaces')}><QuorlythGlyph name="workspace" size={15} />Open independent workspaces</button></div>
       {!ideas.length ? <div className="glass cent ql-project-empty"><span className="ql-empty-mark"><QuorlythGlyph name="workspace" size={30} /></span><h3>{canReview ? 'No selected ideas or projects yet' : 'No project spaces available yet'}</h3><p className="mut">{canReview ? 'Select an idea in a community you manage to start a tracked project.' : 'Project spaces appear here when one of your ideas is selected or a community accepts your collaboration application.'}</p>{canReview && <button type="button" className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/queue')}><QuorlythGlyph name="review" size={15} />Open review queue</button>}</div> : <div style={{ display: 'grid', gap: 16, maxWidth: 900 }}>
-        {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.owner || a.canManageCommunity(idea.cid)} canCollaborate={a.owner || a.canManageCommunity(idea.cid) || idea.authorId === a.me?.id || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')} />)}
+        {ideas.map(idea => <ProjectCard key={idea.id} idea={idea} project={a.data.projects[idea.id]} milestones={a.data.milestones.filter(m => m.projectId === idea.id).sort((x, y) => x.at - y.at)} canManage={a.owner || a.canManageCommunity(idea.cid)} canCollaborate={a.owner || a.canManageCommunity(idea.cid) || a.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === a.me?.id && v.status === 'accepted')} workspaceProjects={workspaceProjects} workspaceMembers={workspaceMembers} workspaceArtifacts={workspaceArtifacts} />)}
       </div>}
     </>
   )

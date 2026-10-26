@@ -7,11 +7,13 @@ import { useApp } from '../data/AppProvider'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 import { emitWorkflowEvent } from '../lib/automation'
 import { userFacingMutationError } from '../lib/userFacingErrors'
+import { WorkSubmission } from '../lib/types'
 
 type WorkspaceTab = 'overview' | 'tasks' | 'evidence' | 'team'
 type WorkspaceProject = {
   id: string; title: string; summary: string; status: 'active' | 'completed'; createdBy: string
   at: number; updatedAt: number; dueAt?: number | null; visibility: 'team'; docId?: string
+  linkedIdeaId?: string; linkedIdeaProjectId?: string
 }
 type WorkspaceMember = {
   id: string; projectId: string; userId: string; role: 'owner' | 'manager' | 'contributor' | 'viewer'
@@ -36,6 +38,48 @@ type GithubRepository = {
   lastSyncedAt: number; docId?: string
 }
 type WorkspaceComment = { id: string; projectId: string; authorId: string; text: string; at: number; docId?: string }
+
+function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
+  submission: WorkSubmission
+  milestoneTitle: string
+  ideaId: string
+}) {
+  const a = useApp()
+  const nav = useNavigate()
+  const [fileLinks, setFileLinks] = useState<{ path: string; name: string; url: string }[]>([])
+  useEffect(() => {
+    let active = true
+    const getUrl = a.backend?.getWorkFileUrl
+    if (!getUrl || !submission.attachments?.length) {
+      setFileLinks([])
+      return () => { active = false }
+    }
+    void Promise.all(submission.attachments.map(async attachment => {
+      try {
+        return { path: attachment.path, name: attachment.name, url: await getUrl(attachment.path) }
+      } catch {
+        return { path: attachment.path, name: attachment.name, url: '' }
+      }
+    })).then(files => { if (active) setFileLinks(files) })
+    return () => { active = false }
+  }, [a.backend, submission.id, submission.updatedAt])
+
+  const status = submission.status === 'approved' ? 'Approved'
+    : submission.status === 'changes_requested' ? 'Changes requested' : 'Awaiting review'
+  return <article className="sw-linked-submission">
+    <div className="sw-linked-submission__top">
+      <div><p className="ql-eyebrow">MILESTONE · REVISION {submission.revision}</p><h4>{milestoneTitle}</h4></div>
+      <span className={'sw-review-status status-' + submission.status}>{status}</span>
+    </div>
+    <p className="sw-linked-submission__summary">{submission.summary}</p>
+    <div className="sw-linked-submission__meta"><span>Submitted by {a.nm(submission.submittedBy)}</span><span>{localDate(submission.submittedAt)}</span></div>
+    {submission.reviewNote && <p className="sw-review-note"><strong>{submission.status === 'approved' ? 'Reviewer note' : 'Requested changes'}</strong><br />{submission.reviewNote}</p>}
+    {fileLinks.length > 0 && <div className="sw-linked-submission__files">{fileLinks.map(file => file.url
+      ? <a key={file.path} href={file.url} target="_blank" rel="noreferrer"><QuorlythGlyph name="file" size={13}/>{file.name}<QuorlythGlyph name="open" size={12}/></a>
+      : <span key={file.path}>{file.name} · Open the original project to access this private file</span>)}</div>}
+    <button className="sw-link-button" type="button" onClick={() => nav('/projects?idea=' + encodeURIComponent(ideaId))}>Open original milestone review <QuorlythGlyph name="arrow" size={13}/></button>
+  </article>
+}
 
 function useWorkspaceCollection<T extends { id?: string }>(collection: string) {
   const a = useApp()
@@ -216,6 +260,7 @@ function WorkspaceProjectList() {
         <div className="sw-project-card__top"><span className="sw-mark"><QuorlythGlyph name="workspace" size={18} /></span><span className={'sw-pill' + (project.status === 'completed' ? ' is-done' : '')}>{currentInvite ? 'Invitation' : project.status === 'completed' ? 'Completed' : 'Active'}</span></div>
         <h3>{project.title}</h3><p>{project.summary}</p>
         <div className="sw-project-card__meta"><span><QuorlythGlyph name="team" size={13} />{team.length || 1} teammate{(team.length || 1) === 1 ? '' : 's'}</span><span><QuorlythGlyph name="calendar" size={13} />{project.dueAt ? localDate(project.dueAt) : 'No deadline'}</span></div>
+        {project.linkedIdeaId && <small className="sw-project-card__linked"><QuorlythGlyph name="link" size={12}/>Connected to a community project</small>}
         <div className="sw-project-card__footer"><span>{project.createdBy === a.me?.id ? 'Owned by you' : 'Shared with you'}</span><span>Open workspace <QuorlythGlyph name="arrow" size={14} /></span></div>
       </button>
     })}</div>}
@@ -243,6 +288,16 @@ function WorkspaceProjectView() {
   const activity = useWorkspaceCollection<{ id: string; projectId: string; docId?: string }>('standaloneActivity')
 
   const project = projects.find(item => item.id === id || item.docId === id)
+  const linkedIdeaId = project?.linkedIdeaId || ''
+  const linkedIdea = a.data.ideas.find(item => item.id === linkedIdeaId)
+  const linkedIdeaProjectId = project?.linkedIdeaProjectId || linkedIdeaId
+  const linkedIdeaProject = linkedIdeaId ? a.data.projects[linkedIdeaId] : undefined
+  const linkedMilestones = a.data.milestones
+    .filter(item => item.projectId === linkedIdeaProjectId || item.projectId === linkedIdeaId)
+    .sort((first, second) => (first.dueAt || first.at) - (second.dueAt || second.at))
+  const linkedSubmissions = a.data.workSubmissions
+    .filter(item => item.ideaId === linkedIdeaId || item.projectId === linkedIdeaProjectId)
+    .sort((first, second) => second.revision - first.revision || second.submittedAt - first.submittedAt)
   const team = members.filter(item => item.projectId === id && item.status === 'active')
   const invitation = members.find(item => item.projectId === id && item.userId === a.me?.id && item.status === 'invited')
   const myMembership = members.find(item => item.projectId === id && item.userId === a.me?.id && item.status === 'active')
@@ -436,14 +491,46 @@ function WorkspaceProjectView() {
   async function inviteMember(event: FormEvent) {
     event.preventDefault()
     if (!project || !a.backend || !a.me || !inviteUser) return
-    await runAction('invite-'+inviteUser, async () => {
+    if (!canManage || project.status !== 'active') {
+      setError('Only an active workspace owner or manager can invite teammates.')
+      return
+    }
+    const person = profilePeople.find(item => item.id === inviteUser)
+    if (!person) {
+      setError('That account is no longer available in the member list. Refresh the workspace and choose a current Quorlyth profile.')
+      return
+    }
+    const existing = members.find(member => member.projectId === id && member.userId === inviteUser)
+    if (existing?.status === 'active') {
+      setInviteUser('')
+      a.toast('This person is already an active workspace member.')
+      return
+    }
+    if (existing?.status === 'invited') {
+      setInviteUser('')
+      a.toast('An invitation is already pending for this account. They can accept it from the workspace.')
+      return
+    }
+    await runAction('invite-' + inviteUser, async () => {
       const now = Date.now()
+      if (existing?.status === 'removed') {
+        // Membership IDs are deterministic. Reactivate the old row rather than INSERTing
+        // a duplicate primary key; the original role/inviter remain immutable under RLS.
+        await a.backend!.store.update('standaloneProjectMembers/' + (existing.docId || existing.id), {
+          status: 'invited',
+          updatedAt: now,
+        })
+        setInviteUser('')
+        a.toast('Workspace invitation re-sent. The teammate must accept it before access is restored.')
+        return
+      }
       const member: WorkspaceMember = {
         id: id + '__' + inviteUser, projectId: id, userId: inviteUser, role: inviteRole, status: 'invited',
         invitedBy: a.me!.id, at: now, updatedAt: now,
       }
       await a.backend!.store.create('standaloneProjectMembers/' + member.id, member)
-      setInviteUser(''); a.toast('Workspace invitation sent.')
+      setInviteUser('')
+      a.toast('Workspace invitation sent. The teammate must accept it before entering the workspace.')
     })
   }
 
@@ -568,6 +655,20 @@ function WorkspaceProjectView() {
   return <>
     <div className="sw-back-row"><button type="button" className="chip" onClick={() => nav('/workspaces')}><QuorlythGlyph name="back" size={14} />All workspaces</button><span className="sw-pill"><QuorlythGlyph name="lock" size={13} />Private project</span></div>
     <Head kicker="Standalone project workspace" title={project.title} right={<span className={'sw-pill'+(project.status==='completed'?' is-done':'')}>{project.status === 'completed' ? 'Completed' : 'Active'}</span>} />
+    {project.linkedIdeaId && <section className="sw-linked-project-banner" aria-label="Connected community project">
+      <span className="sw-linked-project-banner__mark"><QuorlythGlyph name="link" size={17}/></span>
+      <div className="sw-linked-project-banner__copy">
+        <p className="ql-eyebrow">CONNECTED COMMUNITY PROJECT</p>
+        <h3>{linkedIdea?.title || 'Linked collaboration project'}</h3>
+        <p>This workspace and the project's milestone submissions are connected. Evidence is shown from its original record, not copied into a fake duplicate.</p>
+        <div className="sw-linked-project-banner__stats">
+          <span><strong>{linkedMilestones.length}</strong> milestone{linkedMilestones.length===1?'':'s'}</span>
+          <span><strong>{linkedSubmissions.length}</strong> submission{linkedSubmissions.length===1?'':'s'} visible</span>
+          {linkedIdeaProject && <span><strong>{linkedIdeaProject.status==='completed'?'Closed':'Active'}</strong> project status</span>}
+        </div>
+      </div>
+      <button type="button" className="btn" onClick={() => nav('/projects?idea=' + encodeURIComponent(project.linkedIdeaId || ''))}>Open project page <QuorlythGlyph name="arrow" size={13}/></button>
+    </section>}
     <section className="sw-workspace-shell">
       <div className="sw-workspace-summary">
         <div className="sw-workspace-summary__copy"><p className="ql-eyebrow">PROJECT BRIEF</p><p>{project.summary}</p>{project.dueAt && <small><QuorlythGlyph name="calendar" size={13} />Target delivery · {localDate(project.dueAt)}</small>}</div>
@@ -618,6 +719,15 @@ function WorkspaceProjectView() {
     </section>}
 
     {tab === 'evidence' && <div className="sw-evidence-layout">
+      {project.linkedIdeaId && <section className="glass pad sw-panel sw-linked-evidence">
+        <div className="sw-section-heading"><div><p className="ql-eyebrow">CONNECTED PROJECT RECORDS</p><h3>Milestone submissions</h3><p>Submissions uploaded on the community project page appear here from the original, permission-checked record.</p></div><span className="sw-count">{linkedSubmissions.length}</span></div>
+        {linkedSubmissions.length
+          ? <div className="sw-linked-submission-list">{linkedSubmissions.slice(0, 8).map(submission => {
+              const milestone = linkedMilestones.find(item => item.id === submission.milestoneId)
+              return <LinkedWorkSubmissionCard key={submission.id} submission={submission} milestoneTitle={milestone?.title || 'Project milestone'} ideaId={project.linkedIdeaId || ''}/>
+            })}</div>
+          : <div className="sw-empty-inline"><QuorlythGlyph name="review" size={21}/><strong>No linked milestone submissions are visible yet</strong><p>Submit work under a milestone on the Project page. If you do not have access to that project, its private submissions will not be exposed through this workspace.</p><button type="button" className="btn" onClick={() => nav('/projects?idea=' + encodeURIComponent(project.linkedIdeaId || ''))}>Open project milestones</button></div>}
+      </section>}
       <section className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">GITHUB CONNECTION</p><h3>Connect a repository</h3><p>Phase 1 checks public repositories, commits and pull requests directly against GitHub’s API. Private repository OAuth is not enabled in this release.</p></div></div>
         {canManage&&project.status==='active'&&<form className="sw-inline-form" onSubmit={connectRepository}><label className="sw-field"><span>Public repository URL</span><input type="url" required value={repoUrl} onChange={e=>setRepoUrl(e.target.value)} placeholder="https://github.com/owner/repository" /></label><button className="btn p" disabled={busy==='connect-github'}><QuorlythGlyph name="link" size={14}/>{busy==='connect-github'?'Checking GitHub…':'Connect repository'}</button></form>}
         {projectRepos.map(repo=><div className="sw-repo-row" key={repo.id}><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div><a href={repo.htmlUrl} target="_blank" rel="noreferrer">{repo.fullName} <QuorlythGlyph name="open" size={12}/></a><small>{repo.description||'No repository description'} </small><small>{repo.defaultBranch||'Default branch not reported'} · {repo.stars} stars · {repo.openIssues} open issues</small></div><span className="sw-verified"><QuorlythGlyph name="check" size={12}/>API checked</span></div>)}
