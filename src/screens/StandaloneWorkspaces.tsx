@@ -341,6 +341,8 @@ function WorkspaceProjectView() {
   const [artifactSummary, setArtifactSummary] = useState('')
   const [artifactFiles, setArtifactFiles] = useState<File[]>([])
   const [commentText, setCommentText] = useState('')
+  // Keep discussion interactions consistent with the collaboration workspace panel.
+  const [discussionMode, setDiscussionMode] = useState<'inline' | 'expanded' | 'minimized'>('inline')
   const [reviewNotes, setReviewNotes] = useState<Record<string,string>>({})
   const [projectTitle, setProjectTitle] = useState('')
   const [projectSummary, setProjectSummary] = useState('')
@@ -767,12 +769,79 @@ function WorkspaceProjectView() {
         <div className="sw-team-list">{team.map(member=><div className="sw-team-member" key={member.userId}><Av id={member.userId} size={36}/><div><strong>{a.nm(member.userId)}{member.userId===a.me?.id?' · You':''}</strong><small>{member.role.charAt(0).toUpperCase()+member.role.slice(1)} · Joined {localDate(member.updatedAt||member.at)}</small></div><span className={'sw-role-pill role-'+member.role}>{member.role}</span></div>)}</div>
         {canManage&&project.status==='active'&&<form className="sw-invite-form" onSubmit={inviteMember}><p className="ql-eyebrow">INVITE A TEAMMATE</p><label className="sw-field"><span>Person</span><select value={inviteUser} onChange={e=>setInviteUser(e.target.value)} required><option value="">Select a Quorlyth member</option>{profilePeople.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label className="sw-field"><span>Permission</span><select value={inviteRole} onChange={e=>setInviteRole(e.target.value as 'contributor'|'viewer')}><option value="contributor">Contributor · can start assigned tasks</option><option value="viewer">Viewer · read-only</option></select></label><button className="btn p" disabled={busy.startsWith('invite-')}><QuorlythGlyph name="invite" size={14}/>Invite to workspace</button>{!profilePeople.length&&<p className="sw-muted">No other visible member profiles were found. The owner can invite someone once their public Quorlyth profile exists.</p>}</form>}
       </section>
-      <section className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">TEAM DISCUSSION</p><h3>Project room</h3><p>Keep decisions and next steps attached to this project.</p></div></div>
-        <div className="sw-comments">{projectComments.length?projectComments.map(comment=><article className="sw-comment" key={comment.id}><Av id={comment.authorId} size={30}/><div><div className="sw-comment__meta"><strong>{a.nm(comment.authorId)}</strong><small>{new Date(comment.at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</small></div><p>{comment.text}</p></div></article>):<div className="sw-empty-inline"><QuorlythGlyph name="message" size={20}/><strong>No discussion yet</strong><p>Post a decision, blocker or next step to get the conversation started.</p></div>}</div>
-{canContribute && (
-        <form className="sw-comment-form" onSubmit={postComment}><label className="sw-field"><span>Message the team</span><textarea value={commentText} onChange={e=>setCommentText(e.target.value)} maxLength={3000} rows={3} placeholder="What should the team know?" required /></label><button className="btn p" disabled={busy==='comment'||!commentText.trim()}><QuorlythGlyph name="send" size={14}/>Post update</button></form>
-        )}
+      <section
+        className="glass pad sw-panel sw-team-discussion"
+        aria-label="Team discussion"
+        style={discussionMode === 'inline' ? undefined : {
+          position: 'fixed',
+          left: discussionMode === 'expanded' ? '50%' : 'auto',
+          right: discussionMode === 'expanded' ? 'auto' : '12px',
+          top: discussionMode === 'expanded' ? '50%' : 'auto',
+          transform: discussionMode === 'expanded' ? 'translate(-50%, -50%)' : undefined,
+          bottom: discussionMode === 'expanded' ? 'auto' : '12px',
+          width: discussionMode === 'expanded' ? 'min(920px, calc(100vw - 32px))' : 'min(360px, calc(100vw - 24px))',
+          height: discussionMode === 'expanded' ? 'min(820px, calc(100dvh - 40px))' : undefined,
+          maxHeight: discussionMode === 'expanded' ? 'calc(100dvh - 40px)' : 'calc(100dvh - 24px)',
+          zIndex: 120,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0,
+          overflow: 'hidden',
+          padding: discussionMode === 'expanded' ? 20 : 16,
+          background: 'var(--glass, rgba(12,12,14,.96))',
+          backdropFilter: 'blur(24px)',
+          border: '1px solid var(--line, rgba(255,255,255,.16))',
+          boxShadow: '0 24px 90px rgba(0,0,0,.58)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p className="ql-eyebrow" style={{ marginBottom: 4 }}>TEAM DISCUSSION</p>
+            <h3 style={{ fontSize: 19 }}>Project room <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}>· {projectComments.length}</span></h3>
+            {discussionMode !== 'minimized' && <p className="mut" style={{ marginTop: 5, fontSize: 12 }}>Share decisions, blockers and next steps with your project team.</p>}
+          </div>
+          <div className="acts" style={{ margin: 0, gap: 5, flexShrink: 0 }}>
+            {discussionMode === 'inline'
+              ? <button type="button" className="chip" title="Expand discussion" aria-label="Expand team discussion" onClick={() => setDiscussionMode('expanded')}><QuorlythGlyph name="expand" size={14} /></button>
+              : <button type="button" className="chip" title="Return discussion to page" aria-label="Return team discussion to page" onClick={() => setDiscussionMode('inline')}><QuorlythGlyph name="shrink" size={14} /></button>}
+            {discussionMode !== 'minimized'
+              ? <button type="button" className="chip" title="Minimize discussion" aria-label="Minimize team discussion" onClick={() => setDiscussionMode('minimized')}><QuorlythGlyph name="minimize" size={14} /></button>
+              : <button type="button" className="chip" title="Restore discussion" aria-label="Restore team discussion" onClick={() => setDiscussionMode('expanded')}><QuorlythGlyph name="expand" size={14} /></button>}
+          </div>
+        </div>
+        {discussionMode !== 'minimized' && <>
+          <div
+            className="sw-comments"
+            style={{
+              flex: discussionMode === 'expanded' ? 1 : undefined,
+              minHeight: 0,
+              maxHeight: discussionMode === 'expanded' ? undefined : 320,
+              marginTop: 10,
+              marginBottom: 10,
+              paddingRight: 4,
+              overscrollBehavior: 'contain',
+            }}
+          >
+            {projectComments.length
+              ? projectComments.map(comment => <article className="sw-comment" key={comment.id}>
+                  <Av id={comment.authorId} size={30} />
+                  <div>
+                    <div className="sw-comment__meta">
+                      <strong>{a.nm(comment.authorId)}</strong>
+                      <small>{new Date(comment.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</small>
+                    </div>
+                    <p>{comment.text}</p>
+                  </div>
+                </article>)
+              : <div className="sw-empty-inline"><QuorlythGlyph name="message" size={20}/><strong>No discussion yet</strong><p>Post a decision, blocker or next step to get the conversation started.</p></div>}
+          </div>
+          {canContribute && <form className="sw-comment-form" onSubmit={postComment} style={{ marginTop: 'auto' }}>
+            <label className="sw-field"><span>Message the team</span><textarea value={commentText} onChange={e=>setCommentText(e.target.value)} maxLength={3000} rows={discussionMode === 'expanded' ? 3 : 2} placeholder="What should the team know?" required /></label>
+            <button className="btn p" disabled={busy==='comment'||!commentText.trim()}><QuorlythGlyph name="send" size={14}/>{busy==='comment'?'Posting…':'Post update'}</button>
+          </form>}
+        </>}
       </section>
+
     </div>}
 
     {canManage&&<section className="glass pad sw-settings-panel"><details><summary><QuorlythGlyph name="settings" size={15}/>Workspace settings <span>Owner and manager only</span></summary><form onSubmit={saveProject} className="sw-settings-form"><label className="sw-field"><span>Project title</span><input value={projectTitle} onChange={e=>setProjectTitle(e.target.value)} maxLength={100} required /></label><label className="sw-field"><span>Project brief</span><textarea value={projectSummary} onChange={e=>setProjectSummary(e.target.value)} maxLength={4000} rows={3} required /></label><label className="sw-field"><span>Target delivery</span><input type="date" min={minimumDateInput(dateInput(project?.dueAt))} value={projectDueDate} onChange={e=>setProjectDueDate(e.target.value)} /></label><div className="acts"><button className="btn p" disabled={busy==='save-project'}>Save settings</button><button className="btn" type="button" disabled={busy==='project-status'||project.status==='active'&&projectTasks.some(task=>task.status!=='done')} onClick={()=>void toggleProjectStatus()}>{project.status==='completed'?'Reopen workspace':'Close workspace'} </button>{isOwner&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-workspace'} onClick={()=>void removeWorkspace()}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-workspace'?'Deleting workspace…':'Delete workspace permanently'}</button>}</div><p className="sw-muted">Closing a workspace is permitted only after every task has completed with approved evidence. Reopening allows new tasks or revisions.</p>{isOwner&&<p className="sw-muted">Permanent deletion is available to the workspace owner only and removes all tasks, evidence records, team memberships, comments and linked repository records.</p>}</form></details></section>}
