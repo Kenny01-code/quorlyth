@@ -759,7 +759,7 @@ function WorkspaceProjectView() {
             </div>
             <div className="sw-assignee-picker__list">
               {taskAssignees.map(member => <label className="sw-assignee-option" key={member.userId}>
-                <input type="checkbox" checked={taskAssigneeDraft.includes(member.userId)} onChange={e => setTaskAssigneeDraft(current => e.target.checked ? [...new Set([...current, member.userId])] : current.filter(uid => uid !== member.userId)} />
+                <input type="checkbox" checked={taskAssigneeDraft.includes(member.userId)} onChange={e => setTaskAssigneeDraft(current => e.target.checked ? [...new Set([...current, member.userId])] : current.filter(uid => uid !== member.userId))} />
                 <span>{a.nm(member.userId)}<small>{member.role}{member.userId===a.me?.id?' · You':''}</small></span>
               </label>)}
             </div>
