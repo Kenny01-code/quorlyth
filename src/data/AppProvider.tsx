@@ -409,8 +409,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast(error)
         return { ok: false, error }
       }
-      if (postingRule === 'owner' && !managesTargetCommunity) {
-        const error = 'Only the community owner or an authorized platform administrator can post ideas here.'
+      const isTargetCommunityModerator = isTargetCommunityMember && (targetCommunity.moderatorIds || []).includes(me.id)
+      if (postingRule === 'owner' && !managesTargetCommunity && !isTargetCommunityModerator) {
+        const error = 'Only the community owner or a selected posting moderator can post ideas here.'
         toast(error)
         return { ok: false, error }
       }
