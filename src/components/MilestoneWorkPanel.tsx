@@ -179,8 +179,14 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
   async function startWork() {
     if (!canStart) return
     setSubmitting(true)
-    await a.updateMilestone(milestone.id, { status: 'in_progress' })
-    setSubmitting(false)
+    try {
+      const started = await a.updateMilestone(milestone.id, { status: 'in_progress' })
+      if (started) a.toast('Work started. Do the actual work in your tools, then attach a real deliverable here and submit it for review.')
+    } catch {
+      a.toast('Could not start this milestone. Refresh the project and try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function submitWork(event: FormEvent<HTMLFormElement>) {
@@ -242,6 +248,11 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
           <div className="q-work-composer__title">
             <div><h6>{mine?.status === 'changes_requested' ? 'Submit a revised deliverable' : milestone.status === 'in_progress' ? 'Submit completed work' : 'Start with your deliverable'}</h6><p>{canManage ? 'You can submit your own work too; another authorized manager must review it.' : milestone.assigneeId ? 'Assigned to you' : 'This milestone is unassigned; any accepted team member can contribute.'}</p></div>
             {canStart && <button type="button" className="q-work-quiet-btn" disabled={submitting} onClick={() => void startWork()}><QuorlythGlyph name="start" size={14} />Start work</button>}
+          </div>
+          <div className="q-work-steps" aria-label="Real work submission steps">
+            <div><span>01</span><section><strong>Do the actual work</strong><p>Build, design, write, research or test in your real tools. “Start work” records progress; it does not create a fake deliverable.</p></section></div>
+            <div><span>02</span><section><strong>Attach proof</strong><p>Upload the real screenshot, document, demo or other evidence that demonstrates what changed.</p></section></div>
+            <div><span>03</span><section><strong>Submit for review</strong><p>An authorized reviewer checks the evidence. Only an approved submission completes the milestone.</p></section></div>
           </div>
           <form className="q-work-form" onSubmit={submitWork}>
             <label className="q-work-label" htmlFor={'q-work-summary-' + milestone.id}>What did you complete?</label>
