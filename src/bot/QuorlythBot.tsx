@@ -4,6 +4,7 @@ import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import { Chat, ChatMsg, Community, Idea, Profile } from '../lib/types'
 import { emitWorkflowEvent, executeWorkflowActions, newWorkflowId, persistWorkflowRun } from '../lib/automation'
 import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTrigger } from '../lib/automation'
@@ -950,7 +951,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         const o = await askJson<{ matches: { id: string; why: string }[] }>(`Find up to five ideas that best match the request. Reply with only JSON: {"matches":[{"id":"idea id","why":"one short sentence"}]}. Use only ids from the list.\nRequest: ${arg}\nIdeas: ${JSON.stringify(a.data.ideas.slice(0, 60).map(i => ({ id: i.id, title: i.title, details: (i.body || '').slice(0, 160) })))}`, { tier: 'quick' })
         const m = (o.matches || []).filter(x => a.data.ideas.some(i => i.id === x.id)).slice(0, 5)
         n = { ...n, msgs: [...n.msgs, { r: 'a', t: m.length ? 'Here is what I found:\n' + m.map(x => a.data.ideas.find(i => i.id === x.id)!.title + ': ' + String(x.why).slice(0, 120)).join('\n') : 'I did not find a close match.', btns: m.map(x => ({ a: 'idea', id: x.id, l: a.data.ideas.find(i => i.id === x.id)!.title.slice(0, 28) })) }] }; persist(n); say(n.msgs[n.msgs.length - 1].t)
-      } catch (e: any) { n = { ...n, msgs: [...n.msgs, { r: 'a', t: e.message }] }; setCur(n); say(e.message) }
+      } catch (e: any) { const message = friendlyBotError(e); n = { ...n, msgs: [...n.msgs, { r: 'a', t: message }] }; setCur(n); say(message) }
       setBusy(false); return
     }
     const best = [...a.data.ideas].sort((x, y) => ((a.data.reviews[y.id]?.score || 0) + a.votesOf(y.id)) - ((a.data.reviews[x.id]?.score || 0) + a.votesOf(x.id)))[0]
@@ -2943,8 +2944,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
         }
       }
     } catch (e: any) {
-      if (nested) throw new Error(e?.message || 'That action could not be completed.')
-      a.toast(e?.message || 'That action could not be completed.')
+      if (nested) throw new Error(userFacingMutationError(e, 'complete that action'))
+      a.toast(userFacingMutationError(e, 'complete that action'))
     } finally {
       if (!nested) { setBusy(false); setStatus('Online') }
     }
