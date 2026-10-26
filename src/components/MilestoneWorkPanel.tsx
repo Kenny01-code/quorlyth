@@ -243,15 +243,10 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
             <div><h6>{mine?.status === 'changes_requested' ? 'Submit a revised deliverable' : milestone.status === 'in_progress' ? 'Submit completed work' : 'Start with your deliverable'}</h6><p>{canManage ? 'You can submit your own work too; another authorized manager must review it.' : milestone.assigneeId ? 'Assigned to you' : 'This milestone is unassigned; any accepted team member can contribute.'}</p></div>
             {canStart && <button type="button" className="q-work-quiet-btn" disabled={submitting} onClick={() => void startWork()}><QuorlythGlyph name="start" size={14} />Start work</button>}
           </div>
-          <form onSubmit={submitWork}>
+          <form className="q-work-form" onSubmit={submitWork}>
             <label className="q-work-label" htmlFor={'q-work-summary-' + milestone.id}>What did you complete?</label>
             <textarea id={'q-work-summary-' + milestone.id} className="q-work-summary" value={summary} onChange={event => setSummary(event.target.value)} maxLength={6000} minLength={8} required placeholder="Summarize what you built, changed, tested, or delivered. Mention anything the reviewer should know." />
             {milestone.acceptanceCriteria && <p className="q-work-hint"><QuorlythGlyph name="check" size={14} />Use the milestone's definition of done as your checklist before submitting.</p>}
-
-            <label className="q-work-attestation" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 14, cursor: 'pointer' }}>
-              <input type="checkbox" checked={attested} onChange={event => setAttested(event.target.checked)} disabled={submitting || uploading} style={{ marginTop: 4, flexShrink: 0 }} />
-              <span><strong>I confirm this is work I actually completed.</strong><br />My summary and evidence accurately represent the deliverable I worked on. Submitting it does not mean it is approved; an authorized reviewer still needs to check it.</span>
-            </label>
 
             <input ref={fileInput} className="q-work-file-input" type="file" multiple accept={acceptedTypes} onChange={event => void handleFileChange(event)} aria-label="Choose files, images, documents or media" />
             <div className={'q-work-dropzone' + (dragging ? ' is-dragging' : '') + (uploading ? ' is-uploading' : '')}
@@ -273,6 +268,21 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
               <div className="q-work-staged__heading"><strong>{attachments.length} attachment{attachments.length === 1 ? '' : 's'} added</strong><small>Files will be included with this revision.</small></div>
               {attachments.map(attachment => <AttachmentLink key={attachment.path} attachment={attachment} removable onRemove={() => void removeAttachment(attachment)} />)}
             </div>}
+
+            <label className="q-work-attestation" htmlFor={'q-work-attestation-' + milestone.id}>
+              <input
+                id={'q-work-attestation-' + milestone.id}
+                type="checkbox"
+                checked={attested}
+                onChange={event => setAttested(event.target.checked)}
+                disabled={submitting || uploading}
+                aria-describedby={'q-work-attestation-help-' + milestone.id}
+              />
+              <span className="q-work-attestation__copy">
+                <strong>I confirm this is work I actually completed.</strong>
+                <small id={'q-work-attestation-help-' + milestone.id}>My summary and evidence accurately represent the deliverable I worked on. Submitting does not mean it is approved; an authorized reviewer must check it.</small>
+              </span>
+            </label>
 
             <div className="q-work-submit-row">
               <span className="q-work-hint">{attachments.length ? 'Your evidence is saved with this revision. The milestone completes only after an authorized reviewer approves it.' : 'Attach at least one screenshot, document, demo recording, or other deliverable. A progress note alone cannot complete this milestone.'}</span>

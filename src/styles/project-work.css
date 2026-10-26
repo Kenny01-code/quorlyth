@@ -59,6 +59,36 @@
   white-space: nowrap;
 }
 .q-work-composer { display: grid; gap: 13px; min-width: 0; }
+.q-work-form { display: grid; gap: 12px; min-width: 0; }
+.q-work-form > .q-work-label { margin: 0; }
+.q-work-form > .q-work-hint { margin: -3px 0 0; }
+.q-work-form .q-work-dropzone { width: 100%; }
+.q-work-attestation {
+  display: grid;
+  grid-template-columns: 17px minmax(0, 1fr);
+  align-items: start;
+  gap: 11px;
+  min-width: 0;
+  padding: 12px 13px;
+  margin: 0;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.q-work-attestation:hover { border-color: rgba(255,255,255,.23); background: rgba(255,255,255,.045); }
+.q-work-attestation:focus-within { outline: 2px solid rgba(255,255,255,.72); outline-offset: 3px; }
+.q-work-attestation > input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: #fff;
+  flex: none;
+}
+.q-work-attestation__copy { display: grid; gap: 5px; min-width: 0; }
+.q-work-attestation__copy strong { color: rgba(255,255,255,.9); font-size: 12px; font-weight: 550; line-height: 1.45; }
+.q-work-attestation__copy small { color: rgba(255,255,255,.52); font-size: 11px; line-height: 1.65; overflow-wrap: anywhere; }
 .q-work-composer__title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .q-work-composer__title h6,.q-work-history__title h6 { margin: 0; font-size: 13px; font-weight: 500; }
 .q-work-composer__title p { margin: 4px 0 0; color: rgba(255,255,255,.46); font-size: 11px; line-height: 1.5; }
