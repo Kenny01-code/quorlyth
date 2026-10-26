@@ -4,6 +4,7 @@ import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import {
   ACTION_INFO,
   TRIGGER_INFO,
@@ -157,7 +158,7 @@ function AutomationWorkspace() {
       setTab('workflows')
       if (!current) nav('/architecture?automationCreated=' + encodeURIComponent(next.id) + '#arch-system-title')
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Could not save this workflow. Check your access and try again.')
+      setError(userFacingMutationError(failure, 'save this workflow'))
     } finally {
       setBusy('')
     }
@@ -174,7 +175,7 @@ function AutomationWorkspace() {
       await app.backend.store.set(path, { ...current, ...patch, updatedAt: Date.now() })
       if (successMessage) app.toast(successMessage)
     } catch (failure) {
-      const message = failure instanceof Error ? failure.message : 'Could not update this workflow.'
+      const message = userFacingMutationError(failure, 'update this workflow')
       setError(message)
       app.toast(message)
     } finally {
@@ -195,10 +196,10 @@ function AutomationWorkspace() {
     try {
       const run = await executeWorkflowActions(workflow, userId, app.backend.store, event, app.toast)
       await persistWorkflowRun(app.backend.store, collectionPath + '/' + workflow.id, run)
-      app.toast(run.status === 'success' ? 'Workflow run finished.' : 'Workflow run stopped: ' + (run.error || 'an action failed'))
+      app.toast(run.status === 'success' ? 'Workflow run finished.' : userFacingMutationError(run.error || 'An action failed', 'run this workflow'))
       setTab('runs')
     } catch (failure) {
-      const message = failure instanceof Error ? failure.message : 'This workflow could not run.'
+      const message = userFacingMutationError(failure, 'run this workflow')
       setError(message)
       app.toast(message)
     } finally {
@@ -215,7 +216,7 @@ function AutomationWorkspace() {
       await app.backend.store.delete(collectionPath + '/' + workflow.id)
       app.toast('Workflow deleted.')
     } catch (failure) {
-      const message = failure instanceof Error ? failure.message : 'Could not delete the workflow.'
+      const message = userFacingMutationError(failure, 'delete this workflow')
       setError(message)
       app.toast(message)
     } finally {
