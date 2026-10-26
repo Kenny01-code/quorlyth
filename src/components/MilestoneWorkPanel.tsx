@@ -96,7 +96,8 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
     .sort((first, second) => second.revision - first.revision || second.submittedAt - first.submittedAt)[0],
   [submissions, a.me?.id])
   const pendingReviewCount = submissions.filter(item => item.status === 'submitted').length
-  const assignedElsewhere = !!milestone.assigneeId && milestone.assigneeId !== a.me?.id
+  const assignedIds = [...new Set([...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []), ...(milestone.assigneeId ? [milestone.assigneeId] : [])])]
+  const assignedElsewhere = assignedIds.length > 0 && !assignedIds.includes(a.me?.id || '')
   const blocked = !!milestone.blocked && milestone.status !== 'done'
   const uploadAvailable = typeof a.backend?.uploadWorkFile === 'function' && typeof a.backend?.deleteWorkFile === 'function'
   const maximumSize = a.backend?.auth.mode === 'local' ? MAX_LOCAL_BYTES : MAX_UPLOAD_BYTES
@@ -246,7 +247,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
       {canSubmit && (
         <div className="q-work-composer">
           <div className="q-work-composer__title">
-            <div><h6>{mine?.status === 'changes_requested' ? 'Submit a revised deliverable' : milestone.status === 'in_progress' ? 'Submit completed work' : 'Start with your deliverable'}</h6><p>{canManage ? 'You can submit your own work too; another authorized manager must review it.' : milestone.assigneeId ? 'Assigned to you' : 'This milestone is unassigned; any accepted team member can contribute.'}</p></div>
+            <div><h6>{mine?.status === 'changes_requested' ? 'Submit a revised deliverable' : milestone.status === 'in_progress' ? 'Submit completed work' : 'Start with your deliverable'}</h6><p>{canManage ? 'You can submit your own work too; another authorized manager must review it.' : assignedIds.length ? (assignedIds.includes(a.me?.id || '') ? (assignedIds.length > 1 ? 'Assigned to you and selected teammates' : 'Assigned to you') : 'Assigned to other team members') : 'This milestone is unassigned; any accepted team member can contribute.'}</p></div>
             {canStart && <button type="button" className="q-work-quiet-btn" disabled={submitting} onClick={() => void startWork()}><QuorlythGlyph name="start" size={14} />Start work</button>}
           </div>
           <div className="q-work-steps" aria-label="Real work submission steps">
