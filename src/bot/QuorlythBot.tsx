@@ -158,7 +158,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
   }
 }
 
-export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) {
+export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initialOpen?: boolean; voiceRequest?: number }) {
   const a = useApp()
   const nav = useNavigate()
   const loc = useLocation()
@@ -319,6 +319,16 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     if (launcherHoldTimer.current !== null) window.clearTimeout(launcherHoldTimer.current)
     if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
   }, [])
+  useEffect(() => {
+    if (voiceRequest <= 0) return
+    setOpen(true)
+    setMinimized(false)
+    setLauncherHidden(false)
+    setShowLauncherRestore(false)
+    setView('chat')
+    const timer = window.setTimeout(() => { void startLive() }, 0)
+    return () => window.clearTimeout(timer)
+  }, [voiceRequest])
 
   const accent = (cur?.color && (THEMES as any)[cur.color]) || null
   const style = accent ? ({ ['--ac1' as any]: accent.g1, ['--ac2' as any]: accent.g2, ['--acr' as any]: accent.cr } as React.CSSProperties) : undefined
@@ -998,6 +1008,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     let currentUserTranscript = ''
     let responseBeforeSessionReady = false
     let sessionReady = false
+    let nativeAudioRealtime = false
 
     const quickGreeting = (text: string): string | null => {
       const trimmed = text.trim()
@@ -1096,23 +1107,20 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     }
 
     try {
-      // Live Talk should not depend on OpenAI Realtime when browser speech recognition is
-      // available. The selected voice is synthesized by ElevenLabs below; the normal
-      // Quorlyth chat router supplies the answer, so no separate OpenAI voice key is needed.
-      if ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) {
-        throw new Error('Switch to browser speech recognition for ElevenLabs-first Live Talk.')
-      }
+      // Prefer native realtime audio to avoid serial recognition, chat and synthesis requests.
+      // The catch path retains browser recognition and the existing configured TTS fallback.
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
       const voiceContext = { route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveTalk: true }
+      nativeAudioRealtime = true
       const session = await startRealtime({
         instructions: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext()
           + '\nBrowser/device context: ' + browserContext()
-          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The client speaks your response with the selected QuorlythBot voice profile using ElevenLabs first and the browser speech voice if it fails.\n' + LIVE_TALK_SPEECH_STYLE,
+          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The active Realtime session speaks through the selected QuorlythBot realtime voice. If Realtime cannot start, the app falls back to browser recognition and its configured TTS path.\n' + LIVE_TALK_SPEECH_STYLE,
         voice: v.ai,
         accent: bs.accent || 'auto',
-        textOnly: true,
+        textOnly: false,
         ...(accessToken ? { accessToken, context: voiceContext } : {}),
         onEvent: event => {
           if (!liveFallback.current) return
@@ -1123,6 +1131,10 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               if (liveAbortRef.current === speechController) liveAbortRef.current = null
               speechController = null
               speechTail = ''
+              rt.current?.interrupt?.()
+              robot.current?.talk(false)
+            }
+            if (nativeAudioRealtime) {
               rt.current?.interrupt?.()
               robot.current?.talk(false)
             }
@@ -1152,7 +1164,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             speechTail = ''
             setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
             const greeting = quickGreeting(spoken)
-            if (greeting) {
+            if (greeting && !nativeAudioRealtime) {
               // Simple greetings bypass model generation, then start the selected natural device voice immediately.
               const reply = greeting
               c = { ...c, msgs: [...c.msgs, { r: 'a', t: reply }] }
@@ -1174,7 +1186,13 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             return
           }
           if (event.type === 'bot') {
-            if (event.delta) {
+            if (nativeAudioRealtime && !event.done) {
+              currentBotText = event.text
+              currentBotHadDelta = !!event.text
+              setLive(l => l ? { ...l, state: 'speaking', bot: event.text } : l)
+              robot.current?.talk(true)
+            }
+            if (event.delta && !nativeAudioRealtime) {
               const controller = ensureSpeechController()
               currentBotText = event.text
               currentBotHadDelta = true
@@ -1184,8 +1202,8 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
             if (event.done) {
               const answer = event.text.trim() || currentBotText.trim()
               currentBotText = answer
-              const controller = ensureSpeechController()
-              if (!currentBotHadDelta && answer) queueSpeechFromDelta(answer, controller)
+              const controller = nativeAudioRealtime ? null : ensureSpeechController()
+              if (!nativeAudioRealtime && !currentBotHadDelta && answer) queueSpeechFromDelta(answer, controller!)
               const baseChat: Chat = c || {
                 id: 'c_' + slug(), title: 'Live conversation', pj, at: Date.now(), upd: Date.now(), msgs: [],
               }
@@ -1193,22 +1211,32 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
               const nextChat: Chat = { ...baseChat, msgs: [...baseChat.msgs, liveMessage].slice(-100) }
               c = nextChat
               persist(nextChat)
-              setLive(l => l ? { ...l, state: 'thinking', bot: answer } : l)
-              if (speechTail.trim()) enqueueSpeech(speechTail, controller)
-              speechTail = ''
-              void speechQueue.then(() => {
-                if (!liveFallback.current || controller.signal.aborted || speechController !== controller) return
-                speechController = null
-                if (liveAbortRef.current === controller) liveAbortRef.current = null
-                setLive(l => l ? { ...l, state: 'listening' } : l)
-                robot.current?.listen(true)
-              })
+              setLive(l => l ? { ...l, state: nativeAudioRealtime ? 'speaking' : 'thinking', bot: answer } : l)
+              if (!nativeAudioRealtime) {
+                if (speechTail.trim()) enqueueSpeech(speechTail, controller!)
+                speechTail = ''
+                void speechQueue.then(() => {
+                  if (!liveFallback.current || controller!.signal.aborted || speechController !== controller) return
+                  speechController = null
+                  if (liveAbortRef.current === controller) liveAbortRef.current = null
+                  setLive(l => l ? { ...l, state: 'listening' } : l)
+                  robot.current?.listen(true)
+                })
+              } else {
+                speechTail = ''
+              }
               currentBotText = ''
               currentBotHadDelta = false
             }
             return
           }
           if (event.type === 'response_done') {
+            if (nativeAudioRealtime) {
+              setLive(l => l ? { ...l, state: 'listening' } : l)
+              robot.current?.talk(false)
+              robot.current?.listen(true)
+              return
+            }
             if (!speechController) {
               setLive(l => l ? { ...l, state: 'listening' } : l)
               robot.current?.listen(true)
@@ -1236,6 +1264,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
       }
       a.toast('Live Talk is active. The microphone indicator stays visible while I listen; replies use your selected QuorlythBot voice profile.')
     } catch (error: any) {
+      nativeAudioRealtime = false
       // The Realtime API currently needs OPENAI_API_KEY. If that service is
       // unavailable, keep Live Talk usable with browser speech recognition,
       // the app's normal multi-provider chat endpoint, and native speech output.

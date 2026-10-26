@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
+import { buildVoiceTrainingExamples } from './voice-training-catalog.mjs'
 import { fileURLToPath } from 'node:url'
 
 const corpusRoot = fileURLToPath(new URL('../data/ai-training/', import.meta.url))
@@ -45,5 +46,23 @@ for (const versionFolder of versions) {
   total += versionTotal
   process.stdout.write(versionFolder + ': validated ' + versionTotal + ' unique examples across ' + counts.size + ' domains.\n')
 }
-assert.ok(total >= 10000, 'Expected at least 10,000 examples across versions')
-process.stdout.write('Validated ' + total + ' unique examples across ' + versions.length + ' version(s).\n')
+// Validate the deterministic v2 source even before its JSONL shards are materialized.
+if (!versions.includes('v2')) {
+  const generated = buildVoiceTrainingExamples()
+  assert.equal(generated.length, 10000, 'Expected exactly 10,000 generated voice examples')
+  for (const row of generated) {
+    for (const key of ['id','version','domain','intent','input','ideal_response','provenance','review_status']) {
+      assert.ok(row[key], 'Generated voice row missing ' + key)
+    }
+    assert.ok(row.id.startsWith('qth-v2-'), 'Voice ID does not match v2')
+    assert.ok(Array.isArray(row.tags) && row.tags.length >= 3, row.id + ': expected tags')
+    assert.ok(row.input.length > 40 && row.ideal_response.length > 80, row.id + ': too short')
+    assert.ok(['synthetic_unreviewed','reviewed','source_verified'].includes(row.review_status), row.id + ': invalid review status')
+    assert.ok(!seen.has(row.id), 'Duplicate ID ' + row.id)
+    seen.add(row.id)
+  }
+  total += generated.length
+  process.stdout.write('v2: validated ' + generated.length + ' generated voice examples across 10 domains.\n')
+}
+assert.ok(total >= 20000, 'Expected at least 20,000 examples across versions')
+process.stdout.write('Validated ' + total + ' unique examples across ' + (versions.length + (versions.includes('v2') ? 0 : 1)) + ' version(s).\n')

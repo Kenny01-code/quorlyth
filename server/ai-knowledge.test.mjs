@@ -2,11 +2,12 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildTrainingContext, getTrainingCorpusStats, retrieveTrainingExamples } from './ai-knowledge.mjs'
 
-test('loads the versioned 10,000-example dataset', () => {
+test('loads the versioned 20,000-example dataset', () => {
   const stats = getTrainingCorpusStats()
-  assert.ok(stats.total >= 10000)
-  assert.ok(Object.keys(stats.domains).length >= 10)
+  assert.ok(stats.total >= 20000)
+  assert.ok(Object.keys(stats.domains).length >= 20)
   assert.equal(stats.byVersion['1.0.0'], 10000)
+  assert.equal(stats.byVersion['2.0.0'], 10000)
   for (const count of Object.values(stats.domains)) assert.ok(count >= 1000)
   assert.ok(stats.versions.includes('1.0.0'))
 })
@@ -34,4 +35,12 @@ test('context is bounded and marks examples as synthetic, not live facts', () =>
 test('empty or unrelated input cannot break generation', () => {
   assert.deepEqual(retrieveTrainingExamples(''), [])
   assert.equal(buildTrainingContext(''), '')
+})
+
+
+test('retrieves contextual voice guidance for expressive realtime conversation', () => {
+  const results = retrieveTrainingExamples('natural live voice chuckles laughter interruptions microphone privacy and realtime speech')
+  assert.ok(results.length > 0)
+  assert.ok(results.some(row => ['voice_expressiveness', 'realtime_turn_taking', 'privacy_security'].includes(row.domain)))
+  assert.ok(results.every(row => row.review_status === 'synthetic_unreviewed'))
 })
