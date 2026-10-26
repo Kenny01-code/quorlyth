@@ -815,7 +815,7 @@ function WorkspaceProjectView() {
             style={{
               flex: discussionMode === 'expanded' ? 1 : undefined,
               minHeight: 0,
-              maxHeight: discussionMode === 'expanded' ? undefined : 320,
+              maxHeight: discussionMode === 'expanded' ? 'none' : 320,
               marginTop: 10,
               marginBottom: 10,
               paddingRight: 4,
