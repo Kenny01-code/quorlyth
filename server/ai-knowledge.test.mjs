@@ -4,10 +4,11 @@ import { buildTrainingContext, getTrainingCorpusStats, retrieveTrainingExamples 
 
 test('loads the versioned 10,000-example dataset', () => {
   const stats = getTrainingCorpusStats()
-  assert.equal(stats.total, 10000)
-  assert.equal(Object.keys(stats.domains).length, 10)
-  for (const count of Object.values(stats.domains)) assert.equal(count, 1000)
-  assert.deepEqual(stats.versions, ['1.0.0'])
+  assert.ok(stats.total >= 10000)
+  assert.ok(Object.keys(stats.domains).length >= 10)
+  assert.equal(stats.byVersion['1.0.0'], 10000)
+  for (const count of Object.values(stats.domains)) assert.ok(count >= 1000)
+  assert.ok(stats.versions.includes('1.0.0'))
 })
 
 test('retrieves relevant idea guidance for an idea-organizing request', () => {
