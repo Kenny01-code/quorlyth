@@ -15,7 +15,7 @@ import { askJson } from '../ai/client'
 const ICONS = ['community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab']
 const BADGE_ICONS = ['star', 'community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab', 'approve', 'lock']
 const COVERS = [['a', 'Aurora'], ['b', 'Halo'], ['c', 'Grid'], ['d', 'Dusk']]
-const RULE = { anyone: 'Anyone can post', members: 'Members can post', owner: 'Owner posts only' }
+const RULE = { anyone: 'Anyone can post', members: 'Members can post', owner: 'Owner / moderators only' }
 
 type CommunityAIDraft = { name: string; purpose: string; welcome: string; rules: string }
 type IdeaAIDraft = { title: string; body: string; tags: string[] }
@@ -58,7 +58,7 @@ function List() {
   const nav = useNavigate()
   const { data } = a
   const [filter, setFilter] = useState<'owned' | 'joined' | 'discover'>('discover')
-  const emptyCommunity = { name: '', purpose: '', welcome: '', rules: '', icon: 'community', cover: 'a', vis: 'listed', post: 'anyone', joinApproval: false }
+  const emptyCommunity = { name: '', purpose: '', welcome: '', rules: '', icon: 'community', cover: 'a', vis: 'listed', post: 'members', joinApproval: false }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const [communityAIDraft, setCommunityAIDraft] = useState<CommunityAIDraft | null>(null)
   const [communityAIBusy, setCommunityAIBusy] = useState(false)
@@ -196,7 +196,7 @@ function List() {
           <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={() => setF({ ...f, cover: key })}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
           <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
           <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people must request approval before they can join.' : 'OFF — anyone can join this community immediately.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
-          <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner only']]} />
+          <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner / moderators only']]} />
           <div className="acts"><button className="btn p" onClick={async () => { if (!f.name.trim()) return a.toast('Give it a name'); if (await a.createCommunity({ ...f, name: f.name.trim() } as any)) clearDraft(emptyCommunity) }}>Create community</button><button className="btn" onClick={() => clearDraft(emptyCommunity)}>Discard draft</button></div>
         </div>
       )}
@@ -256,8 +256,9 @@ function Detail({ cid }: { cid: string }) {
   // An approved request is itself authoritative membership evidence while the member doc subscription catches up.
   const joined = own ? false : preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid) || myJoinRequest?.status === 'approved'
   const spaceOk = preview ? preview === 'member' || !data.settings?.appr : a.canPost()
-  const rule = c.post || 'anyone'
-  const canPost = !c.arch && (rule === 'owner' ? own : rule === 'members' ? own || joined : true) && (own || spaceOk)
+  const rule = c.post || 'members'
+  const isCommunityModerator = !!a.me && joined && (c.moderatorIds || []).includes(a.me.id)
+  const canPost = !c.arch && (rule === 'owner' ? own || isCommunityModerator : rule === 'members' ? own || joined : true) && (own || spaceOk)
   const communityCreatorId = c.ownerId || c.createdBy || (a.owner ? a.me?.id || '' : '')
   const mem = memberIds.filter(u => u !== communityCreatorId)
   let list = data.ideas.filter(i => i.cid === cid)
@@ -312,6 +313,21 @@ function Detail({ cid }: { cid: string }) {
     setF({ ...f, title: ideaAIDraft.title, body: ideaAIDraft.body, tags: ideaAIDraft.tags.join(', ') })
     setIdeaAIDraft(null)
     a.toast('AI draft filled in. Review it, then submit the idea when ready.')
+  }
+
+  async function joinToShareIdeas() {
+    if (preview) return a.toast('This is a preview. Nothing is saved.')
+    if (!a.me) {
+      nav('/signin?next=' + encodeURIComponent('/communities/' + cid))
+      return
+    }
+    if (joined || own) return
+    if (c?.joinApproval) {
+      if (myJoinRequest?.status === 'pending') return a.toast('Your request to join is awaiting approval.')
+      await a.requestCommunityJoin(cid)
+      return
+    }
+    await a.join(cid, true)
   }
 
   async function post() {
@@ -382,8 +398,28 @@ function Detail({ cid }: { cid: string }) {
               <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={post}><Icon name="contribute" />Submit idea</button></div>
             </div>
           ) : (
-            <div className="glass pad" style={{ marginBottom: 22, display: 'flex', gap: 14 }}><Icon name="private" size={22} />
-              <p className="mut">{c.arch ? 'This community is archived. It is read only.' : rule === 'owner' ? 'Only the owner posts here.' : rule === 'members' && !joined ? 'Join this community to share ideas.' : 'The owner approves who can post.'}</p></div>
+            rule === 'members' && !joined && !c.arch ? (
+              <div className="glass pad" style={{ marginBottom: 22, display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+                <Icon name="community" size={23} />
+                <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                  <h3 style={{ fontSize: 17 }}>Join the community to share your ideas</h3>
+                  <p className="mut" style={{ marginTop: 5 }}>Become part of the conversation, suggest what we should build next, and help turn promising ideas into real projects.</p>
+                  {c.joinApproval && myJoinRequest?.status === 'pending' && <p className="dim" style={{ marginTop: 7, fontSize: 12 }}>Your join request is waiting for the community owner.</p>}
+                </div>
+                <button type="button" className="btn p" disabled={!!a.me && !!c.joinApproval && myJoinRequest?.status === 'pending' || !!preview} onClick={() => void joinToShareIdeas()}>
+                  <Icon name={!a.me ? 'lock' : c.joinApproval ? 'status' : 'community'} size={15} />
+                  {!a.me ? 'Sign in to join' : c.joinApproval ? myJoinRequest?.status === 'pending' ? 'Request pending' : myJoinRequest?.status === 'declined' ? 'Request again' : 'Request to join' : 'Join community'}
+                </button>
+              </div>
+            ) : (
+              <div className="glass pad" style={{ marginBottom: 22, display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                <Icon name="private" size={22} />
+                <div>
+                  <h3 style={{ fontSize: 16 }}>{c.arch ? 'Community is read-only' : !spaceOk && !own ? 'Posting approval required' : rule === 'owner' ? 'Posting is restricted' : 'Posting approval required'}</h3>
+                  <p className="mut" style={{ marginTop: 5 }}>{c.arch ? 'This community is archived. It is read only.' : !spaceOk && !own ? 'Your account needs platform approval before posting.' : rule === 'owner' ? 'Only the owner and selected community moderators can post here.' : 'The community owner controls who can post.'}</p>
+                </div>
+              </div>
+            )
           )}
           {pin && <><p className="dim" style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '0 0 8px' }}><Icon name="pin" size={14} />Pinned</p><div className="grid g3" style={{ marginBottom: 22 }}><IdeaCard idea={pin} /></div></>}
           <div style={{ marginBottom: 18 }}>{['New', 'Top backed', 'AI ranked'].map((l, i) => <span key={l}><Chip on={sort === i} onClick={() => setSort(i)}>{l}</Chip>{' '}</span>)}</div>
@@ -464,7 +500,7 @@ function Detail({ cid }: { cid: string }) {
       {tab === 3 && own && <JoinRequests cid={cid} />}
       {tab === 4 && own && <AIOrganizerRequests cid={cid} />}
       {tab === 5 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
-      {tab === 6 && own && <CommunitySettings c={c} />}
+      {tab === 6 && own && <CommunitySettings c={c} memberIds={mem.filter(userId => userId !== communityCreatorId)} />}
     </>
   )
 }
@@ -594,10 +630,10 @@ function Insights({ cid, creatorId, memberIds }: { cid: string; creatorId: strin
   )
 }
 
-function CommunitySettings({ c }: { c: Community }) {
+function CommunitySettings({ c, memberIds }: { c: Community; memberIds: string[] }) {
   const a = useApp()
   const nav = useNavigate()
-  const initial = { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', cover: c.cover || 'a', vis: c.vis || 'listed', post: c.post || 'anyone', joinApproval: !!c.joinApproval, welcome: c.welcome || '', rules: c.rules || '', arch: !!c.arch }
+  const initial = { name: c.name, purpose: c.purpose || '', icon: c.icon || 'community', cover: c.cover || 'a', vis: c.vis || 'listed', post: c.post || 'members', moderatorIds: c.moderatorIds || [], joinApproval: !!c.joinApproval, welcome: c.welcome || '', rules: c.rules || '', arch: !!c.arch }
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:settings:${c.id}`, initial)
   const [del, setDel] = useState(false)
   return (
@@ -619,7 +655,26 @@ function CommunitySettings({ c }: { c: Community }) {
         }}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
       <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v as any })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
       <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people must request approval before they can join.' : 'OFF — anyone can join immediately. Saving this change will approve existing pending requests.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
-      <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v as any })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner only']]} />
+      <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v as any })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner / moderators only']]} />
+      {f.post === 'owner' && <section className="glass pad" style={{ display: 'grid', gap: 10, margin: '10px 0 16px' }}>
+        <div>
+          <h4 style={{ fontSize: 15 }}>Posting moderators</h4>
+          <p className="mut" style={{ marginTop: 4 }}>Choose current community members who may post when the rule is set to Owner / moderators only. This does not grant access to owner settings or member approvals, and moderators must remain community members.</p>
+        </div>
+        {memberIds.length === 0
+          ? <p className="dim" style={{ fontSize: 12 }}>There are no other members to assign yet. People must join the community before they can be selected as moderators.</p>
+          : <div style={{ display: 'grid', gap: 7 }}>
+            {memberIds.map(userId => {
+              const selected = (f.moderatorIds || []).includes(userId)
+              return <label key={userId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', border: '1px solid rgba(255,255,255,.09)', borderRadius: 10, cursor: 'pointer' }}>
+                <input type="checkbox" checked={selected} onChange={event => setF(current => ({ ...current, moderatorIds: event.target.checked ? [...new Set([...(current.moderatorIds || []), userId])] : (current.moderatorIds || []).filter(id => id !== userId) }))} />
+                <Av id={userId} size={29} />
+                <span style={{ fontSize: 12 }}>{a.nm(userId)}</span>
+                {selected && <span className="chip" style={{ marginLeft: 'auto' }}>Posting moderator</span>}
+              </label>
+            })}
+          </div>}
+      </section>}
       <label className="field"><span>Welcome message</span><textarea value={f.welcome} maxLength={400} onChange={e => setF({ ...f, welcome: e.target.value })} placeholder="Shown to new members" /></label>
       <label className="field"><span>Guidelines</span><textarea value={f.rules} maxLength={600} onChange={e => setF({ ...f, rules: e.target.value })} placeholder="A few simple rules" /></label>
       <div className="set"><div><h3 style={{ fontSize: 15 }}>Archive this community</h3><p className="dim">Read only. Nobody can post.</p></div>

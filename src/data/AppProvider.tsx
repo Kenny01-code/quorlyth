@@ -386,7 +386,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const createCommunityDetailed = async (c: Partial<Community>): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before creating a community.' }
       try {
-        await st!.create('communities/' + slug(), { name: c.name, ownerId: me.id, createdBy: me.id, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'anyone', joinApproval: !!c.joinApproval, cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
+        await st!.create('communities/' + slug(), { name: c.name, ownerId: me.id, createdBy: me.id, purpose: c.purpose || '', icon: c.icon || 'community', vis: c.vis || 'listed', post: c.post || 'members', joinApproval: !!c.joinApproval, cover: c.cover || 'a', ...(c.welcome ? { welcome: c.welcome } : {}), ...(c.rules ? { rules: c.rules } : {}), ...(c.arch ? { arch: true } : {}), at: Date.now() })
         toast('Community created')
         return { ok: true }
       } catch (e: any) {
@@ -399,7 +399,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const postIdeaDetailed = async (i: { title: string; body?: string; cid: string; tags?: string[] }): Promise<{ ok: boolean; error?: string }> => {
       if (!me) return { ok: false, error: 'Sign in before submitting an idea.' }
       if (!i.title.trim()) return { ok: false, error: 'An idea title is required.' }
-      if (!data.communities.some(c => c.id === i.cid && !c.arch)) return { ok: false, error: 'The selected community does not exist or is archived.' }
+      const targetCommunity = data.communities.find(c => c.id === i.cid && !c.arch)
+      if (!targetCommunity) return { ok: false, error: 'The selected community does not exist or is archived.' }
+      const postingRule = targetCommunity.post || 'members'
+      const managesTargetCommunity = canManageCommunity(i.cid)
+      const isTargetCommunityMember = !!data.members[me.id]?.[i.cid]
+      if (postingRule === 'members' && !managesTargetCommunity && !isTargetCommunityMember) {
+        const error = 'Join this community to share ideas.'
+        toast(error)
+        return { ok: false, error }
+      }
+      const isTargetCommunityModerator = isTargetCommunityMember && (targetCommunity.moderatorIds || []).includes(me.id)
+      if (postingRule === 'owner' && !managesTargetCommunity && !isTargetCommunityModerator) {
+        const error = 'Only the community owner or a selected posting moderator can post ideas here.'
+        toast(error)
+        return { ok: false, error }
+      }
       try {
         const ideaId = slug()
         const at = Date.now()
