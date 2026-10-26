@@ -2,11 +2,11 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildTrainingExamples, DATASET_VERSION } from './ai-training-catalog.mjs'
+import { buildTrainingExamples, DATASET_VERSION, DOMAINS, NICHES, SITUATIONS } from './ai-training-catalog.mjs'
 
-const root = fileURLToPath(new URL('../data/ai-training/v1/', import.meta.url))
+const root = fileURLToPath(new URL('../data/ai-training/v' + DATASET_VERSION.split('.')[0] + '/', import.meta.url))
 const rows = buildTrainingExamples()
-const expected = 10000
+const expected = DOMAINS.length * NICHES.length * SITUATIONS.length
 if (rows.length !== expected) throw new Error('Expected exactly ' + expected + ' examples, generated ' + rows.length)
 const seen = new Set()
 for (const row of rows) {
