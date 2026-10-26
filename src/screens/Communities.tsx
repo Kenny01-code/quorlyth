@@ -6,6 +6,7 @@ import { IdeaCard } from '../components/IdeaCard'
 import { Av, Chip, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { Community } from '../lib/types'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 import { cleanTag, cn, when } from '../lib/util'
 import { ShareCard } from '../components/ShareCard'
 import { useDraftState } from '../lib/useDraftState'
@@ -323,7 +324,8 @@ function Detail({ cid }: { cid: string }) {
                           setMemberIds(await a.backend!.store.listCommunityMembers(cid))
                           a.toast('Member removed from this community')
                         } catch (e) {
-                          a.toast('Could not remove member: ' + (e instanceof Error ? e.message : String(e)))
+                          console.error('Quorlyth member removal failed:', e)
+                          a.toast(userFacingMutationError(e, 'remove this member'))
                         }
                       }}>Remove</Chip>
                     </div>
