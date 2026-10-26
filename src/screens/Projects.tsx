@@ -409,21 +409,30 @@ function Inner() {
     setWorkspaceArtifacts([])
     const store = a.backend?.store
     if (!store || !a.me?.id) return
-    const offProjects = store.subscribe(
-      'standaloneProjects',
-      docs => setWorkspaceProjects(docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id } as ProjectWorkspace))),
-      error => console.warn('Could not refresh connected workspaces:', error),
-    )
-    const offMembers = store.subscribe(
-      'standaloneProjectMembers',
-      docs => setWorkspaceMembers(docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id } as ProjectWorkspaceMember))),
-      error => console.warn('Could not refresh workspace memberships:', error),
-    )
-    const offArtifacts = store.subscribe(
-      'standaloneArtifacts',
-      docs => setWorkspaceArtifacts(docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id } as ProjectWorkspaceArtifact))),
-      error => console.warn('Could not refresh workspace evidence:', error),
-    )
+    const offProjects = store.subscribe('standaloneProjects', docs => {
+      const rows: ProjectWorkspace[] = docs.map(doc => ({
+        ...doc.data,
+        id: doc.data?.id || doc.id,
+        docId: doc.id,
+      }))
+      setWorkspaceProjects(rows)
+    })
+    const offMembers = store.subscribe('standaloneProjectMembers', docs => {
+      const rows: ProjectWorkspaceMember[] = docs.map(doc => ({
+        ...doc.data,
+        id: doc.data?.id || doc.id,
+        docId: doc.id,
+      }))
+      setWorkspaceMembers(rows)
+    })
+    const offArtifacts = store.subscribe('standaloneArtifacts', docs => {
+      const rows: ProjectWorkspaceArtifact[] = docs.map(doc => ({
+        ...doc.data,
+        id: doc.data?.id || doc.id,
+        docId: doc.id,
+      }))
+      setWorkspaceArtifacts(rows)
+    })
     return () => { offProjects(); offMembers(); offArtifacts() }
   }, [a.backend?.store, a.me?.id])
   const canReview = a.owner || a.data.communities.some(community => a.ownsCommunity(community.id))
