@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Backend, createBackend } from '../backend'
-import { Comment, Community, CommunityAIOrganizerRequest, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkSubmission } from '../lib/types'
+import { ChatAttachment, Comment, Community, CommunityAIOrganizerRequest, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkSubmission } from '../lib/types'
 import { slug } from '../lib/util'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import { emitWorkflowEvent } from '../lib/automation'
@@ -39,7 +39,7 @@ export interface App {
   updateIdea: (ideaId: string, patch: Partial<Pick<Idea, 'title' | 'body' | 'tags'>>) => Promise<boolean>
   deleteIdea: (ideaId: string) => Promise<boolean>
   vote: (ideaId: string) => Promise<boolean>
-  addComment: (ideaId: string, text: string, parentId?: string, mentionedUserIds?: string[]) => Promise<boolean>
+  addComment: (ideaId: string, text: string, parentId?: string, mentionedUserIds?: string[], attachments?: ChatAttachment[]) => Promise<boolean>
   setStatus: (ideaId: string, status: Status, extra?: Partial<Review>) => Promise<boolean>
   saveReview: (ideaId: string, r: Partial<Review>) => Promise<boolean>
   publish: (ideaId: string, text: string, credits: string[], platform?: 'instagram' | 'x' | 'tiktok' | 'linkedin') => Promise<boolean>
@@ -612,13 +612,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (community.arch) { toast('Archived communities are read-only; backing is disabled.'); return Promise.resolve(false) }
         return w(() => up('votes/' + me.id, { ideas: { [id]: !data.votes[me.id]?.[id] } }))
       },
-      addComment: (id, text, parentId, mentionedUserIds = []) => w(async () => {
+      addComment: (id, text, parentId, mentionedUserIds = [], attachments = []) => w(async () => {
         if (!me) throw new Error('Sign in before replying to a discussion.')
         const idea = data.ideas.find(item => item.id === id)
         if (!idea) throw new Error('This discussion is no longer available.')
         if (!text.trim()) throw new Error('Write a reply first.')
         const uniqueMentions = [...new Set(mentionedUserIds)].filter(uid => uid && uid !== me.id).slice(0, 20)
-        await st!.set(`ideas/${id}/comments/${slug()}`, { authorId: me.id, text: text.trim().slice(0, 1000), at: Date.now(), ...(parentId ? { parentId } : {}), ...(uniqueMentions.length ? { mentionedUserIds: uniqueMentions } : {}) })
+        await st!.set(`ideas/${id}/comments/${slug()}`, { authorId: me.id, text: text.trim().slice(0, 1000), at: Date.now(), ...(parentId ? { parentId } : {}), ...(uniqueMentions.length ? { mentionedUserIds: uniqueMentions } : {}), ...(attachments.length ? { attachments } : {}) })
       }, 'Reply posted'),
       setStatus: (id, status, extra) => w(() => up('reviews/' + id, { status, at: Date.now(), ...extra }), status === 'selected' ? 'Selected for promotion' : status === 'held' ? 'Held for later' : status === 'declined' ? 'Declined' : 'Done'),
       saveReview: (id, r) => w(() => up('reviews/' + id, { ...r, at: Date.now() })),

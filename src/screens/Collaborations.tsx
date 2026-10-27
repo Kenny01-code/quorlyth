@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
-import type { Comment, WorkAttachment } from '../lib/types'
+import type { ChatAttachment, Comment, WorkAttachment } from '../lib/types'
+import { ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
@@ -274,6 +275,8 @@ function Workspace() {
   const loc = useLocation()
   const comments = useComments(id || null)
   const [reply, setReply] = useState('')
+  const [replyFiles, setReplyFiles] = useState<File[]>([])
+  const [replyVoiceNote, setReplyVoiceNote] = useState<VoiceNoteDraft | null>(null)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
   const [mentionOpen, setMentionOpen] = useState(false)
@@ -613,21 +616,45 @@ function Workspace() {
 
   async function postReply(event: FormEvent) {
     event.preventDefault()
-    const cleanReply = reply.trim()
-    if (busy || !cleanReply) return
+    const cleanReply = reply.trim().slice(0, 1000)
+    const mediaFiles = [...replyFiles, ...(replyVoiceNote ? [replyVoiceNote.file] : [])]
+    if (busy || (!cleanReply && !mediaFiles.length)) return
+    if (mediaFiles.length > 8) { a.toast('Attach up to 8 files or voice notes per discussion post.'); return }
+    if (mediaFiles.some(file => file.size > 25 * 1024 * 1024)) { a.toast('Each attachment must be 25 MB or smaller.'); return }
     setBusy(true)
+    const uploaded: ChatAttachment[] = []
     try {
-      const ok = await a.addComment(id, cleanReply, replyTo || undefined, mentionedUserIds)
+      for (const file of mediaFiles) {
+        if (!a.backend?.uploadChatFile) throw new Error('Secure discussion uploads are not available for this session. Refresh or sign in again.')
+        const path = await a.backend.uploadChatFile(id, file)
+        const isVoice = !!replyVoiceNote && file === replyVoiceNote.file
+        uploaded.push({
+          path,
+          name: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          size: file.size,
+          uploadedAt: Date.now(),
+          kind: isVoice ? 'voice' : 'file',
+          ...(isVoice && replyVoiceNote ? { durationMs: replyVoiceNote.durationMs } : {}),
+        })
+      }
+      const messageText = cleanReply || (replyVoiceNote ? 'Sent a voice note.' : 'Shared an attachment.')
+      const ok = await a.addComment(id, messageText, replyTo || undefined, mentionedUserIds, uploaded)
       if (ok) {
         setReply('')
+        setReplyFiles([])
+        setReplyVoiceNote(null)
         setReplyTo(null)
         setMentionedUserIds([])
         setMentionOpen(false)
         setMentionQuery('')
+      } else {
+        await Promise.all(uploaded.map(file => a.backend?.deleteChatFile?.(file.path).catch(() => undefined)))
       }
     } catch (error) {
+      await Promise.all(uploaded.map(file => a.backend?.deleteChatFile?.(file.path).catch(() => undefined)))
       console.error('Quorlyth collaboration reply failed:', error)
-      a.toast('Your reply could not be posted. Check your connection and try again.')
+      a.toast(error instanceof Error ? error.message : 'Your reply could not be posted. Check your connection and try again.')
     } finally {
       setBusy(false)
     }
@@ -652,6 +679,7 @@ function Workspace() {
             {comment.parentId ? <span className="dim" style={{ fontSize: 11 }}>Reply</span> : null}
           </p>
           <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 4 }}>{comment.text}</p>
+          <ChatAttachmentList attachments={comment.attachments} />
           {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 11, marginTop: 5 }}>Mentioned: {comment.mentionedUserIds.map(userId => a.nm(userId)).join(', ')}</p> : null}
           <div className="acts" style={{ marginTop: 6, gap: 6 }}>
             <button className="chip" type="button" onClick={() => beginDiscussionReply(comment.id)}><QuorlythGlyph name="message" size={12} />Reply</button>
@@ -919,8 +947,7 @@ function Workspace() {
                   }}
                   maxLength={1000}
                   rows={discussionMode === 'expanded' ? 3 : 2}
-                  required
-                  placeholder="Write a reply or update. Type @ to mention someone…"
+                  placeholder="Write a reply, attach a file, or record a voice note. Type @ to mention someone…"
                 /></label>
                 {mentionOpen && <div className="discussion-mention-menu" role="listbox" aria-label="Mention people in this collaboration" style={{
                 position: 'absolute',
@@ -960,9 +987,10 @@ function Workspace() {
                     : <p className="dim" style={{ padding: 8, fontSize: 12 }}>{mentionPeople.length ? 'No matching people. Try another name.' : 'No participants are visible yet. Refresh the workspace and try again.'}</p>}
                 </div>}
               </div>
+              <ChatMediaComposer files={replyFiles} onFilesChange={setReplyFiles} voiceNote={replyVoiceNote} onVoiceNoteChange={setReplyVoiceNote} disabled={busy} />
               <p className="dim" style={{ fontSize: 11, margin: '8px 0 10px' }}>Replies stay connected to the idea. Mentioned people are recorded with the message.</p>
               <div className="acts" style={{ margin: 0 }}>
-                <button className="btn p" disabled={busy || !reply.trim()}><QuorlythGlyph name="send" size={14} />{busy ? 'Posting…' : replyTo ? 'Post reply' : 'Post update'}</button>
+                <button className="btn p" disabled={busy || (!reply.trim() && !replyFiles.length && !replyVoiceNote)}><QuorlythGlyph name="send" size={14} />{busy ? 'Posting…' : replyTo ? 'Post reply' : 'Post update'}</button>
                 {replyTo && <button type="button" className="chip" onClick={() => setReplyTo(null)}>Cancel reply</button>}
               </div>
             </form>

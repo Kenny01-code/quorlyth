@@ -1,16 +1,9 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Icon } from '../lib/Icon'
+import type { ChatAttachment as ChatAttachmentData } from '../lib/types'
 import { useApp } from '../data/AppProvider'
 
-export type ChatAttachment = {
-  path: string
-  name: string
-  mimeType: string
-  size: number
-  uploadedAt: number
-  kind?: 'file' | 'voice'
-  durationMs?: number
-}
+export type ChatAttachment = ChatAttachmentData
 export type VoiceNoteDraft = { file: File; durationMs: number }
 
 const MAX_FILES = 8
