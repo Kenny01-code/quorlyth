@@ -31,6 +31,7 @@ function Inner() {
   const [tagIn, setTagIn] = useState('')
   const [emo, setEmo] = useState(false)
   const [pub, setPub] = useState<string | null>(null)
+  const [preparingPost, setPreparingPost] = useState(false)
   const ta = useRef<HTMLTextAreaElement>(null)
   const ctl = useRef<AbortController | null>(null)
   const managedCommunityIds = new Set(data.communities.filter(c => a.ownsCommunity(c.id)).map(c => c.id))
@@ -106,10 +107,18 @@ function Inner() {
     requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(s + e.length, s + e.length) })
   }
   const stream = async (p: string, kind: 'draft' | 'imp') => {
-    setBusy(kind); ctl.current = new AbortController()
-    try { const t = await streamChat([{ role: 'user', content: p }], { signal: ctl.current.signal, onText: f => setDraft(f) }); setDraft(t.trim()) }
-    catch (e: any) { if (e.name !== 'AbortError') a.toast(e.message || 'Drafting did not finish') }
-    setBusy('')
+    if (busy || preparingPost) return
+    setBusy(kind)
+    ctl.current = new AbortController()
+    try {
+      const text = await streamChat([{ role: 'user', content: p }], { signal: ctl.current.signal, onText: fragment => setDraft(fragment) })
+      setDraft(text.trim())
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') a.toast(error?.message || 'Drafting did not finish. Try again.')
+    } finally {
+      setBusy('')
+      ctl.current = null
+    }
   }
   const sug = (() => {
     const o: string[] = []; const add = (t: string) => { t = cleanTag(t); if (t && !o.includes(t) && !ht.includes(t)) o.push(t) }
@@ -168,7 +177,23 @@ function Inner() {
           ))}
         </div>
         <div className="reason" style={{ marginTop: 24 }}><span className="dim">Credited</span><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{credits.slice(0, 8).map(c => <Av key={c} id={c} size={28} />)}<span className="dim">{credits.slice(0, 4).map(a.nm).join(', ')}{credits.length > 4 ? ` and ${credits.length - 4} more` : ''}</span></div></div>
-        <div className="acts"><button className="btn p" onClick={async () => { if (!draft.trim()) return a.toast('Write the post first'); const post = draft.trim(); if (await a.publish(idea.id, post, credits, pm.plat as 'instagram' | 'x' | 'tiktok' | 'linkedin')) { clearPostDraft(''); setPub(post) } }}><Icon name="publish" />Prepare to share</button><button className="btn" onClick={() => clearPostDraft('')}>Discard draft</button></div>
+        <div className="acts"><button type="button" className="btn p" disabled={preparingPost || !!busy || !draft.trim() || draft.trim().length > lim} onClick={async () => {
+          if (preparingPost || busy) return
+          const post = draft.trim()
+          if (!post) return a.toast('Write the post first')
+          if (post.length > lim) return a.toast('This post is over the ' + lim + '-character limit for ' + pm.plat + '. Shorten it before preparing to share.')
+          setPreparingPost(true)
+          try {
+            if (await a.publish(idea.id, post, credits, pm.plat as 'instagram' | 'x' | 'tiktok' | 'linkedin')) {
+              clearPostDraft('')
+              setPub(post)
+            }
+          } catch (error) {
+            a.toast(error instanceof Error ? error.message : 'Could not prepare this post. Please try again.')
+          } finally {
+            setPreparingPost(false)
+          }
+        }}><Icon name="publish" />{preparingPost ? 'Preparing…' : 'Prepare to share'}</button><button type="button" className="btn" disabled={preparingPost} onClick={() => clearPostDraft('')}>Discard draft</button></div>
       </div>
       {pubs}
     </>
