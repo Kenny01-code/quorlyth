@@ -122,6 +122,8 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
       setAiBusy(true)
       try {
         await a.requestCommunityAIOrganizerApproval(idea.id, 'I would like to organize this project brief and collaboration plan with AI.')
+      } catch (error) {
+        a.toast(userFacingMutationError(error, 'request AI organizer access'))
       } finally {
         setAiBusy(false)
       }
