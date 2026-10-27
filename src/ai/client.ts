@@ -190,8 +190,8 @@ export type RealtimeEvent =
 export interface RealtimeTool { type: 'function'; name: string; description: string; parameters: any }
 
 /**
- * Live voice conversation over WebRTC with the OpenAI Realtime API.
- * The browser sends your microphone, the model answers with audio instantly, and you can interrupt it.
+ * Live conversation input and text generation over the OpenAI Realtime API.
+ * Set textOnly=true when audible replies must be synthesized with ElevenLabs instead of model audio.
  */
 export async function startRealtime(opts: {
   instructions: string; voice?: string; accent?: VoiceAccent; tools?: RealtimeTool[]; accessToken?: string; context?: BotContextRequest; textOnly?: boolean
