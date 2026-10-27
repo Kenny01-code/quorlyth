@@ -545,6 +545,8 @@ function JoinRequests({ cid }: { cid: string }) {
       // The server RPC atomically changes the request and grants membership on approval.
       // Keep the request visible and let the provider report a permission/network error.
       await a.reviewCommunityJoinRequest(cid, userId, status)
+    } catch (error) {
+      a.toast(userFacingMutationError(error, status === 'approved' ? 'approve this join request' : 'decline this join request'))
     } finally {
       setWorkingUserId(null)
     }
@@ -571,6 +573,8 @@ function AIOrganizerRequests({ cid }: { cid: string }) {
     setWorkingUserId(userId)
     try {
       await a.reviewCommunityAIOrganizerRequest(cid, userId, status)
+    } catch (error) {
+      a.toast(userFacingMutationError(error, status === 'approved' ? 'approve this AI organizer request' : 'decline this AI organizer request'))
     } finally {
       setWorkingUserId(null)
     }
