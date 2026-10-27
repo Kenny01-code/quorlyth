@@ -8,6 +8,7 @@ import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE 
 import { emitWorkflowEvent } from '../lib/automation'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import { WorkSubmission } from '../lib/types'
+import { ChatAttachment, ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
 
 type WorkspaceTab = 'overview' | 'tasks' | 'evidence' | 'team'
 type WorkspaceProject = {
@@ -40,7 +41,7 @@ type GithubRepository = {
   defaultBranch: string; language?: string; stars: number; openIssues: number; sourceVerified: boolean
   lastSyncedAt: number; docId?: string
 }
-type WorkspaceComment = { id: string; projectId: string; authorId: string; text: string; at: number; docId?: string }
+type WorkspaceComment = { id: string; projectId: string; authorId: string; text: string; at: number; attachments?: ChatAttachment[]; docId?: string }
 
 function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
   submission: WorkSubmission
@@ -348,6 +349,8 @@ function WorkspaceProjectView() {
   const canSubmitSelectedTaskEvidence = !!selectedEvidenceTask
     && (!selectedEvidenceAssignees.length || selectedEvidenceAssignees.includes(a.me?.id || ''))
   const [commentText, setCommentText] = useState('')
+  const [commentFiles, setCommentFiles] = useState<File[]>([])
+  const [commentVoiceNote, setCommentVoiceNote] = useState<VoiceNoteDraft | null>(null)
   // Keep discussion interactions consistent with the collaboration workspace panel.
   const [discussionMode, setDiscussionMode] = useState<'inline' | 'expanded' | 'minimized'>('inline')
   const [reviewNotes, setReviewNotes] = useState<Record<string,string>>({})
@@ -699,12 +702,40 @@ function WorkspaceProjectView() {
 
   async function postComment(event: FormEvent) {
     event.preventDefault()
-    if (!a.backend || !a.me || commentText.trim().length < 1) return
+    if (!a.backend || !a.me) return
+    const cleanText = commentText.trim().slice(0, 3000)
+    const mediaFiles = [...commentFiles, ...(commentVoiceNote ? [commentVoiceNote.file] : [])]
+    if (!cleanText && !mediaFiles.length) return setError('Write a team update, attach a file, or record a voice note.')
+    if (mediaFiles.length > 8) return setError('Attach up to 8 files or voice notes per team update.')
+    if (mediaFiles.some(file => file.size > 25 * 1024 * 1024)) return setError('Each attachment must be 25 MB or smaller.')
     await runAction('comment', async () => {
       const now = Date.now(); const commentId = crypto.randomUUID()
-      const comment: WorkspaceComment = { id: commentId, projectId: id, authorId: a.me!.id, text: commentText.trim().slice(0,3000), at: now }
-      await a.backend!.store.create('standaloneComments/' + commentId, comment)
-      setCommentText('')
+      const attachments: ChatAttachment[] = []
+      try {
+        for (const file of mediaFiles) {
+          if (!a.backend?.uploadChatFile) throw new Error('Secure discussion uploads are not available for this session. Refresh or sign in again.')
+          const path = await a.backend.uploadChatFile(id, file)
+          const isVoice = !!commentVoiceNote && file === commentVoiceNote.file
+          attachments.push({
+            path, name: file.name, mimeType: file.type || 'application/octet-stream', size: file.size, uploadedAt: Date.now(),
+            kind: isVoice ? 'voice' : 'file',
+            ...(isVoice && commentVoiceNote ? { durationMs: commentVoiceNote.durationMs } : {}),
+          })
+        }
+        const text = cleanText || (commentVoiceNote ? 'Sent a voice note.' : 'Shared an attachment.')
+        const comment: WorkspaceComment = {
+          id: commentId, projectId: id, authorId: a.me!.id, text, at: now,
+          ...(attachments.length ? { attachments } : {}),
+        }
+        await a.backend!.store.create('standaloneComments/' + commentId, comment)
+        setCommentText('')
+        setCommentFiles([])
+        setCommentVoiceNote(null)
+        a.toast('Team update posted.')
+      } catch (error) {
+        await Promise.all(attachments.map(file => a.backend?.deleteChatFile?.(file.path).catch(() => undefined)))
+        throw error
+      }
     })
   }
 
@@ -775,9 +806,10 @@ function WorkspaceProjectView() {
               <button type="button" className="sw-link-button" onClick={() => setTaskAssigneeDraft([])}>Clear selection</button>
             </div>
             <div className="sw-assignee-picker__list">
-              {taskAssignees.map(member => <label className="sw-assignee-option" key={member.userId}>
-                <input type="checkbox" checked={taskAssigneeDraft.includes(member.userId)} onChange={e => setTaskAssigneeDraft(current => e.target.checked ? [...new Set([...current, member.userId])] : current.filter(uid => uid !== member.userId))} />
-                <span>{a.nm(member.userId)}<small>{member.role}{member.userId===a.me?.id?' · You':''}</small></span>
+              {taskAssignees.map(member => <label className={'sw-assignee-option' + (taskAssigneeDraft.includes(member.userId) ? ' is-selected' : '')} key={member.userId}>
+                <input type="checkbox" checked={taskAssigneeDraft.includes(member.userId)} aria-label={'Assign ' + a.nm(member.userId)} onChange={e => setTaskAssigneeDraft(current => e.target.checked ? [...new Set([...current, member.userId])] : current.filter(uid => uid !== member.userId))} />
+                <span>{a.nm(member.userId)}<small>{member.role}{member.userId===a.me?.id?' · You':''} · {taskAssigneeDraft.includes(member.userId) ? 'Selected' : 'Not selected'}</small></span>
+                {taskAssigneeDraft.includes(member.userId) && <span className="sw-assignee-selected-label"><QuorlythGlyph name="check" size={12}/>Selected</span>}
               </label>)}
             </div>
             <small className="sw-muted">{taskAssigneeDraft.length} selected · viewers are read-only and cannot be assigned work.</small>
@@ -809,12 +841,13 @@ function WorkspaceProjectView() {
                 const assignedIds = assignedTaskIds(task)
                 const checked = assignedIds.includes(member.userId)
                 const eligible = taskAssignees.some(candidate => candidate.userId === member.userId)
-                return <label className="sw-assignee-option" key={member.userId}>
-                  <input type="checkbox" checked={checked} disabled={busy==='assign-'+task.id || (!eligible && !checked)} onChange={e => {
+                return <label className={'sw-assignee-option' + (checked ? ' is-selected' : '')} key={member.userId}>
+                  <input type="checkbox" checked={checked} aria-label={'Assign ' + a.nm(member.userId)} disabled={busy==='assign-'+task.id || (!eligible && !checked)} onChange={e => {
                     const next = e.target.checked ? [...assignedIds, member.userId] : assignedIds.filter(uid => uid !== member.userId)
                     void reassignTask(task, next)
                   }} />
-                  <span>{a.nm(member.userId)}<small>{eligible ? member.role : 'no longer eligible'}</small></span>
+                  <span>{a.nm(member.userId)}<small>{eligible ? member.role : 'no longer eligible'} · {checked ? 'Selected' : 'Not selected'}</small></span>
+                  {checked && <span className="sw-assignee-selected-label"><QuorlythGlyph name="check" size={12}/>Selected</span>}
                 </label>
               })}
             </div>
@@ -942,13 +975,15 @@ function WorkspaceProjectView() {
                       <small>{new Date(comment.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</small>
                     </div>
                     <p>{comment.text}</p>
+                    <ChatAttachmentList attachments={comment.attachments} />
                   </div>
                 </article>)
               : <div className="sw-empty-inline"><QuorlythGlyph name="message" size={20}/><strong>No discussion yet</strong><p>Post a decision, blocker or next step to get the conversation started.</p></div>}
           </div>
           {canContribute && <form className="sw-comment-form" onSubmit={postComment} style={{ marginTop: 'auto' }}>
-            <label className="sw-field"><span>Message the team</span><textarea value={commentText} onChange={e=>setCommentText(e.target.value)} maxLength={3000} rows={discussionMode === 'expanded' ? 3 : 2} placeholder="What should the team know?" required /></label>
-            <button className="btn p" disabled={busy==='comment'||!commentText.trim()}><QuorlythGlyph name="send" size={14}/>{busy==='comment'?'Posting…':'Post update'}</button>
+            <label className="sw-field"><span>Message the team</span><textarea value={commentText} onChange={e=>setCommentText(e.target.value)} maxLength={3000} rows={discussionMode === 'expanded' ? 3 : 2} placeholder="Share a decision, attach a file, or record a voice note." /></label>
+            <ChatMediaComposer files={commentFiles} onFilesChange={setCommentFiles} voiceNote={commentVoiceNote} onVoiceNoteChange={setCommentVoiceNote} disabled={busy==='comment'} />
+            <button className="btn p" disabled={busy==='comment'||(!commentText.trim()&&!commentFiles.length&&!commentVoiceNote)}><QuorlythGlyph name="send" size={14}/>{busy==='comment'?'Posting…':'Post update'}</button>
           </form>}
         </>}
       </section>

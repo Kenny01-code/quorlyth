@@ -6,9 +6,10 @@ import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import { cn } from '../lib/util'
 import DitherVeil from '../components/DitherVeil'
+import { ChatAttachment, ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
 
 type Conversation = { id: string; title?: string; type: 'direct' | 'group'; members: string[]; createdBy: string; createdAt: number }
-type Message = { id: string; conversationId: string; senderId: string; text: string; at: number; replyTo?: string }
+type Message = { id: string; conversationId: string; senderId: string; text: string; at: number; replyTo?: string; attachments?: ChatAttachment[] }
 type ReadState = { id: string; userId: string; conversationId: string; lastReadAt: number }
 type ChatPreference = { id: string; userId: string; conversationId: string; pinned?: boolean; archived?: boolean; hidden?: boolean; muted?: boolean; updatedAt?: number }
 type MessageEdit = { id: string; messageId: string; conversationId: string; senderId: string; text: string; editedAt: number }
@@ -68,6 +69,8 @@ export function Messages() {
   const [selectedPeople, setSelectedPeople] = useState<string[]>([])
   const [creatingGroup, setCreatingGroup] = useState(false)
   const [sending, setSending] = useState(false)
+  const [composerFiles, setComposerFiles] = useState<File[]>([])
+  const [voiceNote, setVoiceNote] = useState<VoiceNoteDraft | null>(null)
   const [error, setError] = useState('')
   const [workspaceSize, setWorkspaceSize] = useState<'compact' | 'standard' | 'expanded'>(() => (localStorage.getItem('qmessages:size') as 'compact' | 'standard' | 'expanded') || 'standard')
   const [rotatingLine, setRotatingLine] = useState(0)
@@ -426,20 +429,44 @@ export function Messages() {
 
   async function sendMessage(event?: FormEvent) {
     event?.preventDefault()
-    if (!store || !active || !meId || !draft.trim() || sending) return
+    const hasMedia = composerFiles.length > 0 || !!voiceNote
+    if (!store || !active || !meId || (!draft.trim() && !hasMedia) || sending) return
     const text = draft.trim().slice(0, 4000)
+    const files = [...composerFiles, ...(voiceNote ? [voiceNote.file] : [])]
+    if (files.length > 8) { setError('Send up to 8 files or voice notes in one message.'); return }
+    if (files.some(file => file.size > 25 * 1024 * 1024)) { setError('Each attachment must be 25 MB or smaller.'); return }
     setSending(true); setError('')
     // A message we send must land at the bottom even if older history was open.
     shouldStickToBottom.current = true
     const id = makeId()
     const sentAt = Math.max(Date.now(), (activeMessages.at(-1)?.at || 0) + 1)
+    const uploaded: ChatAttachment[] = []
     try {
-      await store.set('messages/' + id, { conversationId: active.id, senderId: meId, text, at: sentAt, ...(replyToMessageId ? { replyTo: replyToMessageId } : {}) })
+      for (const file of files) {
+        if (!a.backend?.uploadChatFile) throw new Error('Secure chat uploads are not available for this session. Refresh or sign in again.')
+        const path = await a.backend.uploadChatFile(active.id, file)
+        const isVoice = !!voiceNote && file === voiceNote.file
+        uploaded.push({
+          path, name: file.name, mimeType: file.type || 'application/octet-stream', size: file.size, uploadedAt: Date.now(),
+          kind: isVoice ? 'voice' : 'file',
+          ...(isVoice && voiceNote ? { durationMs: voiceNote.durationMs } : {}),
+        })
+      }
+      const messageTextValue = text || (voiceNote ? 'Sent a voice note.' : 'Shared an attachment.')
+      await store.set('messages/' + id, {
+        conversationId: active.id, senderId: meId, text: messageTextValue, at: sentAt,
+        ...(replyToMessageId ? { replyTo: replyToMessageId } : {}),
+        ...(uploaded.length ? { attachments: uploaded } : {}),
+      })
       setDraft('')
+      setComposerFiles([])
+      setVoiceNote(null)
       setReplyToMessageId(null)
       if (textarea.current) textarea.current.style.height = 'auto'
-    } catch (e) { setError('Message not sent. ' + readableChatError(e)) }
-    finally { setSending(false); textarea.current?.focus() }
+    } catch (e) {
+      await Promise.all(uploaded.map(file => a.backend?.deleteChatFile?.(file.path).catch(() => undefined)))
+      setError('Message not sent. ' + readableChatError(e))
+    } finally { setSending(false); textarea.current?.focus() }
   }
 
   if (!a.me) return <><Head kicker="Messages" title="Conversations, without the noise." /><div className="glass pad chat-signin"><div className="chat-orb"><Icon name="message" size={32} /></div><h3>Your people. Your ideas. One place.</h3><p className="mut">Sign in to start private conversations and build with your community.</p><button className="btn p" onClick={() => nav('/signin')}>Sign in to continue <Icon name="arrow" size={16} /></button></div></>
@@ -507,6 +534,7 @@ export function Messages() {
                     <div className={cn('chat-bubble', mine ? 'mine' : 'theirs')}>
                       {reply && <button className="chat-reply-reference" type="button" onClick={() => document.getElementById('chat-message-' + reply.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><span>{a.nm(reply.senderId)}</span><small>{messageText(reply).slice(0, 110)}</small></button>}
                       {editingMessageId === m.id ? <div className="chat-edit-block"><textarea value={editDraft} maxLength={4000} rows={3} onChange={e => setEditDraft(e.target.value)} aria-label="Edit message text" /><div><button type="button" className="chat-small-action" onClick={() => { setEditingMessageId(null); setEditDraft('') }}>Cancel</button><button type="button" className="chat-small-action is-primary" disabled={!editDraft.trim()} onClick={() => void saveMessageEdit(m)}>Save edit</button></div></div> : <p>{deleted ? 'This message was deleted.' : messageText(m)}</p>}
+                      {!deleted && <ChatAttachmentList attachments={m.attachments} />}
                       <time>{formatTime(m.at)}{messageEdits.some(edit => edit.messageId === m.id) && !deleted && ' · edited'}</time>
                     </div>
                     
@@ -519,7 +547,7 @@ export function Messages() {
             </div>
             <form className="chat-composer" onSubmit={sendMessage}>
               {replyToMessageId && <div className="chat-reply-composer"><div><b>Replying to {a.nm(activeMessages.find(m => m.id === replyToMessageId)?.senderId || meId)}</b><small>{messageText(activeMessages.find(m => m.id === replyToMessageId) || ({ id: '', conversationId: active.id, senderId: meId, text: '', at: 0 } as Message)).slice(0, 130)}</small></div><button type="button" aria-label="Cancel reply" onClick={() => setReplyToMessageId(null)}><Icon name="x" size={15} /></button></div>}
-              <div className="chat-compose-glass"><div className="chat-compose-row"><span className="chat-attach-mark" title="File attachments are not enabled yet" aria-hidden="true"><Icon name="paperclip" size={17} /></span><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /></div><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button type="button" className="chat-emoji-button" aria-label="Insert smile emoji" title="Insert smile emoji" onClick={() => { setDraft(value => value + ' 🙂'); textarea.current?.focus() }}><Icon name="smile" size={16} /></button><button className="chat-send" type="submit" disabled={!draft.trim() || sending} aria-label={sending ? 'Sending message' : 'Send message'} title={sending ? 'Sending message' : 'Send message'}><span className="chat-send-content">{sending ? <span className="chat-spinner" aria-hidden="true" /> : <Icon name="send" size={15} />}<span className="chat-send-label">{sending ? 'Sending' : 'Send'}</span></span></button></div></div></form>
+              <div className="chat-compose-glass"><div className="chat-compose-row"><textarea ref={textarea} value={draft} rows={1} maxLength={4000} onChange={e => { setDraft(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} placeholder="Write something worth sharing..." aria-label="Message text" /></div><ChatMediaComposer files={composerFiles} onFilesChange={setComposerFiles} voiceNote={voiceNote} onVoiceNoteChange={setVoiceNote} disabled={sending} /><div className="chat-compose-foot"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{draft.length}/4000</span><button type="button" className="chat-emoji-button" aria-label="Insert smile emoji" title="Insert smile emoji" onClick={() => { setDraft(value => value + ' 🙂'); textarea.current?.focus() }}><Icon name="smile" size={16} /></button><button className="chat-send" type="submit" disabled={(!draft.trim() && composerFiles.length === 0 && !voiceNote) || sending} aria-label={sending ? 'Sending message' : 'Send message'} title={sending ? 'Sending message' : 'Send message'}><span className="chat-send-content">{sending ? <span className="chat-spinner" aria-hidden="true" /> : <Icon name="send" size={15} />}<span className="chat-send-label">{sending ? 'Sending' : 'Send'}</span></span></button></div></div></form>
           </> : conversationId ? (conversationsLoaded || openingTimedOut) ? <div className="chat-no-thread chat-conversation-unavailable" role="status"><span className="chat-empty-icon"><Icon name="message" size={24} /></span><p className="chat-eyebrow">CONVERSATION</p><h3>{conversationsLoaded ? 'This conversation is unavailable' : 'Still trying to connect'}</h3><p className="mut">{conversationsLoaded ? 'It may have been removed, or your account may not have access to it.' : 'The messaging service has not responded yet. Check your connection, then try again.'}</p><div className="chat-no-actions"><button className="btn p" onClick={() => nav('/messages')}><Icon name="arrow-left" size={16} />Back to messages</button><button className="btn" onClick={() => window.location.reload()}><Icon name="rotate" size={16} />Try again</button></div></div> : <div className="chat-no-thread" role="status"><span className="chat-spinner" aria-hidden="true" /><p className="dim">Opening your conversation…</p></div> : <div className="chat-no-thread"><div className="chat-orbit"><span /><span /><span /><span className="chat-orbit-core" key={rotatingIcon}><Icon name={(['message', 'idea', 'collab', 'audience', 'community'] as string[])[rotatingIcon]} size={32} /></span></div><p className="dim chat-eyebrow">A SPACE OF YOUR OWN</p><h2 key={rotatingLine} className="chat-rotating-line">{[
             <>Every great thing<br />starts somewhere.</>,
             <>One message can<br />start something real.</>,

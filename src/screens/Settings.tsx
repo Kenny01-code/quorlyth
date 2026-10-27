@@ -114,6 +114,10 @@ function PersonalSettings() {
   const [emailNotifications, setEmailNotifications] = useState(preferences.emailNotifications ?? true)
   const [desktopNotifications, setDesktopNotifications] = useState(preferences.desktopNotifications ?? true)
   const [soundEnabled, setSoundEnabled] = useState(preferences.sound ?? true)
+  const [inAppNotifications, setInAppNotifications] = useState(preferences.inAppNotifications ?? true)
+  const [messageNotifications, setMessageNotifications] = useState(preferences.messageNotifications ?? true)
+  const [messagePopups, setMessagePopups] = useState(preferences.messagePopups ?? true)
+  const [messageSounds, setMessageSounds] = useState(preferences.messageSounds ?? preferences.sound ?? true)
   useEffect(() => {
     setName(profile.name || a.me?.name || '')
     setHeadline(profile.head || '')
@@ -125,6 +129,10 @@ function PersonalSettings() {
     setEmailNotifications(preferences.emailNotifications ?? true)
     setDesktopNotifications(preferences.desktopNotifications ?? true)
     setSoundEnabled(preferences.sound ?? true)
+    setInAppNotifications(preferences.inAppNotifications ?? true)
+    setMessageNotifications(preferences.messageNotifications ?? true)
+    setMessagePopups(preferences.messagePopups ?? true)
+    setMessageSounds(preferences.messageSounds ?? preferences.sound ?? true)
   }, [a.me?.id, userState.st.preferences])
   return <>
     <h3>Your personal settings</h3>
@@ -136,11 +144,15 @@ function PersonalSettings() {
     <label className="field"><span>Profile visibility</span><select value={visibility} onChange={e => setVisibility(e.target.value as typeof visibility)}><option value="public">Public profile</option><option value="members">Signed-in members</option><option value="private">Private profile</option></select></label>
     <div className="set"><div><h3 style={{ fontSize: 15 }}>Email notifications</h3><p className="dim">Your preference for optional email updates.</p></div><button className={cn('tg', emailNotifications && 'on')} role="switch" aria-checked={emailNotifications} onClick={() => setEmailNotifications(v => !v)}><i /></button></div>
     <div className="set"><div><h3 style={{ fontSize: 15 }}>Desktop notifications</h3><p className="dim">Browser notifications when supported and permitted.</p></div><button className={cn('tg', desktopNotifications && 'on')} role="switch" aria-checked={desktopNotifications} onClick={() => setDesktopNotifications(v => !v)}><i /></button></div>
-    <div className="set"><div><h3 style={{ fontSize: 15 }}>Notification sounds</h3><p className="dim">Remember your preference for notification sounds.</p></div><button className={cn('tg', soundEnabled && 'on')} role="switch" aria-checked={soundEnabled} onClick={() => setSoundEnabled(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Notification sounds</h3><p className="dim">Sounds for general activity alerts.</p></div><button className={cn('tg', soundEnabled && 'on')} role="switch" aria-checked={soundEnabled} aria-label="Toggle general notification sounds" onClick={() => setSoundEnabled(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>In-app pop-up alerts</h3><p className="dim">Brief alerts for important activity while you use Quorlyth. The notification centre remains available.</p></div><button className={cn('tg', inAppNotifications && 'on')} role="switch" aria-checked={inAppNotifications} aria-label="Toggle in-app pop-up alerts" onClick={() => setInAppNotifications(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Message notifications</h3><p className="dim">Turn incoming message alerts on or off without changing your unread messages.</p></div><button className={cn('tg', messageNotifications && 'on')} role="switch" aria-checked={messageNotifications} aria-label="Toggle message notifications" onClick={() => setMessageNotifications(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Message pop-ups</h3><p className="dim">Show a brief in-app pop-up for incoming messages. Muted conversations stay quiet.</p></div><button className={cn('tg', messagePopups && 'on')} role="switch" aria-checked={messagePopups} aria-label="Toggle message pop-ups" disabled={!messageNotifications} onClick={() => setMessagePopups(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Message sounds</h3><p className="dim">Play a sound when an incoming message arrives. This preference is separate from general activity alerts.</p></div><button className={cn('tg', messageSounds && 'on')} role="switch" aria-checked={messageSounds} aria-label="Toggle message sounds" disabled={!messageNotifications} onClick={() => setMessageSounds(v => !v)}><i /></button></div>
     <div className="acts"><button className="btn p" onClick={async () => {
       const saved = await a.saveProfile({ name: name.trim(), head: headline.trim(), bio: bio.trim(), photo: photo.trim() })
       if (!saved) return
-      await userState.patch({ preferences: { profileVisibility: visibility, emailNotifications, desktopNotifications, sound: soundEnabled } })
+      await userState.patch({ preferences: { profileVisibility: visibility, emailNotifications, desktopNotifications, sound: soundEnabled, inAppNotifications, messageNotifications, messagePopups, messageSounds } })
       a.toast('Personal settings saved')
     }}><Icon name="save" size={16} />Save personal settings</button></div>
     <div className="glass pad" style={{ marginTop: 20, padding: 18, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>

@@ -24,6 +24,9 @@ export interface Backend {
   uploadWorkFile?(ideaId: string, milestoneId: string, file: File): Promise<string>
   getWorkFileUrl?(path: string): Promise<string>
   deleteWorkFile?(path: string): Promise<void>
+  uploadChatFile?(contextId: string, file: File): Promise<string>
+  getChatFileUrl?(path: string): Promise<string>
+  deleteChatFile?(path: string): Promise<void>
 }
 
 const ME_KEY = 'quorlyth:me'
@@ -175,6 +178,33 @@ export async function createBackend(): Promise<Backend> {
         const { error } = await sb.storage.from('quorlyth-work-submissions').remove([path])
         if (error) throw new Error(error.message || 'Could not remove this attachment.')
       },
+      async uploadChatFile(contextId, file) {
+        const { data: userData, error: userError } = await sb.auth.getUser()
+        if (userError || !userData.user) throw new Error('Sign in again before sending chat attachments.')
+        if (file.size > 25 * 1024 * 1024) throw new Error('Each chat attachment must be 25 MB or smaller.')
+        const safeContext = contextId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 160)
+        if (!safeContext || safeContext !== contextId) throw new Error('This conversation or workspace ID is invalid.')
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-90) || 'attachment'
+        const path = [safeContext, userData.user.id, crypto.randomUUID() + '-' + safeName].join('/')
+        const { error } = await sb.storage.from('quorlyth-chat-attachments').upload(path, file, {
+          cacheControl: '3600',
+          contentType: file.type || 'application/octet-stream',
+          upsert: false,
+        })
+        if (error) throw new Error(error.message || 'Could not upload this attachment.')
+        return path
+      },
+      async getChatFileUrl(path) {
+        if (path.startsWith('local-chat/')) throw new Error('This file belongs to local mode.')
+        const { data, error } = await sb.storage.from('quorlyth-chat-attachments').createSignedUrl(path, 900)
+        if (error || !data?.signedUrl) throw new Error(error?.message || 'Could not open this chat attachment.')
+        return data.signedUrl
+      },
+      async deleteChatFile(path) {
+        if (path.startsWith('local-chat/')) throw new Error('This file belongs to local mode.')
+        const { error } = await sb.storage.from('quorlyth-chat-attachments').remove([path])
+        if (error) throw new Error(error.message || 'Could not remove this chat attachment.')
+      },
       async isPlatformAdmin() {
         const { data, error } = await sb.rpc('current_user_is_platform_admin')
         if (error) throw error
@@ -243,6 +273,33 @@ export async function createBackend(): Promise<Backend> {
     },
     async deleteWorkFile(path) {
       if (!path.startsWith('local/')) throw new Error('This file belongs to a configured storage backend.')
+      await store.delete('workFileBlobs/' + encodeURIComponent(path))
+    },
+    async uploadChatFile(contextId, file) {
+      const current = await auth.current()
+      if (!current) throw new Error('Sign in before attaching a file to a message.')
+      if (file.size > 256 * 1024) throw new Error('Local mode supports files up to 256 KB. Configure Supabase Storage for larger uploads.')
+      const safeContext = contextId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 160)
+      if (!safeContext || safeContext !== contextId) throw new Error('This conversation or workspace ID is invalid.')
+      const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-90) || 'attachment'
+      const path = 'local-chat/' + safeContext + '/' + current.id + '/' + crypto.randomUUID() + '-' + filename
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not read this file.'))
+        reader.onerror = () => reject(new Error('Could not read this file.'))
+        reader.readAsDataURL(file)
+      })
+      await store.set('workFileBlobs/' + encodeURIComponent(path), { dataUrl, uploadedBy: current.id, at: Date.now() })
+      return path
+    },
+    async getChatFileUrl(path) {
+      if (!path.startsWith('local-chat/')) throw new Error('This file belongs to a configured storage backend.')
+      const stored = await store.get('workFileBlobs/' + encodeURIComponent(path))
+      if (typeof stored?.dataUrl !== 'string') throw new Error('This chat attachment is no longer available.')
+      return stored.dataUrl
+    },
+    async deleteChatFile(path) {
+      if (!path.startsWith('local-chat/')) throw new Error('This file belongs to a configured storage backend.')
       await store.delete('workFileBlobs/' + encodeURIComponent(path))
     },
   }

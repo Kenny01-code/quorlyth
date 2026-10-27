@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useApp } from '../data/AppProvider'
 
-export interface UserState { seen?: number; read?: Record<string, boolean>; saved?: Record<string, boolean>; preferences?: { emailNotifications?: boolean; desktopNotifications?: boolean; sound?: boolean; profileVisibility?: 'public' | 'members' | 'private' } }
+export interface UserState { seen?: number; read?: Record<string, boolean>; saved?: Record<string, boolean>; preferences?: { emailNotifications?: boolean; desktopNotifications?: boolean; sound?: boolean; inAppNotifications?: boolean; messageNotifications?: boolean; messagePopups?: boolean; messageSounds?: boolean; profileVisibility?: 'public' | 'members' | 'private' } }
 interface ScopedUserState { memberId: string | null; value: UserState }
 
 /** Private per-person state: which notifications are read and which ideas are saved. */

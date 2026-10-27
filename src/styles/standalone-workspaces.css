@@ -225,10 +225,16 @@
 .sw-assignee-picker{min-width:0}
 .sw-assignee-picker__actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 8px}
 .sw-assignee-picker__list{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px;max-height:220px;overflow:auto;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(0,0,0,.17)}
-.sw-assignee-option{display:flex;align-items:center;gap:9px;min-width:0;padding:8px;border:1px solid rgba(255,255,255,.075);border-radius:8px;background:rgba(255,255,255,.025);cursor:pointer;font-size:11px}
-.sw-assignee-option input{flex:none;accent-color:currentColor;width:15px;height:15px}
+.sw-assignee-option{display:flex;align-items:center;gap:9px;min-width:0;padding:9px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.025);cursor:pointer;font-size:11px;transition:background .15s,border-color .15s,box-shadow .15s}
+.sw-assignee-option:hover{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.24)}
+.sw-assignee-option.is-selected{border-color:rgba(127,236,193,.52);background:rgba(80,210,160,.09);box-shadow:inset 0 0 0 1px rgba(127,236,193,.08)}
+.sw-assignee-option input{appearance:none;display:grid;place-items:center;flex:none;width:19px;height:19px;margin:0;border:1.5px solid rgba(240,240,248,.48);border-radius:5px;background:rgba(0,0,0,.2);cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
+.sw-assignee-option input:focus-visible{outline:2px solid rgba(133,241,205,.85);outline-offset:2px}
+.sw-assignee-option input:checked{border-color:#8debc5;background:#8debc5;box-shadow:0 0 0 3px rgba(141,235,197,.12)}
+.sw-assignee-option input:checked::after{content:'';width:5px;height:9px;border:solid #082318;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
 .sw-assignee-option span{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
-.sw-assignee-option small{color:rgba(241,241,244,.46);font-size:9px}
+.sw-assignee-option small{color:rgba(241,241,244,.6);font-size:9px}
+.sw-assignee-selected-label{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:4px!important;flex:0 0 auto;margin-left:auto;color:#9df0d0;font-size:9px;font-weight:600}
 details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7);font-size:11px}
 .sw-task-reassign>summary{width:fit-content;cursor:pointer;list-style:none;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:7px 10px}
 .sw-task-reassign>summary::-webkit-details-marker{display:none}

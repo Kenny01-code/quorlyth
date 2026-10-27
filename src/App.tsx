@@ -233,16 +233,25 @@ export default function App() {
       && n.at <= now + 30_000
     )
     if (fresh.length) {
-      if (sound && us.st.preferences?.sound !== false) chime()
-      a.toast(fresh.length === 1 ? fresh[0].text : `${fresh.length} new Quorlyth notifications`)
-      if (us.st.preferences?.desktopNotifications !== false && document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        fresh.forEach(n => {
+      const preferences = us.st.preferences || {}
+      const popupItems = fresh.filter(n => n.kind === 'message'
+        ? preferences.messageNotifications !== false && preferences.messagePopups !== false
+        : preferences.inAppNotifications !== false)
+      const soundItems = fresh.some(n => n.kind === 'message'
+        ? preferences.messageNotifications !== false && (preferences.messageSounds ?? (sound && preferences.sound !== false))
+        : sound && preferences.sound !== false)
+      if (soundItems) chime()
+      if (popupItems.length) a.toast(popupItems.length === 1 ? popupItems[0].text : `${popupItems.length} new Quorlyth notifications`)
+      const desktopItems = fresh.filter(n => n.kind !== 'message' || preferences.messageNotifications !== false)
+      if (preferences.desktopNotifications !== false && document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        desktopItems.forEach(n => {
           try { new Notification('Quorlyth', { body: n.text, tag: n.key }) } catch {}
         })
       }
+      // Mark every observed event as known even when the person has muted its pop-ups.
       fresh.forEach(n => known.current!.add(n.key))
     }
-  }, [notifs, a.ready, a.toast, sound])
+  }, [notifs, a.ready, a.toast, sound, us.st.preferences])
 
   // Message notifications are account-scoped and work from every page, not only the inbox.
   useEffect(() => {
@@ -265,19 +274,25 @@ export default function App() {
       }
       const incoming = all.filter(m => m.senderId !== uid && !knownMessages.current!.has(m.id) && conversations.some(c => c.id === m.conversationId) && !mutedConversationIds.has(m.conversationId))
       for (const message of all) knownMessages.current.add(message.id)
-      if (!incoming.length) return
-      const latest = incoming[incoming.length - 1]
+      const preferences = us.st.preferences || {}
+      if (!incoming.length || preferences.messageNotifications === false) return
+      const visibleIncoming = incoming.filter(message => {
+        const activeConversation = window.location.pathname.match(/^\/messages\/([^/]+)/)?.[1]
+        return document.hidden || activeConversation !== message.conversationId
+      })
+      if (!visibleIncoming.length) return
+      const latest = visibleIncoming[visibleIncoming.length - 1]
       const convo = conversations.find(c => c.id === latest.conversationId)
       const title = convo?.type === 'group' ? (convo.title || 'group chat') : 'your private chat'
       const sender = a.nm(latest.senderId)
-      a.toast('New message from ' + sender + ' · ' + title)
-      if (sound) chime()
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
+      if (preferences.messagePopups !== false) a.toast('New message from ' + sender + ' · ' + title)
+      if (preferences.messageSounds ?? (sound && preferences.sound !== false)) chime()
+      if (preferences.desktopNotifications !== false && typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
         try { new Notification('New message from ' + sender, { body: latest.text.slice(0, 120), tag: latest.conversationId }) } catch {}
       }
     }, e => console.warn('Could not load messages for notifications', e))
     return () => { offConversations(); offMessages(); offChatPreferences(); knownMessages.current = null }
-  }, [a.backend, a.me?.id, a.demo, a.nm, a.toast, sound])
+  }, [a.backend, a.me?.id, a.demo, a.nm, a.toast, sound, us.st.preferences])
 
   // keyboard: Ctrl K, /, ?, g then a letter, Escape
   useEffect(() => {
