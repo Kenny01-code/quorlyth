@@ -5,6 +5,7 @@ import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, MilestonePriority } from '../lib/types'
 import { MilestoneWorkPanel } from './MilestoneWorkPanel'
 import { isPastDateChange, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 
 type FilterKey = 'all' | 'open' | 'mine' | 'overdue' | 'blocked'
 type MilestoneDraft = {
@@ -149,21 +150,32 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
       blocked: draft.blocked,
       blockedNote: draft.blockedNote.trim(),
     }
-    const ok = editingId
-      ? await a.updateMilestone(editingId, {
-          title: draft.title.trim(),
-          description: draft.description.trim(),
-          ...details,
-        })
-      : await a.addMilestone(projectId, draft.title.trim(), draft.description.trim(), details)
-    setBusyId('')
-    if (ok) closeComposer()
+    try {
+      const ok = editingId
+        ? await a.updateMilestone(editingId, {
+            title: draft.title.trim(),
+            description: draft.description.trim(),
+            ...details,
+          })
+        : await a.addMilestone(projectId, draft.title.trim(), draft.description.trim(), details)
+      if (ok) closeComposer()
+    } catch (error) {
+      a.toast(userFacingMutationError(error, editingId ? 'save this milestone' : 'create this milestone'))
+    } finally {
+      setBusyId('')
+    }
   }
 
   async function changeStatus(milestone: Milestone, status: Milestone['status']) {
+    if (busyId) return
     setBusyId(milestone.id)
-    await a.updateMilestone(milestone.id, { status })
-    setBusyId('')
+    try {
+      await a.updateMilestone(milestone.id, { status })
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'update this milestone'))
+    } finally {
+      setBusyId('')
+    }
   }
 
   async function changeAssignees(milestone: Milestone, assigneeIds: string[]) {
@@ -172,9 +184,15 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
     const currentIds = getMilestoneAssigneeIds(milestone)
     if (currentIds.length === nextIds.length && currentIds.every(id => nextIds.includes(id))) return
     if (nextIds.some(id => !people.some(person => person.id === id))) return a.toast('Only current project team members can be assigned.')
+    if (busyId) return
     setBusyId(milestone.id)
-    await a.updateMilestone(milestone.id, { assigneeIds: nextIds, assigneeId: nextIds[0] || null })
-    setBusyId('')
+    try {
+      await a.updateMilestone(milestone.id, { assigneeIds: nextIds, assigneeId: nextIds[0] || null })
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'update milestone assignments'))
+    } finally {
+      setBusyId('')
+    }
   }
 
   function toggleDraftAssignee(assigneeId: string, checked: boolean) {
@@ -188,12 +206,18 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   }
 
   async function toggleBlocked(milestone: Milestone) {
+    if (busyId) return
     setBusyId(milestone.id)
-    await a.updateMilestone(milestone.id, {
-      blocked: !milestone.blocked,
-      ...(milestone.blocked ? { blockedNote: '' } : {}),
-    })
-    setBusyId('')
+    try {
+      await a.updateMilestone(milestone.id, {
+        blocked: !milestone.blocked,
+        ...(milestone.blocked ? { blockedNote: '' } : {}),
+      })
+    } catch (error) {
+      a.toast(userFacingMutationError(error, milestone.blocked ? 'clear this blocker' : 'mark this milestone as blocked'))
+    } finally {
+      setBusyId('')
+    }
   }
 
   async function removeMilestone(milestone: Milestone) {
@@ -205,9 +229,14 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
       : ''
     if (!window.confirm(`Delete "${milestone.title}" permanently?${evidenceNote} This cannot be undone.`)) return
     setBusyId(milestone.id)
-    const deleted = await a.deleteMilestone(milestone.id)
-    setBusyId('')
-    if (deleted && editingId === milestone.id) closeComposer()
+    try {
+      const deleted = await a.deleteMilestone(milestone.id)
+      if (deleted && editingId === milestone.id) closeComposer()
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'delete this milestone'))
+    } finally {
+      setBusyId('')
+    }
   }
 
   return (
