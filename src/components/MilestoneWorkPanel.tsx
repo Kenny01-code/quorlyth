@@ -3,6 +3,7 @@ import { Av } from './ui'
 import { QuorlythGlyph } from './QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, WorkAttachment, WorkSubmission } from '../lib/types'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 
 const MAX_ATTACHMENTS = 8
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
@@ -198,13 +199,18 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
       return
     }
     setSubmitting(true)
-    const ok = await a.submitMilestoneWork(milestone.id, summary, attachments)
-    if (ok) {
-      setSummary('')
-      setAttested(false)
-      setAttachments([])
+    try {
+      const ok = await a.submitMilestoneWork(milestone.id, summary, attachments)
+      if (ok) {
+        setSummary('')
+        setAttested(false)
+        setAttachments([])
+      }
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'submit this milestone for review'))
+    } finally {
+      setSubmitting(false)
     }
-    setSubmitting(false)
   }
 
   async function review(submission: WorkSubmission, status: 'approved' | 'changes_requested') {
@@ -213,10 +219,16 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
       a.toast('Explain what needs to change so the contributor has a clear next step.')
       return
     }
+    if (busyReviewId) return
     setBusyReviewId(submission.id)
-    const ok = await a.reviewMilestoneWork(submission.id, status, note)
-    if (ok) setReviewNotes(current => ({ ...current, [submission.id]: '' }))
-    setBusyReviewId('')
+    try {
+      const ok = await a.reviewMilestoneWork(submission.id, status, note)
+      if (ok) setReviewNotes(current => ({ ...current, [submission.id]: '' }))
+    } catch (error) {
+      a.toast(userFacingMutationError(error, status === 'approved' ? 'approve this submission' : 'request changes to this submission'))
+    } finally {
+      setBusyReviewId('')
+    }
   }
 
   return (
