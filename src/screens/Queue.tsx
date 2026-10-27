@@ -207,6 +207,8 @@ function Inner() {
     setReviewingApplication(applicationId)
     try {
       await a.decideVolunteer(applicationId, nextStatus)
+    } catch (error) {
+      a.toast(userFacingMutationError(error, nextStatus === 'accepted' ? 'accept this collaboration application' : 'decline this collaboration application'))
     } finally {
       setReviewingApplication(current => current === applicationId ? null : current)
     }
