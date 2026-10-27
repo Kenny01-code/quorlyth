@@ -613,17 +613,24 @@ function Workspace() {
 
   async function postReply(event: FormEvent) {
     event.preventDefault()
-    if (!reply.trim()) return
+    const cleanReply = reply.trim()
+    if (busy || !cleanReply) return
     setBusy(true)
-    const ok = await a.addComment(id, reply.trim(), replyTo || undefined, mentionedUserIds)
-    if (ok) {
-      setReply('')
-      setReplyTo(null)
-      setMentionedUserIds([])
-      setMentionOpen(false)
-      setMentionQuery('')
+    try {
+      const ok = await a.addComment(id, cleanReply, replyTo || undefined, mentionedUserIds)
+      if (ok) {
+        setReply('')
+        setReplyTo(null)
+        setMentionedUserIds([])
+        setMentionOpen(false)
+        setMentionQuery('')
+      }
+    } catch (error) {
+      console.error('Quorlyth collaboration reply failed:', error)
+      a.toast('Your reply could not be posted. Check your connection and try again.')
+    } finally {
+      setBusy(false)
     }
-    setBusy(false)
   }
 
   const topLevelDiscussion = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
