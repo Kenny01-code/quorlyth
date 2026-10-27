@@ -154,7 +154,18 @@ function Inner() {
           <div className="acts" style={{ marginTop: 12 }}>
             {busy ? <><button className="btn" onClick={() => ctl.current?.abort()}><Icon name="decline" size={16} />Stop</button><span className="dim">QuorlythBot is writing...</span></> : <>
               <button className="btn p" onClick={() => stream(prompt('Return only the post text.'), 'draft')}><span className="aiic"><Icon name="spark" size={16} /></span>Draft with QuorlythBot</button>
-              <button className="btn" onClick={async () => { setBusy('opts'); try { const o = await askJson<{ options: any[] }>(prompt('Give three clearly different options. Reply with only JSON: {"options":[{"label":"a short angle name","text":"the post"}]}')); setOpts((o.options || []).slice(0, 3).map(x => ({ label: String(x.label || 'Option'), text: String(x.text || '').trim() })).filter(x => x.text)) } catch (e: any) { a.toast(e.message) } setBusy('') }}><Icon name="rank" size={16} />Give me 3 options</button></>}
+              <button type="button" className="btn" disabled={!!busy || preparingPost} onClick={async () => {
+                if (busy || preparingPost) return
+                setBusy('opts')
+                try {
+                  const options = await askJson<{ options: any[] }>(prompt('Give three clearly different options. Reply with only JSON: {"options":[{"label":"a short angle name","text":"the post"}]}'))
+                  setOpts((options.options || []).slice(0, 3).map(option => ({ label: String(option.label || 'Option'), text: String(option.text || '').trim() })).filter(option => option.text))
+                } catch (error: any) {
+                  a.toast(error?.message || 'Could not prepare post options. Try again.')
+                } finally {
+                  setBusy('')
+                }
+              }}><Icon name="rank" size={16} />Give me 3 options</button></>}
           </div>
         </div>
         {opts.length > 0 && <div style={{ marginTop: 18 }}><p className="dim" style={{ marginBottom: 8 }}>Options</p>{opts.map((o, k) => <div key={k} className="row" style={{ alignItems: 'flex-start' }}><div className="t"><p className="dim">{o.label}</p><p style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>{o.text}</p></div><button className="btn" style={{ padding: '8px 16px' }} onClick={() => { setDraft(o.text); setHt([]) }}>Use this</button></div>)}</div>}
@@ -165,7 +176,18 @@ function Inner() {
           <div className="acts" style={{ margin: '12px 0 0', gap: 8 }}>
             <Chip on={emo} onClick={() => { setEmo(!emo); setPm({ ...pm, emo: !emo }) }}>😊 Emoji</Chip>
             <div className="htin"><span>#</span><input value={tagIn} maxLength={32} placeholder="Add a hashtag" aria-label="Add a hashtag" onChange={e => setTagIn(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); if (tagIn.trim()) addTags(tagIn) } }} /><button className="chip" onClick={() => tagIn.trim() && addTags(tagIn)}>Add</button></div>
-            <button className="chip" disabled={!!busy} onClick={async () => { setBusy('tags'); try { const o = await askJson<{ tags: string[] }>(`Suggest 8 short, relevant hashtags for a social post about this idea. Reply with only JSON: {"tags":["one","two"]}. No spaces and no # in the tags.\nPlatform: ${pm.plat}\nIdea title: ${idea.title}\nDetails: ${idea.body || ''}`, { tier: 'quick' }); setHs((o.tags || []).map(cleanTag).filter(Boolean).slice(0, 8)) } catch (e: any) { a.toast(e.message) } setBusy('') }}><span className="aiic"><Icon name="spark" size={13} /></span>Suggest hashtags</button>
+            <button type="button" className="chip" disabled={!!busy || preparingPost} onClick={async () => {
+              if (busy || preparingPost) return
+              setBusy('tags')
+              try {
+                const result = await askJson<{ tags: string[] }>(`Suggest 8 short, relevant hashtags for a social post about this idea. Reply with only JSON: {"tags":["one","two"]}. No spaces and no # in the tags.\nPlatform: ${pm.plat}\nIdea title: ${idea.title}\nDetails: ${idea.body || ''}`, { tier: 'quick' })
+                setHs((result.tags || []).map(cleanTag).filter(Boolean).slice(0, 8))
+              } catch (error: any) {
+                a.toast(error?.message || 'Could not suggest hashtags. Try again.')
+              } finally {
+                setBusy('')
+              }
+            }}><span className="aiic"><Icon name="spark" size={13} /></span>Suggest hashtags</button>
           </div>
           {emo && <EmojiPicker onPick={insertEmoji} />}
           {ht.length > 0 && <div className="acts" style={{ margin: '10px 0 0', gap: 6 }}>{ht.map(t => <button key={t} className="chip on" onClick={() => removeTag(t)} aria-label={'Remove #' + t}>#{t} ×</button>)}</div>}
