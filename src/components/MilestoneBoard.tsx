@@ -326,8 +326,8 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
               {canEdit && milestone.status !== 'done' && <details className="ql-milestone-reassign">
                 <summary>{'Assign to teammates · ' + (getMilestoneAssigneeIds(milestone).length || 'none') + ' selected'}</summary>
                 <div className="ql-assignee-picker__actions">
-                  <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void changeAssignees(milestone, people.map(person => person.id))}>Select everyone</button>
-                  <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void changeAssignees(milestone, [])}>Clear</button>
+                  <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeAssignees(milestone, people.map(person => person.id))}>Select everyone</button>
+                  <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeAssignees(milestone, [])}>Clear</button>
                 </div>
                 <div className="ql-assignee-picker__list">
                   {[
@@ -338,7 +338,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                     const checked = assignedIds.includes(person.id)
                     const eligible = people.some(candidate => candidate.id === person.id)
                     return <label className="ql-assignee-option" key={person.id}>
-                      <input type="checkbox" checked={checked} disabled={busyId === milestone.id || (!eligible && !checked)} onChange={event => {
+                      <input type="checkbox" checked={checked} disabled={!!busyId || (!eligible && !checked)} onChange={event => {
                         const next = event.target.checked ? [...assignedIds, person.id] : assignedIds.filter(id => id !== person.id)
                         void changeAssignees(milestone, next)
                       }} />
@@ -350,12 +350,12 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
               {milestone.acceptanceCriteria && <div className="ql-acceptance"><QuorlythGlyph name="document" size={15} /><div><strong>Definition of done</strong><p>{milestone.acceptanceCriteria}</p></div></div>}
               {milestone.blocked && milestone.status !== 'done' && <div className="ql-blocker-note"><QuorlythGlyph name="blocked" size={16} /><div><strong>Blocked</strong><p>{milestone.blockedNote || 'Waiting on a dependency or decision.'}</p></div></div>}
               {(canEdit || canManage) && <div className="ql-milestone-actions">
-                {canEdit && <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => beginEdit(milestone)}><QuorlythGlyph name="plan" size={14} />Edit details</button>}
-                {canEdit && !milestone.blocked && milestone.status !== 'done' && <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void toggleBlocked(milestone)}><QuorlythGlyph name="blocked" size={14} />Mark blocked</button>}
-                {canEdit && milestone.blocked && milestone.status !== 'done' && <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void toggleBlocked(milestone)}><QuorlythGlyph name="complete" size={14} />Clear blocker</button>}
-                {canEdit && milestone.status === 'todo' && (!getMilestoneAssigneeIds(milestone).length || getMilestoneAssigneeIds(milestone).includes(a.me?.id || '')) && <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="start" size={14} />Start work</button>}
-                {canEdit && milestone.status === 'done' && <button type="button" className="ql-quiet-action" disabled={busyId === milestone.id} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="progress" size={14} />Reopen</button>}
-                {canManage && <button type="button" className="ql-quiet-action ql-danger-action" disabled={busyId === milestone.id} onClick={() => void removeMilestone(milestone)}><QuorlythGlyph name="trash" size={14} />Delete milestone</button>}
+                {canEdit && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => beginEdit(milestone)}><QuorlythGlyph name="plan" size={14} />Edit details</button>}
+                {canEdit && !milestone.blocked && milestone.status !== 'done' && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void toggleBlocked(milestone)}><QuorlythGlyph name="blocked" size={14} />Mark blocked</button>}
+                {canEdit && milestone.blocked && milestone.status !== 'done' && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void toggleBlocked(milestone)}><QuorlythGlyph name="complete" size={14} />Clear blocker</button>}
+                {canEdit && milestone.status === 'todo' && (!getMilestoneAssigneeIds(milestone).length || getMilestoneAssigneeIds(milestone).includes(a.me?.id || '')) && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="start" size={14} />Start work</button>}
+                {canEdit && milestone.status === 'done' && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="progress" size={14} />Reopen</button>}
+                {canManage && <button type="button" className="ql-quiet-action ql-danger-action" disabled={!!busyId} onClick={() => void removeMilestone(milestone)}><QuorlythGlyph name="trash" size={14} />Delete milestone</button>}
               </div>}
               <MilestoneWorkPanel
                 idea={idea}
