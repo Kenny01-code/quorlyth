@@ -158,14 +158,20 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
     event.preventDefault()
     if (!summary.trim()) return a.toast('Add a short project summary first.')
     if (isPastDateInput(projectDueDate)) return a.toast(PAST_DATE_MESSAGE)
+    if (busy) return
     setBusy('project')
-    const created = await a.createProject(idea.id, summary.trim(), dateEnd(projectDueDate))
-    setBusy('')
-    if (created) {
-      const options = aiPlan && aiPlanAccepted
-        ? { state: { aiPlan: { ...aiPlan, project_summary: summary.trim() } } }
-        : undefined
-      nav('/collaboration/' + idea.id + '?tab=plan', options)
+    try {
+      const created = await a.createProject(idea.id, summary.trim(), dateEnd(projectDueDate))
+      if (created) {
+        const options = aiPlan && aiPlanAccepted
+          ? { state: { aiPlan: { ...aiPlan, project_summary: summary.trim() } } }
+          : undefined
+        nav('/collaboration/' + idea.id + '?tab=plan', options)
+      }
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'create the project workspace'))
+    } finally {
+      setBusy('')
     }
   }
 
@@ -173,10 +179,16 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
     event.preventDefault()
     if (!project || !summary.trim()) return a.toast('A project summary cannot be empty.')
     if (isPastDateChange(projectDueDate, dateInput(project.dueAt))) return a.toast(PAST_DATE_MESSAGE)
+    if (busy) return
     setBusy('summary')
-    const ok = await a.updateProject(project.id, { summary: summary.trim(), dueAt: dateEnd(projectDueDate) })
-    if (ok) setEditSummary(false)
-    setBusy('')
+    try {
+      const ok = await a.updateProject(project.id, { summary: summary.trim(), dueAt: dateEnd(projectDueDate) })
+      if (ok) setEditSummary(false)
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'save the project summary'))
+    } finally {
+      setBusy('')
+    }
   }
 
   async function connectExistingWorkspace() {
@@ -253,11 +265,16 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
   }
 
   async function toggleProjectStatus() {
-    if (!project) return
+    if (!project || busy) return
     const status = project.status === 'completed' ? 'active' : 'completed'
     setBusy('project-status')
-    await a.updateProject(project.id, { status })
-    setBusy('')
+    try {
+      await a.updateProject(project.id, { status })
+    } catch (error) {
+      a.toast(userFacingMutationError(error, status === 'completed' ? 'complete this project' : 'reopen this project'))
+    } finally {
+      setBusy('')
+    }
   }
 
   return (
