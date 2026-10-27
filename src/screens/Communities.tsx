@@ -62,6 +62,7 @@ function List() {
   const [f, setF, clearDraft] = useDraftState(`q-draft:${a.me?.id}:community:new`, emptyCommunity)
   const [communityAIDraft, setCommunityAIDraft] = useState<CommunityAIDraft | null>(null)
   const [communityAIBusy, setCommunityAIBusy] = useState(false)
+  const [communitySubmitting, setCommunitySubmitting] = useState(false)
 
   async function organizeCommunityWithAI() {
     if (!f.name.trim() && !f.purpose.trim()) return a.toast('Add a rough community name or purpose so the AI has context to organize.')
@@ -197,7 +198,18 @@ function List() {
           <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
           <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people must request approval before they can join.' : 'OFF — anyone can join this community immediately.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
           <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner / moderators only']]} />
-          <div className="acts"><button className="btn p" onClick={async () => { if (!f.name.trim()) return a.toast('Give it a name'); if (await a.createCommunity({ ...f, name: f.name.trim() } as any)) clearDraft(emptyCommunity) }}>Create community</button><button className="btn" onClick={() => clearDraft(emptyCommunity)}>Discard draft</button></div>
+          <div className="acts"><button type="button" className="btn p" disabled={communitySubmitting} onClick={async () => {
+            if (communitySubmitting) return
+            if (!f.name.trim()) return a.toast('Give it a name')
+            setCommunitySubmitting(true)
+            try {
+              if (await a.createCommunity({ ...f, name: f.name.trim() } as any)) clearDraft(emptyCommunity)
+            } catch (error) {
+              a.toast(userFacingMutationError(error, 'create this community'))
+            } finally {
+              setCommunitySubmitting(false)
+            }
+          }}>{communitySubmitting ? 'Creating community…' : 'Create community'}</button><button type="button" className="btn" disabled={communitySubmitting} onClick={() => clearDraft(emptyCommunity)}>Discard draft</button></div>
         </div>
       )}
     </>
@@ -242,6 +254,7 @@ function Detail({ cid }: { cid: string }) {
   const [f, setF, clearIdeaDraft] = useDraftState(`q-draft:${a.me?.id}:idea:${cid}`, emptyIdea)
   const [ideaAIDraft, setIdeaAIDraft] = useState<IdeaAIDraft | null>(null)
   const [ideaAIBusy, setIdeaAIBusy] = useState(false)
+  const [postingIdea, setPostingIdea] = useState(false)
   useEffect(() => {
     const requestedTab = new URLSearchParams(loc.search).get('tab')
     const canReviewCommunityRequests = a.canManageCommunity(cid)
@@ -331,9 +344,23 @@ function Detail({ cid }: { cid: string }) {
   }
 
   async function post() {
+    if (postingIdea) return
     if (!f.title.trim()) return a.toast('Give your idea a title')
     if (preview) return a.toast('This is a preview. Nothing is saved.')
-    if (await a.postIdea({ title: f.title.trim(), body: f.body.trim(), cid, tags: [...new Set(f.tags.split(',').map(cleanTag).filter(Boolean))].slice(0, 3) })) clearIdeaDraft(emptyIdea)
+    setPostingIdea(true)
+    try {
+      const ok = await a.postIdea({
+        title: f.title.trim(),
+        body: f.body.trim(),
+        cid,
+        tags: [...new Set(f.tags.split(',').map(cleanTag).filter(Boolean))].slice(0, 3),
+      })
+      if (ok) clearIdeaDraft(emptyIdea)
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'submit this idea'))
+    } finally {
+      setPostingIdea(false)
+    }
   }
 
   return (
@@ -395,7 +422,7 @@ function Detail({ cid }: { cid: string }) {
               <label className="field"><span>Title</span><input value={f.title} maxLength={120} onChange={e => setF({ ...f, title: e.target.value })} placeholder="A short name for it" /></label>
               <label className="field"><span>Details</span><textarea value={f.body} maxLength={2000} onChange={e => setF({ ...f, body: e.target.value })} placeholder="What should happen and why would people want it" /></label>
               <label className="field"><span>Tags</span><input value={f.tags} maxLength={70} onChange={e => setF({ ...f, tags: e.target.value })} placeholder="Up to three, separated by commas" /></label>
-              <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={post}><Icon name="contribute" />Submit idea</button></div>
+              <div className="acts" style={{ marginTop: 14 }}><button type="button" className="btn p" disabled={postingIdea || !f.title.trim() || !!preview} onClick={() => void post()}><Icon name="contribute" />{postingIdea ? 'Submitting idea…' : 'Submit idea'}</button></div>
             </div>
           ) : (
             rule === 'members' && !joined && !c.arch ? (
