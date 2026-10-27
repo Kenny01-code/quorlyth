@@ -44,6 +44,8 @@ const GLYPH_FOR_ICON: Record<string, QuorlythGlyphName> = {
   'search': 'search',
   'info': 'info',
   'paperclip': 'paperclip',
+  'file': 'file',
+  'image': 'document',
   'smile': 'smile',
   'settings': 'settings',
   'mail': 'mail',
