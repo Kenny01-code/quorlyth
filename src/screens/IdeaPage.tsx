@@ -29,6 +29,7 @@ function Inner() {
   const [deleting, setDeleting] = useState(false)
   const [applicationMessage, setApplicationMessage] = useState('')
   const [applying, setApplying] = useState(false)
+  const [replying, setReplying] = useState(false)
   const [replyTo, setReplyTo] = useState<string | null>(null)
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([])
   const [mentionOpen, setMentionOpen] = useState(false)
@@ -120,7 +121,13 @@ function Inner() {
   const toggleBacking = async () => {
     if (!ideaCommunity || archivedCommunity || voting) return
     setVoting(true)
-    try { await a.vote(idea.id) } finally { setVoting(false) }
+    try {
+      await a.vote(idea.id)
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'update your support for this idea'))
+    } finally {
+      setVoting(false)
+    }
   }
   const deleteCurrentIdea = async () => {
     if (!canDeleteIdea || deleting) return
@@ -132,14 +139,31 @@ function Inner() {
     try {
       const ok = await a.deleteIdea(idea.id)
       if (ok) nav('/communities/' + idea.cid)
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'delete this idea'))
     } finally {
       setDeleting(false)
     }
   }
   const postReply = async () => {
-    if (!text.trim()) return a.toast('Write a reply first')
-    const ok = await a.addComment(idea.id, text.trim(), replyTo || undefined, mentionedUserIds)
-    if (ok) { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]) }
+    if (replying) return
+    const cleanText = text.trim()
+    if (!cleanText) return a.toast('Write a reply first')
+    setReplying(true)
+    try {
+      const ok = await a.addComment(idea.id, cleanText, replyTo || undefined, mentionedUserIds)
+      if (ok) {
+        clearReplyDraft('')
+        setReplyTo(null)
+        setMentionedUserIds([])
+        setMentionOpen(false)
+        setMentionQuery('')
+      }
+    } catch (error) {
+      a.toast(userFacingMutationError(error, 'post this reply'))
+    } finally {
+      setReplying(false)
+    }
   }
   const topLevelComments = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
   const renderComment = (comment: (typeof comments)[number], nested = false): import('react').ReactNode => {
@@ -188,7 +212,19 @@ function Inner() {
               : acceptedCollaborator ? <button className="btn p" style={{ marginTop: 12 }} onClick={() => nav('/collaboration/' + idea.id)}><Icon name="collab" size={15} />Open collaboration space</button>
               : myApplication?.status === 'pending' ? <span className="chip" style={{ marginTop: 12, display: 'inline-flex' }}>Application pending review</span>
               : !a.joined(idea.cid) ? <div className="acts" style={{ marginTop: 12 }}><button className="btn" onClick={() => nav('/communities/' + idea.cid)}>Join this community to apply</button></div>
-              : <form onSubmit={async event => { event.preventDefault(); setApplying(true); const ok = await a.applyToCollaborate(idea.id, applicationMessage); if (ok) setApplicationMessage(''); setApplying(false) }} style={{ marginTop: 12 }}>
+              : <form onSubmit={async event => {
+                event.preventDefault()
+                if (applying) return
+                setApplying(true)
+                try {
+                  const ok = await a.applyToCollaborate(idea.id, applicationMessage)
+                  if (ok) setApplicationMessage('')
+                } catch (error) {
+                  a.toast(userFacingMutationError(error, 'send your collaboration application'))
+                } finally {
+                  setApplying(false)
+                }
+              }} style={{ marginTop: 12 }}>
                 <label className="field"><span>Why would you like to collaborate? (optional)</span><textarea value={applicationMessage} onChange={e => setApplicationMessage(e.target.value)} maxLength={600} placeholder="Share your skills, ideas, or how you can contribute…" /></label>
                 <button className="btn p" disabled={applying}><Icon name="send" size={15} />{applying ? 'Sending application…' : 'Apply to collaborate'}</button>
               </form>}
@@ -206,7 +242,7 @@ function Inner() {
             </div>}
           </div>
           <p className="dim">Type @ while writing to mention members of this idea’s community. Unfinished replies are saved as drafts on this device.</p>
-          <div className="acts" style={{ marginTop: 14 }}><button className="btn p" onClick={postReply}><Icon name="send" size={15} />Reply</button><button className="chip" onClick={() => { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]); setMentionOpen(false); setMentionQuery('') }}>Discard draft</button></div>
+          <div className="acts" style={{ marginTop: 14 }}><button type="button" className="btn p" disabled={replying || !text.trim()} onClick={() => void postReply()}><Icon name="send" size={15} />{replying ? 'Posting reply…' : replyTo ? 'Post reply' : 'Reply'}</button><button type="button" className="chip" disabled={replying} onClick={() => { clearReplyDraft(''); setReplyTo(null); setMentionedUserIds([]); setMentionOpen(false); setMentionQuery('') }}>Discard draft</button></div>
         </div>
         <div className="glass pad">
           <button disabled={!ideaCommunity || archivedCommunity || voting} className={voted ? 'btn' : 'btn p'} style={{ width: '100%', justifyContent: 'center' }} onClick={() => { void toggleBacking() }}><Icon name="support" />{!ideaCommunity ? 'Loading community…' : archivedCommunity ? 'Archived · read-only' : voting ? 'Saving…' : voted ? 'Backed' : 'Back this idea'}</button>
