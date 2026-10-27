@@ -346,8 +346,8 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
                   <label className="q-work-label" htmlFor={'q-work-review-' + submission.id}>Feedback for contributor <small>Optional for approval; required for requested changes.</small></label>
                   <textarea id={'q-work-review-' + submission.id} className="q-work-review__textarea" value={reviewNotes[submission.id] || ''} onChange={event => setReviewNotes(current => ({ ...current, [submission.id]: event.target.value }))} maxLength={1600} placeholder="What is good, or what still needs to change?" />
                   <div className="q-work-review__actions">
-                    <button type="button" className="q-work-request-btn" disabled={busyReviewId === submission.id} onClick={() => void review(submission, 'changes_requested')}><QuorlythGlyph name="rotate" size={14} />Request changes</button>
-                    <button type="button" className="q-work-approve-btn" disabled={busyReviewId === submission.id} onClick={() => void review(submission, 'approved')}><QuorlythGlyph name="complete" size={14} />{busyReviewId === submission.id ? 'Saving review…' : 'Approve & complete milestone'}</button>
+                    <button type="button" className="q-work-request-btn" disabled={!!busyReviewId} onClick={() => void review(submission, 'changes_requested')}><QuorlythGlyph name="rotate" size={14} />{busyReviewId === submission.id ? 'Saving review…' : 'Request changes'}</button>
+                    <button type="button" className="q-work-approve-btn" disabled={!!busyReviewId} onClick={() => void review(submission, 'approved')}><QuorlythGlyph name="complete" size={14} />{busyReviewId === submission.id ? 'Saving review…' : 'Approve & complete milestone'}</button>
                   </div>
                 </div>
               )}
