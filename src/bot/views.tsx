@@ -63,7 +63,6 @@ export function BotViews(p: P) {
     }
 
     setHello({ state: 'loading', message: 'Starting your natural voice…' })
-    let usedBrowserFallback = false
     try {
       const playback = await speakText(
         clean,
@@ -71,7 +70,7 @@ export function BotViews(p: P) {
         () => {
           if (run !== helloRun.current) return
           p.robot.current?.talk(true)
-          setHello({ state: 'playing', message: usedBrowserFallback ? 'ElevenLabs is unavailable, so your browser voice is speaking.' : 'QuorlythBot is speaking with your preferred natural voice.' })
+          setHello({ state: 'playing', message: 'QuorlythBot is speaking with your preferred ElevenLabs voice.' })
         },
         () => {
           if (run !== helloRun.current) return
@@ -81,11 +80,10 @@ export function BotViews(p: P) {
         },
         {
           accent: s.accent || 'auto',
-          // Use the same endpoint and fallback chain that already works for bot replies.
-          // ElevenLabs remains preferred; a configured provider or browser voice prevents silence.
-          allowBrowserFallback: true,
-          browserFallbackTimeoutMs: 10000,
-          onBrowserFallback: () => { usedBrowserFallback = true },
+          // Voice previews must follow the same ElevenLabs-only rule as every bot reply.
+          // If ElevenLabs is unavailable, show the service error rather than playing another voice.
+          elevenLabsOnly: true,
+          browserFallbackTimeoutMs: 25000,
           preferElevenLabsVoice: true,
           liveTalk: true,
         },
@@ -95,7 +93,7 @@ export function BotViews(p: P) {
         return
       }
       helloPlayback.current = playback
-      setHello({ state: 'playing', message: usedBrowserFallback ? 'ElevenLabs is unavailable, so your browser voice is speaking.' : 'Your selected natural voice is playing.' })
+      setHello({ state: 'playing', message: 'Your selected ElevenLabs voice is playing.' })
     } catch (error) {
       if (run !== helloRun.current) return
       const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
@@ -128,7 +126,7 @@ export function BotViews(p: P) {
       rememberWelcomeVoice(v.ai)
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: true, allowBrowserFallback: true, preferElevenLabsVoice: true }).catch(() => a.toast('Neither ElevenLabs nor your browser speech voice is available on this device.'))
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: true, preferElevenLabsVoice: true }).catch(error => a.toast(error instanceof Error ? error.message : 'ElevenLabs voice is unavailable. Your matched voice preference has been saved.'))
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
@@ -219,7 +217,7 @@ export function BotViews(p: P) {
           <div className="acts"><button className="btn" disabled={vm.state === 'rec'} onClick={matchVoice}><Icon name="mic" size={16} />{vm.state === 'rec' ? 'Listening' : 'Start'}</button></div>
           <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>This tunes a studio voice to feel like yours. It is not a clone. Cloning a real voice needs a dedicated voice service and that person's consent.</p>
         </div>
-        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Live Talk is activated by the Talk live button, shows a listening status while the microphone is active, and responds in the language you speak where supported. If ElevenLabs is unavailable, QuorlythBot uses your browser's built-in speech voice as the fallback. Voice cloning is not included.</p></>
+        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Live Talk is activated by the Talk live button, shows a listening status while the microphone is active, and responds in the language you speak where supported. All QuorlythBot speech uses ElevenLabs. If ElevenLabs is unavailable, the written reply remains available but no alternate voice is used. Voice cloning is not included.</p></>
     )
   }
 
