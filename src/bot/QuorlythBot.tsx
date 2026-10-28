@@ -524,7 +524,17 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     const runsTabSelected = tabs.some(tab => /run history/i.test(tab)) || new URLSearchParams(loc.search).get('tab') === 'runs'
     const evidence = main && ((loc.pathname.startsWith('/collaboration/') && evidenceTabSelected)
       || (loc.pathname.startsWith('/workspaces/') && evidenceTabSelected))
-      ? Array.from(main.querySelectorAll('.ql-evidence-record, .sw-artifact')).slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160)).filter(Boolean)
+      ? Array.from(main.querySelectorAll('.ql-evidence-record, .sw-artifact')).slice(0, 8).map(node => {
+        const summary = (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 170)
+        const links = Array.from(node.querySelectorAll('a[href]')).map(anchor => {
+          const raw = (anchor as HTMLAnchorElement).href
+          try {
+            const parsed = new URL(raw)
+            return (parsed.protocol === 'https:' || parsed.protocol === 'http:') ? parsed.hostname.replace(/^www\./i, '') + parsed.pathname.slice(0, 100) : ''
+          } catch { return '' }
+        }).filter(Boolean).slice(0, 4)
+        return summary + (links.length ? ' | detected links: ' + links.join(', ') : '')
+      }).filter(Boolean)
       : []
     const workflowCards = main && loc.pathname === '/automations' && !runsTabSelected
       ? Array.from(main.querySelectorAll('.wa-workflow-card')).slice(0, 8).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 220)).filter(Boolean)
