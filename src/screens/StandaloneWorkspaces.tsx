@@ -51,7 +51,7 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
 }) {
   const a = useApp()
   const nav = useNavigate()
-  const [fileLinks, setFileLinks] = useState<{ path: string; name: string; url: string }[]>([])
+  const [fileLinks, setFileLinks] = useState<{ path: string; name: string; mimeType?: string; url: string }[]>([])
   useEffect(() => {
     let active = true
     const getUrl = a.backend?.getWorkFileUrl
@@ -61,9 +61,9 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
     }
     void Promise.all(submission.attachments.map(async attachment => {
       try {
-        return { path: attachment.path, name: attachment.name, url: await getUrl(attachment.path) }
+        return { path: attachment.path, name: attachment.name, mimeType: attachment.mimeType, url: await getUrl(attachment.path) }
       } catch {
-        return { path: attachment.path, name: attachment.name, url: '' }
+        return { path: attachment.path, name: attachment.name, mimeType: attachment.mimeType, url: '' }
       }
     })).then(files => { if (active) setFileLinks(files) })
     return () => { active = false }
@@ -82,6 +82,7 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
     {fileLinks.length > 0 && <div className="sw-linked-submission__files">{fileLinks.map(file => file.url
       ? <a key={file.path} href={file.url} target="_blank" rel="noreferrer"><QuorlythGlyph name="file" size={13}/>{file.name}<QuorlythGlyph name="open" size={12}/></a>
       : <span key={file.path}>{file.name} · Open the original project to access this private file</span>)}</div>}
+    {fileLinks.filter(file => file.url).map(file => <EvidencePreview key={file.path} url={file.url} name={file.name} mimeType={file.mimeType} compact={false} />)}
     <button className="sw-link-button" type="button" onClick={() => nav('/projects?idea=' + encodeURIComponent(ideaId))}>Open original milestone review <QuorlythGlyph name="arrow" size={13}/></button>
   </article>
 }
