@@ -505,6 +505,9 @@ export async function speakText(
     options.onBrowserFallback?.()
   }
   const preferElevenLabsVoice = options.preferElevenLabsVoice === true || options.preferBrowserVoice === true
+  // Strict mode wins over every fallback flag, so ElevenLabs-only callers cannot
+  // accidentally play another provider or the browser voice.
+  const allowBrowserFallback = options.elevenLabsOnly !== true && options.allowBrowserFallback === true
 
   try {
     // ElevenLabs is the primary voice. Browser speech is reserved for a quick fallback.
@@ -519,7 +522,7 @@ export async function speakText(
     // is enabled, callers can choose a fast timeout; streamed provider failover keeps
     // its longer window. An explicit stop still aborts this request immediately.
     const requestedTimeout = options.browserFallbackTimeoutMs
-    const defaultTimeout = options.elevenLabsOnly && options.allowBrowserFallback === true ? 10_000 : 7500
+    const defaultTimeout = options.elevenLabsOnly ? 25_000 : allowBrowserFallback ? 10_000 : 7500
     const providerTimeout = typeof requestedTimeout === 'number' && Number.isFinite(requestedTimeout)
       ? Math.max(250, Math.min(30_000, requestedTimeout))
       : defaultTimeout
@@ -535,7 +538,7 @@ export async function speakText(
       })
     } catch (error) {
       if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
-      if (preferElevenLabsVoice && options.allowBrowserFallback === true) {
+      if (preferElevenLabsVoice && allowBrowserFallback) {
         forceBrowserFallback = true
       } else if (options.elevenLabsOnly) {
         throw new Error('ElevenLabs is temporarily unavailable. No alternate voice will be used.')
@@ -565,7 +568,7 @@ export async function speakText(
       } catch (error) {
         const wasReplaced = isSuperseded() || (error instanceof Error && error.name === 'AbortError')
         if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
-        if (preferElevenLabsVoice && options.allowBrowserFallback === true) {
+        if (preferElevenLabsVoice && allowBrowserFallback) {
           // Don't wait through a second network request after the primary voice stalls.
           forceBrowserFallback = true
           response = null
@@ -595,7 +598,7 @@ export async function speakText(
     }
 
     if (!forceBrowserFallback && response && !response.ok) {
-      if (preferElevenLabsVoice && options.allowBrowserFallback === true) {
+      if (preferElevenLabsVoice && allowBrowserFallback) {
         forceBrowserFallback = true
       } else {
         throw new Error(await readError(response))
@@ -672,7 +675,7 @@ export async function speakText(
           finish(false)
         }
         if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
-        if (options.allowBrowserFallback !== true) {
+        if (!allowBrowserFallback) {
           throw new Error('The selected QuorlythBot Studio voice could not play. Your written reply is still available; please retry in a moment.')
         }
         notifyBrowserFallback()
@@ -684,7 +687,7 @@ export async function speakText(
     }
 
     assertCurrent()
-    if (options.allowBrowserFallback !== true) {
+    if (!allowBrowserFallback) {
       throw new Error('The selected QuorlythBot Studio voice is temporarily unavailable. Your written reply is still available.')
     }
     if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
