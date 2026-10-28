@@ -6,6 +6,7 @@ import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { MilestoneBoard } from '../components/MilestoneBoard'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
+import { EvidencePreview } from '../components/EvidencePreview'
 import { useApp, useComments } from '../data/AppProvider'
 import { when } from '../lib/util'
 import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
@@ -252,7 +253,7 @@ function WorkspaceEvidenceFile({ attachment }: { attachment: WorkAttachment }) {
     return () => { active = false }
   }, [a.backend, attachment.path])
 
-  return <div className="ql-evidence-file">
+  return <><div className="ql-evidence-file">
     <span className="ql-evidence-file__mark"><QuorlythGlyph name="document" size={16} /></span>
     <span className="ql-evidence-file__copy">
       <strong title={attachment.name}>{attachment.name}</strong>
@@ -262,6 +263,8 @@ function WorkspaceEvidenceFile({ attachment }: { attachment: WorkAttachment }) {
       ? <a href={url} target="_blank" rel="noreferrer" className="ql-evidence-file__open">Open evidence <QuorlythGlyph name="arrow" size={13} /></a>
       : <span className="ql-evidence-file__state">{state === 'loading' ? 'Preparing secure link…' : 'File unavailable'}</span>}
   </div>
+    {url && <EvidencePreview url={url} name={attachment.name} mimeType={attachment.mimeType} compact={false} />}
+  </>
 }
 
 export function CollaborationWorkspace() {
