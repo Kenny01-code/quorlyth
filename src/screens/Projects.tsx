@@ -4,6 +4,7 @@ import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { MilestoneBoard } from '../components/MilestoneBoard'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
+import { EvidencePreview } from '../components/EvidencePreview'
 import { useApp, useComments } from '../data/AppProvider'
 import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
 import { Idea, Milestone, Project } from '../lib/types'
@@ -53,12 +54,56 @@ type ProjectWorkspaceArtifact = {
   provider: 'github' | 'manual'
   kind: string
   url?: string
-  attachments?: { path: string; name: string; size?: number }[]
+  attachments?: { path: string; name: string; mimeType?: string; size?: number; uploadedAt?: number }[]
   summary: string
   status: 'submitted' | 'approved' | 'changes_requested'
   submittedBy: string
   submittedAt: number
   docId?: string
+}
+
+const PROJECT_WORKSPACE_CACHE_PREFIX = 'quorlyth:project-workspace-snapshot:v1:'
+function readProjectWorkspaceCache<T>(userId: string | null | undefined, collection: string): T[] | null {
+  if (!userId) return null
+  try {
+    const raw = sessionStorage.getItem(PROJECT_WORKSPACE_CACHE_PREFIX + userId + ':' + collection)
+    const value = raw ? JSON.parse(raw) : null
+    return Array.isArray(value) ? value as T[] : null
+  } catch { return null }
+}
+function writeProjectWorkspaceCache<T>(userId: string, collection: string, rows: T[]) {
+  try {
+    const raw = JSON.stringify(rows)
+    if (raw.length < 1_500_000) sessionStorage.setItem(PROJECT_WORKSPACE_CACHE_PREFIX + userId + ':' + collection, raw)
+  } catch { /* Fresh backend subscriptions remain the source of truth. */ }
+}
+
+function PrivateWorkspaceEvidence({ attachment }: { attachment: { path: string; name: string; mimeType?: string } }) {
+  const a = useApp()
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    let active = true
+    setUrl('')
+    setFailed(false)
+    if (!a.backend?.getWorkFileUrl) {
+      setFailed(true)
+      return () => { active = false }
+    }
+    setLoading(true)
+    void a.backend.getWorkFileUrl(attachment.path).then(value => {
+      if (active) setUrl(value)
+    }).catch(() => {
+      if (active) setFailed(true)
+    }).finally(() => {
+      if (active) setLoading(false)
+    })
+    return () => { active = false }
+  }, [a.backend, attachment.path])
+  return url
+    ? <EvidencePreview url={url} name={attachment.name} mimeType={attachment.mimeType || ''} compact />
+    : <small className="ql-muted">{loading ? 'Preparing secure preview…' : failed ? 'Private file preview is not available to this account.' : ''}</small>
 }
 
 function ProjectCard({ idea, project, milestones, canManage, canCollaborate, workspaceProjects, workspaceMembers, workspaceArtifacts }: {
@@ -369,7 +414,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
             {project.dueAt ? <p className="ql-muted ql-project-deadline"><QuorlythGlyph name="calendar" size={14} />Target delivery · {dateLabel(project.dueAt)}</p> : null}
             {milestones.length > 0 && <p className="ql-muted ql-project-updated"><QuorlythGlyph name="timeline" size={13} />Last activity · {when(Math.max(project.updatedAt || project.at, ...milestones.map(m => m.updatedAt || m.at))) || 'not recorded'}</p>}
           </div>
-          <MilestoneBoard idea={idea} projectId={project.id} projectStatus={project.status} milestones={milestones} teamMemberIds={teamMemberIds} canCollaborate={canCollaborate} canManage={canManage} />
+          <MilestoneBoard idea={idea} projectId={project.id} projectStatus={project.status} milestones={milestones} teamMemberIds={teamMemberIds} canCollaborate={canCollaborate} canManage={canManage} workspaceId={linkedWorkspace?.id} onCreateWorkspace={() => void createConnectedWorkspace()} />
           <section className="ql-linked-workspace" aria-label="Connected delivery workspace">
             <div className="ql-linked-workspace__top">
               <span className="ql-linked-workspace__mark"><QuorlythGlyph name="workspace" size={18} /></span>
@@ -393,28 +438,13 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
                     {linkedArtifacts.slice(0, 3).map(item => <article className="ql-linked-workspace__artifact" key={'workspace-' + item.id}>
                       <div><strong>{item.summary || (item.kind === 'pull_request' ? 'Pull request evidence' : 'Project deliverable')}</strong><small>Workspace task · {item.kind.replace(/_/g, ' ')} · {dateLabel(item.submittedAt)} · {a.nm(item.submittedBy)}</small></div>
                       <span className={'sw-review-status status-' + item.status}>{item.status === 'approved' ? 'Approved' : item.status === 'changes_requested' ? 'Changes requested' : 'Awaiting review'}</span>
-                      {item.url && <a href={item.url} target="_blank" rel="noreferrer">Open evidence</a>}
-                      {!item.url && (item.attachments?.length || 0) > 0 && <small>{item.attachments!.length} private file{item.attachments!.length === 1 ? '' : 's'} · open workspace to view</small>}
+                      {item.url && <EvidencePreview url={item.url} name={item.summary || 'Workspace evidence'} summary={item.kind.replace(/_/g, ' ')} compact />}
+                      {(item.attachments || []).map(attachment => <PrivateWorkspaceEvidence key={attachment.path} attachment={attachment} />)}
+                      {!item.url && !(item.attachments?.length || 0) && <small>No file attachment is available for preview.</small>}
                     </article>)}
                   </div>
                 : <p className="ql-linked-workspace__empty">No workspace-task evidence has been submitted yet. Community milestone submissions are shown separately below from their original records.</p>}
-              {linkedMilestoneSubmissions.length > 0 && <>
-                <p className="ql-eyebrow ql-linked-workspace__subheading">COMMUNITY MILESTONE SUBMISSIONS</p>
-                <div className="ql-linked-workspace__artifacts">
-                  {linkedMilestoneSubmissions.slice(0, 3).map(submission => {
-                    const milestone = milestones.find(item => item.id === submission.milestoneId)
-                    return <article className="ql-linked-workspace__artifact" key={'milestone-' + submission.id}>
-                      <div>
-                        <strong>{milestone?.title || 'Milestone deliverable'}</strong>
-                        <p>{submission.summary}</p>
-                        <small>Milestone revision {submission.revision} · {dateLabel(submission.submittedAt)} · {a.nm(submission.submittedBy)}</small>
-                      </div>
-                      <span className={'sw-review-status status-' + submission.status}>{submission.status === 'approved' ? 'Approved' : submission.status === 'changes_requested' ? 'Changes requested' : 'Awaiting review'}</span>
-                      {(submission.attachments?.length || 0) > 0 && <small>{submission.attachments!.length} private file{submission.attachments!.length === 1 ? '' : 's'} · open milestone review to access</small>}
-                    </article>
-                  })}
-                </div>
-              </>}
+              {linkedMilestoneSubmissions.length > 0 && <p className="ql-linked-workspace__note">{linkedMilestoneSubmissions.length} legacy milestone submission{linkedMilestoneSubmissions.length === 1 ? '' : 's'} remain available in the connected workspace's Evidence & reviews tab. New work evidence is submitted in the workspace first and then mirrored here.</p>}
               <button type="button" className="btn p" onClick={() => nav('/workspaces/' + linkedWorkspace.id)}><QuorlythGlyph name="workspace" size={14} />Open connected workspace</button>
             </> : canManage && project.status === 'active' ? <>
               {manageableWorkspaces.length > 0 && <form className="ql-linked-workspace__connect" onSubmit={event => { event.preventDefault(); void connectExistingWorkspace() }}>
@@ -443,38 +473,51 @@ function Inner() {
   const nav = useNavigate()
   const [params] = useSearchParams()
   const requestedIdeaId = params.get('idea') || ''
-  const [workspaceProjects, setWorkspaceProjects] = useState<ProjectWorkspace[]>([])
-  const [workspaceMembers, setWorkspaceMembers] = useState<ProjectWorkspaceMember[]>([])
-  const [workspaceArtifacts, setWorkspaceArtifacts] = useState<ProjectWorkspaceArtifact[]>([])
+  const currentUserId = a.me?.id || null
+  const [workspaceProjectsSnapshot, setWorkspaceProjectsSnapshot] = useState<{ userId: string | null; rows: ProjectWorkspace[] }>(() => ({
+    userId: currentUserId, rows: readProjectWorkspaceCache<ProjectWorkspace>(currentUserId, 'standaloneProjects') || [],
+  }))
+  const [workspaceMembersSnapshot, setWorkspaceMembersSnapshot] = useState<{ userId: string | null; rows: ProjectWorkspaceMember[] }>(() => ({
+    userId: currentUserId, rows: readProjectWorkspaceCache<ProjectWorkspaceMember>(currentUserId, 'standaloneProjectMembers') || [],
+  }))
+  const [workspaceArtifactsSnapshot, setWorkspaceArtifactsSnapshot] = useState<{ userId: string | null; rows: ProjectWorkspaceArtifact[] }>(() => ({
+    userId: currentUserId, rows: readProjectWorkspaceCache<ProjectWorkspaceArtifact>(currentUserId, 'standaloneArtifacts') || [],
+  }))
+  const workspaceProjects = workspaceProjectsSnapshot.userId === currentUserId ? workspaceProjectsSnapshot.rows : (readProjectWorkspaceCache<ProjectWorkspace>(currentUserId, 'standaloneProjects') || [])
+  const workspaceMembers = workspaceMembersSnapshot.userId === currentUserId ? workspaceMembersSnapshot.rows : (readProjectWorkspaceCache<ProjectWorkspaceMember>(currentUserId, 'standaloneProjectMembers') || [])
+  const workspaceArtifacts = workspaceArtifactsSnapshot.userId === currentUserId ? workspaceArtifactsSnapshot.rows : (readProjectWorkspaceCache<ProjectWorkspaceArtifact>(currentUserId, 'standaloneArtifacts') || [])
+  const setWorkspaceProjects = (rows: ProjectWorkspace[]) => setWorkspaceProjectsSnapshot({ userId: currentUserId, rows })
+  const setWorkspaceMembers = (rows: ProjectWorkspaceMember[]) => setWorkspaceMembersSnapshot({ userId: currentUserId, rows })
+  const setWorkspaceArtifacts = (rows: ProjectWorkspaceArtifact[]) => setWorkspaceArtifactsSnapshot({ userId: currentUserId, rows })
 
   useEffect(() => {
-    setWorkspaceProjects([])
-    setWorkspaceMembers([])
-    setWorkspaceArtifacts([])
     const store = a.backend?.store
-    if (!store || !a.me?.id) return
+    const uid = a.me?.id
+    if (!store || !uid) {
+      setWorkspaceProjects([])
+      setWorkspaceMembers([])
+      setWorkspaceArtifacts([])
+      return
+    }
+    const cachedProjects = readProjectWorkspaceCache<ProjectWorkspace>(uid, 'standaloneProjects')
+    const cachedMembers = readProjectWorkspaceCache<ProjectWorkspaceMember>(uid, 'standaloneProjectMembers')
+    const cachedArtifacts = readProjectWorkspaceCache<ProjectWorkspaceArtifact>(uid, 'standaloneArtifacts')
+    if (cachedProjects) setWorkspaceProjects(cachedProjects)
+    if (cachedMembers) setWorkspaceMembers(cachedMembers)
+    if (cachedArtifacts) setWorkspaceArtifacts(cachedArtifacts)
     const offProjects = store.subscribe('standaloneProjects', docs => {
-      const rows: ProjectWorkspace[] = docs.map(doc => ({
-        ...doc.data,
-        id: doc.data?.id || doc.id,
-        docId: doc.id,
-      }))
+      const rows: ProjectWorkspace[] = docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id }))
+      writeProjectWorkspaceCache(uid, 'standaloneProjects', rows)
       setWorkspaceProjects(rows)
     })
     const offMembers = store.subscribe('standaloneProjectMembers', docs => {
-      const rows: ProjectWorkspaceMember[] = docs.map(doc => ({
-        ...doc.data,
-        id: doc.data?.id || doc.id,
-        docId: doc.id,
-      }))
+      const rows: ProjectWorkspaceMember[] = docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id }))
+      writeProjectWorkspaceCache(uid, 'standaloneProjectMembers', rows)
       setWorkspaceMembers(rows)
     })
     const offArtifacts = store.subscribe('standaloneArtifacts', docs => {
-      const rows: ProjectWorkspaceArtifact[] = docs.map(doc => ({
-        ...doc.data,
-        id: doc.data?.id || doc.id,
-        docId: doc.id,
-      }))
+      const rows: ProjectWorkspaceArtifact[] = docs.map(doc => ({ ...doc.data, id: doc.data?.id || doc.id, docId: doc.id }))
+      writeProjectWorkspaceCache(uid, 'standaloneArtifacts', rows)
       setWorkspaceArtifacts(rows)
     })
     return () => { offProjects(); offMembers(); offArtifacts() }

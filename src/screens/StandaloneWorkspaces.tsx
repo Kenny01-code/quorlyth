@@ -23,11 +23,28 @@ type WorkspaceMember = {
 }
 type WorkspaceTask = {
   id: string; projectId: string; title: string; description: string; status: 'todo' | 'in_progress' | 'done'
-  createdBy: string; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]
+  createdBy: string; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]; milestoneId?: string | null
   acceptanceCriteria?: string; docId?: string
 }
 const assignedTaskIds = (task: Pick<WorkspaceTask, 'assigneeId' | 'assigneeIds'>): string[] =>
   [...new Set([...(Array.isArray(task.assigneeIds) ? task.assigneeIds : []), ...(task.assigneeId ? [task.assigneeId] : [])].filter(Boolean))]
+
+const WORKSPACE_CACHE_PREFIX = 'quorlyth:workspace-snapshot:v1:'
+function readWorkspaceSnapshot<T>(userId: string | null | undefined, collection: string): T[] | null {
+  if (!userId) return null
+  try {
+    const raw = sessionStorage.getItem(WORKSPACE_CACHE_PREFIX + userId + ':' + collection)
+    if (!raw) return null
+    const saved = JSON.parse(raw)
+    return Array.isArray(saved) ? saved as T[] : null
+  } catch { return null }
+}
+function writeWorkspaceSnapshot<T>(userId: string, collection: string, rows: T[]) {
+  try {
+    const raw = JSON.stringify(rows)
+    if (raw.length <= 1_500_000) sessionStorage.setItem(WORKSPACE_CACHE_PREFIX + userId + ':' + collection, raw)
+  } catch { /* Use live subscription data if browser cache is unavailable. */ }
+}
 
 type WorkspaceAttachment = { path: string; name: string; mimeType: string; size: number; uploadedAt: number }
 type WorkspaceArtifact = {
@@ -80,8 +97,8 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
     <div className="sw-linked-submission__meta"><span>Submitted by {a.nm(submission.submittedBy)}</span><span>{new Date(submission.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
     {submission.reviewNote && <p className="sw-review-note"><strong>{submission.status === 'approved' ? 'Reviewer note' : 'Requested changes'}</strong><br />{submission.reviewNote}</p>}
     {fileLinks.length > 0 && <div className="sw-linked-submission__files">{fileLinks.map(file => file.url
-      ? <a key={file.path} href={file.url} target="_blank" rel="noreferrer"><QuorlythGlyph name="file" size={13}/>{file.name}<QuorlythGlyph name="open" size={12}/></a>
-      : <span key={file.path}>{file.name} · Open the original project to access this private file</span>)}</div>}
+      ? <span key={file.path}><QuorlythGlyph name="file" size={13}/>{file.name} · Preview below</span>
+      : <span key={file.path}>{file.name} · Private preview unavailable for this account</span>)}</div>}
     {fileLinks.filter(file => file.url).map(file => <EvidencePreview key={file.path} url={file.url} name={file.name} mimeType={file.mimeType} compact={false} />)}
     <button className="sw-link-button" type="button" onClick={() => nav('/projects?idea=' + encodeURIComponent(ideaId))}>Open original milestone review <QuorlythGlyph name="arrow" size={13}/></button>
   </article>
@@ -89,15 +106,32 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
 
 function useWorkspaceCollection<T extends { id?: string }>(collection: string) {
   const a = useApp()
-  const [rows, setRows] = useState<T[]>([])
+  const userId = a.me?.id || null
+  const cacheKey = userId ? userId + ':' + collection : ''
+  const [snapshot, setSnapshot] = useState<{ key: string; rows: T[] }>(() => ({
+    key: cacheKey,
+    rows: readWorkspaceSnapshot<T>(userId, collection) || [],
+  }))
+  // Account-scoped snapshot is rendered immediately; changing accounts can never
+  // expose the previous account's cached workspace rows for even one frame.
+  const rows = snapshot.key === cacheKey ? snapshot.rows : (readWorkspaceSnapshot<T>(userId, collection) || [])
+
   useEffect(() => {
-    setRows([])
     const store = a.backend?.store
-    if (!store || !a.me?.id) return
-    return store.subscribe(collection, docs => {
-      setRows(docs.map(doc => ({ ...doc.data, docId: doc.id } as T)))
+    if (!store || !userId) {
+      setSnapshot({ key: cacheKey, rows: [] })
+      return
+    }
+    let active = true
+    const cached = readWorkspaceSnapshot<T>(userId, collection)
+    if (cached) setSnapshot({ key: cacheKey, rows: cached })
+    const unsubscribe = store.subscribe(collection, docs => {
+      const next = docs.map(doc => ({ ...doc.data, docId: doc.id } as T))
+      writeWorkspaceSnapshot(userId, collection, next)
+      if (active) setSnapshot({ key: cacheKey, rows: next })
     }, error => console.warn('Workspace collection could not refresh:', collection, error))
-  }, [a.backend?.store, a.me?.id, a.demo, collection])
+    return () => { active = false; unsubscribe() }
+  }, [a.backend?.store, userId, a.demo, collection, cacheKey])
   return rows
 }
 
@@ -149,7 +183,7 @@ function WorkspaceEvidenceAttachment({ attachment }: { attachment: WorkspaceAtta
   return <><div className="sw-evidence-attachment">
     <span className="sw-repo-mark"><QuorlythGlyph name="file" size={16}/></span>
     <div><strong title={attachment.name}>{attachment.name}</strong><small>{size} · {attachment.mimeType || 'File'}</small></div>
-    {url ? <a href={url} target="_blank" rel="noreferrer">Open file <QuorlythGlyph name="open" size={12}/></a>
+    {url ? <small className="sw-muted">In-app preview below</small>
       : <small className="sw-muted">{loading ? 'Preparing secure link…' : unavailable ? 'File unavailable' : ''}</small>}
   </div>
     {url && <EvidencePreview url={url} name={attachment.name} mimeType={attachment.mimeType} compact={false} />}
@@ -337,6 +371,7 @@ function WorkspaceProjectView() {
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDescription, setTaskDescription] = useState('')
   const [taskCriteria, setTaskCriteria] = useState('')
+  const [taskMilestoneId, setTaskMilestoneId] = useState('')
   const [taskAssigneeDraft, setTaskAssigneeDraft] = useState<string[]>([])
   const [taskDueDate, setTaskDueDate] = useState('')
   const [inviteUser, setInviteUser] = useState('')
@@ -409,9 +444,10 @@ function WorkspaceProjectView() {
         id: taskId, projectId: id, title: taskTitle.trim().slice(0,140), description: taskDescription.trim().slice(0,2000),
         acceptanceCriteria: taskCriteria.trim().slice(0,1000), status: 'todo', createdBy: a.me!.id, at: now, updatedAt: now,
         dueAt: dateEnd(taskDueDate), assigneeIds: [...taskAssigneeDraft], assigneeId: taskAssigneeDraft[0] || null,
+        milestoneId: taskMilestoneId || null,
       }
       await a.backend!.store.create('standaloneTasks/' + taskId, task)
-      setTaskTitle(''); setTaskDescription(''); setTaskCriteria(''); setTaskAssigneeDraft([]); setTaskDueDate('')
+      setTaskTitle(''); setTaskDescription(''); setTaskCriteria(''); setTaskMilestoneId(''); setTaskAssigneeDraft([]); setTaskDueDate('')
       setTab('tasks'); a.toast('Task added to the project plan.')
     })
   }
@@ -458,11 +494,24 @@ function WorkspaceProjectView() {
 
   async function completeTask(task: WorkspaceTask) {
     if (!a.backend) return
+    const approvedArtifact = projectArtifacts.find(artifact =>
+      artifact.taskId === task.id
+      && artifact.status === 'approved'
+      && ((artifact.provider === 'github' && artifact.verificationStatus === 'source_verified')
+        || (artifact.provider === 'manual' && (!!artifact.url || (artifact.attachments || []).length > 0))),
+    )
+    if (!approvedArtifact) return setError('A manager must approve previewable evidence before this task can be completed.')
     await runAction('complete-'+task.id, async () => {
       const completedAt = Date.now()
-      await a.backend!.store.update('standaloneTasks/' + task.id, { status: 'done', updatedAt: completedAt })
-      emitWorkflowEvent('task.completed', { id: task.id, taskId: task.id, projectId: id, title: task.title, summary: task.description, at: completedAt })
-      a.toast('Task completed with approved evidence.')
+      await a.backend!.store.update('standaloneTasks/' + (task.docId || task.id), { status: 'done', updatedAt: completedAt })
+      let milestoneSynced = true
+      if (task.milestoneId) {
+        milestoneSynced = await a.completeMilestoneFromWorkspaceEvidence(task.milestoneId, task.id, approvedArtifact.id)
+      }
+      emitWorkflowEvent('task.completed', { id: task.id, taskId: task.id, projectId: id, title: task.title, summary: task.description, at: completedAt, ...(task.milestoneId ? { milestoneId: task.milestoneId } : {}), evidenceId: approvedArtifact.id })
+      a.toast(milestoneSynced
+        ? 'Task completed with approved evidence.' + (task.milestoneId ? ' Its project milestone was updated too.' : '')
+        : 'Task completed. The linked milestone still needs an authorized community owner to finish its status update.')
     })
   }
 
@@ -761,7 +810,7 @@ function WorkspaceProjectView() {
       <div className="sw-linked-project-banner__copy">
         <p className="ql-eyebrow">CONNECTED COMMUNITY PROJECT</p>
         <h3>{linkedIdea?.title || 'Linked collaboration project'}</h3>
-        <p>This workspace and the project's milestone submissions are connected. Evidence is shown from its original record, not copied into a fake duplicate.</p>
+        <p>Do the hands-on work and submit evidence here first. Approved evidence appears on the connected project, and tasks linked to a milestone can update that milestone after completion.</p>
         <div className="sw-linked-project-banner__stats">
           <span><strong>{linkedMilestones.length}</strong> milestone{linkedMilestones.length===1?'':'s'}</span>
           <span><strong>{linkedSubmissions.length}</strong> submission{linkedSubmissions.length===1?'':'s'} visible</span>
@@ -790,18 +839,19 @@ function WorkspaceProjectView() {
         {projectTasks.length ? <div className="sw-mini-task-list">{projectTasks.slice(0,5).map(task => <button className="sw-mini-task" key={task.id} type="button" onClick={() => setTab('tasks')}><span className={'sw-task-check '+(task.status==='done'?'is-done':'')}>{task.status==='done'?<QuorlythGlyph name="check" size={13}/>:null}</span><span><strong>{task.title}</strong><small>{assignedTaskIds(task).length ? 'Assigned to ' + assignedTaskIds(task).length + ': ' + assignedTaskIds(task).map(uid => a.nm(uid)).join(', ') : 'Unassigned'} · {task.status === 'todo' ? 'Queued' : task.status === 'in_progress' ? 'In progress' : 'Approved complete'}</small></span><QuorlythGlyph name="arrow" size={14}/></button>)}</div> : <div className="sw-empty-inline"><QuorlythGlyph name="milestone" size={21}/><strong>No tasks yet</strong><p>Break the project into manageable outcomes. Each task should define what done means.</p>{canManage && <button className="btn p" type="button" onClick={() => setTab('tasks')}><QuorlythGlyph name="add" size={14}/>Create first task</button>}</div>}
       </div>
       <div className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">SOURCE OF TRUTH</p><h3>Connected GitHub</h3><p>Repository metadata is fetched from GitHub’s public API.</p></div></div>
-        {projectRepos.length ? projectRepos.map(repo => <div className="sw-repo-row" key={repo.id}><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div><a href={repo.htmlUrl} target="_blank" rel="noreferrer">{repo.fullName} <QuorlythGlyph name="open" size={12}/></a><small>{repo.defaultBranch ? 'Default branch · '+repo.defaultBranch : 'Public repository'} · {repo.stars} stars</small><small>Last checked {localDate(repo.lastSyncedAt)}</small></div><span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Connected</span></div>) : <div className="sw-empty-inline"><QuorlythGlyph name="link" size={21}/><strong>No repository connected</strong><p>Connect a public GitHub repository to source-check commits and pull requests. Other deliverable links can also be submitted for human review.</p></div>}
+        {projectRepos.length ? projectRepos.map(repo => <div className="sw-repo-row" key={repo.id}><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div><strong>{repo.fullName}</strong><EvidencePreview url={repo.htmlUrl} name={repo.fullName} summary="Connected GitHub repository" compact /><small>{repo.defaultBranch ? 'Default branch · '+repo.defaultBranch : 'Public repository'} · {repo.stars} stars</small><small>Last checked {localDate(repo.lastSyncedAt)}</small></div><span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Connected</span></div>) : <div className="sw-empty-inline"><QuorlythGlyph name="link" size={21}/><strong>No repository connected</strong><p>Connect a public GitHub repository to source-check commits and pull requests. Other deliverable links can also be submitted for human review.</p></div>}
         {canManage && <button type="button" className="btn p" onClick={() => setTab('evidence')}><QuorlythGlyph name="link" size={14}/>{projectRepos.length ? 'Manage GitHub evidence' : 'Connect GitHub'}</button>}
       </div>
     </section>}
 
     {tab === 'tasks' && <section className="glass pad sw-panel">
-      <div className="sw-section-heading"><div><p className="ql-eyebrow">EXECUTION PLAN</p><h3>Tasks and deliverables</h3><p>Completion stays locked until submitted evidence or a GitHub source record has been reviewed and approved.</p></div><span className="sw-count">{doneCount}/{projectTasks.length} complete</span></div>
+      <div className="sw-section-heading"><div><p className="ql-eyebrow">EXECUTION PLAN</p><h3>Tasks and deliverables</h3><p>Complete tasks only after their evidence is reviewed. Link a task to a community milestone to sync approved progress back to the project.</p></div><span className="sw-count">{doneCount}/{projectTasks.length} complete</span></div>
       {canManage && project.status==='active' && <form className="sw-task-form" onSubmit={addTask}>
         <p className="ql-eyebrow">ADD A TASK</p>
         <label className="sw-field"><span>Task title</span><input value={taskTitle} onChange={e=>setTaskTitle(e.target.value)} required maxLength={140} placeholder="What concrete result should be delivered?" /></label>
         <label className="sw-field"><span>Details <small>Optional</small></span><textarea value={taskDescription} onChange={e=>setTaskDescription(e.target.value)} maxLength={2000} rows={2} placeholder="Scope, approach or links the contributor needs." /></label>
         <label className="sw-field"><span>Definition of done</span><textarea value={taskCriteria} onChange={e=>setTaskCriteria(e.target.value)} maxLength={1000} rows={2} placeholder="Which behaviour, tests or changes must the evidence demonstrate?" /></label>
+        {linkedMilestones.length > 0 && <label className="sw-field"><span>Linked community milestone <small>Optional</small></span><select value={taskMilestoneId} onChange={e=>setTaskMilestoneId(e.target.value)}><option value="">Independent workspace task</option>{linkedMilestones.filter(milestone => milestone.status !== 'done').map(milestone => <option key={milestone.id} value={milestone.id}>{milestone.title}</option>)}</select><small className="sw-muted">When this task's evidence is approved and the task is completed, Quorlyth updates the linked milestone as well.</small></label>}
         <div className="sw-form-row">
           <div className="sw-field sw-assignee-picker">
             <span>Assign to everyone you select</span>
@@ -829,6 +879,7 @@ function WorkspaceProjectView() {
         return <article className="sw-task" key={task.id}>
           <div className="sw-task__top"><span className={'sw-task-check '+(task.status==='done'?'is-done':'')}>{task.status==='done'?<QuorlythGlyph name="check" size={14}/>:null}</span><div className="sw-task__title"><p className="ql-eyebrow">{task.status==='todo'?'QUEUED':task.status==='in_progress'?'IN PROGRESS':'APPROVED COMPLETE'}</p><h4>{task.title}</h4></div><span className={'sw-task-status '+(task.status==='done'?'is-done':'')}>{task.status==='done'?'Complete':task.status==='in_progress'?'Active':'Open'}</span></div>
           {task.description && <p className="sw-task__description">{task.description}</p>}
+          {task.milestoneId && <p className="sw-task__description"><QuorlythGlyph name="link" size={13}/> Linked milestone: {linkedMilestones.find(milestone => milestone.id === task.milestoneId)?.title || 'Community milestone'} </p>}
           {task.acceptanceCriteria && <div className="sw-criteria"><span><QuorlythGlyph name="check" size={14}/></span><div><strong>Definition of done</strong><p>{task.acceptanceCriteria}</p></div></div>}
           <div className="sw-task__meta"><span><QuorlythGlyph name="person" size={13}/>{assignedTaskIds(task).length ? assignedTaskIds(task).length + ' assigned · ' + assignedTaskIds(task).map(uid => a.nm(uid)).join(', ') : 'Unassigned'}</span><span><QuorlythGlyph name="calendar" size={13}/>{task.dueAt?localDate(task.dueAt):'No deadline'}</span><button type="button" className="sw-link-button" onClick={()=>{setArtifactTask(task.id);setTab('evidence')}}><QuorlythGlyph name="link" size={13}/>{taskEvidence.length} evidence item{taskEvidence.length===1?'':'s'}</button></div>
           {canManage && project.status==='active' && task.status!=='done' && <details className="sw-task-reassign">
@@ -856,7 +907,7 @@ function WorkspaceProjectView() {
               })}
             </div>
           </details>}
-          <div className="sw-task__actions">{canContribute && project.status==='active' && task.status==='todo' && assignedTaskIds(task).length>0 && !currentAssignee && <span className="sw-muted">Waiting for an assigned teammate to start this task.</span>}{canContribute && project.status==='active' && task.status==='todo' && (currentAssignee||!assignedTaskIds(task).length) && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{canManage&&project.status==='active'&&task.status!=='done'&&<button className="btn p" type="button" disabled={busy==='complete-'+task.id||approved===0} title={approved?'Complete with approved GitHub evidence':'A manager must approve evidence first'} onClick={()=>void completeTask(task)}><QuorlythGlyph name="complete" size={14}/>{busy==='complete-'+task.id?'Checking…':'Mark complete'}{approved===0?' · evidence needed':''}</button>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Evidence approved</span>}{canManage&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-'+task.id} onClick={()=>void removeTask(task)}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-'+task.id?'Deleting…':'Delete task'}</button>}</div>
+          <div className="sw-task__actions">{canContribute && project.status==='active' && task.status==='todo' && assignedTaskIds(task).length>0 && !currentAssignee && <span className="sw-muted">Waiting for an assigned teammate to start this task.</span>}{canContribute && project.status==='active' && task.status==='todo' && (currentAssignee||!assignedTaskIds(task).length) && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{canManage&&project.status==='active'&&task.status!=='done'&&<button className="btn p" type="button" disabled={busy==='complete-'+task.id||approved===0} title={approved?'Complete after evidence approval':'A manager must approve evidence first'} onClick={()=>void completeTask(task)}><QuorlythGlyph name="complete" size={14}/>{busy==='complete-'+task.id?'Checking…':'Mark complete'}{approved===0?' · evidence needed':''}</button>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Evidence approved</span>}{canManage&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-'+task.id} onClick={()=>void removeTask(task)}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-'+task.id?'Deleting…':'Delete task'}</button>}</div>
         </article>
       })}</div>}
     </section>}
@@ -873,8 +924,8 @@ function WorkspaceProjectView() {
       </section>}
       <section className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">GITHUB CONNECTION</p><h3>Connect a repository</h3><p>Phase 1 checks public repositories, commits and pull requests directly against GitHub’s API. Private repository OAuth is not enabled in this release.</p></div></div>
         {canManage&&project.status==='active'&&<form className="sw-inline-form" onSubmit={connectRepository}><label className="sw-field"><span>Public repository URL</span><input type="url" required value={repoUrl} onChange={e=>setRepoUrl(e.target.value)} placeholder="https://github.com/owner/repository" /></label><button className="btn p" disabled={busy==='connect-github'}><QuorlythGlyph name="link" size={14}/>{busy==='connect-github'?'Checking GitHub…':'Connect repository'}</button></form>}
-        {projectRepos.map(repo=><div className="sw-repo-row" key={repo.id}><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div><a href={repo.htmlUrl} target="_blank" rel="noreferrer">{repo.fullName} <QuorlythGlyph name="open" size={12}/></a><small>{repo.description||'No repository description'} </small><small>{repo.defaultBranch||'Default branch not reported'} · {repo.stars} stars · {repo.openIssues} open issues</small></div><span className="sw-verified"><QuorlythGlyph name="check" size={12}/>API checked</span></div>)}
-        {repoPreview.length>0&&<div className="sw-recent-commits"><p className="ql-eyebrow">RECENT SOURCE ACTIVITY</p>{repoPreview.map(commit=><a className="sw-commit-preview" href={commit.url} target="_blank" rel="noreferrer" key={commit.sha}><code>{commit.shortSha}</code><span><strong>{commit.message||'Commit'}</strong><small>{commit.authorLogin?'@'+commit.authorLogin:commit.authorName||'Author not attributed'}{commit.date?' · '+new Date(commit.date).toLocaleDateString():''}</small></span><QuorlythGlyph name="open" size={13}/></a>)}</div>}
+        {projectRepos.map(repo=><div className="sw-repo-row" key={repo.id}><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div><strong>{repo.fullName}</strong><EvidencePreview url={repo.htmlUrl} name={repo.fullName} summary="Connected GitHub repository" compact /><small>{repo.description||'No repository description'} </small><small>{repo.defaultBranch||'Default branch not reported'} · {repo.stars} stars · {repo.openIssues} open issues</small></div><span className="sw-verified"><QuorlythGlyph name="check" size={12}/>API checked</span></div>)}
+        {repoPreview.length>0&&<div className="sw-recent-commits"><p className="ql-eyebrow">RECENT SOURCE ACTIVITY</p>{repoPreview.map(commit=><article className="sw-commit-entry" key={commit.sha}><div className="sw-commit-preview"><code>{commit.shortSha}</code><span><strong>{commit.message||'Commit'}</strong><small>{commit.authorLogin?'@'+commit.authorLogin:commit.authorName||'Author not attributed'}{commit.date?' · '+new Date(commit.date).toLocaleDateString():''}</small></span></div><EvidencePreview url={commit.url} name={'Commit ' + commit.shortSha} summary={commit.message || 'GitHub commit'} compact /></article>)}</div>}
       </section>
       <section className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">SUBMIT WORK EVIDENCE</p><h3>Attach a deliverable</h3><p>GitHub source records are checked by the API. Other links remain clearly marked as contributor-submitted until a manager reviews them.</p></div></div>
         <form className="sw-artifact-form" onSubmit={submitEvidence}>
@@ -901,7 +952,7 @@ function WorkspaceProjectView() {
           const statusLabel=artifact.status==='approved'?'Approved':artifact.status==='changes_requested'?'Changes requested':'Awaiting review'
           return <article className="sw-artifact" key={artifact.id}>
             <div className="sw-artifact__top"><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div className="sw-artifact__identity"><p className="ql-eyebrow">{artifact.provider==='github'?(artifact.kind==='pull_request'?'PULL REQUEST':'COMMIT'):(artifact.kind==='file'?'FILE SUBMISSION':artifact.kind==='demo'?'DEMO / PROTOTYPE':artifact.kind==='document'?'DOCUMENT / REPORT':'PROJECT LINK')} · {localDate(artifact.verifiedAt||artifact.submittedAt)}</p><h4>{artifact.summary||'GitHub source record'}</h4><p>{artifact.repositoryFullName||(typeof meta.repository==='string'?meta.repository:artifact.provider==='github'?'GitHub':'External link')} · Submitted by {a.nm(artifact.submittedBy)}</p></div><span className={'sw-review-status status-'+artifact.status}>{statusLabel}</span></div>
-            <div className="sw-source-confirmation"><QuorlythGlyph name="check" size={14}/><span>{artifact.provider==='github'?<>GitHub API confirmed this source{meta.authorLogin?' · @'+String(meta.authorLogin):''}{meta.signatureVerified===true?' · Signed commit verified':''}</>:<>Contributor-submitted evidence · not source-verified</>}</span>{artifact.url&&<a href={artifact.url} target="_blank" rel="noreferrer">Open evidence <QuorlythGlyph name="open" size={12}/></a>}</div>
+            <div className="sw-source-confirmation"><QuorlythGlyph name="check" size={14}/><span>{artifact.provider==='github'?<>GitHub API confirmed this source{meta.authorLogin?' · @'+String(meta.authorLogin):''}{meta.signatureVerified===true?' · Signed commit verified':''}</>:<>Contributor-submitted evidence · not source-verified</>}</span>{artifact.url&&<span>Preview available below</span>}</div>
             {artifact.url && <EvidencePreview url={artifact.url} name={artifact.summary || artifact.kind || "Submitted evidence"} summary={artifact.summary} compact={false} />}
             {typeof meta.message==='string'&&<p className="sw-artifact__message">{meta.message.slice(0,700)}</p>}
             {artifact.attachments?.map(attachment=><WorkspaceEvidenceAttachment key={attachment.path} attachment={attachment}/>)}

@@ -11,6 +11,7 @@ import { cn, when } from '../lib/util'
 import { useDraftState } from '../lib/useDraftState'
 import { useUserState } from '../lib/userState'
 import { useNotifs } from '../lib/notifs'
+import { BackupRestore } from '../components/BackupRestore'
 
 export function Settings() {
   return <Gate><Inner /></Gate>
@@ -35,7 +36,7 @@ function Inner() {
   const [emails, setEmails, clearInviteDraft] = useDraftState(`q-draft:${a.me?.id}:settings:invite`, '')
   const url = location.origin
   const text = encodeURIComponent('Join my space on Quorlyth: ' + url)
-  const tabs = a.platformAdmin ? ['Space', 'AI weights', 'Requests', 'Data', 'Invite', 'Personal'] : ['Personal']
+  const tabs = a.platformAdmin ? ['Space', 'AI weights', 'Requests', 'Data', 'Invite', 'Personal', 'Backup & restore'] : ['Personal', 'Backup & restore']
   const reqs = [...a.data.requests].sort((x, y) => y.at - x.at)
   const openReqs = reqs.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at })
   const unreadRequestKeys = notifications.filter(n => n.kind === 'settings' && n.unread).map(n => n.key)
@@ -56,6 +57,7 @@ function Inner() {
         </div>
         <div className="glass pad">
           {(!a.platformAdmin && tab === 0 || a.platformAdmin && tab === 5) && <PersonalSettings />}
+          {(!a.platformAdmin && tab === 1 || a.platformAdmin && tab === 6) && <BackupRestore />}
           {a.platformAdmin && tab === 0 && <>
             <h3>Your space</h3><p className="dim" style={{ marginTop: 4 }}>Unfinished settings are saved as a draft on this device.</p>
             <label className="field"><span>Space name</span><input value={name} maxLength={60} onChange={e => setName(e.target.value)} placeholder="Your name or brand" /></label>

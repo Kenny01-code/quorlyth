@@ -381,3 +381,36 @@
 /* Destructive controls stay quiet until hover to match Quorlyth's monochrome interface. */
 .ql-danger-action { color: rgba(245,245,247,.66); border-color: rgba(255,255,255,.14); }
 .ql-danger-action:hover { color: rgba(255,255,255,.96); border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.045); }
+
+
+/* Milestone page points contributors into the workspace for hands-on work/evidence. */
+.ql-workspace-evidence-notice {
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-width:0;
+  margin-top:14px;
+  padding:13px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;
+  background:
+    radial-gradient(ellipse 75% 110% at 0% 0%,rgba(255,255,255,.045),transparent 72%),
+    rgba(0,0,0,.15);
+  transition:border-color 260ms ease,background 260ms ease,transform 260ms var(--qth-ease,cubic-bezier(.2,.75,.25,1));
+}
+.ql-workspace-evidence-notice:hover { border-color:rgba(255,255,255,.18); background-color:rgba(255,255,255,.018); }
+.ql-workspace-evidence-notice__mark {
+  display:grid; place-items:center; flex:none; width:36px; height:36px;
+  border:1px solid rgba(255,255,255,.13); border-radius:11px;
+  color:rgba(255,255,255,.8); background:rgba(255,255,255,.045);
+}
+.ql-workspace-evidence-notice__copy { flex:1; min-width:0; display:grid; gap:4px; }
+.ql-workspace-evidence-notice__copy strong { font-size:11px; font-weight:550; color:rgba(255,255,255,.85); }
+.ql-workspace-evidence-notice__copy p { margin:0; color:rgba(255,255,255,.48); font-size:10px; line-height:1.65; }
+.ql-workspace-evidence-notice__hint { color:rgba(255,255,255,.4); font-size:10px; line-height:1.5; }
+@media(max-width:640px) {
+  .ql-workspace-evidence-notice { align-items:flex-start; flex-wrap:wrap; }
+  .ql-workspace-evidence-notice__copy { flex-basis:calc(100% - 50px); }
+  .ql-workspace-evidence-notice>.btn { width:100%; justify-content:center; }
+}
+@media(prefers-reduced-motion:reduce) { .ql-workspace-evidence-notice { transition:none!important; } }

@@ -1,0 +1,124 @@
+.q-backup-shell {
+  display:grid;
+  gap:18px;
+  min-width:0;
+  animation:qth-workspace-reveal 480ms var(--qth-ease, cubic-bezier(.2,.75,.25,1)) both;
+}
+.q-backup-hero {
+  position:relative;
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  min-width:0;
+  padding:clamp(16px,3vw,24px);
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:20px;
+  background:
+    radial-gradient(ellipse 65% 95% at 0% 0%,rgba(155,180,255,.09),transparent 68%),
+    radial-gradient(ellipse 55% 85% at 100% 100%,rgba(197,150,255,.07),transparent 68%),
+    linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.012));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 20px 60px -50px rgba(255,255,255,.3);
+}
+.q-backup-hero::after {
+  content:"";
+  position:absolute;
+  top:-70%;
+  left:-45%;
+  width:45%;
+  height:220%;
+  pointer-events:none;
+  transform:rotate(18deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.055),transparent);
+  animation:qth-prism-sweep 9s var(--qth-ease, cubic-bezier(.2,.75,.25,1)) infinite;
+}
+.q-backup-mark,.q-backup-card__icon {
+  display:grid;
+  place-items:center;
+  flex:none;
+  width:45px;
+  height:45px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:14px;
+  color:rgba(255,255,255,.9);
+  background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.025));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 12px 32px -22px rgba(255,255,255,.7);
+}
+.q-backup-hero__copy { flex:1; min-width:0; }
+.q-backup-hero__copy h3 { margin:5px 0 6px; font-size:clamp(20px,3vw,25px); font-weight:420; letter-spacing:-.035em; }
+.q-backup-hero__copy>p:last-child { max-width:620px; margin:0; color:rgba(255,255,255,.56); font-size:12px; line-height:1.75; }
+.q-backup-live {
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  flex:none;
+  padding:7px 9px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  background:rgba(255,255,255,.035);
+  color:rgba(255,255,255,.61);
+  font-size:9px;
+  white-space:nowrap;
+}
+.q-backup-live i { display:block; width:6px; height:6px; border-radius:50%; background:#9be7b2; box-shadow:0 0 12px rgba(155,231,178,.65); }
+.q-backup-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.q-backup-card {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:11px;
+  min-width:0;
+  padding:clamp(15px,2.5vw,20px);
+  border:1px solid rgba(255,255,255,.105);
+  border-radius:18px;
+  background:
+    radial-gradient(ellipse 75% 75% at 100% 0%,rgba(255,255,255,.045),transparent 70%),
+    linear-gradient(145deg,rgba(255,255,255,.038),rgba(255,255,255,.01));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.065);
+  transition:transform 300ms var(--qth-ease, cubic-bezier(.2,.75,.25,1)),border-color 300ms ease,box-shadow 300ms ease;
+}
+.q-backup-card:hover { transform:translateY(-2px); border-color:rgba(255,255,255,.19); box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 22px 42px -35px rgba(255,255,255,.32); }
+.q-backup-card__icon { width:38px; height:38px; border-radius:12px; }
+.q-backup-card>.ql-eyebrow { margin:3px 0 -5px; font-size:9px; letter-spacing:.16em; color:rgba(255,255,255,.42); }
+.q-backup-card h4 { font-size:16px; font-weight:480; letter-spacing:-.02em; line-height:1.3; }
+.q-backup-card>p:not(.ql-eyebrow) { margin:0; color:rgba(255,255,255,.53); font-size:11px; line-height:1.75; }
+.q-backup-card>p strong { color:rgba(255,255,255,.85); font-weight:550; }
+.q-backup-fact { display:grid; gap:4px; width:100%; margin-top:auto; padding:11px 0 2px; border-top:1px solid rgba(255,255,255,.075); }
+.q-backup-fact span { color:rgba(255,255,255,.4); font-size:9px; text-transform:uppercase; letter-spacing:.1em; }
+.q-backup-fact strong { color:rgba(255,255,255,.7); font-size:10px; font-weight:450; overflow-wrap:anywhere; }
+.q-backup-action { margin-top:auto; width:100%; justify-content:center; gap:8px; }
+.q-backup-dropzone {
+  display:grid;
+  justify-items:start;
+  gap:8px;
+  width:100%;
+  padding:16px;
+  border:1px dashed rgba(255,255,255,.19);
+  border-radius:13px;
+  background:rgba(255,255,255,.018);
+  color:rgba(255,255,255,.78);
+  cursor:pointer;
+  transition:border-color .22s ease,background .22s ease,transform .22s ease;
+}
+.q-backup-dropzone:hover,.q-backup-dropzone:focus-within { border-color:rgba(255,255,255,.42); background:rgba(255,255,255,.045); }
+.q-backup-dropzone strong { width:100%; overflow:hidden; text-overflow:ellipsis; font-size:11px; font-weight:500; overflow-wrap:anywhere; }
+.q-backup-dropzone small { color:rgba(255,255,255,.4); font-size:9px; line-height:1.6; }
+.q-backup-dropzone input { width:100%; padding:0; margin:0; border:0; border-radius:0; background:transparent; box-shadow:none; font-size:10px; }
+.q-backup-dropzone input::file-selector-button { padding:7px 10px; margin-right:8px; border:1px solid rgba(255,255,255,.16); border-radius:8px; color:rgba(255,255,255,.85); background:rgba(255,255,255,.07); font:inherit; cursor:pointer; }
+.q-backup-status { padding:12px 14px; border:1px solid rgba(255,255,255,.14); border-radius:13px; background:rgba(255,255,255,.035); color:rgba(255,255,255,.77); font-size:11px; line-height:1.7; overflow-wrap:anywhere; }
+.q-backup-status--success { border-color:rgba(145,222,167,.21); }
+.q-backup-status--error { border-color:rgba(255,143,143,.3); background:rgba(255,100,100,.045); color:rgba(255,219,219,.9); }
+.q-backup-privacy { display:grid; grid-template-columns:18px minmax(0,1fr); align-items:start; gap:10px; padding:13px 14px; border:1px solid rgba(255,255,255,.08); border-radius:13px; background:rgba(0,0,0,.16); color:rgba(255,255,255,.45); }
+.q-backup-privacy>svg { margin-top:2px; }
+.q-backup-privacy p { margin:0; font-size:10px; line-height:1.8; overflow-wrap:anywhere; }
+.q-backup-privacy strong { color:rgba(255,255,255,.69); font-weight:500; }
+@media(max-width:680px) {
+  .q-backup-hero { flex-wrap:wrap; }
+  .q-backup-live { margin-left:59px; }
+  .q-backup-grid { grid-template-columns:minmax(0,1fr); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .q-backup-shell,.q-backup-hero::after { animation:none!important; }
+  .q-backup-card,.q-backup-dropzone { transition:none!important; }
+  .q-backup-card:hover { transform:none; }
+}

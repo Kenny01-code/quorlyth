@@ -13,6 +13,36 @@ interface Data {
 }
 const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], workSubmissions: [], settings: null, ownerId: null }
 
+const APP_DATA_CACHE_PREFIX = 'quorlyth:live-data:v1:'
+const APP_DATA_CACHE_OWNER = 'quorlyth:live-data-owner'
+
+function readCachedAppData(userId: string | null): Data | null {
+  if (!userId || typeof window === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(APP_DATA_CACHE_PREFIX + userId)
+    if (!raw) return null
+    const saved = JSON.parse(raw) as { version?: number; data?: Partial<Data> }
+    if (saved.version !== 1 || !saved.data || typeof saved.data !== 'object') return null
+    return {
+      ...EMPTY,
+      ...saved.data,
+      reviews: saved.data.reviews || {}, outcomes: saved.data.outcomes || {},
+      votes: saved.data.votes || {}, members: saved.data.members || {},
+      profiles: saved.data.profiles || {}, decisions: saved.data.decisions || {},
+      projects: saved.data.projects || {}, settings: saved.data.settings ?? null,
+    }
+  } catch { return null }
+}
+
+function writeCachedAppData(userId: string, data: Data) {
+  if (!userId || typeof window === 'undefined') return
+  try {
+    const serialized = JSON.stringify({ version: 1, savedAt: Date.now(), data })
+    // Session storage is a fast visual cache, never the source of truth.
+    if (serialized.length <= 2_500_000) sessionStorage.setItem(APP_DATA_CACHE_PREFIX + userId, serialized)
+  } catch { /* Live data still loads when browser storage is full or disabled. */ }
+}
+
 const getMilestoneAssigneeIds = (milestone: Pick<Milestone, 'assigneeId' | 'assigneeIds'>): string[] =>
   [...new Set([...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []), ...(milestone.assigneeId ? [milestone.assigneeId] : [])].filter(Boolean))]
 
@@ -52,6 +82,7 @@ export interface App {
   deleteMilestone: (milestoneId: string) => Promise<boolean>
   submitMilestoneWork: (milestoneId: string, summary: string, attachments: WorkAttachment[]) => Promise<boolean>
   reviewMilestoneWork: (submissionId: string, status: 'approved' | 'changes_requested', reviewNote?: string) => Promise<boolean>
+  completeMilestoneFromWorkspaceEvidence: (milestoneId: string, workspaceTaskId: string, artifactId: string) => Promise<boolean>
   saveSettings: (p: Partial<SpaceSettings>) => Promise<boolean>
   saveProfile: (p: Partial<Profile>) => Promise<boolean>
   requestCommunityJoin: (cid: string, message?: string) => Promise<boolean>
@@ -74,7 +105,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [demo, setDemo] = useState(() => sessionStorage.getItem('quorlyth:demo') === '1')
   const [ready, setReady] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
-  const [data, setData] = useState<Data>(EMPTY)
+  const [dataOwnerId, setDataOwnerId] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(APP_DATA_CACHE_OWNER) } catch { return null }
+  })
+  const [dataState, setData] = useState<Data>(() => {
+    try { return readCachedAppData(sessionStorage.getItem(APP_DATA_CACHE_OWNER)) || EMPTY } catch { return EMPTY }
+  })
+  // Only expose cached snapshots to the account that owns them.
+  const data = dataOwnerId === (me?.id || null) ? dataState : EMPTY
   const [settingsSnapshot, setSettingsSnapshot] = useState<{ backend: Backend; userId: string; loaded: boolean } | null>(null)
   const [platformRoleSnapshot, setPlatformRoleSnapshot] = useState<{ backend: Backend; userId: string; ready: boolean } | null>(null)
   const [platformAdmin, setPlatformAdmin] = useState(false)
@@ -175,23 +213,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, toast, demo])
 
   useEffect(() => {
-    // A settings snapshot is valid only for the current subscription lifecycle.
-    // Reset it before switching account/backend subscriptions so a same-user
-    // sign-out/sign-in cannot reuse an earlier loaded flag before fresh data arrives.
+    // Wait for auth resolution before selecting a cache so guest startup cannot
+    // overwrite a signed-in user's immediate first paint.
+    // During initial backend boot, keep the previous same-tab cache marker.
+    // The account ID check above prevents showing it before auth identifies the
+    // owner; clearing it here would defeat instant hydration on every reload.
+    if (!backend) return
+    if (!ready) return
+
+    const userId = me?.id || null
+    const cached = !demo ? readCachedAppData(userId) : null
+    setDataOwnerId(userId)
+    setData(cached || EMPTY)
+    try {
+      // Retain the last account's cache key through sign-out. The in-memory
+      // owner scope is still reset to null, so none of that private data renders
+      // to a guest; signing back into the same account can hydrate immediately.
+      if (userId) sessionStorage.setItem(APP_DATA_CACHE_OWNER, userId)
+    } catch {}
+
     setSettingsSnapshot(null)
-    if (!backend) { setData(EMPTY); return }
-
-    // Drop account-scoped snapshots immediately when auth/backend changes. The
-    // replacement subscriptions may take a moment to complete their first SELECT;
-    // retaining the previous account's data during that gap can leak stale private
-    // requests, memberships, collaboration applications, and read states.
-    setData(d => ({
-      ...d,
-      reviews: {}, outcomes: {}, votes: {}, members: {}, requests: [],
-      joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [],
-      projects: {}, milestones: [], workSubmissions: [], settings: null,
-    }))
-
     const s = backend.store
     const set = (k: keyof Data, v: any) => setData(d => ({ ...d, [k]: v }))
     let readErrorShown = false
@@ -202,8 +243,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast('Some shared data could not load. Check your connection and refresh.')
       }
     }
-    // Keep public profile pages usable for signed-out visitors. Sensitive member/admin data
-    // is subscribed only after authentication; the database RLS remains the authority.
     const offs = [
       s.subscribe('communities', d => set('communities', asList<Community>(d).sort((a, b) => a.at - b.at)), onReadError),
       s.subscribe('ideas', d => set('ideas', asList<Idea>(d)), onReadError),
@@ -230,7 +269,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ] : []),
     ]
     return () => offs.forEach(f => f())
-  }, [backend, me?.id])
+  }, [backend, me?.id, ready, demo])
 
   useEffect(() => {
     if (backend?.auth.mode !== 'supabase' || !me) return
@@ -284,6 +323,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
     return () => { active = false }
   }, [backend, me?.id, demo])
+
+  useEffect(() => {
+    // Keep optimistic updates, not just subscription refreshes, available for an
+    // immediate next render. Account matching prevents writing old data under a
+    // newly authenticated identity.
+    if (!demo && me?.id && dataOwnerId === me.id) writeCachedAppData(me.id, dataState)
+  }, [dataState, dataOwnerId, me?.id, demo])
 
   const settingsLoaded = !!(backend && me && settingsSnapshot?.backend === backend && settingsSnapshot.userId === me.id && settingsSnapshot.loaded)
   const platformRolesReady = !me || !!(backend && platformRoleSnapshot?.backend === backend && platformRoleSnapshot.userId === me.id && platformRoleSnapshot.ready)
@@ -1004,6 +1050,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
       }, 'Submission reviewed'),
+      completeMilestoneFromWorkspaceEvidence: (milestoneId, workspaceTaskId, artifactId) => w(async () => {
+        if (!me || !st) throw new Error('Sign in before completing a milestone from workspace evidence.')
+        const milestone = data.milestones.find(item => item.id === milestoneId)
+        if (!milestone) throw new Error('The linked milestone could not be found.')
+        const project = data.projects[milestone.projectId]
+        const idea = data.ideas.find(item => item.id === (project?.ideaId || milestone.projectId))
+        if (!project || !idea) throw new Error('The linked project could not be found.')
+        if (project.status !== 'active') throw new Error('Reopen the community project before completing a milestone.')
+        if (!canManageCommunity(idea.cid)) throw new Error('An authorized community owner must complete this milestone after checking its workspace evidence.')
+
+        const task = await st.get('standaloneTasks/' + workspaceTaskId)
+        const artifact = await st.get('standaloneArtifacts/' + artifactId)
+        if (!task || task.milestoneId !== milestoneId || task.status !== 'done') {
+          throw new Error('The workspace task must be linked to this milestone and marked complete first.')
+        }
+        if (!artifact || artifact.projectId !== task.projectId || artifact.taskId !== workspaceTaskId) {
+          throw new Error('The approved evidence does not belong to the linked workspace task.')
+        }
+        const workspace = await st.get('standaloneProjects/' + task.projectId)
+        const linkedProjectId = workspace?.linkedIdeaProjectId || workspace?.linkedIdeaId
+        if (!workspace || workspace.linkedIdeaId !== idea.id || linkedProjectId !== milestone.projectId) {
+          throw new Error('This task belongs to a workspace that is not connected to this community project.')
+        }
+        if (artifact.status !== 'approved' || !artifact.reviewedBy || artifact.reviewedBy === artifact.submittedBy) {
+          throw new Error('A different authorized reviewer must approve the workspace evidence before the milestone can be completed.')
+        }
+        const hasAcceptedEvidence = artifact.provider === 'github'
+          ? artifact.verificationStatus === 'source_verified'
+          : !!artifact.url || (Array.isArray(artifact.attachments) && artifact.attachments.length > 0)
+        if (!hasAcceptedEvidence) throw new Error('The workspace task has no previewable evidence to support its completion.')
+        if (milestone.status === 'done') return
+
+        const milestonePatch = { status: 'done' as const, updatedAt: Date.now() }
+        await up('milestones/' + milestoneId, milestonePatch)
+        setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...milestonePatch } : item) }))
+      }, 'Milestone completed from approved workspace evidence'),
       saveSettings: p => w(() => up('settings/space', p), 'Saved'),
       saveProfile: async p => {
         const ok = await w(() => up('profiles/' + me!.id, { ...p, at: Date.now() }), 'Profile saved')
