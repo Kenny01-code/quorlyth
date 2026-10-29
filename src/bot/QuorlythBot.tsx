@@ -1122,10 +1122,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
 
     try {
       // Short, recent context reduces token latency while retaining enough conversational continuity.
-      const recentTurns = c.msgs.filter(m => !(m as any).live).slice(-10)
+      const recentTurns = c.msgs.filter(m => !(m as any).live).slice(-8)
       const turns = recentTurns.map((m, index) => ({
         role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant',
-        content: m.t.slice(-(index === recentTurns.length - 1 ? 4200 : 1400)),
+        content: m.t.slice(-(index === recentTurns.length - 1 ? 4200 : 900)),
       }))
       const liveContext = await requestLiveContext(t)
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
