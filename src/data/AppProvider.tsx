@@ -327,6 +327,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => { active = false }
   }, [backend, me?.id, demo])
 
+  useEffect(() => {
+    // Keep optimistic updates, not just subscription refreshes, available for an
+    // immediate next render. Account matching prevents writing old data under a
+    // newly authenticated identity.
+    if (!demo && me?.id && dataOwnerId === me.id) writeCachedAppData(me.id, dataState)
+  }, [dataState, dataOwnerId, me?.id, demo])
+
   const settingsLoaded = !!(backend && me && settingsSnapshot?.backend === backend && settingsSnapshot.userId === me.id && settingsSnapshot.loaded)
   const platformRolesReady = !me || !!(backend && platformRoleSnapshot?.backend === backend && platformRoleSnapshot.userId === me.id && platformRoleSnapshot.ready)
   const st = backend?.store
