@@ -29,6 +29,23 @@ type WorkspaceTask = {
 const assignedTaskIds = (task: Pick<WorkspaceTask, 'assigneeId' | 'assigneeIds'>): string[] =>
   [...new Set([...(Array.isArray(task.assigneeIds) ? task.assigneeIds : []), ...(task.assigneeId ? [task.assigneeId] : [])].filter(Boolean))]
 
+const WORKSPACE_CACHE_PREFIX = 'quorlyth:workspace-snapshot:v1:'
+function readWorkspaceSnapshot<T>(userId: string | null | undefined, collection: string): T[] | null {
+  if (!userId) return null
+  try {
+    const raw = sessionStorage.getItem(WORKSPACE_CACHE_PREFIX + userId + ':' + collection)
+    if (!raw) return null
+    const saved = JSON.parse(raw)
+    return Array.isArray(saved) ? saved as T[] : null
+  } catch { return null }
+}
+function writeWorkspaceSnapshot<T>(userId: string, collection: string, rows: T[]) {
+  try {
+    const raw = JSON.stringify(rows)
+    if (raw.length <= 1_500_000) sessionStorage.setItem(WORKSPACE_CACHE_PREFIX + userId + ':' + collection, raw)
+  } catch { /* Use live subscription data if browser cache is unavailable. */ }
+}
+
 type WorkspaceAttachment = { path: string; name: string; mimeType: string; size: number; uploadedAt: number }
 type WorkspaceArtifact = {
   id: string; projectId: string; taskId: string; provider: 'github' | 'manual'; kind: 'commit' | 'pull_request' | 'link' | 'document' | 'demo' | 'file'
@@ -89,15 +106,32 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
 
 function useWorkspaceCollection<T extends { id?: string }>(collection: string) {
   const a = useApp()
-  const [rows, setRows] = useState<T[]>([])
+  const userId = a.me?.id || null
+  const cacheKey = userId ? userId + ':' + collection : ''
+  const [snapshot, setSnapshot] = useState<{ key: string; rows: T[] }>(() => ({
+    key: cacheKey,
+    rows: readWorkspaceSnapshot<T>(userId, collection) || [],
+  }))
+  // Account-scoped snapshot is rendered immediately; changing accounts can never
+  // expose the previous account's cached workspace rows for even one frame.
+  const rows = snapshot.key === cacheKey ? snapshot.rows : (readWorkspaceSnapshot<T>(userId, collection) || [])
+
   useEffect(() => {
-    setRows([])
     const store = a.backend?.store
-    if (!store || !a.me?.id) return
-    return store.subscribe(collection, docs => {
-      setRows(docs.map(doc => ({ ...doc.data, docId: doc.id } as T)))
+    if (!store || !userId) {
+      setSnapshot({ key: cacheKey, rows: [] })
+      return
+    }
+    let active = true
+    const cached = readWorkspaceSnapshot<T>(userId, collection)
+    if (cached) setSnapshot({ key: cacheKey, rows: cached })
+    const unsubscribe = store.subscribe(collection, docs => {
+      const next = docs.map(doc => ({ ...doc.data, docId: doc.id } as T))
+      writeWorkspaceSnapshot(userId, collection, next)
+      if (active) setSnapshot({ key: cacheKey, rows: next })
     }, error => console.warn('Workspace collection could not refresh:', collection, error))
-  }, [a.backend?.store, a.me?.id, a.demo, collection])
+    return () => { active = false; unsubscribe() }
+  }, [a.backend?.store, userId, a.demo, collection, cacheKey])
   return rows
 }
 
