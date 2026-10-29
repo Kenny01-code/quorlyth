@@ -70,7 +70,7 @@ export function BotViews(p: P) {
         () => {
           if (run !== helloRun.current) return
           p.robot.current?.talk(true)
-          setHello({ state: 'playing', message: 'QuorlythBot is speaking with your preferred ElevenLabs voice.' })
+          setHello({ state: 'playing', message: 'QuorlythBot is speaking with your preferred voice.' })
         },
         () => {
           if (run !== helloRun.current) return
@@ -80,12 +80,12 @@ export function BotViews(p: P) {
         },
         {
           accent: s.accent || 'auto',
-          // Voice previews must follow the same ElevenLabs-only rule as every bot reply.
-          // If ElevenLabs is unavailable, show the service error rather than playing another voice.
-          elevenLabsOnly: true,
-          browserFallbackTimeoutMs: 25000,
+          // Prefer ElevenLabs, then configured cloud TTS providers; use device speech only as a recovery path.
+          elevenLabsOnly: false,
+          browserFallbackTimeoutMs: 3500,
           preferElevenLabsVoice: true,
-          liveTalk: true,
+          allowBrowserFallback: true,
+liveTalk: true,
         },
       )
       if (run !== helloRun.current) {
@@ -93,7 +93,7 @@ export function BotViews(p: P) {
         return
       }
       helloPlayback.current = playback
-      setHello({ state: 'playing', message: 'Your selected ElevenLabs voice is playing.' })
+      setHello({ state: 'playing', message: 'Your selected voice is playing.' })
     } catch (error) {
       if (run !== helloRun.current) return
       const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
@@ -126,7 +126,7 @@ export function BotViews(p: P) {
       rememberWelcomeVoice(v.ai)
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: true, preferElevenLabsVoice: true }).catch(error => a.toast(error instanceof Error ? error.message : 'ElevenLabs voice is unavailable. Your matched voice preference has been saved.'))
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: false, preferElevenLabsVoice: true }).catch(error => a.toast(error instanceof Error ? error.message : 'ElevenLabs voice is unavailable. Your matched voice preference has been saved.'))
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
