@@ -7,13 +7,30 @@ export interface Notif { key: string; at: number; icon: string; text: string; ki
 type StoredNotif = Omit<Notif, 'key' | 'unread'> & { key?: string }
 
 const keyOf = (k: string, id: string | undefined, at: number) => `${k}_${id || 'x'}_${at}`.replace(/[^\w]/g, '_')
+const NOTIFICATION_CACHE_PREFIX = 'quorlyth:notification-snapshot:v1:'
+function readCachedNotifications(userId: string | null | undefined): StoredNotif[] | null {
+  if (!userId) return null
+  try {
+    const value = JSON.parse(sessionStorage.getItem(NOTIFICATION_CACHE_PREFIX + userId) || 'null')
+    return Array.isArray(value) ? value as StoredNotif[] : null
+  } catch { return null }
+}
+function writeCachedNotifications(userId: string, docs: StoredNotif[]) {
+  try {
+    const raw = JSON.stringify(docs)
+    if (raw.length < 800_000) sessionStorage.setItem(NOTIFICATION_CACHE_PREFIX + userId, raw)
+  } catch { /* Real-time notifications continue to work without the optional cache. */ }
+}
 
 export function useNotifs(a: App, st: UserState): Notif[] {
   const memberId = a.me?.id
-  const [storedState, setStoredState] = useState<{ memberId: string | null; docs: StoredNotif[] }>({ memberId: null, docs: [] })
-  // Never render the previous account's notification snapshot during the render
-  // between an account change and its subscription effect.
-  const stored = storedState.memberId === (memberId || null) ? storedState.docs : []
+  const [storedState, setStoredState] = useState<{ memberId: string | null; docs: StoredNotif[] }>(() => ({
+    memberId: memberId || null, docs: readCachedNotifications(memberId) || [],
+  }))
+  // A matching user cache can render immediately, but never reuse another user's rows.
+  const stored = storedState.memberId === (memberId || null)
+    ? storedState.docs
+    : (readCachedNotifications(memberId) || [])
 
   // These durable events live under the recipient's private user-vault path. Supabase
   // persists them across devices and Realtime updates the panel without polling.
@@ -25,11 +42,15 @@ export function useNotifs(a: App, st: UserState): Notif[] {
       return
     }
     let active = true
-    setStoredState({ memberId: uid, docs: [] })
+    const cached = readCachedNotifications(uid)
+    setStoredState({ memberId: uid, docs: cached || [] })
     const unsubscribe = store.subscribe(
       `data/users/${uid}/notifications`,
       docs => {
-        if (active) setStoredState({ memberId: uid, docs: docs.map(doc => ({ id: doc.id, ...doc.data }) as StoredNotif) })
+        if (!active) return
+        const next = docs.map(doc => ({ id: doc.id, ...doc.data }) as StoredNotif)
+        writeCachedNotifications(uid, next)
+        setStoredState({ memberId: uid, docs: next })
       },
       error => console.warn('Could not load Quorlyth notifications:', error),
     )
