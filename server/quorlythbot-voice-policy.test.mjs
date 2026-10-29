@@ -53,6 +53,7 @@ test('LiveTalk tolerates natural pauses and starts speech from shorter response 
 
   assert.match(server, /type: 'semantic_vad', eagerness: 'medium'/)
   assert.match(bot, /recognition\.continuous = true/)
+  assert.match(bot, /prefetchElevenLabsSpeech\(chunk, v\.ai/)
   assert.match(bot, /liveSilenceTimer\.current = window\.setTimeout/)
   assert.match(bot, /speechTail\.length > 42/)
   assert.match(bot, /tier: 'quick'/)
@@ -61,6 +62,8 @@ test('LiveTalk tolerates natural pauses and starts speech from shorter response 
 test('Normal chat starts ElevenLabs speech while the answer is still streaming', async () => {
   const bot = await readSource('src/bot/QuorlythBot.tsx')
   assert.match(bot, /queueReplySpeechFromDelta/)
+  assert.match(bot, /prefetchElevenLabsSpeech\(chunk, replyVoice\.ai/)
+  assert.match(bot, /playPreparedSpeechBlob\(prepared\.blob/)
   assert.match(bot, /if \(bs\.voice\) finishReplySpeech\(clean\)/)
   assert.match(bot, /elevenLabsOnly: true/)
 })
