@@ -80,8 +80,8 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
     <div className="sw-linked-submission__meta"><span>Submitted by {a.nm(submission.submittedBy)}</span><span>{new Date(submission.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
     {submission.reviewNote && <p className="sw-review-note"><strong>{submission.status === 'approved' ? 'Reviewer note' : 'Requested changes'}</strong><br />{submission.reviewNote}</p>}
     {fileLinks.length > 0 && <div className="sw-linked-submission__files">{fileLinks.map(file => file.url
-      ? <a key={file.path} href={file.url} target="_blank" rel="noreferrer"><QuorlythGlyph name="file" size={13}/>{file.name}<QuorlythGlyph name="open" size={12}/></a>
-      : <span key={file.path}>{file.name} · Open the original project to access this private file</span>)}</div>}
+      ? <span key={file.path}><QuorlythGlyph name="file" size={13}/>{file.name} · Preview below</span>
+      : <span key={file.path}>{file.name} · Private preview unavailable for this account</span>)}</div>}
     {fileLinks.filter(file => file.url).map(file => <EvidencePreview key={file.path} url={file.url} name={file.name} mimeType={file.mimeType} compact={false} />)}
     <button className="sw-link-button" type="button" onClick={() => nav('/projects?idea=' + encodeURIComponent(ideaId))}>Open original milestone review <QuorlythGlyph name="arrow" size={13}/></button>
   </article>
@@ -149,7 +149,7 @@ function WorkspaceEvidenceAttachment({ attachment }: { attachment: WorkspaceAtta
   return <><div className="sw-evidence-attachment">
     <span className="sw-repo-mark"><QuorlythGlyph name="file" size={16}/></span>
     <div><strong title={attachment.name}>{attachment.name}</strong><small>{size} · {attachment.mimeType || 'File'}</small></div>
-    {url ? <a href={url} target="_blank" rel="noreferrer">Open file <QuorlythGlyph name="open" size={12}/></a>
+    {url ? <small className="sw-muted">In-app preview below</small>
       : <small className="sw-muted">{loading ? 'Preparing secure link…' : unavailable ? 'File unavailable' : ''}</small>}
   </div>
     {url && <EvidencePreview url={url} name={attachment.name} mimeType={attachment.mimeType} compact={false} />}
