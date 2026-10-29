@@ -112,7 +112,7 @@ export function useNotifs(a: App, st: UserState): Notif[] {
     return [...merged.values()]
       .sort((x, y) => y.at - x.at)
       .slice(0, 100)
-      .map(n => ({ ...n, unread: n.at > seen && !rd[n.key] }))
+      .map(n => ({ ...n, unread: st.loaded !== false && n.at > seen && !rd[n.key] }))
   }, [a.data, a.me?.id, a.owner, a.platformAdmin, a.nm, a.joined, a.canManageCommunity, st, memberId, stored])
 }
 
