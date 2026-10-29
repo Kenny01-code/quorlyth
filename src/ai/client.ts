@@ -490,7 +490,7 @@ export async function prefetchElevenLabsSpeech(
   }
   if ((response.status === 502 || response.status === 504) && !options.signal?.aborted) {
     try { await response.body?.cancel() } catch {}
-    response = await request('/api/speak-eleven')
+    response = await request('/api/speak')
   }
   if (!response.ok) throw new Error(await readError(response))
   const audio = await response.blob()
