@@ -13,6 +13,36 @@ interface Data {
 }
 const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], workSubmissions: [], settings: null, ownerId: null }
 
+const APP_DATA_CACHE_PREFIX = 'quorlyth:live-data:v1:'
+const APP_DATA_CACHE_OWNER = 'quorlyth:live-data-owner'
+
+function readCachedAppData(userId: string | null): Data | null {
+  if (!userId || typeof window === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(APP_DATA_CACHE_PREFIX + userId)
+    if (!raw) return null
+    const saved = JSON.parse(raw) as { version?: number; data?: Partial<Data> }
+    if (saved.version !== 1 || !saved.data || typeof saved.data !== 'object') return null
+    return {
+      ...EMPTY,
+      ...saved.data,
+      reviews: saved.data.reviews || {}, outcomes: saved.data.outcomes || {},
+      votes: saved.data.votes || {}, members: saved.data.members || {},
+      profiles: saved.data.profiles || {}, decisions: saved.data.decisions || {},
+      projects: saved.data.projects || {}, settings: saved.data.settings ?? null,
+    }
+  } catch { return null }
+}
+
+function writeCachedAppData(userId: string, data: Data) {
+  if (!userId || typeof window === 'undefined') return
+  try {
+    const serialized = JSON.stringify({ version: 1, savedAt: Date.now(), data })
+    // Session storage is a fast visual cache, never the source of truth.
+    if (serialized.length <= 2_500_000) sessionStorage.setItem(APP_DATA_CACHE_PREFIX + userId, serialized)
+  } catch { /* Live data still loads when browser storage is full or disabled. */ }
+}
+
 const getMilestoneAssigneeIds = (milestone: Pick<Milestone, 'assigneeId' | 'assigneeIds'>): string[] =>
   [...new Set([...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []), ...(milestone.assigneeId ? [milestone.assigneeId] : [])].filter(Boolean))]
 
@@ -74,7 +104,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [demo, setDemo] = useState(() => sessionStorage.getItem('quorlyth:demo') === '1')
   const [ready, setReady] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
-  const [data, setData] = useState<Data>(EMPTY)
+  const [dataOwnerId, setDataOwnerId] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(APP_DATA_CACHE_OWNER) } catch { return null }
+  })
+  const [dataState, setData] = useState<Data>(() => {
+    try { return readCachedAppData(sessionStorage.getItem(APP_DATA_CACHE_OWNER)) || EMPTY } catch { return EMPTY }
+  })
+  // Only expose cached snapshots to the account that owns them.
+  const data = dataOwnerId === (me?.id || null) ? dataState : EMPTY
   const [settingsSnapshot, setSettingsSnapshot] = useState<{ backend: Backend; userId: string; loaded: boolean } | null>(null)
   const [platformRoleSnapshot, setPlatformRoleSnapshot] = useState<{ backend: Backend; userId: string; ready: boolean } | null>(null)
   const [platformAdmin, setPlatformAdmin] = useState(false)
@@ -175,25 +212,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, toast, demo])
 
   useEffect(() => {
-    // A settings snapshot is valid only for the current subscription lifecycle.
-    // Reset it before switching account/backend subscriptions so a same-user
-    // sign-out/sign-in cannot reuse an earlier loaded flag before fresh data arrives.
+    // Wait for auth resolution before selecting a cache so guest startup cannot
+    // overwrite a signed-in user's immediate first paint.
+    if (!backend) {
+      setDataOwnerId(null)
+      setData(EMPTY)
+      try { sessionStorage.removeItem(APP_DATA_CACHE_OWNER) } catch {}
+      return
+    }
+    if (!ready) return
+
+    const userId = me?.id || null
+    const cached = !demo ? readCachedAppData(userId) : null
+    setDataOwnerId(userId)
+    setData(cached || EMPTY)
+    try {
+      if (userId) sessionStorage.setItem(APP_DATA_CACHE_OWNER, userId)
+      else sessionStorage.removeItem(APP_DATA_CACHE_OWNER)
+    } catch {}
+
     setSettingsSnapshot(null)
-    if (!backend) { setData(EMPTY); return }
-
-    // Drop account-scoped snapshots immediately when auth/backend changes. The
-    // replacement subscriptions may take a moment to complete their first SELECT;
-    // retaining the previous account's data during that gap can leak stale private
-    // requests, memberships, collaboration applications, and read states.
-    setData(d => ({
-      ...d,
-      reviews: {}, outcomes: {}, votes: {}, members: {}, requests: [],
-      joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [],
-      projects: {}, milestones: [], workSubmissions: [], settings: null,
-    }))
-
     const s = backend.store
-    const set = (k: keyof Data, v: any) => setData(d => ({ ...d, [k]: v }))
+    const set = (k: keyof Data, v: any) => setData(d => {
+      const next = { ...d, [k]: v }
+      if (me?.id && !demo) writeCachedAppData(me.id, next)
+      return next
+    })
     let readErrorShown = false
     const onReadError = (error: unknown) => {
       console.error('Quorlyth shared-data read failed:', error)
@@ -202,8 +246,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast('Some shared data could not load. Check your connection and refresh.')
       }
     }
-    // Keep public profile pages usable for signed-out visitors. Sensitive member/admin data
-    // is subscribed only after authentication; the database RLS remains the authority.
     const offs = [
       s.subscribe('communities', d => set('communities', asList<Community>(d).sort((a, b) => a.at - b.at)), onReadError),
       s.subscribe('ideas', d => set('ideas', asList<Idea>(d)), onReadError),
@@ -230,7 +272,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ] : []),
     ]
     return () => offs.forEach(f => f())
-  }, [backend, me?.id])
+  }, [backend, me?.id, ready, demo])
 
   useEffect(() => {
     if (backend?.auth.mode !== 'supabase' || !me) return
