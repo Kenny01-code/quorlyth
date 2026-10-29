@@ -82,6 +82,7 @@ export interface App {
   deleteMilestone: (milestoneId: string) => Promise<boolean>
   submitMilestoneWork: (milestoneId: string, summary: string, attachments: WorkAttachment[]) => Promise<boolean>
   reviewMilestoneWork: (submissionId: string, status: 'approved' | 'changes_requested', reviewNote?: string) => Promise<boolean>
+  completeMilestoneFromWorkspaceEvidence: (milestoneId: string, workspaceTaskId: string, artifactId: string) => Promise<boolean>
   saveSettings: (p: Partial<SpaceSettings>) => Promise<boolean>
   saveProfile: (p: Partial<Profile>) => Promise<boolean>
   requestCommunityJoin: (cid: string, message?: string) => Promise<boolean>
@@ -1051,6 +1052,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
       }, 'Submission reviewed'),
+      completeMilestoneFromWorkspaceEvidence: (milestoneId, workspaceTaskId, artifactId) => w(async () => {
+        if (!me || !st) throw new Error('Sign in before completing a milestone from workspace evidence.')
+        const milestone = data.milestones.find(item => item.id === milestoneId)
+        if (!milestone) throw new Error('The linked milestone could not be found.')
+        const project = data.projects[milestone.projectId]
+        const idea = data.ideas.find(item => item.id === (project?.ideaId || milestone.projectId))
+        if (!project || !idea) throw new Error('The linked project could not be found.')
+        if (project.status !== 'active') throw new Error('Reopen the community project before completing a milestone.')
+        if (!canManageCommunity(idea.cid)) throw new Error('An authorized community owner must complete this milestone after checking its workspace evidence.')
+
+        const task = await st.get('standaloneTasks/' + workspaceTaskId)
+        const artifact = await st.get('standaloneArtifacts/' + artifactId)
+        if (!task || task.milestoneId !== milestoneId || task.status !== 'done') {
+          throw new Error('The workspace task must be linked to this milestone and marked complete first.')
+        }
+        if (!artifact || artifact.projectId !== task.projectId || artifact.taskId !== workspaceTaskId) {
+          throw new Error('The approved evidence does not belong to the linked workspace task.')
+        }
+        const workspace = await st.get('standaloneProjects/' + task.projectId)
+        if (!workspace || workspace.linkedIdeaId !== idea.id || workspace.linkedIdeaProjectId !== milestone.projectId) {
+          throw new Error('This task belongs to a workspace that is not connected to this community project.')
+        }
+        if (artifact.status !== 'approved' || !artifact.reviewedBy || artifact.reviewedBy === artifact.submittedBy) {
+          throw new Error('A different authorized reviewer must approve the workspace evidence before the milestone can be completed.')
+        }
+        const hasAcceptedEvidence = artifact.provider === 'github'
+          ? artifact.verificationStatus === 'source_verified'
+          : !!artifact.url || (Array.isArray(artifact.attachments) && artifact.attachments.length > 0)
+        if (!hasAcceptedEvidence) throw new Error('The workspace task has no previewable evidence to support its completion.')
+        if (milestone.status === 'done') return
+
+        const milestonePatch = { status: 'done' as const, updatedAt: Date.now() }
+        await up('milestones/' + milestoneId, milestonePatch)
+        setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...milestonePatch } : item) }))
+      }, 'Milestone completed from approved workspace evidence'),
       saveSettings: p => w(() => up('settings/space', p), 'Saved'),
       saveProfile: async p => {
         const ok = await w(() => up('profiles/' + me!.id, { ...p, at: Date.now() }), 'Profile saved')
