@@ -905,6 +905,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         speechMessageKeyRef.current = replySpeechKey
         setSpeechMessageKey(replySpeechKey)
         setSpeechState('loading')
+        setStatus('Preparing voice')
       }
       replySpeechQueue = replySpeechQueue.then(async () => {
         if (replySpeechFailed || replySpeechController.signal.aborted || speechMessageKeyRef.current !== replySpeechKey) return
@@ -1056,7 +1057,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       if (e?.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: friendlyBotError(e) }] }; persist(c) }
       else setCur(c)
     }
-    setBusy(false); setThinkingTask(''); setStatus('Online'); ctl.current = null
+    setBusy(false); setThinkingTask('')
+    setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? current : 'Online')
+    ctl.current = null
   }
 
   async function skill(id: string, arg = '') {
