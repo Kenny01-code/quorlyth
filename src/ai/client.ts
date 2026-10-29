@@ -460,6 +460,45 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
   return startedPromise
 }
 
+/**
+ * Prefetch a later ElevenLabs speech segment while the current segment is playing.
+ * This deliberately returns audio bytes rather than starting playback, so it cannot
+ * interrupt the one active speech segment. The first segment should still use speakText()
+ * for progressive streaming playback.
+ */
+export async function prefetchElevenLabsSpeech(
+  text: string,
+  voice: string,
+  options: { accent?: VoiceAccent; signal?: AbortSignal; liveTalk?: boolean } = {},
+): Promise<Blob> {
+  const source = text.trim().slice(0, 1500)
+  if (!source) throw new Error('There is no text to speak.')
+  if (options.signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+  const request = (path: string) => fetch(aiApiUrl(path), {
+    method: 'POST',
+    signal: options.signal,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: source, voice, accent: detectAccent(options.accent || 'auto'), liveTalk: options.liveTalk === true }),
+  })
+
+  let response: Response
+  try {
+    response = await request('/api/speak-eleven-stream')
+  } catch (error) {
+    if (options.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
+    response = await request('/api/speak-eleven')
+  }
+  if ((response.status === 502 || response.status === 504) && !options.signal?.aborted) {
+    try { await response.body?.cancel() } catch {}
+    response = await request('/api/speak-eleven')
+  }
+  if (!response.ok) throw new Error(await readError(response))
+  const audio = await response.blob()
+  if (!audio.size) throw new Error('ElevenLabs returned an empty speech segment.')
+  if (options.signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+  return audio
+}
+
 /** Uses the selected Studio persona through the server-side ElevenLabs endpoint. Device speech is opt-in only; one speech run can play at a time. */
 export async function speakText(
   text: string,
