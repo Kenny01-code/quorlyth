@@ -4,18 +4,21 @@ import { readFile } from 'node:fs/promises'
 
 const readSource = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('QuorlythBot speech always requests ElevenLabs-only playback', async () => {
-  const [bot, views] = await Promise.all([
+test('QuorlythBot prioritizes ElevenLabs and recovers through cloud or device speech', async () => {
+  const [bot, views, client] = await Promise.all([
     readSource('src/bot/QuorlythBot.tsx'),
     readSource('src/bot/views.tsx'),
+    readSource('src/ai/client.ts'),
   ])
 
-  assert.match(bot, /elevenLabsOnly: true/)
+  assert.match(bot, /elevenLabsOnly: false/)
+  assert.match(bot, /preferElevenLabsVoice: true/)
+  assert.match(bot, /allowBrowserFallback:\s*true/)
   assert.match(bot, /textOnly: true/)
-  assert.doesNotMatch(bot, /allowBrowserFallback:\s*true/)
-  assert.match(views, /elevenLabsOnly: true/)
-  assert.doesNotMatch(views, /allowBrowserFallback:\s*true/)
-  assert.doesNotMatch(views, /browser's built-in speech voice as the fallback/)
+  assert.match(views, /preferElevenLabsVoice:\s*true/)
+  assert.match(views, /allowBrowserFallback:\s*true/)
+  assert.match(client, /request\('\/api\/speak-stream'\)/)
+  assert.match(client, /request\('\/api\/speak'\)/)
 })
 
 test('ElevenLabs-only mode cannot be overridden by a browser fallback option', async () => {
@@ -65,7 +68,8 @@ test('Normal chat starts ElevenLabs speech while the answer is still streaming',
   assert.match(bot, /prefetchElevenLabsSpeech\(chunk, replyVoice\.ai/)
   assert.match(bot, /playPreparedSpeechBlob\(prepared\.blob/)
   assert.match(bot, /if \(bs\.voice\) finishReplySpeech\(clean\)/)
-  assert.match(bot, /elevenLabsOnly: true/)
+  assert.match(bot, /allowBrowserFallback:\s*true/)
+  assert.match(bot, /preferElevenLabsVoice:\s*true/)
 })
 
 test('Opening QuorlythBot no longer shows a separate loading panel', async () => {
@@ -73,4 +77,16 @@ test('Opening QuorlythBot no longer shows a separate loading panel', async () =>
   assert.doesNotMatch(app, /qbot-open-fallback/)
   assert.match(app, /<Suspense fallback=\{null\}><QuorlythBot initialOpen voiceRequest=\{botVoiceRequest\} \/><\/Suspense>/)
   assert.match(app, /Warm the assistant chunk after the first paint/)
+})
+
+test('Chat provider failover bounds stalled first-token waits', async () => {
+  const server = await readSource('server/openai.mjs')
+  assert.match(server, /Math\.min\(configured, 2200\)/)
+  assert.match(server, /PROVIDER_FALLBACK_STATUSES = new Set\(\[401, 402, 403, 404, \.\.\.TRANSIENT_STATUSES\]\)/)
+})
+
+test('Sending a normal message commits its visible state before network awaits', async () => {
+  const bot = await readSource('src/bot/QuorlythBot.tsx')
+  assert.match(bot, /flushSync\(\(\) => \{/)
+  assert.match(bot, /Commit the user's bubble and active state immediately/)
 })
