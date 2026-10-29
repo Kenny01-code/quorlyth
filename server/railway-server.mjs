@@ -1,7 +1,7 @@
 import http from 'node:http'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { chat, json, realtimeSession, speak, speakElevenLabs, speakStream } from './openai.mjs'
+import { chat, json, realtimeSession, speak, speakElevenLabs, speakElevenLabsStream, speakStream } from './openai.mjs'
 
 const ROUTES = {
   '/api/chat': chat,
@@ -9,6 +9,7 @@ const ROUTES = {
   '/api/realtime-session': realtimeSession,
   '/api/speak': speak,
   '/api/speak-eleven': speakElevenLabs,
+  '/api/speak-eleven-stream': speakElevenLabsStream,
   '/api/speak-stream': speakStream,
 }
 
