@@ -347,9 +347,11 @@ async function requestProviderJson(provider, body) {
 
 function firstStreamChunkTimeoutMs() {
   const configured = Number(process.env.AI_FIRST_TOKEN_TIMEOUT_MS)
+  // Fail over quickly when a provider accepts a stream but never starts returning tokens.
+  // This bounds provider failover delay; the actual model response still depends on the network.
   return Number.isFinite(configured) && configured >= 1000
-    ? Math.min(configured, 15000)
-    : 5000
+    ? Math.min(configured, 2200)
+    : 2200
 }
 
 // Buffer the first chunk before returning a stream to the client. A provider
