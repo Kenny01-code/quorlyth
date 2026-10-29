@@ -142,3 +142,100 @@ main > *:nth-child(4) { animation-delay: 95ms; }
   }
   main > * { animation: none !important; }
 }
+
+
+/* More expressive, but purposeful, motion for creation, promotion, evidence and review. */
+@keyframes qth-prism-sweep {
+  0% { transform: translateX(-125%) rotate(13deg); opacity: 0; }
+  18% { opacity: .7; }
+  70%,100% { transform: translateX(220%) rotate(13deg); opacity: 0; }
+}
+@keyframes qth-promo-orbit {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(3deg); }
+}
+@keyframes qth-promo-glow {
+  0%,100% { opacity: .5; filter: blur(26px); }
+  50% { opacity: .9; filter: blur(36px); }
+}
+@keyframes qth-workspace-reveal {
+  from { opacity: 0; transform: translateY(14px) scale(.992); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.promotion-preview {
+  position: relative;
+  isolation: isolate;
+  transform: translateZ(0);
+  animation: qth-workspace-reveal 560ms var(--qth-ease) both;
+}
+.promotion-preview::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -20%;
+  top: -34%;
+  width: 42%;
+  height: 165%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), rgba(255,255,255,.015), transparent);
+  transform: translateX(-125%) rotate(13deg);
+  animation: qth-prism-sweep 7.5s var(--qth-ease) infinite;
+}
+.promotion-preview:not(.promotion-preview-compact):hover {
+  border-color: rgba(255,255,255,.25);
+  box-shadow: 0 30px 85px -55px rgba(255,255,255,.42), inset 0 1px 0 rgba(255,255,255,.14);
+}
+.aibox {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: rgba(255,255,255,.14) !important;
+  background:
+    radial-gradient(ellipse 70% 65% at 100% 0%, rgba(128,160,255,.07), transparent 72%),
+    radial-gradient(ellipse 55% 70% at 0% 100%, rgba(193,134,255,.045), transparent 70%),
+    rgba(255,255,255,.025);
+}
+.aibox::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(110deg, transparent 18%, rgba(255,255,255,.045) 48%, transparent 76%);
+  background-size: 220% 100%;
+  animation: qth-progress-sheen 8s ease-in-out infinite;
+}
+.aiic { animation: qth-promo-orbit 5s ease-in-out infinite; }
+.aibox .csr { position: relative; animation: qth-workspace-reveal 420ms var(--qth-ease) both; }
+.aibox .csr:nth-of-type(2) { animation-delay: 45ms; }
+.aibox .csr:nth-of-type(3) { animation-delay: 90ms; }
+.ql-linked-workspace__artifact {
+  transition: transform 280ms var(--qth-ease), background 280ms ease, border-color 280ms ease, box-shadow 280ms ease;
+}
+.ql-linked-workspace__artifact:hover {
+  transform: translateX(3px);
+  border-color: rgba(255,255,255,.19);
+  background: rgba(255,255,255,.045);
+  box-shadow: -3px 0 0 rgba(255,255,255,.35);
+}
+.sw-tabs button[aria-selected="true"] { position:relative; overflow:hidden; box-shadow:0 8px 25px -20px rgba(255,255,255,.8); }
+.sw-tabs button[aria-selected="true"]::after {
+  content:""; position:absolute; left:18%; right:18%; bottom:3px; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);
+  animation:qth-ambient-breathe 2.8s ease-in-out infinite alternate;
+}
+.sw-artifact { animation: qth-workspace-reveal 460ms var(--qth-ease) both; }
+.sw-artifact:nth-child(2) { animation-delay:35ms; }
+.sw-artifact:nth-child(3) { animation-delay:70ms; }
+.sw-task { animation: qth-workspace-reveal 420ms var(--qth-ease) both; }
+.q-work-submission { animation: qth-workspace-reveal 420ms var(--qth-ease) both; }
+.q-work-file { transition: background 220ms ease, border-color 220ms ease, transform 220ms var(--qth-ease); }
+.q-work-file:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.035); }
+@media(prefers-reduced-motion:reduce) {
+  .promotion-preview,.promotion-preview::before,.aibox::after,.aiic,.aibox .csr,.sw-artifact,.sw-task,.q-work-submission,.sw-tabs button[aria-selected="true"]::after {
+    animation:none !important;
+  }
+  .ql-linked-workspace__artifact,.q-work-file { transition:none !important; }
+  .ql-linked-workspace__artifact:hover,.q-work-file:hover { transform:none; }
+}
