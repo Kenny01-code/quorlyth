@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
+import { EvidencePreview } from '../components/EvidencePreview'
 import { useApp } from '../data/AppProvider'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 import { emitWorkflowEvent } from '../lib/automation'
@@ -50,7 +51,7 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
 }) {
   const a = useApp()
   const nav = useNavigate()
-  const [fileLinks, setFileLinks] = useState<{ path: string; name: string; url: string }[]>([])
+  const [fileLinks, setFileLinks] = useState<{ path: string; name: string; mimeType?: string; url: string }[]>([])
   useEffect(() => {
     let active = true
     const getUrl = a.backend?.getWorkFileUrl
@@ -60,9 +61,9 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
     }
     void Promise.all(submission.attachments.map(async attachment => {
       try {
-        return { path: attachment.path, name: attachment.name, url: await getUrl(attachment.path) }
+        return { path: attachment.path, name: attachment.name, mimeType: attachment.mimeType, url: await getUrl(attachment.path) }
       } catch {
-        return { path: attachment.path, name: attachment.name, url: '' }
+        return { path: attachment.path, name: attachment.name, mimeType: attachment.mimeType, url: '' }
       }
     })).then(files => { if (active) setFileLinks(files) })
     return () => { active = false }
@@ -81,6 +82,7 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
     {fileLinks.length > 0 && <div className="sw-linked-submission__files">{fileLinks.map(file => file.url
       ? <a key={file.path} href={file.url} target="_blank" rel="noreferrer"><QuorlythGlyph name="file" size={13}/>{file.name}<QuorlythGlyph name="open" size={12}/></a>
       : <span key={file.path}>{file.name} · Open the original project to access this private file</span>)}</div>}
+    {fileLinks.filter(file => file.url).map(file => <EvidencePreview key={file.path} url={file.url} name={file.name} mimeType={file.mimeType} compact={false} />)}
     <button className="sw-link-button" type="button" onClick={() => nav('/projects?idea=' + encodeURIComponent(ideaId))}>Open original milestone review <QuorlythGlyph name="arrow" size={13}/></button>
   </article>
 }
@@ -144,12 +146,14 @@ function WorkspaceEvidenceAttachment({ attachment }: { attachment: WorkspaceAtta
     : attachment.size < 1024 * 1024 ? Math.round(attachment.size / 1024) + ' KB'
     : (attachment.size / (1024 * 1024)).toFixed(1) + ' MB'
 
-  return <div className="sw-evidence-attachment">
+  return <><div className="sw-evidence-attachment">
     <span className="sw-repo-mark"><QuorlythGlyph name="file" size={16}/></span>
     <div><strong title={attachment.name}>{attachment.name}</strong><small>{size} · {attachment.mimeType || 'File'}</small></div>
     {url ? <a href={url} target="_blank" rel="noreferrer">Open file <QuorlythGlyph name="open" size={12}/></a>
       : <small className="sw-muted">{loading ? 'Preparing secure link…' : unavailable ? 'File unavailable' : ''}</small>}
   </div>
+    {url && <EvidencePreview url={url} name={attachment.name} mimeType={attachment.mimeType} compact={false} />}
+  </>
 }
 
 
@@ -898,6 +902,7 @@ function WorkspaceProjectView() {
           return <article className="sw-artifact" key={artifact.id}>
             <div className="sw-artifact__top"><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div className="sw-artifact__identity"><p className="ql-eyebrow">{artifact.provider==='github'?(artifact.kind==='pull_request'?'PULL REQUEST':'COMMIT'):(artifact.kind==='file'?'FILE SUBMISSION':artifact.kind==='demo'?'DEMO / PROTOTYPE':artifact.kind==='document'?'DOCUMENT / REPORT':'PROJECT LINK')} · {localDate(artifact.verifiedAt||artifact.submittedAt)}</p><h4>{artifact.summary||'GitHub source record'}</h4><p>{artifact.repositoryFullName||(typeof meta.repository==='string'?meta.repository:artifact.provider==='github'?'GitHub':'External link')} · Submitted by {a.nm(artifact.submittedBy)}</p></div><span className={'sw-review-status status-'+artifact.status}>{statusLabel}</span></div>
             <div className="sw-source-confirmation"><QuorlythGlyph name="check" size={14}/><span>{artifact.provider==='github'?<>GitHub API confirmed this source{meta.authorLogin?' · @'+String(meta.authorLogin):''}{meta.signatureVerified===true?' · Signed commit verified':''}</>:<>Contributor-submitted evidence · not source-verified</>}</span>{artifact.url&&<a href={artifact.url} target="_blank" rel="noreferrer">Open evidence <QuorlythGlyph name="open" size={12}/></a>}</div>
+            {artifact.url && <EvidencePreview url={artifact.url} name={artifact.summary || artifact.kind || "Submitted evidence"} summary={artifact.summary} compact={false} />}
             {typeof meta.message==='string'&&<p className="sw-artifact__message">{meta.message.slice(0,700)}</p>}
             {artifact.attachments?.map(attachment=><WorkspaceEvidenceAttachment key={attachment.path} attachment={attachment}/>)}
             {typeof meta.title==='string'&&<p className="sw-artifact__message">{meta.title.slice(0,300)}{typeof meta.state==='string'?' · '+meta.state:''}{meta.merged===true?' · Merged':''}</p>}

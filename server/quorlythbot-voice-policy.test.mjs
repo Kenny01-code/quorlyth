@@ -23,3 +23,23 @@ test('ElevenLabs-only mode cannot be overridden by a browser fallback option', a
   assert.match(client, /const allowBrowserFallback = options\.elevenLabsOnly !== true && options\.allowBrowserFallback === true/)
   assert.match(client, /if \(!allowBrowserFallback\)/)
 })
+
+test('Nigerian accent never silently uses an American voice when no matching ID is configured', async () => {
+  const server = await readSource('server/openai.mjs')
+  assert.match(server, /if\s*\(accent\s*===\s*'nigerian'\)\s*return\s+null/)
+  assert.match(server, /selected ElevenLabs accent needs a matching voice ID/)
+  assert.match(server, /No alternate voice will be used/)
+})
+
+test('Fluid-black styling is scoped to the slash-command picker, not the composer', async () => {
+  const css = await readSource('src/styles/bot-composer-fluid-black.css')
+  assert.match(css, /\.bsl/)
+  assert.match(css, /\.bsi/)
+  assert.doesNotMatch(css, /\.ast-in|textarea|#root/)
+})
+
+test('Auto-spoken QuorlythBot replies show an error if ElevenLabs playback fails', async () => {
+  const bot = await readSource('src/bot/QuorlythBot.tsx')
+  assert.match(bot, /Auto-spoken replies must surface a useful ElevenLabs error instead of failing silently/)
+  assert.match(bot, /void playSpeech\(clean, key, true\)/)
+})

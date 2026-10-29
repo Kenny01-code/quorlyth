@@ -524,7 +524,17 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     const runsTabSelected = tabs.some(tab => /run history/i.test(tab)) || new URLSearchParams(loc.search).get('tab') === 'runs'
     const evidence = main && ((loc.pathname.startsWith('/collaboration/') && evidenceTabSelected)
       || (loc.pathname.startsWith('/workspaces/') && evidenceTabSelected))
-      ? Array.from(main.querySelectorAll('.ql-evidence-record, .sw-artifact')).slice(0, 4).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160)).filter(Boolean)
+      ? Array.from(main.querySelectorAll('.ql-evidence-record, .sw-artifact')).slice(0, 8).map(node => {
+        const summary = (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 170)
+        const links = Array.from(node.querySelectorAll('a[href]')).map(anchor => {
+          const raw = (anchor as HTMLAnchorElement).href
+          try {
+            const parsed = new URL(raw)
+            return (parsed.protocol === 'https:' || parsed.protocol === 'http:') ? parsed.hostname.replace(/^www\./i, '') + parsed.pathname.slice(0, 100) : ''
+          } catch { return '' }
+        }).filter(Boolean).slice(0, 4)
+        return summary + (links.length ? ' | detected links: ' + links.join(', ') : '')
+      }).filter(Boolean)
       : []
     const workflowCards = main && loc.pathname === '/automations' && !runsTabSelected
       ? Array.from(main.querySelectorAll('.wa-workflow-card')).slice(0, 8).map(node => (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 220)).filter(Boolean)
@@ -669,7 +679,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
       }
       if (showError && !aborted) {
-        a.toast('Voice playback is unavailable right now. The written reply is still here.')
+        const reason = error instanceof Error ? error.message.trim() : ''
+        a.toast(reason
+          ? 'Voice playback failed: ' + reason.slice(0, 180)
+          : 'ElevenLabs voice is unavailable right now. The written reply is still here.')
       }
     } finally {
       if (speechRequest.current === controller) speechRequest.current = null
@@ -702,7 +715,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     const clean = text.replace(/\[\[.*?\]\]/g, '').trim()
     if (!clean || !bs.voice) return
     const key = messageKey || 'announcement:' + Date.now()
-    void playSpeech(clean, key, false)
+    // Auto-spoken replies must surface a useful ElevenLabs error instead of failing silently.
+    void playSpeech(clean, key, true)
   }
 
   function persist(c: Chat) {

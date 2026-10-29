@@ -1099,8 +1099,8 @@ function elevenLabsVoiceId(voice, accent) {
   const accentOverride = process.env[`ELEVENLABS_VOICE_${accentKey}_ID`]?.trim()
   if (personaOverride || accentOverride) return personaOverride || accentOverride
 
-  // Nigerian English is not reliably represented by an American premade voice.
-  // Require an actual Nigeria-matched voice from the user's ElevenLabs account.
+  // Do not label an American preset as Nigerian English. Users can provide
+  // a genuine Nigerian-accent voice ID from their ElevenLabs account.
   if (accent === 'nigerian') return null
   const genericPersonaOverride = persona && process.env[`ELEVENLABS_VOICE_${persona}_ID`]?.trim()
   const accentVoices = ELEVENLABS_DEFAULT_VOICES[accent] || ELEVENLABS_DEFAULT_VOICES.american
@@ -1477,6 +1477,66 @@ export async function speak(req, res) {
   } catch (e) {
     const safe = safeHandlerError(e, 'QuorlythBot')
     return send(res, safe.status, { error: safe.message, retryable: safe.status >= 500 })
+  }
+}
+
+/** ElevenLabs-only streaming endpoint. It never falls through to other TTS providers. */
+export async function speakElevenLabsStream(req, res) {
+  let body
+  try {
+    body = await readBody(req)
+  } catch (error) {
+    const safe = safeHandlerError(error, 'QuorlythBot')
+    return send(res, safe.status, { error: safe.message, retryable: safe.status >= 500 })
+  }
+
+  const text = typeof body?.text === 'string' ? body.text.trim().slice(0, 1500) : ''
+  const accent = speechAccent(body?.accent)
+  if (!text) return send(res, 400, { error: 'Add a reply before playing its voice.' })
+  if (!SPEECH_VOICES.has(body?.voice)) {
+    return send(res, 400, { error: 'Choose a voice in QuorlythBot Voice Studio before playing audio.' })
+  }
+  if (!ELEVENLABS_KEY()) {
+    return send(res, 503, { error: 'ElevenLabs voice is not configured. Add a valid ELEVENLABS_API_KEY in the server environment. No alternate voice will be used.' })
+  }
+  const voiceId = elevenLabsVoiceId(body.voice, accent)
+  if (!voiceId) {
+    return send(res, 503, { error: 'The selected ElevenLabs accent needs a matching voice ID in your ElevenLabs account. Set ELEVENLABS_VOICE_NIGERIAN_ID for Nigerian English. No alternate voice will be used.' })
+  }
+
+  try {
+    const streamed = await streamElevenLabsToClient(text, voiceId, res, body.liveTalk === true, body.voice)
+    if (streamed.ok) return
+
+    logTtsProviderFailure('elevenlabs_stream_only', {
+      status: streamed.response?.status,
+      code: streamed.code,
+    })
+    const status = streamed.response?.status
+    const code = streamed.code
+    await discardResponse(streamed.response)
+
+    if (code === 'quota_exceeded' || code === 'insufficient_credits' || status === 402 || code === 'payment_required') {
+      return send(res, 503, { error: 'ElevenLabs could not generate audio because the account or key has reached its credit limit. Check ElevenLabs usage and billing. No alternate voice was used.' })
+    }
+    if (code === 'invalid_api_key' || code === 'missing_api_key' || status === 401 || status === 403) {
+      return send(res, 503, { error: 'ElevenLabs rejected the API key or its permissions. Verify the production ELEVENLABS_API_KEY and text-to-speech access. No alternate voice was used.' })
+    }
+    if (status === 429) {
+      return send(res, 503, { error: 'ElevenLabs rate limit reached. Wait briefly or check your ElevenLabs usage limits. No alternate voice was used.' })
+    }
+    // A pre-audio streaming failure is retryable by the client using the buffered
+    // ElevenLabs endpoint. It still never switches to browser or another provider.
+    return send(res, 502, { error: 'ElevenLabs streaming could not start. Retrying with buffered ElevenLabs audio may work.', retryable: true })
+  } catch (error) {
+    logTtsProviderFailure('elevenlabs_stream_only', {
+      error: error instanceof Error ? error.name : 'UnknownError',
+    })
+    if (res.headersSent || res.writableEnded) {
+      try { if (!res.writableEnded) res.end() } catch {}
+      return
+    }
+    return send(res, 502, { error: 'ElevenLabs streaming could not start. Retrying with buffered ElevenLabs audio may work.', retryable: true })
   }
 }
 

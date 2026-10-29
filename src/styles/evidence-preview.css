@@ -1,0 +1,32 @@
+/* Evidence previews: media-first, responsive, and safe for private signed URLs. */
+.ql-evidence-preview {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--line, rgba(127, 127, 127, .24));
+  border-radius: 14px;
+  background: var(--surface-2, rgba(127, 127, 127, .06));
+  overflow: hidden;
+}
+.ql-evidence-preview__heading { display: grid; gap: 3px; min-width: 0; }
+.ql-evidence-preview__heading strong { overflow-wrap: anywhere; font-size: 13px; font-weight: 600; }
+.ql-evidence-preview__heading small { color: var(--muted, #888); overflow-wrap: anywhere; font-size: 11px; }
+.ql-evidence-preview__type { width: fit-content; border: 1px solid var(--line, rgba(127, 127, 127, .24)); border-radius: 999px; padding: 3px 8px; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+.ql-evidence-preview__media { display: block; width: 100%; max-height: 440px; border-radius: 9px; overflow: hidden; background: #111; }
+.ql-evidence-preview__media img { display: block; width: 100%; max-height: 440px; object-fit: contain; }
+.ql-evidence-preview video.ql-evidence-preview__media { height: auto; }
+.ql-evidence-preview__audio { display: block; width: 100%; }
+.ql-evidence-preview__pdf { display: block; width: 100%; height: min(70vh, 640px); border: 0; border-radius: 9px; background: #fff; }
+.ql-evidence-preview__embed { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 9px; background: #111; }
+.ql-evidence-preview__embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.ql-evidence-preview__note { margin: 0; color: var(--muted, #888); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.ql-evidence-preview__open { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: fit-content; max-width: 100%; color: var(--text, inherit); font-size: 12px; font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.ql-evidence-preview__open:hover { text-decoration: underline; }
+.ql-evidence-preview--compact { margin: 6px 0; padding: 9px; }
+.ql-evidence-preview--unavailable { color: var(--muted, #888); font-size: 12px; }
+@media (max-width: 640px) {
+  .ql-evidence-preview { padding: 9px; }
+  .ql-evidence-preview__pdf { height: 58vh; }
+}

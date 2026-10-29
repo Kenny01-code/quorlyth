@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { chat, json, realtimeSession, speak, speakElevenLabs, speakStream } from './openai.mjs'
+import { chat, json, realtimeSession, speak, speakElevenLabs, speakElevenLabsStream, speakStream } from './openai.mjs'
 
 const originalFetch = globalThis.fetch
 const originalGeminiKey = process.env.GEMINI_API_KEY
@@ -794,6 +794,34 @@ test('streaming ElevenLabs voice begins sending MP3 before the full clip is gene
   assert.equal(requestOptions.headers['xi-api-key'], 'server-only-elevenlabs-stream-test-key')
   assert.equal(JSON.parse(requestOptions.body).model_id, 'eleven_flash_v2_5')
   assert.equal(res.headers['Content-Type'], 'audio/mpeg')
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
+  assert.equal(res.headers['X-Quorlyth-Voice-Stream'], '1')
+  assert.ok(res.output.length > 0)
+})
+
+test('QuorlythBot strict streaming endpoint uses ElevenLabs and never contacts another voice provider', async () => {
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_flash_v2_5'
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-strict-stream-test-key'
+  process.env.XAI_API_KEY = 'test-xai-must-not-be-called'
+  process.env.GEMINI_API_KEY = 'test-gemini-must-not-be-called'
+  process.env.OPENAI_API_KEY = 'test-openai-must-not-be-called'
+  let requestUrl = ''
+  globalThis.fetch = async (url) => {
+    requestUrl = String(url)
+    if (!requestUrl.includes('api.elevenlabs.io')) throw new Error('Strict endpoint must not request an alternate voice provider')
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array([4, 3, 2]))
+        controller.close()
+      },
+    }), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speakElevenLabsStream({ body: { text: 'Hello, I am here.', voice: 'marin', accent: 'american' } }, res)
+
+  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x/stream?output_format=mp3_22050_32')
+  assert.equal(res.statusCode, 200)
   assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
   assert.equal(res.headers['X-Quorlyth-Voice-Stream'], '1')
   assert.ok(res.output.length > 0)
