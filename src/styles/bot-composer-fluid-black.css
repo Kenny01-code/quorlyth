@@ -1,7 +1,6 @@
 /* Slash-command picker only. Keep this quiet, solid-black surface isolated
    from the typing composer and every other QuorlythBot screen. */
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsl {
-  overflow: visible !important;
   padding: 5px !important;
   gap: 3px !important;
   border: 1px solid rgba(255,255,255,.12) !important;
