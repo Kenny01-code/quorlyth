@@ -958,7 +958,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       say(reply, next.id + ':' + (next.msgs.length - 1))
       return
     }
-    let c!: Chat
+    let c = cur as Chat
     // Commit the user's bubble and active state immediately, before any context or network awaits.
     flushSync(() => {
       stopVoice()
