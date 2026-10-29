@@ -4,6 +4,7 @@ import { QuorlythGlyph } from './QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, WorkAttachment, WorkSubmission } from '../lib/types'
 import { userFacingMutationError } from '../lib/userFacingErrors'
+import { EvidencePreview } from './EvidencePreview'
 
 const MAX_ATTACHMENTS = 8
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
@@ -54,7 +55,7 @@ function AttachmentLink({ attachment, removable, onRemove }: {
     return () => { active = false }
   }, [a.backend, attachment.path])
 
-  return (
+  return <>
     <div className="q-work-file">
       <span className="q-work-file__symbol" aria-hidden="true">
         {attachmentAcceptsImage(attachment.mimeType) && url
@@ -65,11 +66,12 @@ function AttachmentLink({ attachment, removable, onRemove }: {
         <strong title={attachment.name}>{attachment.name}</strong>
         <small>{fileSize(attachment.size)} · {attachment.mimeType || 'File'}</small>
       </span>
-      {url ? <a className="q-work-file__open" href={url} target="_blank" rel="noreferrer" aria-label={'Open ' + attachment.name}>Open</a>
+      {url ? <span className="q-work-file__opening">In-app preview ready</span>
         : <span className="q-work-file__opening">{opening ? 'Loading…' : failed ? 'Unavailable' : ''}</span>}
       {removable && onRemove && <button type="button" className="q-work-file__remove" onClick={onRemove} aria-label={'Remove ' + attachment.name} title="Remove attachment"><QuorlythGlyph name="close" size={15} /></button>}
     </div>
-  )
+    {url && <EvidencePreview url={url} name={attachment.name} mimeType={attachment.mimeType} compact />}
+  </>
 }
 
 export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, canCollaborate, projectActive }: {
