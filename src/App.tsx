@@ -92,11 +92,6 @@ export default function App() {
   // Download the full bot experience only after the user opens its lightweight launcher.
   const [botMounted, setBotMounted] = useState(false)
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
-  // Warm the assistant chunk before a user opens it, so the first open is much faster.
-  useEffect(() => {
-    const timer = window.setTimeout(() => { void loadQuorlythBot().catch(() => {}) }, 300)
-    return () => window.clearTimeout(timer)
-  }, [])
   const [deferredLauncherHidden, setDeferredLauncherHidden] = useState(false)
   const [showDeferredLauncherRestore, setShowDeferredLauncherRestore] = useState(false)
   const deferredRestoreTimer = useRef<number | null>(null)
