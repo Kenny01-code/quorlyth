@@ -1071,7 +1071,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           throw new Error('The approved evidence does not belong to the linked workspace task.')
         }
         const workspace = await st.get('standaloneProjects/' + task.projectId)
-        if (!workspace || workspace.linkedIdeaId !== idea.id || workspace.linkedIdeaProjectId !== milestone.projectId) {
+        const linkedProjectId = workspace?.linkedIdeaProjectId || workspace?.linkedIdeaId
+        if (!workspace || workspace.linkedIdeaId !== idea.id || linkedProjectId !== milestone.projectId) {
           throw new Error('This task belongs to a workspace that is not connected to this community project.')
         }
         if (artifact.status !== 'approved' || !artifact.reviewedBy || artifact.reviewedBy === artifact.submittedBy) {
