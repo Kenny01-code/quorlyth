@@ -85,7 +85,7 @@ export function BotViews(p: P) {
           browserFallbackTimeoutMs: 3500,
           preferElevenLabsVoice: true,
           allowBrowserFallback: true,
-liveTalk: true,
+          liveTalk: true,
         },
       )
       if (run !== helloRun.current) {
@@ -126,7 +126,7 @@ liveTalk: true,
       rememberWelcomeVoice(v.ai)
       bd.saveSettings({ vid: v.id, theme: v.theme }); p.robot.current?.theme(v.theme); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: false, preferElevenLabsVoice: true }).catch(error => a.toast(error instanceof Error ? error.message : 'ElevenLabs voice is unavailable. Your matched voice preference has been saved.'))
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: false, preferElevenLabsVoice: true, allowBrowserFallback: true, browserFallbackTimeoutMs: 3500 }).catch(error => a.toast(error instanceof Error ? error.message : 'ElevenLabs voice is unavailable. Your matched voice preference has been saved.'))
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
