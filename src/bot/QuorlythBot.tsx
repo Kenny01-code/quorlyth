@@ -72,6 +72,82 @@ function friendlyBotError(error: unknown): string {
   return 'I hit a temporary snag while preparing that answer. Your message is still here; please try again in a moment.'
 }
 
+/** Play a pre-generated ElevenLabs segment without replacing the currently active speech owner. */
+function playPreparedSpeechBlob(
+  blob: Blob,
+  signal: AbortSignal,
+  onStart?: () => void,
+  onEnd?: () => void,
+): Promise<SpeechPlayback> {
+  if (signal.aborted) return Promise.reject(new DOMException('Speech cancelled', 'AbortError'))
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob)
+    const player = new Audio(url)
+    player.preload = 'auto'
+    let started = false
+    let settled = false
+    let finished = false
+
+    const cleanup = () => {
+      signal.removeEventListener('abort', stop)
+      player.onplay = null
+      player.onended = null
+      player.onerror = null
+      URL.revokeObjectURL(url)
+    }
+    const finish = (notify = true) => {
+      if (finished) return
+      finished = true
+      cleanup()
+      if (notify) onEnd?.()
+    }
+    const stop = () => {
+      try {
+        player.pause()
+        player.currentTime = 0
+        player.removeAttribute('src')
+        player.load()
+      } catch {}
+      if (!started && !settled) {
+        settled = true
+        reject(new DOMException('Speech cancelled', 'AbortError'))
+      }
+      finish()
+    }
+    const playback: SpeechPlayback = {
+      pause: () => { if (!finished) player.pause() },
+      resume: () => { if (!finished) void player.play().catch(() => finish()) },
+      stop,
+    }
+
+    player.onplay = () => {
+      if (signal.aborted) { stop(); return }
+      started = true
+      onStart?.()
+      if (!settled) {
+        settled = true
+        resolve(playback)
+      }
+    }
+    player.onended = () => finish()
+    player.onerror = () => {
+      if (!settled) {
+        settled = true
+        reject(new Error('The prepared ElevenLabs voice could not be played.'))
+      }
+      finish(started)
+    }
+    signal.addEventListener('abort', stop, { once: true })
+    void player.play().catch(error => {
+      if (!settled) {
+        settled = true
+        reject(error)
+      }
+      finish(false)
+    })
+  })
+}
+
 type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
 type Live = null | { state: string; user: string; bot: string }
 type PendingAction =
