@@ -118,6 +118,24 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
         const suffix = response.status === 404 ? 'This GitHub record may be private or unavailable.' : response.status === 403 ? 'GitHub may be rate-limiting this preview.' : 'GitHub could not load this record.'
         throw new Error(suffix)
       }
+      // GitHub's pull-request detail endpoint omits the changed-file list. Fetch
+      // its companion files endpoint so the reviewer can inspect actual diffs here.
+      if (type === 'github' && parsed && /\/(?:pull|pulls)\/\d+\/?$/i.test(parsed.pathname)) {
+        try {
+          const filesResponse = await fetch(githubApi + '/files?per_page=20', {
+            signal: controller.signal,
+            headers: { Accept: 'application/vnd.github+json' },
+          })
+          if (filesResponse.ok) {
+            const files = await filesResponse.json()
+            if (Array.isArray(files)) data.files = files
+          }
+        } catch (error) {
+          if (controller.signal.aborted) return
+          // Keep the pull-request summary visible if GitHub's secondary endpoint
+          // is restricted or rate limited.
+        }
+      }
       let content = ''
       if (typeof data.content === 'string' && data.encoding === 'base64' && parsed && isTextGitHubFile(parsed)) {
         try { content = decodeBase64Utf8(data.content).slice(0, 80000) }
