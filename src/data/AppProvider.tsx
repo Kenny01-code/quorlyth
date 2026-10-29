@@ -214,12 +214,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Wait for auth resolution before selecting a cache so guest startup cannot
     // overwrite a signed-in user's immediate first paint.
-    if (!backend) {
-      setDataOwnerId(null)
-      setData(EMPTY)
-      try { sessionStorage.removeItem(APP_DATA_CACHE_OWNER) } catch {}
-      return
-    }
+    // During initial backend boot, keep the previous same-tab cache marker.
+    // The account ID check above prevents showing it before auth identifies the
+    // owner; clearing it here would defeat instant hydration on every reload.
+    if (!backend) return
     if (!ready) return
 
     const userId = me?.id || null
