@@ -53,6 +53,68 @@ function formatBytes(bytes: number) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
+function plainText(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value.replace(/\r/g, '').trim()
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) return value.map(item => plainText(item)).filter(Boolean).join(', ')
+  return fallback
+}
+
+function recordSection(path: string) {
+  const root = path.split('/')[0]
+  if (root === 'profiles' || path.startsWith('data/users/')) return 'ACCOUNT, PREFERENCES & SAVED ACTIVITY'
+  if (root === 'communities' || root === 'members' || root === 'communityJoinRequests') return 'COMMUNITIES & MEMBERSHIPS'
+  if (root === 'ideas' || root === 'reviews' || root === 'ideaOutcomes' || root === 'votes') return 'IDEAS & COMMUNITY FEEDBACK'
+  if (root === 'projects' || root === 'milestones' || root === 'workSubmissions' || root.startsWith('standalone')) return 'PROJECTS, TASKS & EVIDENCE'
+  if (root === 'promotions') return 'PROMOTIONS & SHARE-READY POSTS'
+  if (root === 'settings') return 'WORKSPACE SETTINGS'
+  return 'OTHER SAVED RECORDS'
+}
+
+function readableBackup(records: BackupRecord[], accountName: string, createdAt: string) {
+  const grouped = new Map<string, string[]>()
+  const sorted = [...records].sort((first, second) => first.path.localeCompare(second.path))
+  for (const item of sorted) {
+    if (!item || typeof item.path !== 'string' || !item.data || typeof item.data !== 'object' || Array.isArray(item.data)) continue
+    const data = item.data as Record<string, unknown>
+    const section = recordSection(item.path)
+    const title = plainText(data.title, plainText(data.name, plainText(data.summary, plainText(data.text, 'Saved item'))))
+    const lines = [
+      title,
+      plainText(data.summary, plainText(data.description, plainText(data.body))),
+      typeof data.status === 'string' ? 'Status: ' + plainText(data.status) : '',
+      typeof data.dueAt === 'number' && data.dueAt > 0 ? 'Due: ' + new Date(data.dueAt).toLocaleDateString() : '',
+      typeof data.at === 'number' && data.at > 0 ? 'Saved: ' + new Date(data.at).toLocaleString() : '',
+      plainText(data.tags) ? 'Tags: ' + plainText(data.tags) : '',
+      plainText(data.reviewNote) ? 'Review note: ' + plainText(data.reviewNote) : '',
+      Array.isArray(data.attachments) && data.attachments.length ? 'Attachments: ' + data.attachments.map(att => plainText((att as Record<string, unknown>)?.name, 'File')).join(', ') : '',
+    ].filter(Boolean).map(value => value.replace(/[ \t]+$/gm, ''))
+    const entry = [...new Set(lines)].join('\n')
+    if (!entry) continue
+    const items = grouped.get(section) || []
+    items.push(entry)
+    grouped.set(section, items)
+  }
+
+  const output = [
+    'QUORLYTH BACKUP SUMMARY',
+    '========================================',
+    'Account: ' + (accountName || 'Quorlyth member'),
+    'Created: ' + new Date(createdAt).toLocaleString(),
+    'Saved records: ' + records.length.toLocaleString(),
+    '',
+    'This is the readable summary of your backup. Keep the matching .qbackup file as well if you want to restore supported records later.',
+    'The summary is for reading and does not replace the .qbackup restore file.',
+    '',
+  ]
+  for (const [section, entries] of grouped) {
+    output.push(section, '-'.repeat(Math.min(section.length, 60)), '')
+    for (const entry of entries) output.push(entry, '', '----------------------------------------', '')
+  }
+  output.push('END OF QUORLYTH BACKUP SUMMARY')
+  return output.join('\n')
+}
+
 export function BackupRestore() {
   const a = useApp()
   const userId = a.me?.id || ''
@@ -81,12 +143,16 @@ export function BackupRestore() {
         records: records.map(record => ({ path: record.path, data: record.data, updatedAt: record.updatedAt })),
       }
       const serialized = JSON.stringify(payload)
+      const readable = readableBackup(records, payload.account.name, payload.createdAt)
       const day = new Date().toISOString().slice(0, 10)
       downloadBackup('Quorlyth-backup-' + day + '.qbackup', serialized)
+      // Pair the restore-capable file with a plain-language export that people
+      // can actually read without opening developer tooling.
+      downloadBackup('Quorlyth-backup-summary-' + day + '.txt', readable)
       const savedAt = payload.createdAt
       setLastBackup(savedAt)
       try { localStorage.setItem(cacheKey, savedAt) } catch {}
-      setStatus({ kind: 'success', text: 'Your backup is ready. ' + records.length.toLocaleString() + ' records were packed into a portable Quorlyth backup file (' + formatBytes(new Blob([serialized]).size) + ').' })
+      setStatus({ kind: 'success', text: 'Your backup is ready. Quorlyth downloaded a readable summary (' + formatBytes(new Blob([readable]).size) + ') plus a portable restore file (' + formatBytes(new Blob([serialized]).size) + ') containing ' + records.length.toLocaleString() + ' records.' })
     } catch (error) {
       setStatus({ kind: 'error', text: error instanceof Error ? error.message : 'Quorlyth could not prepare the backup. Check your connection and try again.' })
     } finally {
@@ -165,7 +231,7 @@ export function BackupRestore() {
         <div className="q-backup-card__icon"><Icon name="save" size={19} /></div>
         <p className="ql-eyebrow">01 · CREATE A COPY</p>
         <h4>Back up your Quorlyth data</h4>
-        <p>Creates a portable <strong>.qbackup</strong> file using records this account is allowed to export. The file is downloaded to your device.</p>
+        <p>Downloads two files: a readable <strong>.txt summary</strong> you can open like a WhatsApp export, and a portable <strong>.qbackup file</strong> Quorlyth can use to restore supported records later.</p>
         <div className="q-backup-fact"><span>Last backup</span><strong>{lastBackup ? new Date(lastBackup).toLocaleString() : 'Not created on this device yet'}</strong></div>
         <button type="button" className="btn p q-backup-action" onClick={() => void createBackup()} disabled={!a.backend || !a.me || !!busy}>
           <Icon name="download" size={16} />{busy === 'backup' ? 'Preparing backup…' : 'Create backup'}
