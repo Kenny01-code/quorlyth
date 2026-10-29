@@ -72,5 +72,5 @@ test('Opening QuorlythBot no longer shows a separate loading panel', async () =>
   const app = await readSource('src/App.tsx')
   assert.doesNotMatch(app, /qbot-open-fallback/)
   assert.match(app, /<Suspense fallback=\{null\}><QuorlythBot initialOpen voiceRequest=\{botVoiceRequest\} \/><\/Suspense>/)
-  assert.match(app, /Warm the assistant chunk before a user opens it/)
+  assert.match(app, /Warm the assistant chunk after the first paint/)
 })
