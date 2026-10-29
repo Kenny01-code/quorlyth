@@ -12,8 +12,8 @@ type BackupFile = {
   records: BackupRecord[]
 }
 
-function downloadBackup(fileName: string, content: string) {
-  const blob = new Blob([content], { type: 'application/vnd.quorlyth.backup+json' })
+function downloadBackup(fileName: string, content: string, mimeType = 'application/vnd.quorlyth.backup+json') {
+  const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
@@ -148,7 +148,7 @@ export function BackupRestore() {
       downloadBackup('Quorlyth-backup-' + day + '.qbackup', serialized)
       // Pair the restore-capable file with a plain-language export that people
       // can actually read without opening developer tooling.
-      downloadBackup('Quorlyth-backup-summary-' + day + '.txt', readable)
+      downloadBackup('Quorlyth-backup-summary-' + day + '.txt', readable, 'text/plain;charset=utf-8')
       const savedAt = payload.createdAt
       setLastBackup(savedAt)
       try { localStorage.setItem(cacheKey, savedAt) } catch {}
