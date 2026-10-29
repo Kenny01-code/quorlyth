@@ -23,7 +23,7 @@ type WorkspaceMember = {
 }
 type WorkspaceTask = {
   id: string; projectId: string; title: string; description: string; status: 'todo' | 'in_progress' | 'done'
-  createdBy: string; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]
+  createdBy: string; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]; milestoneId?: string | null
   acceptanceCriteria?: string; docId?: string
 }
 const assignedTaskIds = (task: Pick<WorkspaceTask, 'assigneeId' | 'assigneeIds'>): string[] =>
@@ -371,6 +371,7 @@ function WorkspaceProjectView() {
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDescription, setTaskDescription] = useState('')
   const [taskCriteria, setTaskCriteria] = useState('')
+  const [taskMilestoneId, setTaskMilestoneId] = useState('')
   const [taskAssigneeDraft, setTaskAssigneeDraft] = useState<string[]>([])
   const [taskDueDate, setTaskDueDate] = useState('')
   const [inviteUser, setInviteUser] = useState('')
@@ -443,9 +444,10 @@ function WorkspaceProjectView() {
         id: taskId, projectId: id, title: taskTitle.trim().slice(0,140), description: taskDescription.trim().slice(0,2000),
         acceptanceCriteria: taskCriteria.trim().slice(0,1000), status: 'todo', createdBy: a.me!.id, at: now, updatedAt: now,
         dueAt: dateEnd(taskDueDate), assigneeIds: [...taskAssigneeDraft], assigneeId: taskAssigneeDraft[0] || null,
+        milestoneId: taskMilestoneId || null,
       }
       await a.backend!.store.create('standaloneTasks/' + taskId, task)
-      setTaskTitle(''); setTaskDescription(''); setTaskCriteria(''); setTaskAssigneeDraft([]); setTaskDueDate('')
+      setTaskTitle(''); setTaskDescription(''); setTaskCriteria(''); setTaskMilestoneId(''); setTaskAssigneeDraft([]); setTaskDueDate('')
       setTab('tasks'); a.toast('Task added to the project plan.')
     })
   }
@@ -492,11 +494,24 @@ function WorkspaceProjectView() {
 
   async function completeTask(task: WorkspaceTask) {
     if (!a.backend) return
+    const approvedArtifact = projectArtifacts.find(artifact =>
+      artifact.taskId === task.id
+      && artifact.status === 'approved'
+      && ((artifact.provider === 'github' && artifact.verificationStatus === 'source_verified')
+        || (artifact.provider === 'manual' && (!!artifact.url || (artifact.attachments || []).length > 0))),
+    )
+    if (!approvedArtifact) return setError('A manager must approve previewable evidence before this task can be completed.')
     await runAction('complete-'+task.id, async () => {
       const completedAt = Date.now()
-      await a.backend!.store.update('standaloneTasks/' + task.id, { status: 'done', updatedAt: completedAt })
-      emitWorkflowEvent('task.completed', { id: task.id, taskId: task.id, projectId: id, title: task.title, summary: task.description, at: completedAt })
-      a.toast('Task completed with approved evidence.')
+      await a.backend!.store.update('standaloneTasks/' + (task.docId || task.id), { status: 'done', updatedAt: completedAt })
+      let milestoneSynced = true
+      if (task.milestoneId) {
+        milestoneSynced = await a.completeMilestoneFromWorkspaceEvidence(task.milestoneId, task.id, approvedArtifact.id)
+      }
+      emitWorkflowEvent('task.completed', { id: task.id, taskId: task.id, projectId: id, title: task.title, summary: task.description, at: completedAt, ...(task.milestoneId ? { milestoneId: task.milestoneId } : {}), evidenceId: approvedArtifact.id })
+      a.toast(milestoneSynced
+        ? 'Task completed with approved evidence.' + (task.milestoneId ? ' Its project milestone was updated too.' : '')
+        : 'Task completed. The linked milestone still needs an authorized community owner to finish its status update.')
     })
   }
 
@@ -830,12 +845,13 @@ function WorkspaceProjectView() {
     </section>}
 
     {tab === 'tasks' && <section className="glass pad sw-panel">
-      <div className="sw-section-heading"><div><p className="ql-eyebrow">EXECUTION PLAN</p><h3>Tasks and deliverables</h3><p>Completion stays locked until submitted evidence or a GitHub source record has been reviewed and approved.</p></div><span className="sw-count">{doneCount}/{projectTasks.length} complete</span></div>
+      <div className="sw-section-heading"><div><p className="ql-eyebrow">EXECUTION PLAN</p><h3>Tasks and deliverables</h3><p>Complete tasks only after their evidence is reviewed. Link a task to a community milestone to sync approved progress back to the project.</p></div><span className="sw-count">{doneCount}/{projectTasks.length} complete</span></div>
       {canManage && project.status==='active' && <form className="sw-task-form" onSubmit={addTask}>
         <p className="ql-eyebrow">ADD A TASK</p>
         <label className="sw-field"><span>Task title</span><input value={taskTitle} onChange={e=>setTaskTitle(e.target.value)} required maxLength={140} placeholder="What concrete result should be delivered?" /></label>
         <label className="sw-field"><span>Details <small>Optional</small></span><textarea value={taskDescription} onChange={e=>setTaskDescription(e.target.value)} maxLength={2000} rows={2} placeholder="Scope, approach or links the contributor needs." /></label>
         <label className="sw-field"><span>Definition of done</span><textarea value={taskCriteria} onChange={e=>setTaskCriteria(e.target.value)} maxLength={1000} rows={2} placeholder="Which behaviour, tests or changes must the evidence demonstrate?" /></label>
+        {linkedMilestones.length > 0 && <label className="sw-field"><span>Linked community milestone <small>Optional</small></span><select value={taskMilestoneId} onChange={e=>setTaskMilestoneId(e.target.value)}><option value="">Independent workspace task</option>{linkedMilestones.filter(milestone => milestone.status !== 'done').map(milestone => <option key={milestone.id} value={milestone.id}>{milestone.title}</option>)}</select><small className="sw-muted">When this task's evidence is approved and the task is completed, Quorlyth updates the linked milestone as well.</small></label>}
         <div className="sw-form-row">
           <div className="sw-field sw-assignee-picker">
             <span>Assign to everyone you select</span>
@@ -863,6 +879,7 @@ function WorkspaceProjectView() {
         return <article className="sw-task" key={task.id}>
           <div className="sw-task__top"><span className={'sw-task-check '+(task.status==='done'?'is-done':'')}>{task.status==='done'?<QuorlythGlyph name="check" size={14}/>:null}</span><div className="sw-task__title"><p className="ql-eyebrow">{task.status==='todo'?'QUEUED':task.status==='in_progress'?'IN PROGRESS':'APPROVED COMPLETE'}</p><h4>{task.title}</h4></div><span className={'sw-task-status '+(task.status==='done'?'is-done':'')}>{task.status==='done'?'Complete':task.status==='in_progress'?'Active':'Open'}</span></div>
           {task.description && <p className="sw-task__description">{task.description}</p>}
+          {task.milestoneId && <p className="sw-task__description"><QuorlythGlyph name="link" size={13}/> Linked milestone: {linkedMilestones.find(milestone => milestone.id === task.milestoneId)?.title || 'Community milestone'} </p>}
           {task.acceptanceCriteria && <div className="sw-criteria"><span><QuorlythGlyph name="check" size={14}/></span><div><strong>Definition of done</strong><p>{task.acceptanceCriteria}</p></div></div>}
           <div className="sw-task__meta"><span><QuorlythGlyph name="person" size={13}/>{assignedTaskIds(task).length ? assignedTaskIds(task).length + ' assigned · ' + assignedTaskIds(task).map(uid => a.nm(uid)).join(', ') : 'Unassigned'}</span><span><QuorlythGlyph name="calendar" size={13}/>{task.dueAt?localDate(task.dueAt):'No deadline'}</span><button type="button" className="sw-link-button" onClick={()=>{setArtifactTask(task.id);setTab('evidence')}}><QuorlythGlyph name="link" size={13}/>{taskEvidence.length} evidence item{taskEvidence.length===1?'':'s'}</button></div>
           {canManage && project.status==='active' && task.status!=='done' && <details className="sw-task-reassign">
