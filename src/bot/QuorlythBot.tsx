@@ -972,9 +972,20 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     let replySpeechCharacters = 0
     let replySpeechQueue = Promise.resolve()
 
+    let replySpeechChunkCount = 0
     const queueReplySpeech = (raw: string) => {
       const chunk = raw.trim().replace(/\s+/g, ' ')
       if (!chunk || !bs.voice) return
+      // Stream the first segment for the earliest audio. Download later segments in
+      // parallel with current playback to avoid dead air between ElevenLabs clips.
+      const streamThisChunk = replySpeechChunkCount === 0
+      replySpeechChunkCount += 1
+      const prefetchedAudio = streamThisChunk ? null : prefetchElevenLabsSpeech(chunk, replyVoice.ai, {
+        accent: bs.accent || 'auto',
+        signal: replySpeechController.signal,
+        liveTalk: true,
+      }).then(blob => ({ ok: true as const, blob }), error => ({ ok: false as const, error }))
+
       if (!replySpeechStarted) {
         replySpeechStarted = true
         speechRequest.current = replySpeechController
@@ -996,26 +1007,33 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
           robot.current?.talk(false)
           finishPlayback()
         }
+        const markPlaying = () => {
+          if (replySpeechController.signal.aborted || speechMessageKeyRef.current !== replySpeechKey) return
+          setSpeechState('playing')
+          setStatus('Speaking')
+          robot.current?.talk(true)
+        }
         try {
-          playback = await speakText(
-            chunk,
-            replyVoice.ai,
-            () => {
-              if (replySpeechController.signal.aborted || speechMessageKeyRef.current !== replySpeechKey) return
-              setSpeechState('playing')
-              setStatus('Speaking')
-              robot.current?.talk(true)
-            },
-            finish,
-            {
-              accent: bs.accent || 'auto',
-              signal: replySpeechController.signal,
-              elevenLabsOnly: true,
-              preferElevenLabsVoice: true,
-              browserFallbackTimeoutMs: 25_000,
-              liveTalk: true,
-            },
-          )
+          if (streamThisChunk) {
+            playback = await speakText(
+              chunk,
+              replyVoice.ai,
+              markPlaying,
+              finish,
+              {
+                accent: bs.accent || 'auto',
+                signal: replySpeechController.signal,
+                elevenLabsOnly: true,
+                preferElevenLabsVoice: true,
+                browserFallbackTimeoutMs: 25_000,
+                liveTalk: true,
+              },
+            )
+          } else {
+            const prepared = await prefetchedAudio!
+            if (!prepared.ok) throw prepared.error
+            playback = await playPreparedSpeechBlob(prepared.blob, replySpeechController.signal, markPlaying, finish)
+          }
           if (replySpeechController.signal.aborted || speechMessageKeyRef.current !== replySpeechKey) {
             playback.stop()
             finish()
@@ -1045,11 +1063,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         queueReplySpeech(replySpeechTail.slice(0, endAt))
         replySpeechTail = replySpeechTail.slice(match.index + match[0].length)
       }
-      if (replySpeechTail.length > 42) {
-        const commaCut = replySpeechTail.lastIndexOf(',', 34)
-        const wordCut = replySpeechTail.lastIndexOf(' ', 34)
-        const cut = commaCut > 22 ? commaCut : wordCut
-        if (cut > 22) {
+      if (replySpeechTail.length > 26) {
+        const commaCut = replySpeechTail.lastIndexOf(',', 22)
+        const wordCut = replySpeechTail.lastIndexOf(' ', 22)
+        const cut = commaCut > 14 ? commaCut : wordCut
+        if (cut > 14) {
           const phrase = replySpeechTail.slice(0, cut).trim()
           queueReplySpeech(/[,.!?]$/.test(phrase) ? phrase : phrase + ',')
           replySpeechTail = replySpeechTail.slice(cut + 1)
