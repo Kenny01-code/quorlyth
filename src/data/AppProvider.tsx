@@ -226,17 +226,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDataOwnerId(userId)
     setData(cached || EMPTY)
     try {
+      // Retain the last account's cache key through sign-out. The in-memory
+      // owner scope is still reset to null, so none of that private data renders
+      // to a guest; signing back into the same account can hydrate immediately.
       if (userId) sessionStorage.setItem(APP_DATA_CACHE_OWNER, userId)
-      else sessionStorage.removeItem(APP_DATA_CACHE_OWNER)
     } catch {}
 
     setSettingsSnapshot(null)
     const s = backend.store
-    const set = (k: keyof Data, v: any) => setData(d => {
-      const next = { ...d, [k]: v }
-      if (me?.id && !demo) writeCachedAppData(me.id, next)
-      return next
-    })
+    const set = (k: keyof Data, v: any) => setData(d => ({ ...d, [k]: v }))
     let readErrorShown = false
     const onReadError = (error: unknown) => {
       console.error('Quorlyth shared-data read failed:', error)
