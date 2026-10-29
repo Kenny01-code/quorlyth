@@ -239,8 +239,8 @@ async function fetchWithHeaderTimeout(url, options = {}) {
       ? process.env.AI_GEMINI_PROVIDER_TIMEOUT_MS
       : process.env.AI_PROVIDER_TIMEOUT_MS)
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
-    ? Math.min(configuredTimeout, 30000)
-    : isTtsRequest ? 8000 : isGeminiRequest ? 15000 : 7000
+    ? Math.min(configuredTimeout, isTtsRequest ? 30000 : isGeminiRequest ? 4500 : 2400)
+    : isTtsRequest ? 8000 : isGeminiRequest ? 4500 : 2400
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
