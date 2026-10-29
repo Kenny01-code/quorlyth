@@ -43,3 +43,34 @@ test('Auto-spoken QuorlythBot replies show an error if ElevenLabs playback fails
   assert.match(bot, /Auto-spoken replies must surface a useful ElevenLabs error instead of failing silently/)
   assert.match(bot, /void playSpeech\(clean, key, true\)/)
 })
+
+
+test('LiveTalk tolerates natural pauses and starts speech from shorter response chunks', async () => {
+  const [bot, server] = await Promise.all([
+    readSource('src/bot/QuorlythBot.tsx'),
+    readSource('server/openai.mjs'),
+  ])
+
+  assert.match(server, /type: 'semantic_vad', eagerness: 'medium'/)
+  assert.match(bot, /recognition\.continuous = true/)
+  assert.match(bot, /prefetchElevenLabsSpeech\(chunk, v\.ai/)
+  assert.match(bot, /liveSilenceTimer\.current = window\.setTimeout/)
+  assert.match(bot, /speechTail\.length > 26/)
+  assert.match(bot, /tier: 'quick'/)
+})
+
+test('Normal chat starts ElevenLabs speech while the answer is still streaming', async () => {
+  const bot = await readSource('src/bot/QuorlythBot.tsx')
+  assert.match(bot, /queueReplySpeechFromDelta/)
+  assert.match(bot, /prefetchElevenLabsSpeech\(chunk, replyVoice\.ai/)
+  assert.match(bot, /playPreparedSpeechBlob\(prepared\.blob/)
+  assert.match(bot, /if \(bs\.voice\) finishReplySpeech\(clean\)/)
+  assert.match(bot, /elevenLabsOnly: true/)
+})
+
+test('Opening QuorlythBot no longer shows a separate loading panel', async () => {
+  const app = await readSource('src/App.tsx')
+  assert.doesNotMatch(app, /qbot-open-fallback/)
+  assert.match(app, /<Suspense fallback=\{null\}><QuorlythBot initialOpen voiceRequest=\{botVoiceRequest\} \/><\/Suspense>/)
+  assert.match(app, /Warm the assistant chunk after the first paint/)
+})

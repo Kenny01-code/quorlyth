@@ -9,7 +9,7 @@ import { Chat, ChatMsg, Community, Idea, Profile } from '../lib/types'
 import { emitWorkflowEvent, executeWorkflowActions, newWorkflowId, persistWorkflowRun } from '../lib/automation'
 import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTrigger } from '../lib/automation'
 import { cn, slug, when } from '../lib/util'
-import { askJson, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
+import { askJson, prefetchElevenLabsSpeech, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
 import { Robot, RobotApi } from './Robot'
 import { ChatMenu } from './ChatMenu'
@@ -70,6 +70,82 @@ function friendlyBotError(error: unknown): string {
   if (/timed out|stalled|interrupted before it finished/i.test(message)) return 'That reply didn’t finish coming through. Please try again and I’ll take another run at it.'
   if (/temporarily unavailable|available ai services/i.test(message)) return 'I’m having trouble reaching the AI service right now. Please try again shortly.'
   return 'I hit a temporary snag while preparing that answer. Your message is still here; please try again in a moment.'
+}
+
+/** Play a pre-generated ElevenLabs segment without replacing the currently active speech owner. */
+function playPreparedSpeechBlob(
+  blob: Blob,
+  signal: AbortSignal,
+  onStart?: () => void,
+  onEnd?: () => void,
+): Promise<SpeechPlayback> {
+  if (signal.aborted) return Promise.reject(new DOMException('Speech cancelled', 'AbortError'))
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob)
+    const player = new Audio(url)
+    player.preload = 'auto'
+    let started = false
+    let settled = false
+    let finished = false
+
+    const cleanup = () => {
+      signal.removeEventListener('abort', stop)
+      player.onplay = null
+      player.onended = null
+      player.onerror = null
+      URL.revokeObjectURL(url)
+    }
+    const finish = (notify = true) => {
+      if (finished) return
+      finished = true
+      cleanup()
+      if (notify) onEnd?.()
+    }
+    const stop = () => {
+      try {
+        player.pause()
+        player.currentTime = 0
+        player.removeAttribute('src')
+        player.load()
+      } catch {}
+      if (!started && !settled) {
+        settled = true
+        reject(new DOMException('Speech cancelled', 'AbortError'))
+      }
+      finish()
+    }
+    const playback: SpeechPlayback = {
+      pause: () => { if (!finished) player.pause() },
+      resume: () => { if (!finished) void player.play().catch(() => finish()) },
+      stop,
+    }
+
+    player.onplay = () => {
+      if (signal.aborted) { stop(); return }
+      started = true
+      onStart?.()
+      if (!settled) {
+        settled = true
+        resolve(playback)
+      }
+    }
+    player.onended = () => finish()
+    player.onerror = () => {
+      if (!settled) {
+        settled = true
+        reject(new Error('The prepared ElevenLabs voice could not be played.'))
+      }
+      finish(started)
+    }
+    signal.addEventListener('abort', stop, { once: true })
+    void player.play().catch(error => {
+      if (!settled) {
+        settled = true
+        reject(error)
+      }
+      finish(false)
+    })
+  })
 }
 
 type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
@@ -174,6 +250,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
   const liveRecognition = useRef<any>(null)
   const liveAbortRef = useRef<AbortController | null>(null)
   const liveRestartTimer = useRef<number | null>(null)
+  const liveSilenceTimer = useRef<number | null>(null)
   const liveTurnBusy = useRef(false)
   const audio = useRef<SpeechPlayback | null>(null)
   const speechRequest = useRef<AbortController | null>(null)
@@ -886,6 +963,136 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     ctl.current = new AbortController()
     let renderTimer: number | null = null
     let latestClean = ''
+    const replySpeechKey = c.id + ':' + c.msgs.length
+    const replySpeechController = new AbortController()
+    const replyVoice = VOICES.find(item => item.id === bs.vid) || VOICES[0]
+    let replySpeechStarted = false
+    let replySpeechFailed = false
+    let replySpeechTail = ''
+    let replySpeechCharacters = 0
+    let replySpeechQueue = Promise.resolve()
+
+    let replySpeechChunkCount = 0
+    const queueReplySpeech = (raw: string) => {
+      const chunk = raw.trim().replace(/\s+/g, ' ')
+      if (!chunk || !bs.voice) return
+      // Stream the first segment for the earliest audio. Download later segments in
+      // parallel with current playback to avoid dead air between ElevenLabs clips.
+      const streamThisChunk = replySpeechChunkCount === 0
+      replySpeechChunkCount += 1
+      const prefetchedAudio = streamThisChunk ? null : prefetchElevenLabsSpeech(chunk, replyVoice.ai, {
+        accent: bs.accent || 'auto',
+        signal: replySpeechController.signal,
+        liveTalk: true,
+      }).then(blob => ({ ok: true as const, blob }), error => ({ ok: false as const, error }))
+
+      if (!replySpeechStarted) {
+        replySpeechStarted = true
+        speechRequest.current = replySpeechController
+        speechMessageKeyRef.current = replySpeechKey
+        setSpeechMessageKey(replySpeechKey)
+        setSpeechState('loading')
+        setStatus('Preparing voice')
+      }
+      replySpeechQueue = replySpeechQueue.then(async () => {
+        if (replySpeechFailed || replySpeechController.signal.aborted || speechMessageKeyRef.current !== replySpeechKey) return
+        let playback: SpeechPlayback | null = null
+        let finishPlayback: () => void = () => {}
+        let finished = false
+        const ended = new Promise<void>(resolve => { finishPlayback = resolve })
+        const finish = () => {
+          if (finished) return
+          finished = true
+          if (audio.current === playback) audio.current = null
+          robot.current?.talk(false)
+          finishPlayback()
+        }
+        const markPlaying = () => {
+          if (replySpeechController.signal.aborted || speechMessageKeyRef.current !== replySpeechKey) return
+          setSpeechState('playing')
+          setStatus('Speaking')
+          robot.current?.talk(true)
+        }
+        try {
+          if (streamThisChunk) {
+            playback = await speakText(
+              chunk,
+              replyVoice.ai,
+              markPlaying,
+              finish,
+              {
+                accent: bs.accent || 'auto',
+                signal: replySpeechController.signal,
+                elevenLabsOnly: true,
+                preferElevenLabsVoice: true,
+                browserFallbackTimeoutMs: 25_000,
+                liveTalk: true,
+              },
+            )
+          } else {
+            const prepared = await prefetchedAudio!
+            if (!prepared.ok) throw prepared.error
+            playback = await playPreparedSpeechBlob(prepared.blob, replySpeechController.signal, markPlaying, finish)
+          }
+          if (replySpeechController.signal.aborted || speechMessageKeyRef.current !== replySpeechKey) {
+            playback.stop()
+            finish()
+            return
+          }
+          audio.current = playback
+          await ended
+          if (audio.current === playback) audio.current = null
+        } catch (error) {
+          finish()
+          if (replySpeechController.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
+          replySpeechFailed = true
+          const reason = error instanceof Error ? error.message.trim() : ''
+          a.toast(reason
+            ? 'Voice playback failed: ' + reason.slice(0, 180)
+            : 'ElevenLabs voice is unavailable right now. The written answer is still here.')
+        }
+      })
+    }
+
+    const queueReplySpeechFromDelta = (piece: string) => {
+      replySpeechTail += piece || ''
+      while (true) {
+        const match = /[.!?](?:["'’”\)\]]*)\s+/.exec(replySpeechTail)
+        if (!match) break
+        const endAt = match.index + match[0].trimEnd().length
+        queueReplySpeech(replySpeechTail.slice(0, endAt))
+        replySpeechTail = replySpeechTail.slice(match.index + match[0].length)
+      }
+      if (replySpeechTail.length > 26) {
+        const commaCut = replySpeechTail.lastIndexOf(',', 22)
+        const wordCut = replySpeechTail.lastIndexOf(' ', 22)
+        const cut = commaCut > 14 ? commaCut : wordCut
+        if (cut > 14) {
+          const phrase = replySpeechTail.slice(0, cut).trim()
+          queueReplySpeech(/[,.!?]$/.test(phrase) ? phrase : phrase + ',')
+          replySpeechTail = replySpeechTail.slice(cut + 1)
+        }
+      }
+    }
+
+    const finishReplySpeech = (finalText: string) => {
+      if (!bs.voice) return
+      if (replySpeechTail.trim()) {
+        queueReplySpeech(replySpeechTail)
+        replySpeechTail = ''
+      }
+      if (!replySpeechStarted) queueReplySpeech(finalText)
+      void replySpeechQueue.then(() => {
+        if (!replySpeechStarted || speechMessageKeyRef.current !== replySpeechKey) return
+        if (speechRequest.current === replySpeechController) speechRequest.current = null
+        speechMessageKeyRef.current = ''
+        setSpeechMessageKey('')
+        setSpeechState('idle')
+        robot.current?.talk(false)
+        setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
+      })
+    }
+
     try {
       // Short, recent context reduces token latency while retaining enough conversational continuity.
       const recentTurns = c.msgs.filter(m => !(m as any).live).slice(-10)
@@ -903,8 +1110,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         ...(!accessToken ? { system: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext() + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
         ...(accessToken ? { accessToken, context: botContext } : {}), tier: responseTierForRequest(t, bs.model), signal: ctl.current.signal,
         onText: f => {
-          if (first) { first = false; transitionThinkingOut(); robot.current?.think(false); robot.current?.talk(true); setStatus('Typing') }
-          latestClean = f.replace(/\[\[[\s\S]*$/, '').trim()
+          if (first) { first = false; transitionThinkingOut(); robot.current?.think(false); setStatus('Typing') }
+          const speakable = f.replace(/\[\[[\s\S]*$/, '')
+          const speechDelta = speakable.slice(replySpeechCharacters)
+          if (speechDelta) queueReplySpeechFromDelta(speechDelta)
+          replySpeechCharacters = speakable.length
+          latestClean = speakable.trim()
           if (renderTimer === null) {
             renderTimer = window.setTimeout(() => {
               renderTimer = null
@@ -922,15 +1133,27 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       const clean = full.replace(/\[\[[\s\S]*?\]\]/g, '').trim() || 'I couldn’t put together a complete answer that time. Could you try asking again?'
       c = { ...c, msgs: [...c.msgs, { r: 'a', t: clean, btns }] }
       persist(c)
-      robot.current?.talk(false); say(clean, c.id + ':' + (c.msgs.length - 1))
+      if (bs.voice) finishReplySpeech(clean)
+      else robot.current?.talk(false)
       setTimeout(() => setCaption(''), 1500)
     } catch (e: any) {
       if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
+      replySpeechController.abort()
+      if (speechRequest.current === replySpeechController) speechRequest.current = null
+      if (speechMessageKeyRef.current === replySpeechKey) {
+        audio.current?.stop()
+        audio.current = null
+        speechMessageKeyRef.current = ''
+        setSpeechMessageKey('')
+        setSpeechState('idle')
+      }
       robot.current?.think(false); robot.current?.talk(false)
       if (e?.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: friendlyBotError(e) }] }; persist(c) }
       else setCur(c)
     }
-    setBusy(false); setThinkingTask(''); setStatus('Online'); ctl.current = null
+    setBusy(false); setThinkingTask('')
+    setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? current : 'Online')
+    ctl.current = null
   }
 
   async function skill(id: string, arg = '') {
@@ -1009,6 +1232,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     let c = cur
     let speechTail = ''
     let speechQueue = Promise.resolve()
+    let speechChunkCount = 0
     let speechController: AbortController | null = null
     let speechFailed = false
     let speechFailureToastShown = false
@@ -1043,6 +1267,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       if (!speechController || speechController.signal.aborted) {
         speechController = new AbortController()
         liveAbortRef.current = speechController
+        speechChunkCount = 0
         speechFailed = false
         speechFailureToastShown = false
       }
@@ -1052,6 +1277,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     const enqueueSpeech = (raw: string, controller: AbortController) => {
       const chunk = raw.trim().replace(/\s+/g, ' ')
       if (!chunk) return
+      const streamThisChunk = speechChunkCount === 0
+      speechChunkCount += 1
+      const prefetchedAudio = streamThisChunk ? null : prefetchElevenLabsSpeech(chunk, v.ai, {
+        accent: bs.accent || 'auto',
+        signal: controller.signal,
+        liveTalk: true,
+      }).then(blob => ({ ok: true as const, blob }), error => ({ ok: false as const, error }))
+
       speechQueue = speechQueue.then(async () => {
         if (!liveFallback.current || speechFailed || controller.signal.aborted) return
         let finishPlayback: () => void = () => {}
@@ -1065,25 +1298,32 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
           robot.current?.talk(false)
           finishPlayback()
         }
+        const markPlaying = () => {
+          if (!liveFallback.current || controller.signal.aborted) return
+          setLive(l => l ? { ...l, state: 'speaking' } : l)
+          robot.current?.talk(true)
+        }
         try {
-          playback = await speakText(
-            chunk,
-            v.ai,
-            () => {
-              if (!liveFallback.current || controller.signal.aborted) return
-              setLive(l => l ? { ...l, state: 'speaking' } : l)
-              robot.current?.talk(true)
-            },
-            finish,
-            {
-            accent: bs.accent || 'auto',
-            signal: controller.signal,
-            elevenLabsOnly: true,
-            preferElevenLabsVoice: true,
-            browserFallbackTimeoutMs: 25_000,
-            liveTalk: true,
-          },
-          )
+          if (streamThisChunk) {
+            playback = await speakText(
+              chunk,
+              v.ai,
+              markPlaying,
+              finish,
+              {
+                accent: bs.accent || 'auto',
+                signal: controller.signal,
+                elevenLabsOnly: true,
+                preferElevenLabsVoice: true,
+                browserFallbackTimeoutMs: 25_000,
+                liveTalk: true,
+              },
+            )
+          } else {
+            const prepared = await prefetchedAudio!
+            if (!prepared.ok) throw prepared.error
+            playback = await playPreparedSpeechBlob(prepared.blob, controller.signal, markPlaying, finish)
+          }
           if (!liveFallback.current || controller.signal.aborted) {
             playback.stop()
             finish()
@@ -1115,9 +1355,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         enqueueSpeech(speechTail.slice(0, endAt), controller)
         speechTail = speechTail.slice(match.index + match[0].length)
       }
-      if (speechTail.length > 72) {
-        const cut = Math.max(speechTail.lastIndexOf(' ', 58), speechTail.lastIndexOf(',', 58))
-        if (cut > 36) {
+      // Start voice after a short, speakable phrase instead of waiting for a long paragraph.
+      if (speechTail.length > 26) {
+        const commaCut = speechTail.lastIndexOf(',', 22)
+        const wordCut = speechTail.lastIndexOf(' ', 22)
+        const cut = commaCut > 14 ? commaCut : wordCut
+        if (cut > 14) {
           const phrase = speechTail.slice(0, cut).trim()
           enqueueSpeech(/[,.!?]$/.test(phrase) ? phrase : phrase + ',', controller)
           speechTail = speechTail.slice(cut + 1)
@@ -1284,6 +1527,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         let browserFallbackEnabled = true
         let browserRecognition: any = null
         let browserTurnNumber = 0
+        let browserFinalTranscript = ''
 
         const restartBrowserRecognition = () => {
           if (!browserFallbackEnabled || !liveFallback.current || browserTurnBusy) return
@@ -1301,16 +1545,36 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                 : chosenAccent === 'international' ? (navigator.language || 'en-US')
                 : chosenAccent === 'american' ? 'en-US'
                 : (navigator.language || 'en-US')
-              recognition.continuous = false
+              recognition.continuous = true
               recognition.interimResults = true
               recognition.maxAlternatives = 1
+
+              const submitAfterNaturalPause = () => {
+                if (liveSilenceTimer.current !== null) window.clearTimeout(liveSilenceTimer.current)
+                liveSilenceTimer.current = window.setTimeout(() => {
+                  liveSilenceTimer.current = null
+                  const spoken = browserFinalTranscript.trim()
+                  if (!spoken || browserTurnBusy || !browserFallbackEnabled || !liveFallback.current) return
+
+                  browserTurnBusy = true
+                  browserTurnNumber += 1
+                  const thisTurn = browserTurnNumber
+                  browserFinalTranscript = ''
+                  setLive(current => current ? { ...current, state: 'thinking', user: spoken, bot: '' } : current)
+                  try { recognition.stop() } catch {}
+                  void handleBrowserVoiceTurn(spoken, thisTurn).finally(() => {
+                    if (thisTurn !== browserTurnNumber) return
+                    browserTurnBusy = false
+                    if (browserFallbackEnabled && liveFallback.current) restartBrowserRecognition()
+                  })
+                }, 1150)
+              }
 
               recognition.onresult = (event: any) => {
                 let finalText = ''
                 let interimText = ''
-                // Rebuild the whole current utterance on every callback, not only
-                // the changed result index; otherwise earlier words can disappear
-                // from the live preview while the user is still speaking.
+                // Keep all recognized words together and reset the silence window while
+                // interim speech continues, so a short pause does not submit the turn.
                 const results = event.results
                 for (let i = 0; i < results.length; i += 1) {
                   const transcript = String(results[i]?.[0]?.transcript || '').trim()
@@ -1318,23 +1582,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                   if (results[i]?.isFinal) finalText += (finalText ? ' ' : '') + transcript
                   else interimText += (interimText ? ' ' : '') + transcript
                 }
-                const liveTranscript = [finalText, interimText].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+                browserFinalTranscript = finalText.trim()
+                const liveTranscript = [browserFinalTranscript, interimText].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
                 if (liveTranscript) {
                   setLive(current => current ? { ...current, state: 'listening', user: liveTranscript } : current)
                 }
-                const spoken = finalText.trim()
-                if (!spoken || browserTurnBusy || !liveFallback.current) return
-
-                browserTurnBusy = true
-                browserTurnNumber += 1
-                const thisTurn = browserTurnNumber
-                setLive(current => current ? { ...current, state: 'thinking', user: spoken, bot: '' } : current)
-                try { recognition.stop() } catch {}
-                void handleBrowserVoiceTurn(spoken, thisTurn).finally(() => {
-                  if (thisTurn !== browserTurnNumber) return
-                  browserTurnBusy = false
-                  if (browserFallbackEnabled && liveFallback.current) restartBrowserRecognition()
-                })
+                if (browserFinalTranscript && !browserTurnBusy && liveFallback.current) submitAfterNaturalPause()
               }
 
               recognition.onerror = (event: any) => {
@@ -1359,7 +1612,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
 
               recognition.onend = () => {
                 if (liveRecognition.current === recognition) liveRecognition.current = null
-                if (browserFallbackEnabled && liveFallback.current && !browserTurnBusy) restartBrowserRecognition()
+                if (!browserFallbackEnabled || !liveFallback.current || browserTurnBusy) return
+                if (browserFinalTranscript.trim()) {
+                  if (liveSilenceTimer.current === null) submitAfterNaturalPause()
+                  return
+                }
+                restartBrowserRecognition()
               }
               recognition.start()
               setLive(current => current ? { ...current, state: 'listening' } : current)
@@ -1417,7 +1675,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                     + '\n' + LIVE_TALK_SPEECH_STYLE,
                 } : {}),
                 ...(accessToken ? { accessToken, context: botContext } : {}),
-                tier: bs.model === 'quick' ? 'quick' : 'smart',
+                tier: 'quick',
                 signal: controller.signal,
                 onText: fullText => {
                   if (!liveFallback.current || turnNumber !== browserTurnNumber || controller.signal.aborted) return
@@ -1492,6 +1750,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       window.clearTimeout(liveRestartTimer.current)
       liveRestartTimer.current = null
     }
+    if (liveSilenceTimer.current !== null) {
+      window.clearTimeout(liveSilenceTimer.current)
+      liveSilenceTimer.current = null
+    }
     try { liveRecognition.current?.stop() } catch {}
     liveRecognition.current = null
     rt.current?.stop()
@@ -1507,6 +1769,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
   useEffect(() => () => {
     liveAbortRef.current?.abort()
     if (liveRestartTimer.current !== null) window.clearTimeout(liveRestartTimer.current)
+    if (liveSilenceTimer.current !== null) window.clearTimeout(liveSilenceTimer.current)
     rt.current?.stop()
   }, [])
 

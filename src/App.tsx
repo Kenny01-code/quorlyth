@@ -438,13 +438,7 @@ export default function App() {
           <button type="button" onClick={restoreDeferredLauncher}>Undo</button>
           <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
         </div>}
-      </> : <Suspense fallback={<div className="qbot-open-fallback" role="status" aria-live="polite" aria-label="Opening QuorlythBot">
-        <div className="qbot-open-fallback__panel">
-          <span className="qbot-open-fallback__mark"><Logo size={30} /></span>
-          <div className="qbot-open-fallback__copy"><strong>QuorlythBot</strong><span>Preparing your assistant…</span><small>Communities · ideas · analytics · workspaces · collaborations</small></div>
-          <span className="qbot-open-fallback__signal" aria-hidden="true"><i /><i /><i /></span>
-        </div>
-      </div>}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
+      </> : <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
       <Toast />
       <WritingAssistant />
     </>

@@ -920,3 +920,25 @@ test('Realtime voice session includes native audio and restrained vocal-reaction
   assert.match(payload.session.instructions, /chuckle or laugh/i)
   assert.match(payload.session.instructions, /never laugh during distress/i)
 })
+
+
+test('LiveTalk realtime sessions use semantic turn detection for natural pauses', async () => {
+  process.env.OPENAI_API_KEY = 'test-openai-secret'
+  let payload
+  globalThis.fetch = async (_url, options) => {
+    payload = JSON.parse(options.body)
+    return new Response(JSON.stringify({ value: 'ephemeral-live-talk-token' }), { status: 200 })
+  }
+
+  const res = response()
+  await realtimeSession({ body: { instructions: 'Be helpful', voice: 'marin', textOnly: true } }, res)
+
+  assert.equal(res.statusCode, 200)
+  assert.deepEqual(payload.session.audio.input.turn_detection, {
+    type: 'semantic_vad',
+    eagerness: 'medium',
+    create_response: false,
+    interrupt_response: true,
+  })
+  assert.deepEqual(payload.session.output_modalities, ['text'])
+})
