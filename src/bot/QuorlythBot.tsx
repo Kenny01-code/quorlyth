@@ -1232,6 +1232,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     let c = cur
     let speechTail = ''
     let speechQueue = Promise.resolve()
+    let speechChunkCount = 0
     let speechController: AbortController | null = null
     let speechFailed = false
     let speechFailureToastShown = false
@@ -1266,6 +1267,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       if (!speechController || speechController.signal.aborted) {
         speechController = new AbortController()
         liveAbortRef.current = speechController
+        speechChunkCount = 0
         speechFailed = false
         speechFailureToastShown = false
       }
@@ -1275,6 +1277,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     const enqueueSpeech = (raw: string, controller: AbortController) => {
       const chunk = raw.trim().replace(/\s+/g, ' ')
       if (!chunk) return
+      const streamThisChunk = speechChunkCount === 0
+      speechChunkCount += 1
+      const prefetchedAudio = streamThisChunk ? null : prefetchElevenLabsSpeech(chunk, v.ai, {
+        accent: bs.accent || 'auto',
+        signal: controller.signal,
+        liveTalk: true,
+      }).then(blob => ({ ok: true as const, blob }), error => ({ ok: false as const, error }))
+
       speechQueue = speechQueue.then(async () => {
         if (!liveFallback.current || speechFailed || controller.signal.aborted) return
         let finishPlayback: () => void = () => {}
@@ -1288,25 +1298,32 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
           robot.current?.talk(false)
           finishPlayback()
         }
+        const markPlaying = () => {
+          if (!liveFallback.current || controller.signal.aborted) return
+          setLive(l => l ? { ...l, state: 'speaking' } : l)
+          robot.current?.talk(true)
+        }
         try {
-          playback = await speakText(
-            chunk,
-            v.ai,
-            () => {
-              if (!liveFallback.current || controller.signal.aborted) return
-              setLive(l => l ? { ...l, state: 'speaking' } : l)
-              robot.current?.talk(true)
-            },
-            finish,
-            {
-            accent: bs.accent || 'auto',
-            signal: controller.signal,
-            elevenLabsOnly: true,
-            preferElevenLabsVoice: true,
-            browserFallbackTimeoutMs: 25_000,
-            liveTalk: true,
-          },
-          )
+          if (streamThisChunk) {
+            playback = await speakText(
+              chunk,
+              v.ai,
+              markPlaying,
+              finish,
+              {
+                accent: bs.accent || 'auto',
+                signal: controller.signal,
+                elevenLabsOnly: true,
+                preferElevenLabsVoice: true,
+                browserFallbackTimeoutMs: 25_000,
+                liveTalk: true,
+              },
+            )
+          } else {
+            const prepared = await prefetchedAudio!
+            if (!prepared.ok) throw prepared.error
+            playback = await playPreparedSpeechBlob(prepared.blob, controller.signal, markPlaying, finish)
+          }
           if (!liveFallback.current || controller.signal.aborted) {
             playback.stop()
             finish()
@@ -1339,11 +1356,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         speechTail = speechTail.slice(match.index + match[0].length)
       }
       // Start voice after a short, speakable phrase instead of waiting for a long paragraph.
-      if (speechTail.length > 42) {
-        const commaCut = speechTail.lastIndexOf(',', 34)
-        const wordCut = speechTail.lastIndexOf(' ', 34)
-        const cut = commaCut > 22 ? commaCut : wordCut
-        if (cut > 22) {
+      if (speechTail.length > 26) {
+        const commaCut = speechTail.lastIndexOf(',', 22)
+        const wordCut = speechTail.lastIndexOf(' ', 22)
+        const cut = commaCut > 14 ? commaCut : wordCut
+        if (cut > 14) {
           const phrase = speechTail.slice(0, cut).trim()
           enqueueSpeech(/[,.!?]$/.test(phrase) ? phrase : phrase + ',', controller)
           speechTail = speechTail.slice(cut + 1)
