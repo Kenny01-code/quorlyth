@@ -530,7 +530,7 @@ export async function speakText(
       providerRequestTimer = window.setTimeout(() => providerRequest.abort(), providerTimeout)
     }
     try {
-      response = await fetch(aiApiUrl(options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak-stream'), {
+      response = await fetch(aiApiUrl(options.elevenLabsOnly ? '/api/speak-eleven-stream' : '/api/speak-stream'), {
         method: 'POST',
         signal: providerRequest.signal,
         headers: { 'Content-Type': 'application/json' },
@@ -540,10 +540,9 @@ export async function speakText(
       if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
       if (preferElevenLabsVoice && allowBrowserFallback) {
         forceBrowserFallback = true
-      } else if (options.elevenLabsOnly) {
-        throw new Error('ElevenLabs is temporarily unavailable. No alternate voice will be used.')
       } else {
-        // Older routes, network intermediaries, or deployments may not support the streaming endpoint.
+        // If streaming is temporarily unreachable, retry the buffered ElevenLabs
+        // endpoint. Strict mode still never uses a different provider or browser TTS.
         retryBufferedSpeech = true
       }
     } finally {
@@ -600,6 +599,11 @@ export async function speakText(
     if (!forceBrowserFallback && response && !response.ok) {
       if (preferElevenLabsVoice && allowBrowserFallback) {
         forceBrowserFallback = true
+      } else if (options.elevenLabsOnly && (response.status === 502 || response.status === 504)) {
+        // Retry only transient streaming failures with the buffered ElevenLabs route.
+        try { await response.body?.cancel() } catch { /* The stream may already be closed. */ }
+        response = null
+        retryBufferedSpeech = true
       } else {
         throw new Error(await readError(response))
       }
