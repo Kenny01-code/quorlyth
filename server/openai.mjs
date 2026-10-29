@@ -1099,10 +1099,9 @@ function elevenLabsVoiceId(voice, accent) {
   const accentOverride = process.env[`ELEVENLABS_VOICE_${accentKey}_ID`]?.trim()
   if (personaOverride || accentOverride) return personaOverride || accentOverride
 
-  // A dedicated accent/persona ID always wins. Without a dedicated Nigerian
-  // ID, use the configured ElevenLabs English preset rather than returning no
-  // voice at all. Audio still comes exclusively from ElevenLabs; no browser or
-  // alternate TTS provider is introduced by this fallback.
+  // Do not label an American preset as Nigerian English. Users can provide
+  // a genuine Nigerian-accent voice ID from their ElevenLabs account.
+  if (accent === 'nigerian') return null
   const genericPersonaOverride = persona && process.env[`ELEVENLABS_VOICE_${persona}_ID`]?.trim()
   const accentVoices = ELEVENLABS_DEFAULT_VOICES[accent] || ELEVENLABS_DEFAULT_VOICES.american
   return genericPersonaOverride || accentVoices[voice] || null
