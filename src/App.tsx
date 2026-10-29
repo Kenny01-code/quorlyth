@@ -92,6 +92,11 @@ export default function App() {
   // Download the full bot experience only after the user opens its lightweight launcher.
   const [botMounted, setBotMounted] = useState(false)
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
+  // Warm the assistant chunk before a user opens it, so the first open is much faster.
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadQuorlythBot().catch(() => {}) }, 300)
+    return () => window.clearTimeout(timer)
+  }, [])
   const [deferredLauncherHidden, setDeferredLauncherHidden] = useState(false)
   const [showDeferredLauncherRestore, setShowDeferredLauncherRestore] = useState(false)
   const deferredRestoreTimer = useRef<number | null>(null)
@@ -438,13 +443,7 @@ export default function App() {
           <button type="button" onClick={restoreDeferredLauncher}>Undo</button>
           <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
         </div>}
-      </> : <Suspense fallback={<div className="qbot-open-fallback" role="status" aria-live="polite" aria-label="Opening QuorlythBot">
-        <div className="qbot-open-fallback__panel">
-          <span className="qbot-open-fallback__mark"><Logo size={30} /></span>
-          <div className="qbot-open-fallback__copy"><strong>QuorlythBot</strong><span>Preparing your assistant…</span><small>Communities · ideas · analytics · workspaces · collaborations</small></div>
-          <span className="qbot-open-fallback__signal" aria-hidden="true"><i /><i /><i /></span>
-        </div>
-      </div>}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
+      </> : <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
       <Toast />
       <WritingAssistant />
     </>
