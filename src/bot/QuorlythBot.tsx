@@ -1567,7 +1567,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                     browserTurnBusy = false
                     if (browserFallbackEnabled && liveFallback.current) restartBrowserRecognition()
                   })
-                }, 850)
+                }, 1150)
               }
 
               recognition.onresult = (event: any) => {
