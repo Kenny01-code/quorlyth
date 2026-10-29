@@ -732,13 +732,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         {
           accent: bs.accent || 'auto',
           signal: controller.signal,
-          // QuorlythBot speech must always come from ElevenLabs. If its service is
-          // unavailable, keep the written answer and report the problem; never
-          // substitute browser speech or a different AI provider.
+          // Prefer ElevenLabs first, then configured cloud TTS providers, then device speech
+          // if cloud voice is unavailable. A depleted provider must not leave replies silent.
           elevenLabsOnly: false,
           preferElevenLabsVoice: true,
           allowBrowserFallback: true,
-browserFallbackTimeoutMs: 3500,
+          browserFallbackTimeoutMs: 3500,
           liveTalk: true,
         },
       )
@@ -1037,7 +1036,7 @@ browserFallbackTimeoutMs: 3500,
                 elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
                 allowBrowserFallback: true,
-browserFallbackTimeoutMs: 3500,
+                browserFallbackTimeoutMs: 3500,
                 liveTalk: true,
               },
             )
@@ -1344,7 +1343,7 @@ browserFallbackTimeoutMs: 3500,
                 elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
                 allowBrowserFallback: true,
-browserFallbackTimeoutMs: 3500,
+                browserFallbackTimeoutMs: 3500,
                 liveTalk: true,
               },
             )
