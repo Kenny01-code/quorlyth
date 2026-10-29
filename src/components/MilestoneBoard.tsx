@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Av } from './ui'
 import { QuorlythGlyph } from './QuorlythGlyph'
 import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, MilestonePriority } from '../lib/types'
-import { MilestoneWorkPanel } from './MilestoneWorkPanel'
 import { isPastDateChange, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 
@@ -55,7 +55,7 @@ const isOverdue = (milestone: Milestone) => !!milestone.dueAt && milestone.statu
 const getMilestoneAssigneeIds = (milestone: Pick<Milestone, 'assigneeId' | 'assigneeIds'>): string[] =>
   [...new Set([...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []), ...(milestone.assigneeId ? [milestone.assigneeId] : [])].filter(Boolean))]
 
-export function MilestoneBoard({ idea, projectId, projectStatus, milestones, teamMemberIds, canCollaborate, canManage, createMilestoneRequest }: {
+export function MilestoneBoard({ idea, projectId, projectStatus, milestones, teamMemberIds, canCollaborate, canManage, createMilestoneRequest, workspaceId, onCreateWorkspace }: {
   idea: Idea
   projectId: string
   projectStatus: 'active' | 'completed'
@@ -64,8 +64,11 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
   canCollaborate: boolean
   canManage: boolean
   createMilestoneRequest?: number
+  workspaceId?: string
+  onCreateWorkspace?: () => void
 }) {
   const a = useApp()
+  const nav = useNavigate()
   const [filter, setFilter] = useState<FilterKey>('all')
   const [composerOpen, setComposerOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -357,14 +360,18 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                 {canEdit && milestone.status === 'done' && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="progress" size={14} />Reopen</button>}
                 {canManage && <button type="button" className="ql-quiet-action ql-danger-action" disabled={!!busyId} onClick={() => void removeMilestone(milestone)}><QuorlythGlyph name="trash" size={14} />Delete milestone</button>}
               </div>}
-              <MilestoneWorkPanel
-                idea={idea}
-                milestone={milestone}
-                submissions={a.data.workSubmissions.filter(item => item.milestoneId === milestone.id)}
-                canManage={canManage}
-                canCollaborate={canCollaborate && active}
-                projectActive={active}
-              />
+              <section className="ql-workspace-evidence-notice" aria-label="Workspace evidence flow">
+                <span className="ql-workspace-evidence-notice__mark"><QuorlythGlyph name="workspace" size={18} /></span>
+                <div className="ql-workspace-evidence-notice__copy">
+                  <strong>Work and evidence live in the workspace</strong>
+                  <p>Open the connected workspace to do the actual task, upload files or links, submit your evidence, and follow the review. Only workspace-submitted evidence is surfaced back on this project.</p>
+                </div>
+                {workspaceId
+                  ? <button type="button" className="btn p" onClick={() => nav('/workspaces/' + workspaceId)}><QuorlythGlyph name="workspace" size={14} />Open workspace</button>
+                  : canManage && active && onCreateWorkspace
+                    ? <button type="button" className="btn p" onClick={onCreateWorkspace}><QuorlythGlyph name="add" size={14} />Create workspace</button>
+                    : <span className="ql-workspace-evidence-notice__hint">Waiting for a project manager to connect a workspace.</span>}
+              </section>
             </div>
           </article>
         })}
