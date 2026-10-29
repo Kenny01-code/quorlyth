@@ -79,9 +79,10 @@ test('Opening QuorlythBot no longer shows a separate loading panel', async () =>
   assert.match(app, /Warm the assistant chunk after the first paint/)
 })
 
-test('Chat provider failover bounds stalled first-token waits', async () => {
+test('Chat provider failover bounds stalled header and first-token waits', async () => {
   const server = await readSource('server/openai.mjs')
   assert.match(server, /Math\.min\(configured, 2200\)/)
+  assert.match(server, /isTtsRequest \? 30000 : isGeminiRequest \? 4500 : 2400/)
   assert.match(server, /PROVIDER_FALLBACK_STATUSES = new Set\(\[401, 402, 403, 404, \.\.\.TRANSIENT_STATUSES\]\)/)
 })
 
@@ -89,4 +90,6 @@ test('Sending a normal message commits its visible state before network awaits',
   const bot = await readSource('src/bot/QuorlythBot.tsx')
   assert.match(bot, /flushSync\(\(\) => \{/)
   assert.match(bot, /Commit the user's bubble and active state immediately/)
+  assert.match(bot, /slice\(-8\)/)
+  assert.match(bot, /recentTurns\.length - 1 \? 4200 : 900/)
 })
