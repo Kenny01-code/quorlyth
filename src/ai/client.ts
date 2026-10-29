@@ -461,10 +461,10 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
 }
 
 /**
- * Prefetch a later ElevenLabs speech segment while the current segment is playing.
- * This deliberately returns audio bytes rather than starting playback, so it cannot
- * interrupt the one active speech segment. The first segment should still use speakText()
- * for progressive streaming playback.
+ * Prefetch a later speech segment while the current segment is playing.
+ * The server still prioritizes ElevenLabs, then tries configured cloud voices; the caller
+ * can fall back to device speech if every cloud provider is unavailable. This returns audio
+ * bytes instead of playing them, so only the active segment owns the speaker.
  */
 export async function prefetchElevenLabsSpeech(
   text: string,
@@ -483,14 +483,14 @@ export async function prefetchElevenLabsSpeech(
 
   let response: Response
   try {
-    response = await request('/api/speak-eleven-stream')
+    response = await request('/api/speak-stream')
   } catch (error) {
     if (options.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
-    response = await request('/api/speak-eleven')
+    response = await request('/api/speak')
   }
   if ((response.status === 502 || response.status === 504) && !options.signal?.aborted) {
     try { await response.body?.cancel() } catch {}
-    response = await request('/api/speak-eleven')
+    response = await request('/api/speak')
   }
   if (!response.ok) throw new Error(await readError(response))
   const audio = await response.blob()

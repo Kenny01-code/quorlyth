@@ -1254,3 +1254,107 @@
   scrollbar-width: none;
   scrollbar-gutter: auto;
 }
+
+
+/* QuorlythBot precision motion pass: restrained, responsive, accessibility-aware. */
+@keyframes qbot-shell-enter {
+  from { opacity: 0; transform: translate3d(0, 9px, 0) scale(.992); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes qbot-message-enter {
+  from { opacity: 0; transform: translate3d(0, 5px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes qbot-soft-sheen {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+  transform-origin: bottom right;
+  animation: qbot-shell-enter 280ms cubic-bezier(.2, .82, .2, 1) both;
+  will-change: opacity, transform;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsb,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bib,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .chip,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsi,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bci,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in button {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 220ms ease,
+    transform 180ms cubic-bezier(.2, .8, .2, 1),
+    opacity 180ms ease;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh:hover,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc:hover {
+  border-color: rgba(255,255,255,.22) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsb:not(:disabled):hover,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .chip:not(:disabled):hover,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bci:not(:disabled):hover,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in button:not(:disabled):hover {
+  transform: translate3d(0, -1px, 0);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsb:not(:disabled):active,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .chip:not(:disabled):active,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bci:not(:disabled):active,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in button:not(:disabled):active {
+  transform: scale(.975);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(button, textarea, input, select):focus-visible {
+  outline: 2px solid rgba(255,255,255,.6);
+  outline-offset: 3px;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in textarea {
+  transition:
+    border-color 180ms ease,
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 180ms ease !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in textarea:focus {
+  border-color: rgba(255,255,255,.42) !important;
+  box-shadow:
+    inset 0 2px 13px rgba(0,0,0,.72),
+    0 0 0 3px rgba(255,255,255,.055),
+    0 12px 32px -22px rgba(255,255,255,.32) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am {
+  animation: qbot-message-enter 210ms cubic-bezier(.2, .8, .2, 1) both;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsb.on,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .chip.on,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bci.on {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 4px 18px rgba(255,255,255,.035);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in textarea::placeholder {
+  color: rgba(255,255,255,.42);
+  transition: color 180ms ease;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in textarea:focus::placeholder {
+  color: rgba(255,255,255,.28);
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot),
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am {
+    animation: none !important;
+    will-change: auto;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsb,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bib,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .chip,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsi,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bci,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in button {
+    transition: none !important;
+  }
+}
