@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
@@ -734,9 +735,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
           // QuorlythBot speech must always come from ElevenLabs. If its service is
           // unavailable, keep the written answer and report the problem; never
           // substitute browser speech or a different AI provider.
-          elevenLabsOnly: true,
+          elevenLabsOnly: false,
           preferElevenLabsVoice: true,
-          browserFallbackTimeoutMs: 25_000,
+          allowBrowserFallback: true,
+browserFallbackTimeoutMs: 3500,
           liveTalk: true,
         },
       )
@@ -957,9 +959,18 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       say(reply, next.id + ':' + (next.msgs.length - 1))
       return
     }
-    stopVoice(); setView('chat')
-    let c = add(cur, { r: 'u', t })
-    setBusy(true); robot.current?.think(true); setStatus('Thinking'); setThinkingTask(taskPreview(t)); setCaption('')
+    let c!: Chat
+    // Commit the user's bubble and active state immediately, before any context or network awaits.
+    flushSync(() => {
+      stopVoice()
+      setView('chat')
+      c = add(cur, { r: 'u', t })
+      setBusy(true)
+      robot.current?.think(true)
+      setStatus('Thinking')
+      setThinkingTask(taskPreview(t))
+      setCaption('')
+    })
     ctl.current = new AbortController()
     let renderTimer: number | null = null
     let latestClean = ''
@@ -977,7 +988,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       const chunk = raw.trim().replace(/\s+/g, ' ')
       if (!chunk || !bs.voice) return
       // Stream the first segment for the earliest audio. Download later segments in
-      // parallel with current playback to avoid dead air between ElevenLabs clips.
+      // parallel with current playback to avoid dead air between voice clips.
       const streamThisChunk = replySpeechChunkCount === 0
       replySpeechChunkCount += 1
       const prefetchedAudio = streamThisChunk ? null : prefetchElevenLabsSpeech(chunk, replyVoice.ai, {
@@ -1023,16 +1034,33 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
               {
                 accent: bs.accent || 'auto',
                 signal: replySpeechController.signal,
-                elevenLabsOnly: true,
+                elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
-                browserFallbackTimeoutMs: 25_000,
+                allowBrowserFallback: true,
+browserFallbackTimeoutMs: 3500,
                 liveTalk: true,
               },
             )
           } else {
             const prepared = await prefetchedAudio!
-            if (!prepared.ok) throw prepared.error
-            playback = await playPreparedSpeechBlob(prepared.blob, replySpeechController.signal, markPlaying, finish)
+            if (!prepared.ok) {
+              playback = await speakText(
+                chunk,
+                replyVoice.ai,
+                markPlaying,
+                finish,
+                {
+                  accent: bs.accent || 'auto',
+                  signal: replySpeechController.signal,
+                  preferElevenLabsVoice: true,
+                  allowBrowserFallback: true,
+                  browserFallbackTimeoutMs: 3500,
+                  liveTalk: true,
+                },
+              )
+            } else {
+              playback = await playPreparedSpeechBlob(prepared.blob, replySpeechController.signal, markPlaying, finish)
+            }
           }
           if (replySpeechController.signal.aborted || speechMessageKeyRef.current !== replySpeechKey) {
             playback.stop()
@@ -1121,7 +1149,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
               renderTimer = null
               setCaption(latestClean.slice(-140))
               setCur(prev => prev ? { ...prev, msgs: prev.msgs.filter(m => !(m as any).live).concat([{ r: 'a', t: latestClean, live: true } as any]) } : prev)
-            }, 32)
+            }, 40)
           }
         },
       })
@@ -1313,16 +1341,33 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
               {
                 accent: bs.accent || 'auto',
                 signal: controller.signal,
-                elevenLabsOnly: true,
+                elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
-                browserFallbackTimeoutMs: 25_000,
+                allowBrowserFallback: true,
+browserFallbackTimeoutMs: 3500,
                 liveTalk: true,
               },
             )
           } else {
             const prepared = await prefetchedAudio!
-            if (!prepared.ok) throw prepared.error
-            playback = await playPreparedSpeechBlob(prepared.blob, controller.signal, markPlaying, finish)
+            if (!prepared.ok) {
+              playback = await speakText(
+                chunk,
+                v.ai,
+                markPlaying,
+                finish,
+                {
+                  accent: bs.accent || 'auto',
+                  signal: controller.signal,
+                  preferElevenLabsVoice: true,
+                  allowBrowserFallback: true,
+                  browserFallbackTimeoutMs: 3500,
+                  liveTalk: true,
+                },
+              )
+            } else {
+              playback = await playPreparedSpeechBlob(prepared.blob, controller.signal, markPlaying, finish)
+            }
           }
           if (!liveFallback.current || controller.signal.aborted) {
             playback.stop()
