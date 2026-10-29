@@ -1259,7 +1259,7 @@
 /* QuorlythBot precision motion pass: restrained, responsive, accessibility-aware. */
 @keyframes qbot-shell-enter {
   from { opacity: 0; transform: translate3d(0, 9px, 0) scale(.992); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes qbot-message-enter {
   from { opacity: 0; transform: translate3d(0, 5px, 0); }
