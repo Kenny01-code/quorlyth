@@ -414,7 +414,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
             {project.dueAt ? <p className="ql-muted ql-project-deadline"><QuorlythGlyph name="calendar" size={14} />Target delivery · {dateLabel(project.dueAt)}</p> : null}
             {milestones.length > 0 && <p className="ql-muted ql-project-updated"><QuorlythGlyph name="timeline" size={13} />Last activity · {when(Math.max(project.updatedAt || project.at, ...milestones.map(m => m.updatedAt || m.at))) || 'not recorded'}</p>}
           </div>
-          <MilestoneBoard idea={idea} projectId={project.id} projectStatus={project.status} milestones={milestones} teamMemberIds={teamMemberIds} canCollaborate={canCollaborate} canManage={canManage} />
+          <MilestoneBoard idea={idea} projectId={project.id} projectStatus={project.status} milestones={milestones} teamMemberIds={teamMemberIds} canCollaborate={canCollaborate} canManage={canManage} workspaceId={linkedWorkspace?.id} onCreateWorkspace={() => void createConnectedWorkspace()} />
           <section className="ql-linked-workspace" aria-label="Connected delivery workspace">
             <div className="ql-linked-workspace__top">
               <span className="ql-linked-workspace__mark"><QuorlythGlyph name="workspace" size={18} /></span>
@@ -444,23 +444,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
                     </article>)}
                   </div>
                 : <p className="ql-linked-workspace__empty">No workspace-task evidence has been submitted yet. Community milestone submissions are shown separately below from their original records.</p>}
-              {linkedMilestoneSubmissions.length > 0 && <>
-                <p className="ql-eyebrow ql-linked-workspace__subheading">COMMUNITY MILESTONE SUBMISSIONS</p>
-                <div className="ql-linked-workspace__artifacts">
-                  {linkedMilestoneSubmissions.slice(0, 3).map(submission => {
-                    const milestone = milestones.find(item => item.id === submission.milestoneId)
-                    return <article className="ql-linked-workspace__artifact" key={'milestone-' + submission.id}>
-                      <div>
-                        <strong>{milestone?.title || 'Milestone deliverable'}</strong>
-                        <p>{submission.summary}</p>
-                        <small>Milestone revision {submission.revision} · {dateLabel(submission.submittedAt)} · {a.nm(submission.submittedBy)}</small>
-                      </div>
-                      <span className={'sw-review-status status-' + submission.status}>{submission.status === 'approved' ? 'Approved' : submission.status === 'changes_requested' ? 'Changes requested' : 'Awaiting review'}</span>
-                      {(submission.attachments || []).map(attachment => <PrivateWorkspaceEvidence key={attachment.path} attachment={attachment} />)}
-                    </article>
-                  })}
-                </div>
-              </>}
+              {linkedMilestoneSubmissions.length > 0 && <p className="ql-linked-workspace__note">{linkedMilestoneSubmissions.length} legacy milestone submission{linkedMilestoneSubmissions.length === 1 ? '' : 's'} remain available in the connected workspace's Evidence & reviews tab. New work evidence is submitted in the workspace first and then mirrored here.</p>}
               <button type="button" className="btn p" onClick={() => nav('/workspaces/' + linkedWorkspace.id)}><QuorlythGlyph name="workspace" size={14} />Open connected workspace</button>
             </> : canManage && project.status === 'active' ? <>
               {manageableWorkspaces.length > 0 && <form className="ql-linked-workspace__connect" onSubmit={event => { event.preventDefault(); void connectExistingWorkspace() }}>
