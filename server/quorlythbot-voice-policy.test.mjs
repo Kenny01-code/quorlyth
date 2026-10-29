@@ -24,10 +24,11 @@ test('ElevenLabs-only mode cannot be overridden by a browser fallback option', a
   assert.match(client, /if \(!allowBrowserFallback\)/)
 })
 
-test('Nigerian accent keeps speaking through an ElevenLabs preset when no accent-specific ID is configured', async () => {
+test('Nigerian accent never silently uses an American voice when no matching ID is configured', async () => {
   const server = await readSource('server/openai.mjs')
-  assert.doesNotMatch(server, /if\s*\(accent\s*===\s*'nigerian'\)\s*return\s+null/)
-  assert.match(server, /const accentVoices = ELEVENLABS_DEFAULT_VOICES\[accent\] \|\| ELEVENLABS_DEFAULT_VOICES\.american/)
+  assert.match(server, /if\s*\(accent\s*===\s*'nigerian'\)\s*return\s+null/)
+  assert.match(server, /selected ElevenLabs accent needs a matching voice ID/)
+  assert.match(server, /No alternate voice will be used/)
 })
 
 test('Fluid-black styling is scoped to the slash-command picker, not the composer', async () => {
