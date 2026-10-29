@@ -27,6 +27,7 @@ function downloadBackup(fileName: string, content: string) {
 
 function isSafePath(path: string, userId: string, platformAdmin: boolean, data: unknown): boolean {
   if (!path || path.length > 700 || path.startsWith('/') || /(^|\/)\.\.?($|\/)/.test(path)) return false
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false
   const segments = path.split('/')
   if (segments.some(part => !part || part.startsWith('.'))) return false
   const forbidden = new Set(['auth', 'private', 'platform_roles', 'secrets', 'system', 'config'])
@@ -42,7 +43,6 @@ function isSafePath(path: string, userId: string, platformAdmin: boolean, data: 
     'standaloneArtifacts', 'standaloneComments', 'standaloneGithubRepos', 'ideas',
   ])
   if (!restorableCollections.has(segments[0])) return false
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return false
   const record = data as Record<string, unknown>
   return ['authorId', 'createdBy', 'ownerId', 'submittedBy', 'by', 'applicantId'].some(field => record[field] === userId)
 }
@@ -151,7 +151,7 @@ export function BackupRestore() {
 
   return <section className="q-backup-shell" aria-label="Backup and restore">
     <div className="q-backup-hero">
-      <span className="q-backup-mark"><Icon name="shield-check" size={23} /></span>
+      <span className="q-backup-mark"><Icon name="private" size={23} /></span>
       <div className="q-backup-hero__copy">
         <p className="ql-eyebrow">YOUR DATA · YOUR CONTROL</p>
         <h3>Backup & restore</h3>
@@ -162,7 +162,7 @@ export function BackupRestore() {
 
     <div className="q-backup-grid">
       <article className="q-backup-card">
-        <div className="q-backup-card__icon"><Icon name="download" size={19} /></div>
+        <div className="q-backup-card__icon"><Icon name="save" size={19} /></div>
         <p className="ql-eyebrow">01 · CREATE A COPY</p>
         <h4>Back up your Quorlyth data</h4>
         <p>Creates a portable <strong>.qbackup</strong> file using records this account is allowed to export. The file is downloaded to your device.</p>
@@ -173,12 +173,12 @@ export function BackupRestore() {
       </article>
 
       <article className="q-backup-card">
-        <div className="q-backup-card__icon"><Icon name="refresh-cw" size={19} /></div>
+        <div className="q-backup-card__icon"><Icon name="rotate" size={19} /></div>
         <p className="ql-eyebrow">02 · RECOVER YOUR COPY</p>
         <h4>Restore from a backup</h4>
         <p>Select a Quorlyth backup made by this same account. Restore adds or updates permitted records and never deletes records that are not in the file.</p>
         <label className="q-backup-dropzone" htmlFor="quorlyth-backup-file">
-          <Icon name="file-up" size={22} />
+          <Icon name="file" size={22} />
           <strong>{selectedFile ? selectedFile.name : 'Choose a backup file'}</strong>
           <small>{selectedFile ? formatBytes(selectedFile.size) + ' · Selected' : '.qbackup file · Maximum 100 MB'}</small>
           <input id="quorlyth-backup-file" type="file" accept=".qbackup,.json,application/json" onChange={handleFileChange} disabled={!!busy} />
