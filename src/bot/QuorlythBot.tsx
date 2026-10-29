@@ -679,7 +679,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         setStatus(current => ['Speaking', 'Preparing voice', 'Paused'].includes(current) ? 'Online' : current)
       }
       if (showError && !aborted) {
-        a.toast('Voice playback is unavailable right now. The written reply is still here.')
+        const reason = error instanceof Error ? error.message.trim() : ''
+        a.toast(reason
+          ? 'Voice playback failed: ' + reason.slice(0, 180)
+          : 'ElevenLabs voice is unavailable right now. The written reply is still here.')
       }
     } finally {
       if (speechRequest.current === controller) speechRequest.current = null
@@ -712,7 +715,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     const clean = text.replace(/\[\[.*?\]\]/g, '').trim()
     if (!clean || !bs.voice) return
     const key = messageKey || 'announcement:' + Date.now()
-    void playSpeech(clean, key, false)
+    // Auto-spoken replies must surface a useful ElevenLabs error instead of failing silently.
+    void playSpeech(clean, key, true)
   }
 
   function persist(c: Chat) {
