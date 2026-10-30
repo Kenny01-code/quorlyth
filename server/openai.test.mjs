@@ -7,6 +7,7 @@ const originalGeminiKey = process.env.GEMINI_API_KEY
 const originalOpenAIKey = process.env.OPENAI_API_KEY
 const originalElevenLabsKey = process.env.ELEVENLABS_API_KEY
 const originalElevenLabsTtsModel = process.env.ELEVENLABS_TTS_MODEL
+const originalElevenLabsLiveTtsModel = process.env.ELEVENLABS_LIVE_TTS_MODEL
 const originalElevenLabsNigerianVoiceId = process.env.ELEVENLABS_VOICE_NIGERIAN_ID
 const originalRealtimeModel = process.env.OPENAI_REALTIME_MODEL
 const originalXaiKey = process.env.XAI_API_KEY
@@ -39,6 +40,8 @@ afterEach(() => {
   else process.env.ELEVENLABS_API_KEY = originalElevenLabsKey
   if (originalElevenLabsTtsModel === undefined) delete process.env.ELEVENLABS_TTS_MODEL
   else process.env.ELEVENLABS_TTS_MODEL = originalElevenLabsTtsModel
+  if (originalElevenLabsLiveTtsModel === undefined) delete process.env.ELEVENLABS_LIVE_TTS_MODEL
+  else process.env.ELEVENLABS_LIVE_TTS_MODEL = originalElevenLabsLiveTtsModel
   if (originalElevenLabsNigerianVoiceId === undefined) delete process.env.ELEVENLABS_VOICE_NIGERIAN_ID
   else process.env.ELEVENLABS_VOICE_NIGERIAN_ID = originalElevenLabsNigerianVoiceId
   if (originalRealtimeModel === undefined) delete process.env.OPENAI_REALTIME_MODEL
@@ -632,6 +635,41 @@ test('natural voice endpoint applies the selected accent using server-side OpenA
   assert.ok(res.output.length > 0)
 })
 
+test('ElevenLabs v4 live streaming uses the single-speaker TTS streaming endpoint', async () => {
+  process.env.AI_TTS_PROVIDER = 'grok'
+  process.env.ELEVENLABS_LIVE_TTS_MODEL = 'eleven_v4'
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-v4-stream-key'
+  process.env.XAI_API_KEY = 'test-xai-should-not-run'
+  process.env.GEMINI_API_KEY = 'test-gemini-should-not-run'
+  delete process.env.OPENAI_API_KEY
+  let requestUrl = ''
+  let requestOptions
+  globalThis.fetch = async (url, options = {}) => {
+    requestUrl = String(url)
+    requestOptions = options
+    return new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new Uint8Array([4, 3, 2, 1]))
+        controller.close()
+      },
+    }), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speakStream({ body: { text: 'That is a lovely idea. Let us work through it together.', voice: 'marin', accent: 'american', liveTalk: true } }, res)
+
+  assert.equal(requestUrl, 'https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x/stream?output_format=mp3_22050_32')
+  assert.equal(requestOptions.headers['xi-api-key'], 'server-only-elevenlabs-v4-stream-key')
+  const payload = JSON.parse(requestOptions.body)
+  assert.equal(payload.model_id, 'eleven_v4')
+  assert.ok(payload.text.includes('That is a lovely idea.'))
+  assert.equal(payload.voice_settings.stability, 0.38)
+  assert.equal(payload.voice_settings.similarity_boost, 0.82)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
+  assert.equal(res.headers['X-Quorlyth-Voice-Stream'], '1')
+  assert.ok(res.output.length > 0)
+})
+
 test('ElevenLabs is preferred for natural voice even when Grok is selected for chat', async () => {
   process.env.ELEVENLABS_TTS_MODEL = 'eleven_flash_v2_5'
   process.env.AI_PROVIDER = 'grok'
@@ -663,9 +701,39 @@ test('ElevenLabs is preferred for natural voice even when Grok is selected for c
   assert.ok(res.output.length > 0)
 })
 
+test('healthy ElevenLabs stays primary even when Grok is configured as the fallback provider', async () => {
+  process.env.AI_TTS_PROVIDER = 'grok'
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_v4'
+  process.env.ELEVENLABS_LIVE_TTS_MODEL = 'eleven_v4'
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-primary-test-key'
+  process.env.XAI_API_KEY = 'test-xai-primary-fallback-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-primary-fallback-key'
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push({ url: String(url), options })
+    return new Response(Buffer.from([4, 3, 2, 1]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Hey, good to hear from you.', voice: 'marin', accent: 'american', liveTalk: true } }, res)
+
+  assert.equal(requested.length, 1)
+  assert.ok(requested[0].url.includes('api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x?'))
+  assert.equal(requested[0].options.headers['xi-api-key'], 'server-only-elevenlabs-primary-test-key')
+  const payload = JSON.parse(requested[0].options.body)
+  assert.equal(payload.model_id, 'eleven_v4')
+  assert.ok(payload.text.includes('Hey, good to hear from you.'))
+  assert.equal(payload.voice_settings.stability, 0.38)
+  assert.equal(payload.voice_settings.similarity_boost, 0.82)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
+})
+
 test('voice falls back from ElevenLabs payment errors to Grok without trying Gemini first', async () => {
   process.env.AI_PROVIDER = 'gemini'
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  // This test checks provider ordering, so pin the legacy single-voice endpoint.
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
   process.env.XAI_API_KEY = 'test-xai-key'
   process.env.GEMINI_API_KEY = 'test-gemini-key'
@@ -694,6 +762,7 @@ test('voice falls back from ElevenLabs payment errors to Grok without trying Gem
 
 test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
   process.env.AI_PROVIDER = 'auto'
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   delete process.env.XAI_API_KEY
   delete process.env.GEMINI_API_KEY
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
@@ -718,6 +787,7 @@ test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
 
 test('a configured Nigerian ElevenLabs voice ID is used instead of a mismatched default accent', async () => {
   process.env.AI_PROVIDER = 'auto'
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   delete process.env.XAI_API_KEY
   delete process.env.GEMINI_API_KEY
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
@@ -829,6 +899,7 @@ test('QuorlythBot strict streaming endpoint uses ElevenLabs and never contacts a
 
 test('streaming voice falls back from ElevenLabs payment errors to Grok before other providers', async () => {
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-stream-test-key'
   process.env.XAI_API_KEY = 'test-xai-stream-fallback-key'
   process.env.GEMINI_API_KEY = 'test-gemini-stream-fallback-key'
@@ -881,6 +952,7 @@ test('streaming voice uses Grok when the ElevenLabs key is missing', async () =>
 
 
 test('buffered ElevenLabs retry never falls back to another voice provider', async () => {
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-buffered-test-key'
   process.env.XAI_API_KEY = 'test-xai-buffered-fallback-key'
   process.env.GEMINI_API_KEY = 'test-gemini-buffered-fallback-key'

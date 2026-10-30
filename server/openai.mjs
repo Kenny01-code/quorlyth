@@ -909,6 +909,8 @@ export async function realtimeSession(req, res) {
               // No language is pinned: let the transcription model identify each spoken language.
               transcription: { model: 'gpt-4o-mini-transcribe' },
               turn_detection: textOnly
+                // Let people finish a phrase and take natural pauses before we respond.
+                // Medium semantic VAD balances turn-taking speed with fewer premature cut-offs.
                 ? { type: 'semantic_vad', eagerness: 'medium', create_response: false, interrupt_response: true }
                 : { type: 'server_vad', threshold: 0.5, silence_duration_ms: 500, create_response: true, interrupt_response: true },
             },
@@ -931,7 +933,7 @@ function speechAccent(value) {
   return ['nigerian', 'american', 'british', 'international'].includes(value) ? value : 'international'
 }
 
-const LIVE_TALK_CONVERSATION_STYLE = 'Live Talk delivery: sound like a relaxed, spontaneous conversation, not a narrator. Use contractions, varied sentence lengths, natural backchannels, occasional brief thinking phrases such as “Hmm” or “well” only when they genuinely fit, and punctuation that gives the voice room to breathe. Match the emotional weight of what the user actually said: be warmly excited about genuine good news, curious when asking a real question, and gentler with sensitive subjects. Do not repeat fillers, perform an emotion that contradicts the words, invent a personal experience, or narrate stage directions. Return clean spoken words only; never print audio tags or bracketed directions. When genuine humor lands, allow a brief natural chuckle or laugh to be audible; when empathy or relief fits, use gentle prosody or a light sigh. Keep reactions rare, brief, and context-appropriate. Never laugh during distress, conflict, safety-sensitive topics, or uncertainty. Do not speak reaction labels or output bracketed directions. Continue listening and responding for the whole live conversation.';
+const LIVE_TALK_CONVERSATION_STYLE = 'Live Talk delivery: sound like a relaxed, spontaneous conversation, not a narrator. Use contractions, varied sentence lengths, natural backchannels, occasional brief thinking phrases such as “Hmm” or “well” only when they genuinely fit, and punctuation that gives the voice room to breathe. Match the emotional weight of the user’s actual words: be warmly excited about genuine good news, curious when asking a real question, and gentler with sensitive subjects. Answer the exact question early, then add only the context that makes the answer useful. Handle every part of a multi-part question without repeating the question back. Treat accents, code-switching, filler words and imperfect grammar as normal speech. If a name, number, instruction or sentence is unclear, ask one brief clarification rather than guessing. Do not repeat fillers, perform an emotion that contradicts the words, invent personal experiences, or narrate stage directions. Return clean spoken words only; never print audio tags or bracketed directions. When genuine humor lands, allow a brief natural chuckle or laugh to be audible; when empathy or relief fits, use gentle prosody or a light sigh. Keep reactions rare, brief, and context-appropriate. Never laugh during distress, conflict, safety-sensitive topics, or uncertainty. Do not speak reaction labels or output bracketed directions. For Quorlyth changes, prepare the correct permission-checked action preview and never claim it has been applied before the user confirms it. Continue listening and responding for the whole live conversation.';
 
 function speechStyleInstructions(value, liveTalk = false) {
   const style = speechAccent(value)
@@ -949,9 +951,9 @@ function speechStyleInstructions(value, liveTalk = false) {
 
 /** Allow expressive ElevenLabs models while keeping model selection configurable. */
 function elevenLabsTtsModel(liveTalk = false) {
-  // This server uses ElevenLabs' HTTP Create/Stream Speech endpoints. Use v4
-  // for expressive reactions here; v4 Turbo's documented realtime path is the
-  // Text-to-Dialogue WebSocket, which this HTTP adapter does not implement.
+  // Use the single-speaker Text-to-Speech endpoint for assistant turns.
+  // Text-to-Dialogue is for authored multi-speaker scenes, not live agent replies.
+  // v4 Turbo requires a separate bidirectional Text-to-Dialogue WebSocket adapter.
   const configured = String(
     liveTalk
       ? (process.env.ELEVENLABS_LIVE_TTS_MODEL || process.env.ELEVENLABS_TTS_MODEL || 'eleven_v4')
@@ -1143,20 +1145,30 @@ function elevenLabsVoiceSettings(model, liveTalk) {
   return settings
 }
 
+function elevenLabsSpeechRequest(text, voiceId, model, liveTalk, voice, stream) {
+  const spokenText = expressiveElevenLabsText(text, model, liveTalk, voice)
+  const outputFormat = stream ? 'mp3_22050_32' : 'mp3_44100_128'
+  return {
+    url: `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}${stream ? '/stream' : ''}?output_format=${outputFormat}`,
+    body: {
+      text: spokenText,
+      model_id: model,
+      voice_settings: elevenLabsVoiceSettings(model, liveTalk),
+    },
+  }
+}
+
 async function requestElevenLabsSpeech(text, voiceId, liveTalk = false, voice = '') {
   const model = elevenLabsTtsModel(liveTalk)
-  return requestTtsWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+  const request = elevenLabsSpeechRequest(text, voiceId, model, liveTalk, voice, false)
+  return requestTtsWithTimeout(request.url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'audio/mpeg',
       'xi-api-key': ELEVENLABS_KEY(),
     },
-    body: JSON.stringify({
-      text: expressiveElevenLabsText(text, model, liveTalk, voice),
-      model_id: model,
-      voice_settings: elevenLabsVoiceSettings(model, liveTalk),
-    }),
+    body: JSON.stringify(request.body),
   }, 'audio')
 }
 
@@ -1164,7 +1176,8 @@ async function requestElevenLabsSpeech(text, voiceId, liveTalk = false, voice = 
 /** Opens ElevenLabs' streaming endpoint; the caller owns the response body and abort controller. */
 async function requestElevenLabsSpeechStream(text, voiceId, liveTalk = false, voice = '') {
   const model = elevenLabsTtsModel(liveTalk)
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32`
+  const request = elevenLabsSpeechRequest(text, voiceId, model, liveTalk, voice, true)
+  const url = request.url
   const controller = new AbortController()
   const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
   // Respect the configured provider deadline. A 1.8s hard cap aborted healthy
@@ -1182,11 +1195,7 @@ async function requestElevenLabsSpeechStream(text, voiceId, liveTalk = false, vo
         Accept: 'audio/mpeg',
         'xi-api-key': ELEVENLABS_KEY(),
       },
-      body: JSON.stringify({
-        text: expressiveElevenLabsText(text, model, liveTalk, voice),
-        model_id: model,
-        voice_settings: elevenLabsVoiceSettings(model, liveTalk),
-      }),
+      body: JSON.stringify(request.body),
     })
     clearTimeout(timer)
     return { response, controller }
@@ -1389,13 +1398,14 @@ async function speakFromBody(body, res, excludedProviders = new Set()) {
       return send(res, 400, { error: 'Choose a voice in QuorlythBot Voice Studio before playing audio.' })
     }
     const voice = body.voice
-    // Voice selection is intentionally independent from the chat provider.
-    // ElevenLabs is the preferred natural voice, with fast cross-provider fallbacks.
-    const selectedTtsProvider = (process.env.AI_TTS_PROVIDER || 'elevenlabs').trim().toLowerCase()
-    const voiceProviders = ['elevenlabs', 'grok', 'gemini', 'openai']
-    const order = voiceProviders.includes(selectedTtsProvider)
-      ? [selectedTtsProvider, ...voiceProviders.filter(provider => provider !== selectedTtsProvider)]
-      : voiceProviders
+    // ElevenLabs is always the primary voice when configured. AI_TTS_PROVIDER
+    // only chooses which alternate service to try after ElevenLabs is unavailable.
+    const preferredFallback = (process.env.AI_TTS_PROVIDER || 'grok').trim().toLowerCase()
+    const fallbackProviders = ['grok', 'gemini', 'openai']
+    const fallbackOrder = fallbackProviders.includes(preferredFallback)
+      ? [preferredFallback, ...fallbackProviders.filter(provider => provider !== preferredFallback)]
+      : fallbackProviders
+    const order = ['elevenlabs', ...fallbackOrder]
 
     for (const provider of order) {
       if (excludedProviders.has(provider)) continue
@@ -1564,7 +1574,7 @@ export async function speakElevenLabs(req, res) {
   const voiceId = elevenLabsVoiceId(body.voice, accent)
   if (!voiceId) return send(res, 503, { error: 'The selected ElevenLabs accent needs a matching voice ID in your ElevenLabs account. No alternate voice will be used.' })
   try {
-    const result = await requestElevenLabsSpeech(text, voiceId, body.liveTalk === true)
+    const result = await requestElevenLabsSpeech(text, voiceId, body.liveTalk === true, body.voice)
     if (result.response.ok) return audioResponse(res, result.data, 'elevenlabs')
     logTtsProviderFailure('elevenlabs_buffered', { status: result.response.status, code: result.code })
     const status = result.response.status

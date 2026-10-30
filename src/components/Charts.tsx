@@ -1,4 +1,4 @@
-import { type PointerEvent, type ReactNode, type WheelEvent, useEffect, useId, useRef, useState } from 'react'
+import { type PointerEvent, type ReactNode, type WheelEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { Av } from './ui'
 
 /** Shared horizontal chart viewport. The scrollbar is hidden, but wheel, drag, keyboard and touch scrolling remain available. */
@@ -95,6 +95,27 @@ export function AreaChart({ dd, o }: { dd: Daily; o: AreaOpts }) {
     return d
   }
   const line = path(pts)
+  const lineRef = useRef<SVGPathElement>(null)
+  useLayoutEffect(() => {
+    const element = lineRef.current
+    if (!element) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      element.style.strokeDasharray = 'none'
+      element.style.strokeDashoffset = '0'
+      return
+    }
+    let length = 0
+    try { length = element.getTotalLength() } catch { return }
+    if (!length) return
+    element.style.transition = 'none'
+    element.style.strokeDasharray = String(length)
+    element.style.strokeDashoffset = String(length)
+    const frame = window.requestAnimationFrame(() => {
+      element.style.transition = 'stroke-dashoffset 1050ms cubic-bezier(.2,.75,.25,1)'
+      element.style.strokeDashoffset = '0'
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [line])
   const avg = v.reduce((x, y) => x + y, 0) / (n || 1)
   const ma = v.map((_, i) => { const w = v.slice(Math.max(0, i - 6), i + 1); return [X(i), Y(w.reduce((x, y) => x + y, 0) / w.length)] })
   return (
@@ -103,7 +124,7 @@ export function AreaChart({ dd, o }: { dd: Daily; o: AreaOpts }) {
       {[0, 1, 2, 3, 4].map(g => { const yy = T + (ph * g) / 4; return <g key={g}>{o.grid && <line x1={L} x2={W - R} y1={yy} y2={yy} stroke="rgba(255,255,255,.08)" />}<text x={L - 8} y={yy + 4} textAnchor="end" fill="#6b6b6b" fontSize="11">{Math.round(mr * (1 - g / 4))}</text></g> })}
       {[0, 1, 2, 3, 4].map(k => { const i = Math.round((k * (n - 1)) / 4); return <text key={k} x={X(i)} y={H - 8} textAnchor="middle" fill="#6b6b6b" fontSize="11">{fd(dd.d[i])}</text> })}
       <path d={`${line} L${X(n - 1)} ${T + ph} L${X(0)} ${T + ph}Z`} fill={`url(#af${id})`} />
-      <path d={line} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,.6))' }} />
+      <path ref={lineRef} d={line} fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,.6))' }} />
       {o.avg && <><line x1={L} x2={W - R} y1={Y(avg)} y2={Y(avg)} stroke="#a8a8a8" strokeDasharray="5 5" /><text x={W - R} y={Y(avg) - 6} textAnchor="end" fill="#a8a8a8" fontSize="11">avg {avg.toFixed(1)}</text></>}
       {o.ma && <path d={path(ma)} fill="none" stroke="#a8a8a8" strokeWidth="1.5" strokeDasharray="2 5" />}
       {pts.map((p, i) => <g key={i}>{o.pts && <circle cx={p[0]} cy={p[1]} r="3.2" fill="#000" stroke="#fff" strokeWidth="1.5"><title>{fd(dd.d[i])}: {v[i]}</title></circle>}{o.lab && (n <= 31 || v[i] === mx) && v[i] > 0 && <text x={p[0]} y={p[1] - 9} textAnchor="middle" fill="#e4e4e4" fontSize="11">{v[i]}</text>}</g>)}
@@ -147,7 +168,7 @@ export function Donut({ items, total, o }: { items: [string, number, string][]; 
     <div style={{ textAlign: 'center' }}>
       <svg viewBox="0 0 42 42" width="190" height="190" style={{ margin: '14px 0', maxWidth: '100%' }}>
         <circle cx="21" cy="21" r="15.9155" fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="2.2" />
-        {items.map(([n, c, col]) => { const p = (c / t) * 100, q = off; off += p; return p ? <circle key={n} cx="21" cy="21" r="15.9155" fill="none" stroke={col} strokeWidth="2.2" strokeDasharray={`${Math.max(p - 1, 0.1)} ${101 - p}`} strokeDashoffset={-q} transform="rotate(-90 21 21)"><title>{n}: {c}</title></circle> : null })}
+        {items.map(([n, c, col], index) => { const p = (c / t) * 100, q = off; off += p; return p ? <circle key={n} className="qth-donut-segment" cx="21" cy="21" r="15.9155" fill="none" stroke={col} strokeWidth="2.2" strokeDasharray={`${Math.max(p - 1, 0.1)} ${101 - p}`} strokeDashoffset={-q} transform="rotate(-90 21 21)" style={{ ['--qth-dash' as any]: `${Math.max(p - 1, 0.1)} ${101 - p}`, ['--qth-delay' as any]: `${index * 55}ms` }}><title>{n}: {c}</title></circle> : null })}
         {o.tot && <text x="21" y="22.5" textAnchor="middle" fill="#fff" fontSize="6" fontWeight="200">{total}</text>}
       </svg>
       <div style={{ display: 'grid', gap: 8, textAlign: 'left' }}>
