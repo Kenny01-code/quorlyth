@@ -96,10 +96,29 @@ export function Landing() {
   }, [])
   useReveal()
   const w = { o: data.settings?.wo ?? 40, f: data.settings?.wf ?? 25, r: data.settings?.wr ?? 35 }
+  const [demoWeights, setDemoWeights] = useState(w)
+  useEffect(() => setDemoWeights(w), [w.o, w.f, w.r])
+  const sampleSignals = { o: 82, f: 74, r: 91 }
+  const weightTotal = Math.max(1, demoWeights.o + demoWeights.f + demoWeights.r)
+  const sampleScore = Math.round((sampleSignals.o * demoWeights.o + sampleSignals.f * demoWeights.f + sampleSignals.r * demoWeights.r) / weightTotal)
+  const changeDemoWeight = (key: 'o' | 'f' | 'r', value: number) => setDemoWeights(current => ({ ...current, [key]: value }))
   const ws = [...WORDS, ...WORDS]
   return (
     <>
-      <div className="hero" id="top">
+      <div className="hero" id="top"
+        onPointerMove={event => {
+          if (event.pointerType === 'touch' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+          const rect = event.currentTarget.getBoundingClientRect()
+          if (!rect.width || !rect.height) return
+          const x = (event.clientX - rect.left) / rect.width - .5
+          const y = (event.clientY - rect.top) / rect.height - .5
+          event.currentTarget.style.setProperty('--qth-orbit-x', `${-y * 3.5}deg`)
+          event.currentTarget.style.setProperty('--qth-orbit-y', `${x * 5}deg`)
+        }}
+        onPointerLeave={event => {
+          event.currentTarget.style.setProperty('--qth-orbit-x', '0deg')
+          event.currentTarget.style.setProperty('--qth-orbit-y', '0deg')
+        }}>
         <Orbit />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
@@ -154,10 +173,34 @@ export function Landing() {
             <div><h3>{t}</h3><p className="mut">{d}</p></div>
             <div className="glass pad" style={{ padding: 22 }}><p className="dim">What you do</p><p style={{ marginTop: 6 }}>{what}</p></div></div>
         ))}</div></div>
-      <div className="sec rv"><h2>How the AI reads an idea.</h2><p className="mut">Three signals, weighted the way you choose in settings.</p>
-        <div className="grid g3" style={{ marginTop: 40 }}>{([['Originality', 'How fresh the idea is compared with what already exists.', w.o], ['Feasibility', 'How realistic it is to deliver with the time and tools you have.', w.f], ['Audience relevance', 'How closely it matches what your community cares about.', w.r]] as [string, string, number][]).map(([t, d, v]) => (
-          <div key={t} className="glass pad lift"><h3>{t}</h3><p className="dim" style={{ margin: '8px 0 22px' }}>{d}</p><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="dim">Weight</span><span>{v}%</span></div><Bar value={v} /></div>
-        ))}</div></div>
+      <div className="sec rv"><h2>How the AI reads an idea.</h2><p className="mut">Adjust the weights and watch an illustrative score recalculate. Your saved settings stay untouched.</p>
+        <div className="grid g3" style={{ marginTop: 40 }}>{([
+          ['o', 'Originality', 'How fresh the idea is compared with what already exists.', demoWeights.o],
+          ['f', 'Feasibility', 'How realistic it is to deliver with the time and tools you have.', demoWeights.f],
+          ['r', 'Audience relevance', 'How closely it matches what your community cares about.', demoWeights.r],
+        ] as const).map(([key, title, description, value]) => (
+          <div key={key} className="glass pad lift">
+            <h3>{title}</h3>
+            <p className="dim" style={{ margin: '8px 0 18px', minHeight: 42 }}>{description}</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="dim" htmlFor={`qth-weight-${key}`}>Weight</label><strong>{value}%</strong>
+            </div>
+            <input id={`qth-weight-${key}`} type="range" min="0" max="100" step="1" value={value} onChange={event => changeDemoWeight(key, Number(event.target.value))} aria-label={`${title} example weight`} style={{ width: '100%', marginTop: 14 }} />
+            <div style={{ marginTop: 8 }}><Bar value={value} /></div>
+          </div>
+        ))}</div>
+        <div className="glass pad qth-weight-demo" style={{ marginTop: 18, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 18 }}>
+          <div style={{ flex: '1 1 260px' }}>
+            <p className="dim">Example idea</p>
+            <h3 style={{ marginTop: 5 }}>A weekly creator-led video series</h3>
+            <p className="mut" style={{ marginTop: 6, fontSize: 12 }}>Fixed sample signals: originality 82, feasibility 74, audience relevance 91.</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div><p className="dim">Illustrative score</p><p className="num" style={{ fontSize: 42 }}>{sampleScore}<span className="dim"> / 100</span></p></div>
+          </div>
+          <p className="dim" style={{ flexBasis: '100%' }}>This is a local demonstration of weighted scoring, not a live review of a submitted idea.</p>
+        </div>
+      </div>
       <div className="sec rv"><h2>Made quietly, built to last.</h2>
         <div className="grid g3" style={{ marginTop: 40 }}>{FEATURES.map(([ic, t, d], i) => <div key={t} className="glass pad lift rv" style={{ ['--d' as any]: (i % 3) * 0.08 + 's' }}><div style={{ marginBottom: 46 }}><Icon name={ic} size={28} /></div><h3>{t}</h3><p className="dim" style={{ marginTop: 6 }}>{d}</p></div>)}</div></div>
       <div className="sec rv"><p className="mani">A following is a crowd.<br />A community is a room<br />full of ideas.</p></div>
