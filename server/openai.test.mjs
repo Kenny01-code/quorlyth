@@ -663,6 +663,30 @@ test('ElevenLabs is preferred for natural voice even when Grok is selected for c
   assert.ok(res.output.length > 0)
 })
 
+test('healthy ElevenLabs stays primary even when Grok is configured as the fallback provider', async () => {
+  process.env.AI_TTS_PROVIDER = 'grok'
+  process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-primary-test-key'
+  process.env.XAI_API_KEY = 'test-xai-primary-fallback-key'
+  process.env.GEMINI_API_KEY = 'test-gemini-primary-fallback-key'
+  delete process.env.OPENAI_API_KEY
+  const requested = []
+  globalThis.fetch = async (url, options = {}) => {
+    requested.push({ url: String(url), options })
+    return new Response(Buffer.from([4, 3, 2, 1]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })
+  }
+
+  const res = response()
+  await speak({ body: { text: 'Hey, good to hear from you.', voice: 'marin', accent: 'american', liveTalk: true } }, res)
+
+  assert.equal(requested.length, 1)
+  assert.match(requested[0].url, /api\\.elevenlabs\\.io\\/v1\\/text-to-speech/)
+  assert.equal(requested[0].options.headers['xi-api-key'], 'server-only-elevenlabs-primary-test-key')
+  const payload = JSON.parse(requested[0].options.body)
+  assert.equal(payload.model_id, 'eleven_v4')
+  assert.match(payload.text, /\\[bright, naturally upbeat delivery\\]|\\[bright, lively, naturally upbeat delivery\\]|Hey, good to hear from you\\./)
+  assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
+})
+
 test('voice falls back from ElevenLabs payment errors to Grok without trying Gemini first', async () => {
   process.env.AI_PROVIDER = 'gemini'
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
