@@ -1053,7 +1053,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                   signal: replySpeechController.signal,
                   preferElevenLabsVoice: true,
                   allowBrowserFallback: true,
-                  browserFallbackTimeoutMs: 9500,
+                  browserFallbackTimeoutMs: 4200,
                   liveTalk: true,
                 },
               )
@@ -1417,7 +1417,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                   signal: controller.signal,
                   preferElevenLabsVoice: true,
                   allowBrowserFallback: true,
-                  browserFallbackTimeoutMs: 9500,
+                  browserFallbackTimeoutMs: 4200,
                   liveTalk: true,
                 },
               )
@@ -1456,13 +1456,18 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         enqueueSpeech(speechTail.slice(0, endAt), controller)
         speechTail = speechTail.slice(match.index + match[0].length)
       }
-      // Prefer a complete sentence; otherwise wait for a comfortably sized clause
-      // so ElevenLabs does not make the conversation sound chopped into tiny fragments.
-      if (speechTail.length > 58) {
-        const commaCut = speechTail.lastIndexOf(',', 48)
-        const wordCut = speechTail.lastIndexOf(' ', 48)
-        const cut = commaCut > 32 ? commaCut : wordCut
-        if (cut > 32) {
+      // Start the first spoken phrase as soon as a natural clause is available.
+      // Later chunks can be a little longer because they are prefetched while the
+      // previous phrase is playing.
+      const firstChunk = speechChunkCount === 0
+      const threshold = firstChunk ? 30 : 58
+      const cutLimit = firstChunk ? 38 : 48
+      const minCut = firstChunk ? 22 : 32
+      if (speechTail.length >= threshold) {
+        const commaCut = speechTail.lastIndexOf(',', cutLimit)
+        const wordCut = speechTail.lastIndexOf(' ', cutLimit)
+        const cut = commaCut > minCut ? commaCut : wordCut
+        if (cut > minCut) {
           const phrase = speechTail.slice(0, cut).trim()
           enqueueSpeech(/[,.!?]$/.test(phrase) ? phrase : phrase + ',', controller)
           speechTail = speechTail.slice(cut + 1)
@@ -1518,7 +1523,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
               rt.current?.interrupt?.()
               robot.current?.talk(false)
             }
-            setLive(l => l ? { ...l, state: 'listening', user: '', bot: '' } : l)
+            flushSync(() => setLive(l => l ? { ...l, state: 'listening', user: '', bot: '' } : l))
             return
           }
           if (event.type === 'state') {
@@ -1530,7 +1535,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
           }
           if (event.type === 'user_preview') {
             currentUserTranscript = event.text
-            setLive(l => l ? { ...l, state: 'listening', user: event.text } : l)
+            // Commit transcript deltas immediately so the visible preview tracks
+            // incoming speech events without waiting for unrelated React work.
+            flushSync(() => setLive(l => l ? { ...l, state: 'listening', user: event.text } : l))
             return
           }
           if (event.type === 'user') {
@@ -1542,7 +1549,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
             currentBotText = ''
             currentBotHadDelta = false
             speechTail = ''
-            setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l)
+            flushSync(() => setLive(l => l ? { ...l, state: 'thinking', user: spoken, bot: '' } : l))
             const greeting = quickGreeting(spoken)
             if (greeting) {
               // Simple greetings bypass model generation, then speak through ElevenLabs immediately.
@@ -1686,7 +1693,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                     browserTurnBusy = false
                     if (browserFallbackEnabled && liveFallback.current) restartBrowserRecognition()
                   })
-                }, 1350)
+                }, 650)
               }
 
               recognition.onresult = (event: any) => {
@@ -1704,7 +1711,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                 browserFinalTranscript = finalText.trim()
                 const liveTranscript = [browserFinalTranscript, interimText].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
                 if (liveTranscript) {
-                  setLive(current => current ? { ...current, state: 'listening', user: liveTranscript } : current)
+                  flushSync(() => setLive(current => current ? { ...current, state: 'listening', user: liveTranscript } : current))
                 }
                 if (browserFinalTranscript && !browserTurnBusy && liveFallback.current) submitAfterNaturalPause()
               }
@@ -1950,8 +1957,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         if (item?.[0]?.transcript) pieces.push(String(item[0].transcript))
       }
       dictationText.current = pieces.join(' ').replace(/\s+/g, ' ').trim()
-      setInput(dictationText.current)
-      armSilenceStop(1900)
+      // Keep spoken words in the composer as soon as interim recognition arrives.
+      flushSync(() => setInput(dictationText.current))
+      armSilenceStop(700)
     }
     r.onend = () => {
       window.clearTimeout(noteSilenceTimer.current || undefined)
