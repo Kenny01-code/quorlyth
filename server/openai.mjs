@@ -909,9 +909,10 @@ export async function realtimeSession(req, res) {
               // No language is pinned: let the transcription model identify each spoken language.
               transcription: { model: 'gpt-4o-mini-transcribe' },
               turn_detection: textOnly
-                // Let people finish a phrase and take natural pauses before we respond.
-                // Medium semantic VAD balances turn-taking speed with fewer premature cut-offs.
-                ? { type: 'semantic_vad', eagerness: 'medium', create_response: false, interrupt_response: true }
+                // Live Talk should react promptly after a natural phrase. High eagerness
+                // shortens the semantic end-of-turn wait; the transcript remains visible
+                // throughout speech so users can continue speaking or correct themselves.
+                ? { type: 'semantic_vad', eagerness: 'high', create_response: false, interrupt_response: true }
                 : { type: 'server_vad', threshold: 0.5, silence_duration_ms: 500, create_response: true, interrupt_response: true },
             },
             ...(textOnly ? {} : { output: { voice } }),
