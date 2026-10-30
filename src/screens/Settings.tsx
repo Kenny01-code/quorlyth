@@ -40,6 +40,12 @@ function Inner() {
   const reqs = [...a.data.requests].sort((x, y) => y.at - x.at)
   const openReqs = reqs.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at })
   const unreadRequestKeys = notifications.filter(n => n.kind === 'settings' && n.unread).map(n => n.key)
+  const trackInviteShare = () => {
+    if (a.backend?.auth.mode !== 'supabase') return
+    void a.backend.store.trackGrowthEvent('invite_link_shared', 'settings-invite').catch(error => {
+      console.warn('Could not record invite sharing:', error)
+    })
+  }
 
   useEffect(() => {
     if (a.platformAdmin && searchParams.get('tab') === 'requests') setTab(2)
@@ -91,7 +97,7 @@ function Inner() {
             <h3>Let people in</h3><p className="dim" style={{ margin: '6px 0 16px' }}>People sign in with Google or their email. Share the link, or approve them yourself under Requests.</p>
             <div className="grid g3" style={{ marginBottom: 6 }}>
               <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Invite by email</h3><label className="field"><span>Their emails, separated by commas</span><input value={emails} onChange={e => setEmails(e.target.value)} placeholder="friend@email.com" /></label><div className="acts"><a className="btn p" href={`mailto:${encodeURIComponent(emails.replace(/\s+/g, ''))}?subject=${encodeURIComponent('Join me on Quorlyth')}&body=${text}`} onClick={() => clearInviteDraft('')}><Icon name="mail" size={16} />Write the email</a><button className="chip" onClick={() => clearInviteDraft('')}>Discard draft</button></div></div>
-              <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Share a link</h3><p className="lnk" style={{ marginTop: 10 }}>{url}</p><div className="acts"><button className="btn p" onClick={() => navigator.clipboard.writeText(url).then(() => a.toast('Link copied'))}><Icon name="link" size={16} />Copy link</button><a className="btn" href={`https://wa.me/?text=${text}`} target="_blank" rel="noopener">WhatsApp</a><a className="btn" href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Join my space on Quorlyth')}`} target="_blank" rel="noopener">Telegram</a><a className="btn" href={`https://twitter.com/intent/tweet?text=${text}`} target="_blank" rel="noopener">X</a></div></div>
+              <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Share a link</h3><p className="lnk" style={{ marginTop: 10 }}>{url}</p><div className="acts"><button className="btn p" onClick={() => navigator.clipboard.writeText(url).then(() => { trackInviteShare(); a.toast('Link copied') }).catch(() => a.toast('Could not copy the link'))}><Icon name="link" size={16} />Copy link</button><a className="btn" href={`https://wa.me/?text=${text}`} target="_blank" rel="noopener">WhatsApp</a><a className="btn" href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Join my space on Quorlyth')}`} target="_blank" rel="noopener">Telegram</a><a className="btn" href={`https://twitter.com/intent/tweet?text=${text}`} target="_blank" rel="noopener">X</a></div></div>
               <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Approve people yourself</h3><p className="dim" style={{ margin: '8px 0 12px' }}>Turn on approval and members send a request you can accept under Requests.</p><div className="acts" style={{ margin: 0 }}><Chip onClick={() => setTab(0)}>Space settings</Chip><Chip onClick={() => setTab(2)}>View requests</Chip></div></div>
             </div>
             <ShareCard title="Scan to join" url={url} sub="Anyone you share this with signs in first." />
