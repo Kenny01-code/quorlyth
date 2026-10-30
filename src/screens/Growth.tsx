@@ -93,6 +93,29 @@ function GrowthDashboard() {
       && new Date(event.occurred_at).getTime() >= new Date(signup.occurred_at).getTime(),
     ))
     const activeEvents = inRange.filter(event => event.event_name === 'active_day')
+    const allActiveDayEvents = events.filter(event => event.event_name === 'active_day')
+    const trackingStartedAt = allActiveDayEvents.length
+      ? Math.min(...allActiveDayEvents.map(event => new Date(event.occurred_at).getTime()))
+      : now
+    const weeklyActiveEvents = allActiveDayEvents.filter(event => new Date(event.occurred_at).getTime() >= now - 7 * dayMs)
+    const weeklyActiveUsers = uniqueUsers(weeklyActiveEvents)
+    const retentionCohort = (days: 7 | 30) => {
+      const windowMs = days * dayMs
+      const mature = signups.filter(signup => {
+        const signedUpAt = new Date(signup.occurred_at).getTime()
+        return signedUpAt >= trackingStartedAt && signedUpAt + windowMs <= now
+      })
+      const retained = mature.filter(signup => {
+        const signedUpAt = new Date(signup.occurred_at).getTime()
+        return allActiveDayEvents.some(event => {
+          const eventAt = new Date(event.occurred_at).getTime()
+          return event.user_id === signup.user_id && eventAt > signedUpAt + dayMs && eventAt <= signedUpAt + windowMs
+        })
+      })
+      return { total: mature.length, returned: retained.length, rate: mature.length ? Math.round(retained.length / mature.length * 100) : null }
+    }
+    const retention7 = retentionCohort(7)
+    const retention30 = retentionCohort(30)
     const activeDaysByUser = new Map<string, Set<string>>()
     for (const event of activeEvents) {
       const day = event.event_key || new Date(event.occurred_at).toISOString().slice(0, 10)
@@ -118,8 +141,8 @@ function GrowthDashboard() {
     const daily = Array.from({ length: chartDays }, (_, index) => {
       const date = new Date(now - (chartDays - index - 1) * dayMs)
       const key = date.toISOString().slice(0, 10)
-      const dayEvents = activeEvents.filter(event => (event.event_key || event.occurred_at.slice(0, 10)) === key)
-      const signupEvents = periodSignups.filter(event => event.occurred_at.slice(0, 10) === key)
+      const dayEvents = allActiveDayEvents.filter(event => (event.event_key || event.occurred_at.slice(0, 10)) === key)
+      const signupEvents = signups.filter(event => event.occurred_at.slice(0, 10) === key)
       return { key, label: date.toLocaleDateString(undefined, { weekday: 'short' }), active: uniqueUsers(dayEvents), signups: signupEvents.length }
     })
 
@@ -144,8 +167,11 @@ function GrowthDashboard() {
       activated: activatedAfterSignup.length,
       activationRate,
       activeUsers,
+      weeklyActiveUsers,
       returningUsers,
       returnRate: activeUsers ? Math.round((returningUsers / activeUsers) * 100) : 0,
+      retention7,
+      retention30,
       inviteShares,
       memberJoins: memberJoins.length,
       completedOnboarding,
@@ -246,7 +272,7 @@ function GrowthDashboard() {
           <div className="grid g3 growth-secondary">
             <Metric label="Community joins" value={derived.memberJoins} detail="New member joins in this period" icon="community" />
             <Metric label="Onboarding completed" value={derived.completedOnboarding} detail={derived.startedOnboarding + ' accounts started tracked onboarding'} icon="check" />
-            <Metric label="Invite shares" value={derived.inviteShares} detail="First recorded invite-link share per account" icon="share" />
+            <Metric label="Weekly active accounts" value={derived.weeklyActiveUsers} detail="Unique accounts active at least once in the last 7 days" icon="live" />
           </div>
 
           <section className="glass pad growth-panels">
@@ -265,7 +291,11 @@ function GrowthDashboard() {
                 <strong>{derived.returnRate}%</strong>
                 <div><b>Recorded return rate</b><p>{derived.returningUsers} of {derived.activeUsers} active accounts returned on at least one additional day within the selected range.</p></div>
               </div>
-              <p className="growth-note">Daily activity recording begins with this release. Historical sign-in days are not reconstructed, so reliable signup-cohort 7-day and 30-day retention will build as new and existing accounts return.</p>
+              <div className="growth-cohort-grid">
+                <div><span>7-day cohort</span><strong>{derived.retention7.rate === null ? '—' : derived.retention7.rate + '%'}</strong><small>{derived.retention7.returned} of {derived.retention7.total} matured signups returned on a later day</small></div>
+                <div><span>30-day cohort</span><strong>{derived.retention30.rate === null ? '—' : derived.retention30.rate + '%'}</strong><small>{derived.retention30.returned} of {derived.retention30.total} matured signups returned on a later day</small></div>
+              </div>
+              <p className="growth-note">Cohorts begin at the first recorded active day after this release. Signups need a complete 7- or 30-day observation window, and return activity must occur after signup day. Historical sign-in days are not reconstructed.</p>
             </section>
 
             <section className="glass pad">
