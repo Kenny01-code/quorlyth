@@ -29,6 +29,7 @@ const CollaborationWorkspace = lazy(() => import('./screens/Collaborations').the
 const Promote = lazy(() => import('./screens/Promote').then(m => ({ default: m.Promote })))
 const Me = lazy(() => import('./screens/Me').then(m => ({ default: m.Me })))
 const Analytics = lazy(() => import('./screens/Analytics').then(m => ({ default: m.Analytics })))
+const Growth = lazy(() => import('./screens/Growth').then(m => ({ default: m.Growth })))
 const Settings = lazy(() => import('./screens/Settings').then(m => ({ default: m.Settings })))
 const Database = lazy(() => import('./screens/Database').then(m => ({ default: m.Database })))
 const Access = lazy(() => import('./screens/Access').then(m => ({ default: m.Access })))
@@ -385,6 +386,7 @@ export default function App() {
               <Route path="/collaboration/:id" element={<CollaborationWorkspace />} />
               <Route path="/promote" element={<Promote />} />
               <Route path="/analytics" element={<Analytics />} />
+              <Route path="/growth" element={<Growth />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/database" element={<Database />} />
               <Route path="/access" element={<Access />} />
