@@ -733,6 +733,8 @@ test('healthy ElevenLabs stays primary even when Grok is configured as the fallb
 test('voice falls back from ElevenLabs payment errors to Grok without trying Gemini first', async () => {
   process.env.AI_PROVIDER = 'gemini'
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  // This test checks provider ordering, so pin the legacy single-voice endpoint.
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
   process.env.XAI_API_KEY = 'test-xai-key'
   process.env.GEMINI_API_KEY = 'test-gemini-key'
@@ -761,6 +763,7 @@ test('voice falls back from ElevenLabs payment errors to Grok without trying Gem
 
 test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
   process.env.AI_PROVIDER = 'auto'
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   delete process.env.XAI_API_KEY
   delete process.env.GEMINI_API_KEY
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
@@ -785,6 +788,7 @@ test('natural voice falls back to OpenAI when ElevenLabs fails', async () => {
 
 test('a configured Nigerian ElevenLabs voice ID is used instead of a mismatched default accent', async () => {
   process.env.AI_PROVIDER = 'auto'
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   delete process.env.XAI_API_KEY
   delete process.env.GEMINI_API_KEY
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-test-key'
@@ -896,6 +900,7 @@ test('QuorlythBot strict streaming endpoint uses ElevenLabs and never contacts a
 
 test('streaming voice falls back from ElevenLabs payment errors to Grok before other providers', async () => {
   process.env.AI_TTS_PROVIDER = 'elevenlabs'
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-stream-test-key'
   process.env.XAI_API_KEY = 'test-xai-stream-fallback-key'
   process.env.GEMINI_API_KEY = 'test-gemini-stream-fallback-key'
@@ -948,6 +953,7 @@ test('streaming voice uses Grok when the ElevenLabs key is missing', async () =>
 
 
 test('buffered ElevenLabs retry never falls back to another voice provider', async () => {
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_multilingual_v2'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-buffered-test-key'
   process.env.XAI_API_KEY = 'test-xai-buffered-fallback-key'
   process.env.GEMINI_API_KEY = 'test-gemini-buffered-fallback-key'
