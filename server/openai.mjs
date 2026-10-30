@@ -951,8 +951,9 @@ function speechStyleInstructions(value, liveTalk = false) {
 
 /** Allow expressive ElevenLabs models while keeping model selection configurable. */
 function elevenLabsTtsModel(liveTalk = false) {
-  // This adapter streams v4/v3 through the HTTP Text-to-Dialogue endpoint.
-  // v4 Turbo is reserved for a dedicated Text-to-Dialogue WebSocket implementation.
+  // Use the single-speaker Text-to-Speech endpoint for assistant turns.
+  // Text-to-Dialogue is for authored multi-speaker scenes, not live agent replies.
+  // v4 Turbo requires a separate bidirectional Text-to-Dialogue WebSocket adapter.
   const configured = String(
     liveTalk
       ? (process.env.ELEVENLABS_LIVE_TTS_MODEL || process.env.ELEVENLABS_TTS_MODEL || 'eleven_v4')
@@ -1146,20 +1147,7 @@ function elevenLabsVoiceSettings(model, liveTalk) {
 
 function elevenLabsSpeechRequest(text, voiceId, model, liveTalk, voice, stream) {
   const spokenText = expressiveElevenLabsText(text, model, liveTalk, voice)
-  const dialogueModel = model === 'eleven_v4' || model === 'eleven_v3'
   const outputFormat = stream ? 'mp3_22050_32' : 'mp3_44100_128'
-  if (dialogueModel) {
-    // v4/v3 use Text to Dialogue, not the legacy single-voice TTS endpoint.
-    // v4 Turbo is intentionally excluded until the dedicated TTD WebSocket is wired.
-    return {
-      url: `https://api.elevenlabs.io/v1/text-to-dialogue${stream ? '/stream' : ''}?output_format=${outputFormat}`,
-      body: {
-        inputs: [{ text: spokenText, voice_id: voiceId }],
-        model_id: model,
-        settings: { similarity: 0.82 },
-      },
-    }
-  }
   return {
     url: `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}${stream ? '/stream' : ''}?output_format=${outputFormat}`,
     body: {
