@@ -8,10 +8,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          const moduleId = id.replace(/\\\\/g, '/')
-          if (moduleId.includes('/node_modules/three/')) return 'three'
-          if (moduleId.includes('/node_modules/jspdf/')) return 'pdf-export'
-          if (moduleId.endsWith('/src/components/Charts.tsx')) return 'charts'
+          if (id.includes('/node_modules/three/')) return 'three'
+          if (id.includes('/node_modules/jspdf/')) return 'pdf-export'
+          if (id.endsWith('/src/components/Charts.tsx')) return 'charts'
         },
       },
     },
