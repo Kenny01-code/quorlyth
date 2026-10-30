@@ -1145,20 +1145,43 @@ function elevenLabsVoiceSettings(model, liveTalk) {
   return settings
 }
 
+function elevenLabsSpeechRequest(text, voiceId, model, liveTalk, voice, stream) {
+  const spokenText = expressiveElevenLabsText(text, model, liveTalk, voice)
+  const dialogueModel = model === 'eleven_v4' || model === 'eleven_v3'
+  const outputFormat = stream ? 'mp3_22050_32' : 'mp3_44100_128'
+  if (dialogueModel) {
+    // v4/v3 use Text to Dialogue, not the legacy single-voice TTS endpoint.
+    // v4 Turbo is intentionally excluded until the dedicated TTD WebSocket is wired.
+    return {
+      url: `https://api.elevenlabs.io/v1/text-to-dialogue${stream ? '/stream' : ''}?output_format=${outputFormat}`,
+      body: {
+        inputs: [{ text: spokenText, voice_id: voiceId }],
+        model_id: model,
+        settings: { similarity: 0.82 },
+      },
+    }
+  }
+  return {
+    url: `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}${stream ? '/stream' : ''}?output_format=${outputFormat}`,
+    body: {
+      text: spokenText,
+      model_id: model,
+      voice_settings: elevenLabsVoiceSettings(model, liveTalk),
+    },
+  }
+}
+
 async function requestElevenLabsSpeech(text, voiceId, liveTalk = false, voice = '') {
   const model = elevenLabsTtsModel(liveTalk)
-  return requestTtsWithTimeout(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+  const request = elevenLabsSpeechRequest(text, voiceId, model, liveTalk, voice, false)
+  return requestTtsWithTimeout(request.url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'audio/mpeg',
       'xi-api-key': ELEVENLABS_KEY(),
     },
-    body: JSON.stringify({
-      text: expressiveElevenLabsText(text, model, liveTalk, voice),
-      model_id: model,
-      voice_settings: elevenLabsVoiceSettings(model, liveTalk),
-    }),
+    body: JSON.stringify(request.body),
   }, 'audio')
 }
 
@@ -1166,7 +1189,8 @@ async function requestElevenLabsSpeech(text, voiceId, liveTalk = false, voice = 
 /** Opens ElevenLabs' streaming endpoint; the caller owns the response body and abort controller. */
 async function requestElevenLabsSpeechStream(text, voiceId, liveTalk = false, voice = '') {
   const model = elevenLabsTtsModel(liveTalk)
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/stream?output_format=mp3_22050_32`
+  const request = elevenLabsSpeechRequest(text, voiceId, model, liveTalk, voice, true)
+  const url = request.url
   const controller = new AbortController()
   const configuredTimeout = Number(process.env.AI_TTS_PROVIDER_TIMEOUT_MS)
   // Respect the configured provider deadline. A 1.8s hard cap aborted healthy
@@ -1184,11 +1208,7 @@ async function requestElevenLabsSpeechStream(text, voiceId, liveTalk = false, vo
         Accept: 'audio/mpeg',
         'xi-api-key': ELEVENLABS_KEY(),
       },
-      body: JSON.stringify({
-        text: expressiveElevenLabsText(text, model, liveTalk, voice),
-        model_id: model,
-        voice_settings: elevenLabsVoiceSettings(model, liveTalk),
-      }),
+      body: JSON.stringify(request.body),
     })
     clearTimeout(timer)
     return { response, controller }
@@ -1567,7 +1587,7 @@ export async function speakElevenLabs(req, res) {
   const voiceId = elevenLabsVoiceId(body.voice, accent)
   if (!voiceId) return send(res, 503, { error: 'The selected ElevenLabs accent needs a matching voice ID in your ElevenLabs account. No alternate voice will be used.' })
   try {
-    const result = await requestElevenLabsSpeech(text, voiceId, body.liveTalk === true)
+    const result = await requestElevenLabsSpeech(text, voiceId, body.liveTalk === true, body.voice)
     if (result.response.ok) return audioResponse(res, result.data, 'elevenlabs')
     logTtsProviderFailure('elevenlabs_buffered', { status: result.response.status, code: result.code })
     const status = result.response.status
