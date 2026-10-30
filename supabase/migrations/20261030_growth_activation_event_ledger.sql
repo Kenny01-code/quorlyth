@@ -57,9 +57,6 @@ create index if not exists growth_events_event_name_occurred_at_idx
   on public.growth_events (event_name, occurred_at desc);
 create index if not exists growth_events_user_occurred_at_idx
   on public.growth_events (user_id, occurred_at desc);
-create index if not exists growth_events_actor_occurred_at_idx
-  on public.growth_events (actor_id, occurred_at desc)
-  where actor_id is not null;
 
 create or replace function private.capture_growth_auth_signup()
 returns trigger
