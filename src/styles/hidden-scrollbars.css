@@ -1,0 +1,16 @@
+/* Keep every overflow area usable while removing visible scrollbar chrome. */
+html,
+body,
+#root,
+#root * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
