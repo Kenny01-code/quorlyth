@@ -1,4 +1,4 @@
-import { type PointerEvent, type ReactNode, type WheelEvent, useEffect, useId, useRef, useState } from 'react'
+import { type PointerEvent, type ReactNode, type WheelEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { Av } from './ui'
 
 /** Shared horizontal chart viewport. The scrollbar is hidden, but wheel, drag, keyboard and touch scrolling remain available. */
@@ -96,7 +96,7 @@ export function AreaChart({ dd, o }: { dd: Daily; o: AreaOpts }) {
   }
   const line = path(pts)
   const lineRef = useRef<SVGPathElement>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = lineRef.current
     if (!element) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
