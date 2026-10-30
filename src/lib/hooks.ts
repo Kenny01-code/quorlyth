@@ -52,9 +52,10 @@ export function useReveal(dep: unknown = null) {
 
 /** Counts a number up from zero. */
 export function useCount(n: number, ms = 1200) {
-  const [v, setV] = useState(n)
+  const [v, setV] = useState(0)
   useEffect(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setV(n); return }
+    setV(0)
     const t0 = performance.now(); let raf = 0
     const f = (t: number) => { const p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 4); setV(Math.round(n * e)); if (p < 1) raf = requestAnimationFrame(f) }
     raf = requestAnimationFrame(f)
