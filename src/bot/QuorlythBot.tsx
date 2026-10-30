@@ -27,7 +27,7 @@ const PHRASES = {
   visitor: ['Ask QuorlythBot anything', 'How do I get access?', 'Show me around', 'What is Quorlyth?', 'Type / for skills'],
 }
 
-const LIVE_TALK_SPEECH_STYLE = `LIVE TALK SPEECH STYLE: This is an ongoing voice conversation, not a written essay. Speak naturally with contractions, varied sentence lengths, small acknowledgements, and occasional genuine thinking phrases like “Hmm...” or “well...” when they fit. Use pauses and light hesitation when gathering a thought, but never fill every silence or repeat the same mannerism each turn. Sound warm and expressive when the context merits it, quiet and careful for sensitive topics, curious when you truly need to ask a question, and lightly playful when the user is playful. Do not output bracketed audio tags, stage directions, or markdown. The voice layer will add appropriate human-sounding vocal reactions to the audio while keeping the visible transcript clean. Do not invent personal experiences or claim to be human.`
+const LIVE_TALK_SPEECH_STYLE = `LIVE TALK SPEECH STYLE: This is a continuous, attentive voice conversation, not a written essay or help-centre script. Speak naturally with contractions, varied sentence lengths and occasional brief acknowledgements or genuine thinking phrases, but never fill every pause or repeat the same mannerism. Answer the actual question near the beginning; cover each part of a multi-part question without reciting the question back. Keep simple answers short and give fuller explanations for complex questions or tasks. Match the user's energy without forcing slang, an accent caricature or fake enthusiasm. Be warm and playful when it fits, calm and careful with sensitive topics, and curious only when a real clarification is needed. Treat accents, code-switching, filler words and imperfect grammar as normal speech. When a transcript contains an unclear name, number, target or instruction that could change the action, ask one concise clarification rather than guessing. Use the current Quorlyth page and verified app context when relevant; never invent live facts or claim an action is finished before the user confirms its preview. Do not output markdown, bracketed audio tags or stage directions. The voice layer adds restrained, context-aware vocal delivery while keeping the visible transcript clean. Do not invent personal experiences or claim to be human.`
 
 function usePlaceholder(role: 'owner' | 'member' | 'visitor', active: boolean) {
   const [index, setIndex] = useState(0)
@@ -1456,12 +1456,13 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         enqueueSpeech(speechTail.slice(0, endAt), controller)
         speechTail = speechTail.slice(match.index + match[0].length)
       }
-      // Start voice after a short, speakable phrase instead of waiting for a long paragraph.
-      if (speechTail.length > 26) {
-        const commaCut = speechTail.lastIndexOf(',', 22)
-        const wordCut = speechTail.lastIndexOf(' ', 22)
-        const cut = commaCut > 14 ? commaCut : wordCut
-        if (cut > 14) {
+      // Prefer a complete sentence; otherwise wait for a comfortably sized clause
+      // so ElevenLabs does not make the conversation sound chopped into tiny fragments.
+      if (speechTail.length > 58) {
+        const commaCut = speechTail.lastIndexOf(',', 48)
+        const wordCut = speechTail.lastIndexOf(' ', 48)
+        const cut = commaCut > 32 ? commaCut : wordCut
+        if (cut > 32) {
           const phrase = speechTail.slice(0, cut).trim()
           enqueueSpeech(/[,.!?]$/.test(phrase) ? phrase : phrase + ',', controller)
           speechTail = speechTail.slice(cut + 1)
@@ -1685,7 +1686,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                     browserTurnBusy = false
                     if (browserFallbackEnabled && liveFallback.current) restartBrowserRecognition()
                   })
-                }, 900)
+                }, 1350)
               }
 
               recognition.onresult = (event: any) => {
