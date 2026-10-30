@@ -1053,7 +1053,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                   signal: replySpeechController.signal,
                   preferElevenLabsVoice: true,
                   allowBrowserFallback: true,
-                  browserFallbackTimeoutMs: 4200,
+                  browserFallbackTimeoutMs: 9500,
                   liveTalk: true,
                 },
               )
