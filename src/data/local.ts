@@ -17,6 +17,8 @@ export function createLocalStore(): DocStore {
   return {
     async get(path) { return read()[path] ?? null },
     async exportAll() { return Object.entries(read()).map(([path, data]) => ({ path, data })) },
+    async listGrowthEvents() { return [] },
+    async trackGrowthEvent() { /* Local and demo activity is not part of production platform analytics. */ },
     async listCommunityMembers(cid) {
       return Object.entries(read())
         .filter(([path, data]) => /^members\/[^/]+$/.test(path) && data?.c?.[cid] === true)
