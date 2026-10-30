@@ -59,7 +59,7 @@ test('LiveTalk tolerates natural pauses and starts speech from shorter response 
   assert.match(bot, /prefetchElevenLabsSpeech\(chunk, v\.ai/)
   assert.match(bot, /liveSilenceTimer\.current = window\.setTimeout/)
   assert.match(bot, /const threshold = firstChunk \? 30 : 58/)
-  assert.match(bot, /}, 1350\)/)
+  assert.match(bot, /}, 650\)/)
   assert.match(bot, /tier: 'quick'/)
 })
 
