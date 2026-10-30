@@ -951,9 +951,8 @@ function speechStyleInstructions(value, liveTalk = false) {
 
 /** Allow expressive ElevenLabs models while keeping model selection configurable. */
 function elevenLabsTtsModel(liveTalk = false) {
-  // This server uses ElevenLabs' HTTP Create/Stream Speech endpoints. Use v4
-  // for expressive reactions here; v4 Turbo's documented realtime path is the
-  // Text-to-Dialogue WebSocket, which this HTTP adapter does not implement.
+  // This adapter streams v4/v3 through the HTTP Text-to-Dialogue endpoint.
+  // v4 Turbo is reserved for a dedicated Text-to-Dialogue WebSocket implementation.
   const configured = String(
     liveTalk
       ? (process.env.ELEVENLABS_LIVE_TTS_MODEL || process.env.ELEVENLABS_TTS_MODEL || 'eleven_v4')
