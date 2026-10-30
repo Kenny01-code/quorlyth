@@ -1,0 +1,107 @@
+/* Review queue: compact aggregate progress and a contained, visually quiet list. */
+.review-progress {
+  display: grid;
+  gap: 9px;
+  margin: -12px 0 20px;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.045);
+}
+.review-progress__top,
+.review-progress__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.review-progress__top {
+  color: var(--w);
+  font-size: 13px;
+}
+.review-progress__top span {
+  color: var(--g5);
+  font-variant-numeric: tabular-nums;
+}
+.review-progress__track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.09);
+}
+.review-progress__track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--w);
+  transition: width 240ms ease;
+}
+.review-progress__meta {
+  color: var(--g5);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.review-queue-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+  max-height: min(68vh, 720px);
+  overflow: hidden;
+  padding: 12px;
+}
+.review-queue-panel__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 7px 12px;
+  color: var(--g6);
+  font-size: 12px;
+}
+.review-queue-panel__heading span {
+  color: var(--g4);
+  font-variant-numeric: tabular-nums;
+}
+.review-queue-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0 2px 2px;
+}
+.review-queue-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.review-queue-scroll .row {
+  cursor: pointer;
+}
+.review-queue-scroll .row:focus-visible {
+  outline: 2px solid var(--w);
+  outline-offset: -2px;
+}
+@media (max-width: 860px) {
+  .review-queue-panel {
+    max-height: min(52vh, 480px);
+    min-height: 210px;
+  }
+}
+@media (max-width: 520px) {
+  .review-progress__meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .review-queue-panel {
+    max-height: min(48vh, 420px);
+    min-height: 190px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .review-progress__track > span {
+    transition: none;
+  }
+}
