@@ -1009,7 +1009,7 @@ test('LiveTalk realtime sessions use semantic turn detection for natural pauses'
   assert.equal(res.statusCode, 200)
   assert.deepEqual(payload.session.audio.input.turn_detection, {
     type: 'semantic_vad',
-    eagerness: 'high',
+    eagerness: 'medium',
     create_response: false,
     interrupt_response: true,
   })
