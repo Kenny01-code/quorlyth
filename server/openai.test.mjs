@@ -7,6 +7,7 @@ const originalGeminiKey = process.env.GEMINI_API_KEY
 const originalOpenAIKey = process.env.OPENAI_API_KEY
 const originalElevenLabsKey = process.env.ELEVENLABS_API_KEY
 const originalElevenLabsTtsModel = process.env.ELEVENLABS_TTS_MODEL
+const originalElevenLabsLiveTtsModel = process.env.ELEVENLABS_LIVE_TTS_MODEL
 const originalElevenLabsNigerianVoiceId = process.env.ELEVENLABS_VOICE_NIGERIAN_ID
 const originalRealtimeModel = process.env.OPENAI_REALTIME_MODEL
 const originalXaiKey = process.env.XAI_API_KEY
@@ -39,6 +40,8 @@ afterEach(() => {
   else process.env.ELEVENLABS_API_KEY = originalElevenLabsKey
   if (originalElevenLabsTtsModel === undefined) delete process.env.ELEVENLABS_TTS_MODEL
   else process.env.ELEVENLABS_TTS_MODEL = originalElevenLabsTtsModel
+  if (originalElevenLabsLiveTtsModel === undefined) delete process.env.ELEVENLABS_LIVE_TTS_MODEL
+  else process.env.ELEVENLABS_LIVE_TTS_MODEL = originalElevenLabsLiveTtsModel
   if (originalElevenLabsNigerianVoiceId === undefined) delete process.env.ELEVENLABS_VOICE_NIGERIAN_ID
   else process.env.ELEVENLABS_VOICE_NIGERIAN_ID = originalElevenLabsNigerianVoiceId
   if (originalRealtimeModel === undefined) delete process.env.OPENAI_REALTIME_MODEL
@@ -665,6 +668,8 @@ test('ElevenLabs is preferred for natural voice even when Grok is selected for c
 
 test('healthy ElevenLabs stays primary even when Grok is configured as the fallback provider', async () => {
   process.env.AI_TTS_PROVIDER = 'grok'
+  process.env.ELEVENLABS_TTS_MODEL = 'eleven_v4'
+  process.env.ELEVENLABS_LIVE_TTS_MODEL = 'eleven_v4'
   process.env.ELEVENLABS_API_KEY = 'server-only-elevenlabs-primary-test-key'
   process.env.XAI_API_KEY = 'test-xai-primary-fallback-key'
   process.env.GEMINI_API_KEY = 'test-gemini-primary-fallback-key'
@@ -679,11 +684,11 @@ test('healthy ElevenLabs stays primary even when Grok is configured as the fallb
   await speak({ body: { text: 'Hey, good to hear from you.', voice: 'marin', accent: 'american', liveTalk: true } }, res)
 
   assert.equal(requested.length, 1)
-  assert.match(requested[0].url, /api\\.elevenlabs\\.io\\/v1\\/text-to-speech/)
+  assert.ok(requested[0].url.includes('api.elevenlabs.io/v1/text-to-speech/'))
   assert.equal(requested[0].options.headers['xi-api-key'], 'server-only-elevenlabs-primary-test-key')
   const payload = JSON.parse(requested[0].options.body)
   assert.equal(payload.model_id, 'eleven_v4')
-  assert.match(payload.text, /\\[bright, naturally upbeat delivery\\]|\\[bright, lively, naturally upbeat delivery\\]|Hey, good to hear from you\\./)
+  assert.ok(payload.text.includes('Hey, good to hear from you.'))
   assert.equal(res.headers['X-Quorlyth-Voice-Provider'], 'elevenlabs')
 })
 
