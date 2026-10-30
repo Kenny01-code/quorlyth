@@ -3,7 +3,7 @@ import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { Icon } from '../lib/Icon'
 import { useApp } from '../data/AppProvider'
-import { GrowthEvent, GrowthEventName } from '../data/docstore'
+import type { GrowthEvent, GrowthEventName } from '../data/docstore'
 import { download } from './Analytics'
 import '../styles/growth.css'
 
@@ -102,14 +102,13 @@ function GrowthDashboard() {
     }
     const activeUsers = activeDaysByUser.size
     const returningUsers = [...activeDaysByUser.values()].filter(days => days.size >= 2).length
-    const activatedUsers = uniqueUsers(events.filter(event => ACTIVATION_EVENTS.has(event.event_name)))
     const creatorAccounts = uniqueUsers(events.filter(event => event.event_name === 'community_created'))
     const ideaCreators = uniqueUsers(events.filter(event => event.event_name === 'idea_submitted'))
     const workspaceCreators = uniqueUsers(events.filter(event => event.event_name === 'project_created'))
     const memberJoins = inRange.filter(event => event.event_name === 'member_joined')
     const inviteShares = inRange.filter(event => event.event_name === 'invite_link_shared').length
-    const completedOnboarding = uniqueUsers(events.filter(event => event.event_name === 'onboarding_completed'))
-    const startedOnboarding = uniqueUsers(events.filter(event => event.event_name === 'onboarding_started'))
+    const completedOnboarding = uniqueUsers(inRange.filter(event => event.event_name === 'onboarding_completed'))
+    const startedOnboarding = uniqueUsers(inRange.filter(event => event.event_name === 'onboarding_started'))
     const signupCount = signups.length
     const activationRate = periodSignups.length
       ? Math.round((activatedAfterSignup.length / periodSignups.length) * 100)
@@ -151,7 +150,6 @@ function GrowthDashboard() {
       memberJoins: memberJoins.length,
       completedOnboarding,
       startedOnboarding,
-      activatedUsers,
     }
   }, [events, range])
 
