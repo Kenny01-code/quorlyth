@@ -364,3 +364,20 @@ main .grid > .glass:nth-child(8) { animation-delay: 280ms; }
   #nav .nav-active-pill { transition: none; }
   main .grid > .glass, .bar > i, .qth-donut-segment { animation: none !important; }
 }
+
+
+/* Landing interaction: gentle cursor tilt, never competing with the copy. */
+.hero .orb {
+  transform: translate(-50%,-50%) perspective(1100px) rotateX(var(--qth-orbit-x,0deg)) rotateY(var(--qth-orbit-y,0deg));
+  transform-style: preserve-3d;
+  transition: transform 360ms cubic-bezier(.2,.75,.25,1);
+}
+.qth-weight-demo {
+  border-color: rgba(255,255,255,.15);
+  background:
+    radial-gradient(ellipse 50% 110% at 100% 0%,rgba(255,255,255,.07),transparent 70%),
+    linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.012));
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero .orb { transition: none; transform: translate(-50%,-50%); }
+}
