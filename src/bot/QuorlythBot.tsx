@@ -737,7 +737,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
           elevenLabsOnly: false,
           preferElevenLabsVoice: true,
           allowBrowserFallback: true,
-          browserFallbackTimeoutMs: 3500,
+          browserFallbackTimeoutMs: 9500,
           liveTalk: true,
         },
       )
@@ -1036,7 +1036,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                 elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
                 allowBrowserFallback: true,
-                browserFallbackTimeoutMs: 3500,
+                browserFallbackTimeoutMs: 9500,
                 liveTalk: true,
               },
             )
@@ -1053,7 +1053,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                   signal: replySpeechController.signal,
                   preferElevenLabsVoice: true,
                   allowBrowserFallback: true,
-                  browserFallbackTimeoutMs: 3500,
+                  browserFallbackTimeoutMs: 9500,
                   liveTalk: true,
                 },
               )
@@ -1245,6 +1245,62 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     nav(s[0]); setCur(c => add(c, { r: 'a', t: s[1] })); setCaption(s[1]); robot.current?.set('point'); setTimeout(() => robot.current?.set('explain'), 900); say(s[1])
   }
 
+  function isExplicitVoiceTaskRequest(text: string): boolean {
+    const source = text.trim()
+    const imperative = /^(?:(?:hey|okay)[,\\s]+)?(?:(?:please\\s+)?(?:(?:can|could|would)\\s+you\\s+(?:please\\s+)?|i want you to\\s+|i need you to\\s+|help me\\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore)\\b/i
+    const target = /\\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?)\\b/i
+    return imperative.test(source) && target.test(source)
+  }
+
+  async function prepareVoiceTaskAction(requestText: string): Promise<{ ok: boolean; preview?: string; message: string; confirmationRequired?: boolean }> {
+    const request = requestText.trim().slice(0, 1800)
+    if (!request) return { ok: false, message: 'I did not catch the task clearly. Please say what you want me to prepare.' }
+    if (!a.me) return { ok: false, message: 'Sign in first. I can answer questions as a visitor, but private workspace actions need your account.' }
+
+    const universalOrganizeCommand = /\\b(one[- ]click organize|organize this page|auto[- ]organize(?: this page| the current page)?|organize the current page|organize my (?:whole|entire) (?:site|quorlyth)|organize everything (?:on|in) (?:my )?quorlyth)\\b/i.test(request)
+    const automationCommand = /\\b(?:automation|automations|workflow|workflows|automate)\\b/i.test(request)
+      && /\\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute)\\b/i.test(request)
+    const workspaceCommand = /\\b(workspace|project space|standalone task|workspace task|independent project|task)\\b/i.test(request)
+      && /\\b(create|build|set up|make|add|edit|update|rename|rewrite|revise|organize|improve|start|begin|mark|complete|close|reopen|reactivate|delete|remove)\\b/i.test(request)
+      && (!loc.pathname.startsWith('/collaboration/') || /\\b(standalone|independent workspace|project space)\\b/i.test(request) || loc.pathname.startsWith('/workspaces/'))
+
+    setView('chat')
+    setBusy(true)
+    setStatus('Preparing action preview')
+    setThinkingTask('Checking your current workspace, target and permissions')
+    robot.current?.think(true)
+    try {
+      let action: PendingAction | null = null
+      if (universalOrganizeCommand) action = await planUniversalActionBatch(request)
+      else if (automationCommand) action = await planAutomationAction(request)
+      else if (workspaceCommand) action = await planStandaloneWorkspaceAction(request)
+      else action = planAction(request)
+
+      if (!action) {
+        return {
+          ok: false,
+          message: 'I could not prepare that as a safe Quorlyth action from the current page. I have not changed anything. Try naming the exact community, idea, workspace or task.',
+        }
+      }
+
+      setPendingAction(action)
+      const preview = pendingActionDetail(action, a.data.communities, a.data.ideas)
+      return {
+        ok: true,
+        preview,
+        confirmationRequired: true,
+        message: 'I prepared the action preview. Nothing has been changed yet. Please review the details in Quorlyth and confirm there when you are ready.',
+      }
+    } catch (error) {
+      return { ok: false, message: userFacingMutationError(error, 'prepare that Quorlyth action') }
+    } finally {
+      setBusy(false)
+      setStatus(liveFallback.current ? 'Listening' : 'Online')
+      setThinkingTask('')
+      robot.current?.think(false)
+    }
+  }
+
   // ----- live voice -----
   async function startLive() {
     if (live) return stopLive()
@@ -1343,7 +1399,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                 elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
                 allowBrowserFallback: true,
-                browserFallbackTimeoutMs: 3500,
+                browserFallbackTimeoutMs: 9500,
                 liveTalk: true,
               },
             )
@@ -1360,7 +1416,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                   signal: controller.signal,
                   preferElevenLabsVoice: true,
                   allowBrowserFallback: true,
-                  browserFallbackTimeoutMs: 3500,
+                  browserFallbackTimeoutMs: 9500,
                   liveTalk: true,
                 },
               )
@@ -1428,6 +1484,21 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
         accent: bs.accent || 'auto',
         textOnly: true,
         ...(accessToken ? { accessToken, context: voiceContext } : {}),
+        tools: [{
+          type: 'function',
+          name: 'prepare_quorlyth_task',
+          description: 'Prepare a reviewable preview for an explicit Quorlyth create, update, organize, or other in-app task. Use only when the user clearly asks you to do something, not when they ask how something works. This tool never applies the change; the user must confirm the preview in Quorlyth.',
+          parameters: {
+            type: 'object',
+            properties: { request: { type: 'string', description: 'The user’s exact requested Quorlyth task, preserving their target names and important constraints.' } },
+            required: ['request'],
+            additionalProperties: false,
+          },
+        }],
+        onTool: async (name, args) => {
+          if (name !== 'prepare_quorlyth_task') return { ok: false, message: 'That action is not supported by this voice session.' }
+          return prepareVoiceTaskAction(String(args?.request || currentUserTranscript || ''))
+        },
         onEvent: event => {
           if (!liveFallback.current) return
           if (event.type === 'speech_started') {
@@ -1541,7 +1612,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
             return
           }
           if (event.type === 'tool') {
-            a.toast('This live response requested an in-app action, but the action needs to be completed from the chat composer.')
+            setStatus('Preparing action preview')
+            setThinkingTask('Checking access and preparing a confirmation card')
             return
           }
           if (event.type === 'error') {
@@ -1611,7 +1683,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
                     browserTurnBusy = false
                     if (browserFallbackEnabled && liveFallback.current) restartBrowserRecognition()
                   })
-                }, 1150)
+                }, 900)
               }
 
               recognition.onresult = (event: any) => {
@@ -1689,6 +1761,18 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
           const controller = ensureSpeechController()
           try {
             let answer = ''
+            if (isExplicitVoiceTaskRequest(spoken)) {
+              const prepared = await prepareVoiceTaskAction(spoken)
+              if (!liveFallback.current || turnNumber !== browserTurnNumber || controller.signal.aborted) return
+              answer = prepared.message
+              voiceChat = { ...voiceChat, msgs: [...voiceChat.msgs, { r: 'a' as const, t: answer }].slice(-100) }
+              c = voiceChat
+              persist(voiceChat)
+              setLive(current => current ? { ...current, state: 'speaking', bot: answer } : current)
+              enqueueSpeech(answer, controller)
+              await speechQueue
+              return
+            }
             if (greeting) {
               answer = greeting
               voiceChat = { ...voiceChat, msgs: [...voiceChat.msgs, { r: 'a' as const, t: answer }].slice(-100) }
