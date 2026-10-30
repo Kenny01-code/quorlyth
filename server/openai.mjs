@@ -909,7 +909,9 @@ export async function realtimeSession(req, res) {
               // No language is pinned: let the transcription model identify each spoken language.
               transcription: { model: 'gpt-4o-mini-transcribe' },
               turn_detection: textOnly
-                ? { type: 'semantic_vad', eagerness: 'medium', create_response: false, interrupt_response: true }
+                // Faster semantic chunk completion keeps Live Talk responsive while
+                // still using meaning, not a fixed silence timer, to detect turn ends.
+                ? { type: 'semantic_vad', eagerness: 'high', create_response: false, interrupt_response: true }
                 : { type: 'server_vad', threshold: 0.5, silence_duration_ms: 500, create_response: true, interrupt_response: true },
             },
             ...(textOnly ? {} : { output: { voice } }),
@@ -1389,13 +1391,14 @@ async function speakFromBody(body, res, excludedProviders = new Set()) {
       return send(res, 400, { error: 'Choose a voice in QuorlythBot Voice Studio before playing audio.' })
     }
     const voice = body.voice
-    // Voice selection is intentionally independent from the chat provider.
-    // ElevenLabs is the preferred natural voice, with fast cross-provider fallbacks.
-    const selectedTtsProvider = (process.env.AI_TTS_PROVIDER || 'elevenlabs').trim().toLowerCase()
-    const voiceProviders = ['elevenlabs', 'grok', 'gemini', 'openai']
-    const order = voiceProviders.includes(selectedTtsProvider)
-      ? [selectedTtsProvider, ...voiceProviders.filter(provider => provider !== selectedTtsProvider)]
-      : voiceProviders
+    // ElevenLabs is always the primary voice when configured. AI_TTS_PROVIDER
+    // only chooses which alternate service to try after ElevenLabs is unavailable.
+    const preferredFallback = (process.env.AI_TTS_PROVIDER || 'grok').trim().toLowerCase()
+    const fallbackProviders = ['grok', 'gemini', 'openai']
+    const fallbackOrder = fallbackProviders.includes(preferredFallback)
+      ? [preferredFallback, ...fallbackProviders.filter(provider => provider !== preferredFallback)]
+      : fallbackProviders
+    const order = ['elevenlabs', ...fallbackOrder]
 
     for (const provider of order) {
       if (excludedProviders.has(provider)) continue
