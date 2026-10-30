@@ -4,6 +4,33 @@
  */
 export interface Doc<T = any> { id: string; data: T }
 
+export type GrowthEventName =
+  | 'account_created'
+  | 'active_day'
+  | 'onboarding_started'
+  | 'onboarding_completed'
+  | 'profile_completed'
+  | 'community_created'
+  | 'member_joined'
+  | 'idea_submitted'
+  | 'project_created'
+  | 'invite_link_shared'
+
+export type SelfTrackedGrowthEventName =
+  | 'active_day'
+  | 'onboarding_started'
+  | 'onboarding_completed'
+  | 'invite_link_shared'
+
+export interface GrowthEvent {
+  id: string
+  user_id: string
+  actor_id: string | null
+  event_name: GrowthEventName
+  event_key: string
+  occurred_at: string
+}
+
 export interface ExportDoc<T = any> { path: string; data: T; updatedAt?: string | null }
 
 export interface DocStore {
@@ -14,6 +41,10 @@ export interface DocStore {
   listCommunityMembers(cid: string): Promise<string[]>
   /** Return scoped contributor totals for a community the caller manages. */
   listCommunityContributors(cid: string): Promise<{ userId: string; ideas: number; backings: number }[]>
+  /** Read the platform growth ledger. Supabase RLS limits this to platform admins. */
+  listGrowthEvents(): Promise<GrowthEvent[]>
+  /** Record a small, self-attributed event. The database restricts allowed event names and ownership. */
+  trackGrowthEvent(eventName: SelfTrackedGrowthEventName, eventKey?: string): Promise<void>
   /** Create a brand-new record without ON CONFLICT UPDATE semantics. */
   create(path: string, data: any): Promise<void>
   set(path: string, data: any): Promise<void>
