@@ -5,7 +5,8 @@ import { Gate } from '../components/Gate'
 import { Av, Bar, Chip, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
-import { reviewIdeas, ReviewProgress } from '../ai/review'
+import { reviewIdeas } from '../ai/review'
+import type { ReviewProgress } from '../ai/review'
 import '../styles/review-queue.css'
 import { STATUS_LABEL, YouTubeSocialSignals } from '../lib/types'
 import { cn, when } from '../lib/util'
@@ -315,7 +316,7 @@ function Inner() {
               </div> : <p className="mut" style={{ marginTop: 10, fontSize: 13 }}>No collaboration applications for this idea yet.</p>}
             </div>
             <div className="acts">
-              <button className="btn" disabled={!!status} onClick={() => void run(false, d.id)}><span className="aiic"><Icon name="spark" size={16} /></span>{status ? 'Reviewing…' : 'Re-run AI review'}</button>
+              <button className="btn" disabled={!!reviewProgress} onClick={() => void run(false, d.id)}><span className="aiic"><Icon name="spark" size={16} /></span>{reviewProgress ? 'Reviewing…' : 'Re-run AI review'}</button>
               <button className="btn p" onClick={() => a.setStatus(d.id, 'selected')}><Icon name="approve" />Select</button>
               <button className="btn" onClick={() => a.setStatus(d.id, 'held')}><Icon name="hold" />Hold</button>
               <button className="btn" onClick={() => a.setStatus(d.id, 'declined')}><Icon name="decline" />Decline</button>
