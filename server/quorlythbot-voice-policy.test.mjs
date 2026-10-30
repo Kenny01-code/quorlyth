@@ -54,12 +54,12 @@ test('LiveTalk tolerates natural pauses and starts speech from shorter response 
     readSource('server/openai.mjs'),
   ])
 
-  assert.match(server, /type: 'semantic_vad', eagerness: 'medium'/)
+  assert.match(server, /type: 'semantic_vad', eagerness: 'high'/)
   assert.match(bot, /recognition\.continuous = true/)
   assert.match(bot, /prefetchElevenLabsSpeech\(chunk, v\.ai/)
   assert.match(bot, /liveSilenceTimer\.current = window\.setTimeout/)
-  assert.match(bot, /speechTail\.length > 58/)
-  assert.match(bot, /}, 1350\)/)
+  assert.match(bot, /const threshold = firstChunk \? 30 : 58/)
+  assert.match(bot, /}, 650\)/)
   assert.match(bot, /tier: 'quick'/)
 })
 

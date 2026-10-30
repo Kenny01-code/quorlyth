@@ -1,4 +1,4 @@
-import { DocStore, Doc, isDirectChild, deepMerge } from './docstore'
+import { DocStore, Doc, GrowthEvent, SelfTrackedGrowthEventName, isDirectChild, deepMerge } from './docstore'
 import { nextRetryAttempt, retryDelayForAttempt } from './retry-policy.js'
 
 /**
@@ -61,6 +61,38 @@ export async function createSupabaseStore(url: string, key: string) {
         ideas: Number(row.ideas_count) || 0,
         backings: Number(row.backings_count) || 0,
       }))
+    },
+    async listGrowthEvents() {
+      // Page the ledger so the dashboard keeps working beyond PostgREST's row cap.
+      // The table's RLS policy is the authority: non-platform admins receive no rows.
+      const pageSize = 500
+      const records: GrowthEvent[] = []
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await sb
+          .from('growth_events')
+          .select('id,user_id,actor_id,event_name,event_key,occurred_at')
+          .order('occurred_at', { ascending: false })
+          .range(offset, offset + pageSize - 1)
+        if (error) throw new Error(error.message || 'Could not load platform growth events')
+        const page = (data || []) as GrowthEvent[]
+        records.push(...page)
+        if (page.length < pageSize) break
+        if (records.length >= 20000) break
+      }
+      return records
+    },
+    async trackGrowthEvent(eventName: SelfTrackedGrowthEventName, eventKey = '') {
+      const { data: authData, error: authError } = await sb.auth.getUser()
+      if (authError || !authData.user) throw new Error('Sign in before recording account activity.')
+      const userId = authData.user.id
+      const { error } = await sb.from('growth_events').insert({
+        user_id: userId,
+        actor_id: userId,
+        event_name: eventName,
+        event_key: eventKey.slice(0, 256),
+      })
+      // Event keys are idempotent by design. A repeat visit or retry is not a failure.
+      if (error && error.code !== '23505') throw new Error(error.message || 'Could not record account activity')
     },
     async exportAll() {
       // Page the complete docs table; PostgreSQL row-level security limits this export
