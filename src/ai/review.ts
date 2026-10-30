@@ -24,7 +24,9 @@ export async function reviewIdeas(a: App, ideas: Idea[], opts: { community?: str
       const o = 62 + hash % 34, f = 58 + (hash >>> 4) % 38, r = 60 + (hash >>> 9) % 36
       await a.saveReview(idea.id, { o, f, r, score: Math.round((o * w.o + f * w.f + r * w.r) / (w.o + w.f + w.r || 1)), reason: 'Demo score based on the sample idea and the space’s configured signal weights. In a live space, QuorlythBot would explain its assessment using the real idea context.', status: a.statusOf(idea.id) })
       done++
-      const progress = { total: ideas.length, completed: done, totalBatches, activeBatches: done < ideas.length ? 1 : 0 }\n      opts.onReviewProgress?.(progress)\n      opts.onProgress?.('Reviewed ' + done + ' of ' + ideas.length + ' ideas...')
+      const progress = { total: ideas.length, completed: done, totalBatches, activeBatches: done < ideas.length ? 1 : 0 }
+      opts.onReviewProgress?.(progress)
+      opts.onProgress?.('Reviewed ' + done + ' of ' + ideas.length + ' ideas...')
     }
     return done
   }
@@ -35,7 +37,11 @@ export async function reviewIdeas(a: App, ideas: Idea[], opts: { community?: str
   let nextBatch = 0
   let activeBatches = 0
   let firstError: unknown = null
-  const emitProgress = () => {\n    const progress = { total: ideas.length, completed: done, totalBatches: batches.length, activeBatches }\n    opts.onReviewProgress?.(progress)\n    opts.onProgress?.((activeBatches ? 'Scoring ideas' : 'Preparing next batch') + ' · ' + done + ' of ' + ideas.length + ' reviewed')\n  }
+  const emitProgress = () => {
+    const progress = { total: ideas.length, completed: done, totalBatches: batches.length, activeBatches }
+    opts.onReviewProgress?.(progress)
+    opts.onProgress?.((activeBatches ? 'Scoring ideas' : 'Preparing next batch') + ' · ' + done + ' of ' + ideas.length + ' reviewed')
+  }
   emitProgress()
 
   async function processBatch(b: Idea[]) {
