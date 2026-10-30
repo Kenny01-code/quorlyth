@@ -240,7 +240,8 @@ function GrowthDashboard() {
           <div className="grid g2 growth-panels">
             <section className="glass pad">
               <div className="growth-section-heading"><div><p className="dim">ACTIVITY</p><h3>Daily account activity</h3><p className="mut">Active days and new signups over the last two weeks</p></div></div>
-              <div className="growth-daily-chart">
+              <div className="growth-daily-chart-scroll">
+                <div className="growth-daily-chart">
                 {derived.daily.map(day => {
                   const max = Math.max(1, ...derived.daily.map(item => Math.max(item.active, item.signups)))
                   return <div className="growth-daily-column" key={day.key} title={day.key + ': ' + day.active + ' active, ' + day.signups + ' signups'}>
@@ -251,6 +252,7 @@ function GrowthDashboard() {
                     <span>{day.label}</span>
                   </div>
                 })}
+                </div>
               </div>
               <div className="growth-legend"><span><i className="active" />Active accounts</span><span><i className="signup" />New signups</span></div>
             </section>
