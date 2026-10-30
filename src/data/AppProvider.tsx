@@ -213,6 +213,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, toast, demo])
 
   useEffect(() => {
+    if (!backend || !me || demo || backend.auth.mode !== 'supabase') return
+    const utcDay = new Date().toISOString().slice(0, 10)
+    void backend.store.trackGrowthEvent('active_day', utcDay).catch(error => {
+      // Growth telemetry must never interrupt normal app usage.
+      console.warn('Could not record daily active account:', error)
+    })
+  }, [backend, me?.id, demo])
+
+  useEffect(() => {
     // Wait for auth resolution before selecting a cache so guest startup cannot
     // overwrite a signed-in user's immediate first paint.
     // During initial backend boot, keep the previous same-tab cache marker.
