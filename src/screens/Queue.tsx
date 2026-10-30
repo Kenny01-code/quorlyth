@@ -5,7 +5,8 @@ import { Gate } from '../components/Gate'
 import { Av, Bar, Chip, Empty, Head } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
-import { reviewIdeas } from '../ai/review'
+import { reviewIdeas, ReviewProgress } from '../ai/review'
+import '../styles/review-queue.css'
 import { STATUS_LABEL, YouTubeSocialSignals } from '../lib/types'
 import { cn, when } from '../lib/util'
 
@@ -163,7 +164,7 @@ function Inner() {
   const qc = sp.get('c') || ''
   const requestedIdeaId = sp.get('idea') || ''
   const [sel, setSel] = useState<string>('')
-  const [status, setStatus] = useState('')
+  const [reviewProgress, setReviewProgress] = useState<ReviewProgress | null>(null)
   const [err, setErr] = useState('')
   const [reviewingApplication, setReviewingApplication] = useState<string | null>(null)
   const ctl = useRef<AbortController | null>(null)
@@ -178,7 +179,7 @@ function Inner() {
   const unreviewed = list.filter(i => data.reviews[i.id]?.score == null).length
 
   async function run(all = false, only?: string, forceYoutubeRefresh = false) {
-    if (status) return
+    if (reviewProgress) return
     // Never let a direct single-item review escape the current user's community scope.
     const base = only ? inScope.filter(i => i.id === only) : inScope
     const todo = all || only ? base : base.filter(i => data.reviews[i.id]?.score == null)
@@ -188,12 +189,12 @@ function Inner() {
       const done = await reviewIdeas(a, todo, {
         community: qc ? data.communities.find(c => c.id === qc)?.name : undefined,
         signal: ctl.current.signal,
-        onProgress: setStatus,
+        onProgress: setReviewProgress,
         forceYoutubeRefresh,
       })
       a.toast(`${done} idea${done === 1 ? '' : 's'} reviewed`)
     } catch (e: any) { if (e.name !== 'AbortError') setErr(userFacingMutationError(e, 'review the selected ideas')) }
-    setStatus(''); ctl.current = null
+    setReviewProgress(null); ctl.current = null
   }
 
   const m = (l: string, v?: number) => v == null ? null : <div style={{ marginTop: 18 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{l}</span><span>{v}</span></div><Bar value={v} /></div>
@@ -217,10 +218,30 @@ function Inner() {
   return (
     <>
       <Head kicker="Review queue" title="Ranked for you. Chosen by you."
-        right={status ? <button className="btn" onClick={() => ctl.current?.abort()}><Icon name="decline" size={16} />Stop</button> : <>
+        right={reviewProgress ? <button className="btn" onClick={() => ctl.current?.abort()}><Icon name="decline" size={16} />Stop review</button> : <>
           <button className="btn p" onClick={() => run()}><span className="aiic"><Icon name="spark" size={16} /></span>Run AI review{unreviewed ? ` (${unreviewed})` : ''}</button>{' '}
           {list.length > unreviewed && <button className="btn" onClick={() => run(true)}>Review all again</button>}</>} />
-      {status && <p className="aistat">{status}</p>}
+      {reviewProgress && (() => {
+        const percent = reviewProgress.total ? Math.round((reviewProgress.completed / reviewProgress.total) * 100) : 0
+        const activity = reviewProgress.activeBatches > 1
+          ? reviewProgress.activeBatches + ' scoring batches running'
+          : reviewProgress.activeBatches === 1 ? 'Scoring ideas...' : 'Preparing the next batch...'
+        return (
+          <section className="review-progress" role="status" aria-live="polite" aria-label="AI review progress">
+            <div className="review-progress__top">
+              <strong>AI review in progress</strong>
+              <span>{percent}%</span>
+            </div>
+            <div className="review-progress__track" role="progressbar" aria-label="Ideas reviewed" aria-valuemin={0} aria-valuemax={reviewProgress.total} aria-valuenow={reviewProgress.completed}>
+              <span style={{ width: percent + '%' }} />
+            </div>
+            <div className="review-progress__meta">
+              <span>{reviewProgress.completed} of {reviewProgress.total} ideas reviewed</span>
+              <span>{activity}</span>
+            </div>
+          </section>
+        )
+      })()}
       {err && <p className="aistat" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><Icon name="alert" size={16} />{err}</p>}
       <div style={{ marginBottom: 18 }}>
         <Chip on={!qc} onClick={() => setSp({})}>All</Chip>{' '}
@@ -231,22 +252,25 @@ function Inner() {
       </p>
       {!list.length ? <Empty icon="queue" title="No ideas in this space yet" text="Ideas from this community will appear here as members contribute." /> : d && (
         <div className="grid q">
-          <div className="glass" style={{ padding: 12 }}>
+          <div className="glass review-queue-panel">
+            <div className="review-queue-panel__heading"><strong>Ideas in this queue</strong><span>{list.length}</span></div>
+            <div className="review-queue-scroll" role="list" aria-label="Ideas in the review queue">
             {list.map(i => {
               const rr = data.reviews[i.id]
               return (
-                <div key={i.id} className={cn('row', i.id === d.id && 'on')} tabIndex={0} onClick={() => setSel(i.id)} onKeyDown={e => e.key === 'Enter' && setSel(i.id)}>
+                <div key={i.id} role="listitem" className={cn('row', i.id === d.id && 'on')} tabIndex={0} aria-current={i.id === d.id ? 'true' : undefined} onClick={() => setSel(i.id)} onKeyDown={e => e.key === 'Enter' && setSel(i.id)}>
                   <div className="score">{rr?.score ?? '–'}</div>
                   <div className="t"><h3>{i.title}</h3><p className="dim">{a.nm(i.authorId)}, {STATUS_LABEL[a.statusOf(i.id)]}</p></div>
                 </div>
               )
             })}
+            </div>
           </div>
           <div className="glass pad lift">
             <span className="chip">{STATUS_LABEL[a.statusOf(d.id)]}</span>
             <h2 style={{ margin: '18px 0 12px' }}>{d.title}</h2>
             <p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{d.body}</p>
-            {r?.score != null ? <>{m('Originality', r.o)}{m('Feasibility', r.f)}{m('Audience relevance', r.r)}<div className="reason" style={{ marginTop: 28 }}><span className="dim">Why this score</span><p>{r.reason}</p></div>{r.youtubeSignals && <YouTubePreview key={d.id} signal={r.youtubeSignals} refreshing={!!status} onRefresh={() => { void run(false, d.id, true) }} />}</>
+            {r?.score != null ? <>{m('Originality', r.o)}{m('Feasibility', r.f)}{m('Audience relevance', r.r)}<div className="reason" style={{ marginTop: 28 }}><span className="dim">Why this score</span><p>{r.reason}</p></div>{r.youtubeSignals && <YouTubePreview key={d.id} signal={r.youtubeSignals} refreshing={!!reviewProgress} onRefresh={() => { void run(false, d.id, true) }} />}</>
               : <p className="dim" style={{ marginTop: 20 }}>Not reviewed by the AI yet.</p>}
             <div className="reason">
               <span className="dim">Idea author</span>
