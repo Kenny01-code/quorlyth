@@ -1247,8 +1247,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
 
   function isExplicitVoiceTaskRequest(text: string): boolean {
     const source = text.trim()
-    const imperative = /^(?:(?:hey|okay)[,\\s]+)?(?:(?:please\\s+)?(?:(?:can|could|would)\\s+you\\s+(?:please\\s+)?|i want you to\\s+|i need you to\\s+|help me\\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore)\\b/i
-    const target = /\\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?)\\b/i
+    const imperative = /^(?:(?:hey|okay)[,\s]+)?(?:(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?|i want you to\s+|i need you to\s+|help me\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore)\b/i
+    const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?)\b/i
     return imperative.test(source) && target.test(source)
   }
 
@@ -1257,12 +1257,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     if (!request) return { ok: false, message: 'I did not catch the task clearly. Please say what you want me to prepare.' }
     if (!a.me) return { ok: false, message: 'Sign in first. I can answer questions as a visitor, but private workspace actions need your account.' }
 
-    const universalOrganizeCommand = /\\b(one[- ]click organize|organize this page|auto[- ]organize(?: this page| the current page)?|organize the current page|organize my (?:whole|entire) (?:site|quorlyth)|organize everything (?:on|in) (?:my )?quorlyth)\\b/i.test(request)
-    const automationCommand = /\\b(?:automation|automations|workflow|workflows|automate)\\b/i.test(request)
-      && /\\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute)\\b/i.test(request)
-    const workspaceCommand = /\\b(workspace|project space|standalone task|workspace task|independent project|task)\\b/i.test(request)
-      && /\\b(create|build|set up|make|add|edit|update|rename|rewrite|revise|organize|improve|start|begin|mark|complete|close|reopen|reactivate|delete|remove)\\b/i.test(request)
-      && (!loc.pathname.startsWith('/collaboration/') || /\\b(standalone|independent workspace|project space)\\b/i.test(request) || loc.pathname.startsWith('/workspaces/'))
+    const universalOrganizeCommand = /\b(one[- ]click organize|organize this page|auto[- ]organize(?: this page| the current page)?|organize the current page|organize my (?:whole|entire) (?:site|quorlyth)|organize everything (?:on|in) (?:my )?quorlyth)\b/i.test(request)
+    const automationCommand = /\b(?:automation|automations|workflow|workflows|automate)\b/i.test(request)
+      && /\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute)\b/i.test(request)
+    const workspaceCommand = /\b(workspace|project space|standalone task|workspace task|independent project|task)\b/i.test(request)
+      && /\b(create|build|set up|make|add|edit|update|rename|rewrite|revise|organize|improve|start|begin|mark|complete|close|reopen|reactivate|delete|remove)\b/i.test(request)
+      && (!loc.pathname.startsWith('/collaboration/') || /\b(standalone|independent workspace|project space)\b/i.test(request) || loc.pathname.startsWith('/workspaces/'))
 
     setView('chat')
     setBusy(true)
@@ -1479,6 +1479,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
       const session = await startRealtime({
         instructions: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext()
           + '\nBrowser/device context: ' + browserContext()
+          + '\nFor explicit in-app requests such as creating, editing, organizing, deleting, promoting, or managing a community, idea, workspace, project, task, milestone, or automation, call prepare_quorlyth_task with the exact request. Do not call it for questions about how something works. The tool only prepares a permission-checked preview; never claim a change was applied. Tell the user to review and confirm the preview in Quorlyth. If the user asks a question, answer it directly without forcing a tool call.'
           + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The Realtime session returns text only. Every spoken reply is synthesized by the selected ElevenLabs voice; never use the Realtime model audio output or browser speech synthesis. If Realtime cannot start, the app falls back to browser recognition and ElevenLabs-only text-to-speech.\n' + LIVE_TALK_SPEECH_STYLE,
         voice: v.ai,
         accent: bs.accent || 'auto',
