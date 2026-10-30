@@ -190,7 +190,7 @@ function Inner() {
       const done = await reviewIdeas(a, todo, {
         community: qc ? data.communities.find(c => c.id === qc)?.name : undefined,
         signal: ctl.current.signal,
-        onProgress: setReviewProgress,
+        onReviewProgress: setReviewProgress,
         forceYoutubeRefresh,
       })
       a.toast(`${done} idea${done === 1 ? '' : 's'} reviewed`)
