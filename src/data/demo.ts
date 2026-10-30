@@ -57,6 +57,8 @@ export function createDemoBackend(): Backend {
   const store: DocStore = {
     async get(path) { return docs[path] ?? null },
     async exportAll() { return Object.entries(docs).map(([path, data]) => ({ path, data: JSON.parse(JSON.stringify(data)) })) },
+    async listGrowthEvents() { return [] },
+    async trackGrowthEvent() { /* Demo interactions are intentionally excluded from platform metrics. */ },
     async listCommunityMembers(cid) {
       return Object.entries(docs)
         .filter(([path, data]) => /^members\/[^/]+$/.test(path) && data?.c?.[cid] === true)
