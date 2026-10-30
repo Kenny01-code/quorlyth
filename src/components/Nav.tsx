@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -78,6 +78,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   const main = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const thumb = useRef<HTMLElement>(null)
+  const activePill = useRef<HTMLSpanElement>(null)
   const active = (p: string) => p === '/' ? loc.pathname === '/' : loc.pathname === p || loc.pathname.startsWith(p + '/')
 
   useEffect(() => {
@@ -118,6 +119,37 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
     return () => { window.clearTimeout(initialMeasure); window.clearTimeout(tm); m.removeEventListener('scroll', onScroll); m.removeEventListener('wheel', wheel); m.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); m.removeEventListener('click', click, true); removeEventListener('resize', upd); ro?.disconnect() }
   }, [])
 
+  useLayoutEffect(() => {
+    const m = main.current
+    const pill = activePill.current
+    if (!m || !pill) return
+    let frame = 0
+    const measure = () => {
+      if (frame) window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        const target = m.querySelector<HTMLElement>('.nav-item.on')
+        if (!target) {
+          pill.style.opacity = '0'
+          return
+        }
+        pill.style.width = target.offsetWidth + 'px'
+        pill.style.transform = `translate3d(${target.offsetLeft}px,0,0)`
+        pill.style.opacity = '1'
+      })
+    }
+    measure()
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    observer?.observe(m)
+    const activeItem = m.querySelector<HTMLElement>('.nav-item.on')
+    if (activeItem) observer?.observe(activeItem)
+    window.addEventListener('resize', measure)
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame)
+      observer?.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [loc.pathname, owner, communityOwner, hasAccessibleProject, demo, accessSent])
+
   useEffect(() => {
     const a = main.current?.querySelector('.on') as HTMLElement | null
     if (a && main.current) { const l = a.offsetLeft - main.current.clientWidth / 2 + a.offsetWidth / 2; if (main.current.scrollTo) main.current.scrollTo({ left: l, behavior: 'smooth' }); else main.current.scrollLeft = l }
@@ -129,6 +161,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
       <b className="nav-wordmark">{'QUORLYTH'.split('').map((c, i) => <span key={i} style={{ ['--word-index' as any]: i }}>{c}</span>)}</b>
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
+          <span ref={activePill} className="nav-active-pill" aria-hidden="true" />
           {ITEMS.filter(i => {
             if (i.platformAdminOnly) return !!platformAdmin && !demo
             if (i.platformOwnerOnly) return !!platformOwner && !demo
