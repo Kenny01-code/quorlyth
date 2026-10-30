@@ -23,7 +23,8 @@ import './styles/automations.css'
 import './styles/public-architecture.css'
 import './styles/motion-system.css'
 import './styles/bot-composer-fluid-black.css'
-import { AppProvider } from './data/AppProvider'
+
+import './styles/hidden-scrollbars.css'import { AppProvider } from './data/AppProvider'
 import App from './App'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 
