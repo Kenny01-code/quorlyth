@@ -259,9 +259,13 @@ function Inner() {
             {list.map(i => {
               const rr = data.reviews[i.id]
               return (
-                <div key={i.id} role="listitem" className={cn('row', i.id === d.id && 'on')} tabIndex={0} aria-current={i.id === d.id ? 'true' : undefined} onClick={() => setSel(i.id)} onKeyDown={e => e.key === 'Enter' && setSel(i.id)}>
-                  <div className="score">{rr?.score ?? '–'}</div>
-                  <div className="t"><h3>{i.title}</h3><p className="dim">{a.nm(i.authorId)}, {STATUS_LABEL[a.statusOf(i.id)]}</p></div>
+                <div key={i.id} role="listitem">
+                  <div className={cn('row', i.id === d.id && 'on')} role="button" tabIndex={0} aria-pressed={i.id === d.id} onClick={() => setSel(i.id)} onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSel(i.id) }
+                  }}>
+                    <div className="score">{rr?.score ?? '–'}</div>
+                    <div className="t"><h3>{i.title}</h3><p className="dim">{a.nm(i.authorId)}, {STATUS_LABEL[a.statusOf(i.id)]}</p></div>
+                  </div>
                 </div>
               )
             })}
