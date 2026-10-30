@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Gate } from '../components/Gate'
@@ -23,6 +23,22 @@ function Inner() {
   const setCp = (purpose: string) => setDraft(d => ({ ...d, purpose }))
   const bar = <div className="steps">{[0, 1, 2].map(i => <i key={i} className={cn(i <= step && 'on')} />)}</div>
 
+  useEffect(() => {
+    if (!a.me || a.demo || a.backend?.auth.mode !== 'supabase') return
+    void a.backend.store.trackGrowthEvent('onboarding_started', 'first-run').catch(error => {
+      console.warn('Could not record onboarding start:', error)
+    })
+  }, [a.me?.id, a.backend, a.demo])
+
+  const finishOnboarding = async () => {
+    if (a.backend?.auth.mode === 'supabase') {
+      try { await a.backend.store.trackGrowthEvent('onboarding_completed', 'first-run') }
+      catch (error) { console.warn('Could not record onboarding completion:', error) }
+    }
+    clearDraft(blank)
+    nav('/dashboard')
+  }
+
   if (!a.owner) {
     return (
       <div className="glass pad" style={{ maxWidth: 640, margin: '20px auto', padding: 40 }}>
@@ -30,7 +46,7 @@ function Inner() {
         {a.data.communities.length ? a.data.communities.map(c => { const j = a.joined(c.id); return (
           <div key={c.id} className="row" style={{ cursor: 'default' }}><Icon name="community" /><div className="t"><h3 style={{ fontSize: 15 }}>{c.name}</h3><p className="dim">{c.purpose}</p></div>
             <button className={cn('btn', !j && 'p')} style={{ padding: '9px 18px' }} onClick={() => a.join(c.id, !j)}>{j ? 'Joined' : 'Join'}</button></div>) }) : <p className="mut">No communities yet.</p>}
-        <div className="acts"><button className="btn p" onClick={() => nav('/dashboard')}>Continue</button></div>
+        <div className="acts"><button className="btn p" onClick={() => { void finishOnboarding() }}>Continue</button></div>
       </div>
     )
   }
@@ -52,7 +68,7 @@ function Inner() {
       </>}
       {step === 2 && <div className="done"><div className="score"><Icon name="approve" size={34} /></div><h2>Your space is ready.</h2>
         <p className="mut" style={{ margin: '12px auto 0', maxWidth: 380 }}>Share the link from Settings, Invite, and ideas will start to arrive here.</p>
-        <div className="acts" style={{ justifyContent: 'center' }}><button className="btn p" onClick={() => { clearDraft(blank); nav('/dashboard') }}>Open dashboard</button></div></div>}
+        <div className="acts" style={{ justifyContent: 'center' }}><button className="btn p" onClick={() => { void finishOnboarding() }}>Open dashboard</button></div></div>}
     </div>
   )
 }
