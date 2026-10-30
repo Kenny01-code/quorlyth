@@ -909,9 +909,9 @@ export async function realtimeSession(req, res) {
               // No language is pinned: let the transcription model identify each spoken language.
               transcription: { model: 'gpt-4o-mini-transcribe' },
               turn_detection: textOnly
-                // Faster semantic chunk completion keeps Live Talk responsive while
-                // still using meaning, not a fixed silence timer, to detect turn ends.
-                ? { type: 'semantic_vad', eagerness: 'high', create_response: false, interrupt_response: true }
+                // Let people finish a phrase and take natural pauses before we respond.
+                // Medium semantic VAD balances turn-taking speed with fewer premature cut-offs.
+                ? { type: 'semantic_vad', eagerness: 'medium', create_response: false, interrupt_response: true }
                 : { type: 'server_vad', threshold: 0.5, silence_duration_ms: 500, create_response: true, interrupt_response: true },
             },
             ...(textOnly ? {} : { output: { voice } }),
@@ -933,7 +933,7 @@ function speechAccent(value) {
   return ['nigerian', 'american', 'british', 'international'].includes(value) ? value : 'international'
 }
 
-const LIVE_TALK_CONVERSATION_STYLE = 'Live Talk delivery: sound like a relaxed, spontaneous conversation, not a narrator. Use contractions, varied sentence lengths, natural backchannels, occasional brief thinking phrases such as “Hmm” or “well” only when they genuinely fit, and punctuation that gives the voice room to breathe. Match the emotional weight of what the user actually said: be warmly excited about genuine good news, curious when asking a real question, and gentler with sensitive subjects. Do not repeat fillers, perform an emotion that contradicts the words, invent a personal experience, or narrate stage directions. Return clean spoken words only; never print audio tags or bracketed directions. When genuine humor lands, allow a brief natural chuckle or laugh to be audible; when empathy or relief fits, use gentle prosody or a light sigh. Keep reactions rare, brief, and context-appropriate. Never laugh during distress, conflict, safety-sensitive topics, or uncertainty. Do not speak reaction labels or output bracketed directions. Continue listening and responding for the whole live conversation.';
+const LIVE_TALK_CONVERSATION_STYLE = 'Live Talk delivery: sound like a relaxed, spontaneous conversation, not a narrator. Use contractions, varied sentence lengths, natural backchannels, occasional brief thinking phrases such as “Hmm” or “well” only when they genuinely fit, and punctuation that gives the voice room to breathe. Match the emotional weight of the user’s actual words: be warmly excited about genuine good news, curious when asking a real question, and gentler with sensitive subjects. Answer the exact question early, then add only the context that makes the answer useful. Handle every part of a multi-part question without repeating the question back. Treat accents, code-switching, filler words and imperfect grammar as normal speech. If a name, number, instruction or sentence is unclear, ask one brief clarification rather than guessing. Do not repeat fillers, perform an emotion that contradicts the words, invent personal experiences, or narrate stage directions. Return clean spoken words only; never print audio tags or bracketed directions. When genuine humor lands, allow a brief natural chuckle or laugh to be audible; when empathy or relief fits, use gentle prosody or a light sigh. Keep reactions rare, brief, and context-appropriate. Never laugh during distress, conflict, safety-sensitive topics, or uncertainty. Do not speak reaction labels or output bracketed directions. For Quorlyth changes, prepare the correct permission-checked action preview and never claim it has been applied before the user confirms it. Continue listening and responding for the whole live conversation.';
 
 function speechStyleInstructions(value, liveTalk = false) {
   const style = speechAccent(value)
