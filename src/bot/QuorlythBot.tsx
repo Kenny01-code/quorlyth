@@ -1285,11 +1285,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
 
       setPendingAction(action)
       const preview = pendingActionDetail(action, a.data.communities, a.data.ideas)
+      const spokenPreview = preview.replace(/\\s+/g, ' ').slice(0, 280)
       return {
         ok: true,
         preview,
         confirmationRequired: true,
-        message: 'I prepared the action preview. Nothing has been changed yet. Please review the details in Quorlyth and confirm there when you are ready.',
+        message: `I prepared a preview for ${spokenPreview}. Nothing has been changed yet. Review it in Quorlyth and confirm when you are ready.`,
       }
     } catch (error) {
       return { ok: false, message: userFacingMutationError(error, 'prepare that Quorlyth action') }
