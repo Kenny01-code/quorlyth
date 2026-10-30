@@ -6,6 +6,7 @@
 - **Source:** https://github.com/Kenny01-code/quorlyth
 - **Assessment brief and acceptance checklist:** [ASSESSMENT.md](./ASSESSMENT.md)
 - **System architecture and workflow diagrams:** [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- **Production readiness audit:** [docs/PRODUCTION-READINESS.md](./docs/PRODUCTION-READINESS.md)
 
 ## The problem
 
