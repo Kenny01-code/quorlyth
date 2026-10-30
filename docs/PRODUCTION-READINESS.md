@@ -70,6 +70,17 @@ Supabase Security Advisor reports that **leaked-password protection is disabled*
 - Performance Advisor lists five unused indexes. With the current small data volume, do not drop them solely based on this snapshot. Revisit after representative production traffic exists.
 - Raw Vercel logs for a full 24-hour period were unavailable under the current log-retention allowance. The error-cluster query did complete and returned no clusters.
 
+### Private attachment storage
+
+Both production attachment buckets exist and are configured as **private**:
+
+- `quorlyth-chat-attachments`
+- `quorlyth-work-submissions`
+
+Each bucket has a 25 MiB file-size limit, matching the current upload guards in the backend. The Storage `objects` table has seven authenticated policies covering chat media upload/read/delete and work-submission upload/read/delete (including project-manager cleanup). The policies use `WITH CHECK` for inserts and `USING` for reads/deletes.
+
+This verifies bucket configuration and policy presence, not a full cross-user attempt to read another member's signed file URL. That authorization test remains part of the two-account acceptance matrix.
+
 ## Manual two-account acceptance test - still pending
 
 No authenticated browser session was available during this audit. Do not mark the following as passed until two distinct accounts have completed the scenarios in the deployed application.
