@@ -1143,7 +1143,7 @@ function WorkspaceProjectView() {
           {!linkedTask && milestone.status === 'done' && <span className="sw-muted">No work task needed</span>}
         </div>
       })}
-      {canManage && project.status === 'active' && <div className="acts" style={{ marginTop: 3 }}><button type="button" className="btn p" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="refresh" size={14}/>{busy === 'sync-plan' ? 'Syncing plan…' : 'Sync missing workspace tasks'}</button></div>}
+      {canManage && project.status === 'active' && <div className="acts" style={{ marginTop: 3 }}><button type="button" className="btn p" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="rotate" size={14}/>{busy === 'sync-plan' ? 'Syncing plan…' : 'Sync missing workspace tasks'}</button></div>}
     </section>}
     {tab === 'overview' && <section className="sw-two-column">
       <div className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">BUILD PLAN</p><h3>Next, make it actionable</h3><p>Give each outcome an owner and a definition of done.</p></div></div>
@@ -1166,7 +1166,7 @@ function WorkspaceProjectView() {
             {linkedTask ? <span className="sw-verified"><QuorlythGlyph name="link" size={12}/>Linked task: {linkedTask.status.replace('_',' ')}</span> : milestone.status === 'done' ? <span className="sw-muted">Outcome already approved</span> : canManage ? <button type="button" className="sw-link-button" disabled={busy === 'sync-plan'} onClick={() => void addTaskFromMilestone(milestone)}>Create workspace task <QuorlythGlyph name="arrow" size={12}/></button> : <span className="sw-muted">Waiting for manager sync</span>}
           </div>
         })}
-        {canManage && project.status === 'active' && <div className="acts" style={{ margin: 0 }}><button type="button" className="btn" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="refresh" size={14}/>{busy === 'sync-plan' ? 'Syncing…' : 'Sync missing workspace tasks'}</button></div>}
+        {canManage && project.status === 'active' && <div className="acts" style={{ margin: 0 }}><button type="button" className="btn" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="rotate" size={14}/>{busy === 'sync-plan' ? 'Syncing…' : 'Sync missing workspace tasks'}</button></div>}
       </div>}
       {canManage && project.status==='active' && <form className="sw-task-form" onSubmit={addTask}>
         <p className="ql-eyebrow">ADD A TASK</p>
@@ -1277,7 +1277,7 @@ function WorkspaceProjectView() {
             <div className="sw-source-confirmation"><QuorlythGlyph name="check" size={14}/><span>{artifact.provider==='github'?<>GitHub API confirmed this source{meta.authorLogin?' · @'+String(meta.authorLogin):''}{meta.signatureVerified===true?' · Signed commit verified':''}</>:<>Contributor-submitted evidence · not source-verified</>}</span>{artifact.url&&<span>Preview available below</span>}</div>
             {artifact.aiReview && <section className="sw-ai-evidence-review" style={{ display: 'grid', gap: 8, padding: 13, marginTop: 12, borderRadius: 13, border: '1px solid var(--line, rgba(255,255,255,.12))', background: 'rgba(255,255,255,.025)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                <strong><QuorlythGlyph name="sparkles" size={14}/> Quorlyth plan-alignment review</strong>
+                <strong><QuorlythGlyph name="review" size={14}/> Quorlyth plan-alignment review</strong>
                 <span className={'sw-pill' + (artifact.aiReview.status === 'aligned' ? ' is-done' : '')}>{artifact.aiReview.status === 'aligned' ? 'Likely aligned' : artifact.aiReview.status === 'needs_changes' ? 'Gaps detected' : artifact.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Needs human judgement'} · {artifact.aiReview.alignmentScore}/100</span>
               </div>
               <p className="sw-muted">{artifact.aiReview.summary}</p>
