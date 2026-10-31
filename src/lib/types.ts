@@ -45,7 +45,7 @@ export type VolunteerStatus = 'pending' | 'accepted' | 'declined'
 export interface VolunteerApplication { id: string; ideaId: string; applicantId: string; message?: string; status: VolunteerStatus; at: number; reviewedAt?: number; reviewedBy?: string }
 export interface Project { id: string; ideaId: string; summary: string; status: 'active' | 'completed'; createdBy: string; at: number; updatedAt?: number; dueAt?: number | null; aiOrganizerGenerated?: boolean }
 export type MilestonePriority = 'low' | 'normal' | 'high' | 'critical'
-export interface Milestone { id: string; projectId: string; title: string; description?: string; status: 'todo' | 'in_progress' | 'done'; createdBy: string; at: number; updatedAt?: number; priority?: MilestonePriority; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]; acceptanceCriteria?: string; blocked?: boolean; blockedNote?: string; aiOrganized?: boolean }
+export interface Milestone { id: string; projectId: string; title: string; description?: string; status: 'todo' | 'in_progress' | 'done'; createdBy: string; at: number; updatedAt?: number; priority?: MilestonePriority; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]; acceptanceCriteria?: string; blocked?: boolean; blockedNote?: string; aiOrganized?: boolean; workspaceTaskId?: string; evidenceArtifactId?: string }
 export type MilestoneDetails = Partial<Pick<Milestone, 'priority' | 'dueAt' | 'assigneeId' | 'assigneeIds' | 'acceptanceCriteria' | 'blocked' | 'blockedNote' | 'aiOrganized'>>
 export type MilestonePatch = Partial<Pick<Milestone, 'title' | 'description' | 'status' | 'priority' | 'dueAt' | 'assigneeId' | 'assigneeIds' | 'acceptanceCriteria' | 'blocked' | 'blockedNote'>>
 export interface SpaceSettings { name?: string; tag?: string; appr?: boolean; ann?: string; wo?: number; wf?: number; wr?: number }
@@ -60,6 +60,16 @@ export interface WorkAttachment {
   uploadedAt: number
 }
 export type WorkSubmissionStatus = 'submitted' | 'approved' | 'changes_requested'
+export interface WorkEvidenceAIReview {
+  status: 'aligned' | 'needs_changes' | 'unclear' | 'unavailable'
+  alignmentScore: number
+  summary: string
+  matchedCriteria: string[]
+  gaps: string[]
+  recommendations: string[]
+  reviewedAt: number
+  scopeNote: string
+}
 export interface WorkSubmission {
   id: string
   ideaId: string
@@ -75,4 +85,5 @@ export interface WorkSubmission {
   reviewedAt?: number
   reviewedBy?: string
   reviewNote?: string
+  aiReview?: WorkEvidenceAIReview
 }

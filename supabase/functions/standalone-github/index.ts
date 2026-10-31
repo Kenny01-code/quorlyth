@@ -101,16 +101,40 @@ Deno.serve(async (req: Request) => {
     }
 
     let role = "";
+    let hasExplicitMembership = false;
     if (project.data.createdBy === user.id) {
       role = "owner";
     } else {
       const member = await getDoc("standaloneProjectMembers/" + projectId + "__" + user.id);
-      if (member?.data.userId === user.id && member.data.projectId === projectId && member.data.status === "active") {
+      hasExplicitMembership = member?.data.userId === user.id && member.data.projectId === projectId;
+      if (hasExplicitMembership && member?.data.status === "active") {
         role = cleanText(member.data.role, 30);
       }
     }
+
+    // Connected collaboration workspaces inherit the accepted team from their
+    // source idea only when no explicit workspace role overrides that access.
+    if (!role && !hasExplicitMembership && project.data.linkedIdeaId) {
+      const ideaId = cleanText(project.data.linkedIdeaId, 120);
+      const idea = ideaId ? await getDoc("ideas/" + ideaId) : null;
+      const communityId = cleanText(idea?.data?.cid, 120);
+      const community = communityId ? await getDoc("communities/" + communityId) : null;
+      const isIdeaAuthor = idea?.data?.authorId === user.id;
+      const isCommunityOwner = community?.data?.ownerId === user.id || community?.data?.createdBy === user.id;
+      let isAcceptedCollaborator = false;
+      if (ideaId) {
+        const { data: volunteerRows, error: volunteerError } = await serviceClient
+          .from("docs").select("data").like("path", "volunteers/%").limit(1000);
+        if (volunteerError) throw new Error("Could not verify the linked collaboration team.");
+        isAcceptedCollaborator = (volunteerRows || []).some((row: { data: Record<string, unknown> }) =>
+          row.data.ideaId === ideaId && row.data.applicantId === user.id && row.data.status === "accepted"
+        );
+      }
+      if (isIdeaAuthor || isCommunityOwner || isAcceptedCollaborator) role = "contributor";
+    }
+
     if (!["owner", "manager", "contributor", "viewer"].includes(role)) {
-      return respond(403, { error: "You need an active project invitation to connect GitHub evidence here." });
+      return respond(403, { error: "You need active workspace access or an accepted collaboration role to use this integration." });
     }
 
     if (action === "connect_repository") {
@@ -170,6 +194,44 @@ Deno.serve(async (req: Request) => {
         date: cleanText(commit.commit?.author?.date, 80) || null,
       })) : [];
       return respond(200, { ok: true, repository: repoDoc, commits, note: "GitHub confirmed this public repository and its visible commit metadata. The repository's authors are not yet linked to Quorlyth accounts." });
+    }
+
+    if (action === "save_ai_review") {
+      if (!["owner", "manager", "contributor"].includes(role)) {
+        return respond(403, { error: "Workspace viewers cannot attach an evidence pre-review." });
+      }
+      const artifactId = cleanText(body.artifactId, 100);
+      if (!artifactId || !/^[A-Za-z0-9_-]{1,100}$/.test(artifactId)) {
+        return respond(400, { error: "Choose a valid evidence record." });
+      }
+      const artifact = await getDoc("standaloneArtifacts/" + artifactId);
+      if (!artifact || artifact.data.projectId !== projectId || artifact.data.submittedBy !== user.id || artifact.data.status !== "submitted") {
+        return respond(403, { error: "Only the contributor who submitted pending evidence can attach its AI pre-review." });
+      }
+      const rawReview = body.aiReview && typeof body.aiReview === "object" ? body.aiReview as Record<string, unknown> : {};
+      const reviewStatus = cleanText(rawReview.status, 30);
+      if (!["aligned", "needs_changes", "unclear", "unavailable"].includes(reviewStatus)) {
+        return respond(400, { error: "The evidence review status is invalid." });
+      }
+      const score = Number(rawReview.alignmentScore);
+      const cleanList = (value: unknown) => Array.isArray(value)
+        ? value.slice(0, 6).map(item => cleanText(item, 300)).filter(Boolean)
+        : [];
+      const aiReview = {
+        status: reviewStatus,
+        alignmentScore: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0,
+        summary: cleanText(rawReview.summary, 1200) || "No AI review summary was supplied.",
+        matchedCriteria: cleanList(rawReview.matchedCriteria),
+        gaps: cleanList(rawReview.gaps),
+        recommendations: cleanList(rawReview.recommendations),
+        reviewedAt: Date.now(),
+        scopeNote: "Preliminary AI alignment check. Quorlyth assessed the task definition and submitted description/metadata. It did not independently open private files or prove that an external link works. A human workspace reviewer must inspect the deliverable before approval.",
+      };
+      const { error: reviewWriteError } = await serviceClient.from("docs")
+        .update({ data: { ...artifact.data, aiReview, updatedAt: Date.now() } })
+        .eq("path", "standaloneArtifacts/" + artifactId);
+      if (reviewWriteError) throw new Error("The AI pre-review ran, but Quorlyth could not attach it to the evidence record.");
+      return respond(200, { ok: true, aiReview });
     }
 
     if (action === "verify_artifact") {

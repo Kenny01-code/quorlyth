@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react'
-import type { ChatAttachment, Comment, WorkAttachment } from '../lib/types'
+import type { ChatAttachment, Comment, WorkAttachment, WorkSubmission } from '../lib/types'
 import { ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
@@ -11,6 +11,7 @@ import { useApp, useComments } from '../data/AppProvider'
 import { when } from '../lib/util'
 import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
 import { isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 
 
 type WorkspaceTab = 'overview' | 'plan' | 'evidence' | 'team'
@@ -312,6 +313,8 @@ function Workspace() {
   const [aiPlanAccepted, setAiPlanAccepted] = useState(false)
   const [applyingPlan, setApplyingPlan] = useState(false)
   const [createMilestoneRequest, setCreateMilestoneRequest] = useState(0)
+  const [submissionReviewNotes, setSubmissionReviewNotes] = useState<Record<string, string>>({})
+  const [reviewingSubmissionId, setReviewingSubmissionId] = useState('')
   const idea = a.data.ideas.find(item => item.id === id)
   const project = a.data.projects[id]
   useEffect(() => setProjectDueDate(dateInput(project?.dueAt)), [project?.dueAt])
@@ -350,6 +353,28 @@ function Workspace() {
     ...Object.entries(a.data.votes).filter(([, votes]) => [...communityIdeaIds].some(communityIdeaId => !!votes?.[communityIdeaId])).map(([userId]) => userId),
   ].filter((uid): uid is string => !!uid))]
   const participantKey = discussionParticipantIds.join('|')
+
+  async function reviewSubmission(submission: WorkSubmission, status: 'approved' | 'changes_requested') {
+    if (!a.me || !canManage || reviewingSubmissionId) return
+    if (submission.submittedBy === a.me.id) {
+      a.toast('You cannot review your own submission. Another authorized reviewer must decide.')
+      return
+    }
+    const note = (submissionReviewNotes[submission.id] || '').trim()
+    if (status === 'changes_requested' && note.length < 4) {
+      a.toast('Explain what needs to change so the contributor can act on the review.')
+      return
+    }
+    setReviewingSubmissionId(submission.id)
+    try {
+      const ok = await a.reviewMilestoneWork(submission.id, status, note)
+      if (ok) setSubmissionReviewNotes(current => ({ ...current, [submission.id]: '' }))
+    } catch (failure) {
+      a.toast(userFacingMutationError(failure, 'review this submission'))
+    } finally {
+      setReviewingSubmissionId('')
+    }
+  }
   const matchingDiscussionMembers = mentionPeople
     .filter(person => person.name.toLowerCase().includes(mentionQuery.trim().toLowerCase()))
     .sort((first, second) => first.name.localeCompare(second.name))
@@ -850,6 +875,23 @@ function Workspace() {
               <span className={'ql-evidence-decision status-' + submission.status}>{decisionLabel}</span>
             </div>
             <p className="ql-evidence-record__summary">{submission.summary}</p>
+            {submission.aiReview && <section className="ql-evidence-review-note" style={{ display: 'grid', gap: 8, marginTop: 12, borderColor: submission.aiReview.status === 'needs_changes' ? 'rgba(255,154,118,.32)' : 'var(--line, rgba(255,255,255,.12))' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <strong><QuorlythGlyph name="review" size={14}/> Quorlyth plan-alignment review</strong>
+                <span className="ql-evidence-decision">{submission.aiReview.status === 'aligned' ? 'Likely aligned' : submission.aiReview.status === 'needs_changes' ? 'Gaps detected' : submission.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Human judgement needed'} · {submission.aiReview.alignmentScore}/100</span>
+              </div>
+              <p>{submission.aiReview.summary}</p>
+              {!!submission.aiReview.matchedCriteria.length && <div><small className="ql-eyebrow">POSSIBLE MATCHES</small><ul>{submission.aiReview.matchedCriteria.map((item,index)=><li key={'match-'+index}>{item}</li>)}</ul></div>}
+              {!!submission.aiReview.gaps.length && <div><small className="ql-eyebrow">GAPS TO CHECK</small><ul>{submission.aiReview.gaps.map((item,index)=><li key={'gap-'+index}>{item}</li>)}</ul></div>}
+              {!!submission.aiReview.recommendations.length && <div><small className="ql-eyebrow">RECOMMENDED NEXT STEPS</small><ul>{submission.aiReview.recommendations.map((item,index)=><li key={'rec-'+index}>{item}</li>)}</ul></div>}
+              <small className="ql-muted">{submission.aiReview.scopeNote} · {dateLabel(submission.aiReview.reviewedAt)}</small>
+            </section>}
+            {canManage && submission.status === 'submitted' && submission.submittedBy !== a.me?.id && <div className="ql-evidence-review-note" style={{ display: 'grid', gap: 8 }}>
+              <label className="ql-field"><span>Reviewer feedback <small>Required when requesting changes</small></span><textarea value={submissionReviewNotes[submission.id] || ''} onChange={event => setSubmissionReviewNotes(current => ({ ...current, [submission.id]: event.target.value }))} maxLength={1600} rows={2} placeholder="Compare the attached deliverable with the milestone definition of done." /></label>
+              {submission.aiReview?.recommendations?.length ? <button type="button" className="ql-quiet-action" onClick={() => setSubmissionReviewNotes(current => ({ ...current, [submission.id]: [...submission.aiReview!.gaps, ...submission.aiReview!.recommendations].join('\n').slice(0,1600) }))}>Use Quorlyth's suggested feedback <QuorlythGlyph name="arrow" size={12}/></button> : null}
+              <div className="acts"><button type="button" className="btn" disabled={reviewingSubmissionId === submission.id} onClick={() => void reviewSubmission(submission, 'changes_requested')}><QuorlythGlyph name="rotate" size={14}/>{reviewingSubmissionId === submission.id ? 'Saving review…' : 'Request changes'}</button><button type="button" className="btn p" disabled={reviewingSubmissionId === submission.id} onClick={() => void reviewSubmission(submission, 'approved')}><QuorlythGlyph name="check" size={14}/>Approve evidence</button></div>
+            </div>}
+            {canManage && submission.status === 'submitted' && submission.submittedBy === a.me?.id && <p className="ql-muted">You submitted this evidence, so another authorized community owner or platform administrator must review it.</p>}
             {submission.reviewNote && <div className="ql-evidence-review-note"><strong>{submission.status === 'approved' ? 'Reviewer note' : 'Requested changes'}</strong><p>{submission.reviewNote}</p>{submission.reviewedBy && submission.reviewedAt && <small>Reviewed by {a.nm(submission.reviewedBy)} · {dateLabel(submission.reviewedAt)}</small>}</div>}
             <div className="ql-evidence-record__files">
               {submission.attachments.map(attachment => <WorkspaceEvidenceFile key={attachment.path} attachment={attachment} />)}

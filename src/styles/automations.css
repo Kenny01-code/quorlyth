@@ -266,3 +266,37 @@
 .wa-notice-row strong{display:block;font-size:11px;font-weight:500}
 .wa-notice-row p{font-size:10px;line-height:1.65;color:rgba(255,255,255,.62);overflow-wrap:anywhere;margin-top:3px}
 .wa-notice-row small{display:block;font-size:9px;color:rgba(255,255,255,.35);margin-top:5px}
+
+/* N8n-style canvas treatment: connected nodes stay legible on a structured surface. */
+.wa-canvas{
+  background-image:
+    radial-gradient(circle at 1px 1px,rgba(255,255,255,.09) 1px,transparent 0),
+    linear-gradient(135deg,rgba(255,255,255,.035),transparent 55%);
+  background-size:22px 22px,100% 100%;
+}
+.wa-flow-node{
+  position:relative;
+  background:linear-gradient(135deg,rgba(19,21,27,.96),rgba(255,255,255,.035));
+  box-shadow:0 12px 30px rgba(0,0,0,.13);
+}
+.wa-trigger-node{border-color:rgba(135,174,255,.25)}
+.wa-action-node{border-color:rgba(151,226,182,.19)}
+.wa-filter-node{backdrop-filter:blur(12px)}
+.wa-connector{background:linear-gradient(to bottom,rgba(135,174,255,.38),rgba(151,226,182,.3))}
+.wa-run-status.running{color:#c9d8ff;border-color:rgba(140,174,255,.3);background:rgba(84,119,196,.12)}
+.wa-run-dot.running{background:#a8c1ff;box-shadow:0 0 0 4px rgba(116,151,230,.12);animation:wa-live-pulse 1.4s ease-in-out infinite}
+.wa-badge.is-running{color:#c8d8ff;border-color:rgba(140,174,255,.3);background:rgba(84,119,196,.1)}
+@keyframes wa-live-pulse{0%,100%{box-shadow:0 0 0 3px rgba(116,151,230,.1)}50%{box-shadow:0 0 0 7px rgba(116,151,230,.03)}}
+
+.wa-node-tools{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
+.wa-node-tools .wa-icon-btn{width:27px;height:27px}
+.wa-node-tools .wa-icon-btn:disabled{opacity:.25;cursor:not-allowed}
+.wa-canvas-heading .wa-node-count{white-space:nowrap}
+.wa-flow-node{transition:border-color .18s ease,box-shadow .18s ease}
+.wa-flow-node:focus-within{border-color:rgba(190,210,255,.34);box-shadow:0 0 0 3px rgba(140,174,255,.07),0 16px 36px rgba(0,0,0,.15)}
+.wa-action-node .wa-node-state{align-self:flex-start}
+@media(max-width:760px){
+  .wa-node-tools .wa-icon-btn{width:25px;height:25px}
+  .wa-action-title-row{gap:8px}
+  .wa-action-title-row .wa-node-kind{min-width:0}
+}
