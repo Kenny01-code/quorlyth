@@ -556,6 +556,8 @@ function WorkspaceProjectView() {
     ])].filter(userId => taskAssignees.some(member => member.userId === userId))
     const now = Date.now()
     const taskId = 'milestone-' + milestone.id
+    const taskPath = 'standaloneTasks/' + taskId
+    if (await a.backend.store.get(taskPath)) return false
     const task: WorkspaceTask = {
       id: taskId,
       projectId: id,
