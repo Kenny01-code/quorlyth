@@ -555,7 +555,7 @@ function WorkspaceProjectView() {
       ...(milestone.assigneeId ? [milestone.assigneeId] : []),
     ])].filter(userId => taskAssignees.some(member => member.userId === userId))
     const now = Date.now()
-    const taskId = crypto.randomUUID()
+    const taskId = 'milestone-' + milestone.id
     const task: WorkspaceTask = {
       id: taskId,
       projectId: id,
