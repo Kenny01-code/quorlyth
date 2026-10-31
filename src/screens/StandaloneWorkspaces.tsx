@@ -548,27 +548,51 @@ function WorkspaceProjectView() {
   async function syncOneMilestone(milestone: (typeof linkedMilestones)[number]) {
     if (!a.backend || !a.me || !project || !canManage) throw new Error('Only a workspace owner or manager can sync the collaboration plan.')
     const existing = projectTasks.find(task => task.milestoneId === milestone.id)
-    if (existing) return false
     if (milestone.status === 'done') return false
     const assigneeIds = [...new Set([
       ...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []),
       ...(milestone.assigneeId ? [milestone.assigneeId] : []),
     ])].filter(userId => taskAssignees.some(member => member.userId === userId))
     const now = Date.now()
+    const title = milestone.title.trim().slice(0, 140)
+    const description = String(milestone.description || 'Synced from the collaboration plan. Complete the deliverable and submit evidence here.').slice(0, 2000)
+    const acceptanceCriteria = String(milestone.acceptanceCriteria || '').slice(0, 1000)
+    const dueAt = milestone.dueAt ?? null
+    if (existing) {
+      if (existing.status === 'done') return false
+      const sameAssignees = assignedTaskIds(existing).length === assigneeIds.length
+        && assignedTaskIds(existing).every(userId => assigneeIds.includes(userId))
+      const changed = existing.title !== title
+        || existing.description !== description
+        || (existing.acceptanceCriteria || '') !== acceptanceCriteria
+        || (existing.dueAt ?? null) !== dueAt
+        || !sameAssignees
+      if (!changed) return false
+      await a.backend.store.update('standaloneTasks/' + (existing.docId || existing.id), {
+        title,
+        description,
+        acceptanceCriteria,
+        dueAt,
+        assigneeIds,
+        assigneeId: assigneeIds[0] || null,
+        updatedAt: now,
+      })
+      return true
+    }
     const taskId = 'milestone-' + milestone.id
     const taskPath = 'standaloneTasks/' + taskId
     if (await a.backend.store.get(taskPath)) return false
     const task: WorkspaceTask = {
       id: taskId,
       projectId: id,
-      title: milestone.title.trim().slice(0, 140),
-      description: String(milestone.description || 'Synced from the collaboration plan. Complete the deliverable and submit evidence here.').slice(0, 2000),
-      acceptanceCriteria: String(milestone.acceptanceCriteria || '').slice(0, 1000),
+      title,
+      description,
+      acceptanceCriteria,
       status: 'todo',
       createdBy: a.me.id,
       at: now,
       updatedAt: now,
-      dueAt: milestone.dueAt ?? null,
+      dueAt,
       assigneeIds,
       assigneeId: assigneeIds[0] || null,
       milestoneId: milestone.id,
@@ -591,15 +615,16 @@ function WorkspaceProjectView() {
     let skipped = 0
     try {
       for (const milestone of linkedMilestones) {
-        if (milestone.status === 'done' || projectTasks.some(task => task.milestoneId === milestone.id)) {
+        if (milestone.status === 'done') {
           skipped++
           continue
         }
         if (await syncOneMilestone(milestone)) created++
+        else skipped++
       }
       a.toast(created
-        ? 'Synced ' + created + ' collaboration outcome' + (created === 1 ? '' : 's') + ' into workspace tasks.'
-        : 'The workspace tasks are already in sync with the open collaboration plan.')
+        ? 'Synced or refreshed ' + created + ' collaboration outcome' + (created === 1 ? '' : 's') + ' in workspace tasks.'
+        : 'The workspace tasks already match the open collaboration plan.')
     } catch (failure) {
       console.error('Collaboration plan sync stopped:', failure)
       setError(userFacingMutationError(failure, 'sync the collaboration plan'))
@@ -626,21 +651,22 @@ function WorkspaceProjectView() {
     }
   }
 
-  const missingMilestoneSyncKey = linkedMilestones
-    .filter(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))
-    .map(milestone => milestone.id + ':' + String(milestone.updatedAt || milestone.at))
+  const pendingMilestoneSyncKey = linkedMilestones
+    .filter(milestone => milestone.status !== 'done')
+    .map(milestone => {
+      const task = projectTasks.find(item => item.milestoneId === milestone.id)
+      return milestone.id + ':' + String(milestone.updatedAt || milestone.at) + ':' + String(task?.updatedAt || 0) + ':' + String(task?.status || 'missing')
+    })
     .join('|')
 
   // Keep the workspace task list in step with the shared collaboration plan.
   // Deterministic task IDs make this safe across reloads, retries and open tabs.
   useEffect(() => {
-    if (!project?.linkedIdeaId || project.status !== 'active' || !canManage || !missingMilestoneSyncKey) return
+    if (!project?.linkedIdeaId || project.status !== 'active' || !canManage || !pendingMilestoneSyncKey) return
     let cancelled = false
     void (async () => {
-      const missing = linkedMilestones.filter(milestone =>
-        milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id)
-      )
-      for (const milestone of missing) {
+      const pending = linkedMilestones.filter(milestone => milestone.status !== 'done')
+      for (const milestone of pending) {
         if (cancelled) break
         try {
           await syncOneMilestone(milestone)
@@ -655,7 +681,7 @@ function WorkspaceProjectView() {
       }
     })()
     return () => { cancelled = true }
-  }, [project?.id, project?.linkedIdeaId, project?.status, canManage, missingMilestoneSyncKey, a.backend?.store, a.me?.id])
+  }, [project?.id, project?.linkedIdeaId, project?.status, canManage, pendingMilestoneSyncKey, a.backend?.store, a.me?.id])
 
   async function addTask(event: FormEvent) {
     event.preventDefault()
