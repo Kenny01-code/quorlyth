@@ -178,13 +178,38 @@ export function AutomationRuntime() {
 
         void (async () => {
           const path = 'data/users/' + userId + '/automations/' + workflow.id
+          const runPath = 'data/users/' + userId + '/automation-runs/' + encodeURIComponent(runKey).slice(0, 180)
           try {
+            // A stable INSERT claim prevents two open tabs or devices from
+            // executing the same workflow for the same database event.
+            await store.create(runPath, {
+              id: runKey,
+              workflowId: workflow.id,
+              workflowName: workflow.name,
+              trigger: detail.type,
+              status: 'running',
+              startedAt: now,
+              finishedAt: 0,
+              eventTitle: String(detail.payload?.title || detail.payload?.summary || ''),
+              steps: [],
+            })
+            const saveProgress = async run => {
+              await store.update(runPath, {
+                ...run,
+                workflowId: workflow.id,
+                workflowName: workflow.name,
+                updatedAt: Date.now(),
+              })
+            }
             const run = await executeWorkflowActions(workflow, userId, store, detail, message => {
               if (alive) app.toast(message)
-            })
+            }, saveProgress)
+            await saveProgress(run)
             await persistWorkflowRun(store, path, run)
             if (alive && run.status === 'failed') app.toast('Automation "' + workflow.name + '" stopped: ' + (run.error || 'an action failed'))
           } catch (error) {
+            const message = String(error?.message || error)
+            if (/23505|duplicate key|unique constraint/i.test(message)) return
             console.error('Workflow execution could not be recorded:', error)
             if (alive) app.toast('Automation "' + workflow.name + '" could not finish. Check its configuration.')
           } finally {
