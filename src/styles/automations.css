@@ -287,3 +287,16 @@
 .wa-run-dot.running{background:#a8c1ff;box-shadow:0 0 0 4px rgba(116,151,230,.12);animation:wa-live-pulse 1.4s ease-in-out infinite}
 .wa-badge.is-running{color:#c8d8ff;border-color:rgba(140,174,255,.3);background:rgba(84,119,196,.1)}
 @keyframes wa-live-pulse{0%,100%{box-shadow:0 0 0 3px rgba(116,151,230,.1)}50%{box-shadow:0 0 0 7px rgba(116,151,230,.03)}}
+
+.wa-node-tools{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto}
+.wa-node-tools .wa-icon-btn{width:27px;height:27px}
+.wa-node-tools .wa-icon-btn:disabled{opacity:.25;cursor:not-allowed}
+.wa-canvas-heading .wa-node-count{white-space:nowrap}
+.wa-flow-node{transition:border-color .18s ease,box-shadow .18s ease}
+.wa-flow-node:focus-within{border-color:rgba(190,210,255,.34);box-shadow:0 0 0 3px rgba(140,174,255,.07),0 16px 36px rgba(0,0,0,.15)}
+.wa-action-node .wa-node-state{align-self:flex-start}
+@media(max-width:760px){
+  .wa-node-tools .wa-icon-btn{width:25px;height:25px}
+  .wa-action-title-row{gap:8px}
+  .wa-action-title-row .wa-node-kind{min-width:0}
+}
