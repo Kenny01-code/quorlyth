@@ -7,6 +7,8 @@ import { Intro } from './components/Intro'
 import { Palette } from './components/Palette'
 import { Shortcuts } from './components/Shortcuts'
 import { NotifPanel } from './components/NotifPanel'
+import { NotificationPopups } from './components/NotificationPopups'
+import { PageAssist } from './components/PageAssist'
 import { WritingAssistant } from './components/WritingAssistant'
 import { Logo } from './lib/Logo'
 import { QuorlythLoader } from './components/QuorlythLoader'
@@ -78,6 +80,8 @@ export default function App() {
   const [palette, setPalette] = useState(false)
   const [keys, setKeys] = useState(false)
   const [bell, setBell] = useState(false)
+  const [screenPopups, setScreenPopups] = useState<import('./lib/notifs').Notif[]>([])
+  const dismissScreenPopup = useCallback((key: string) => setScreenPopups(items => items.filter(item => item.key !== key)), [])
   // Play the branded welcome animation once per browser, then remember it across sessions.
   // Existing returning visitors who already heard the sign-in hello also skip the intro.
   const [intro, setIntro] = useState(() => {
@@ -242,7 +246,10 @@ export default function App() {
         ? preferences.messageNotifications !== false && (preferences.messageSounds ?? (sound && preferences.sound !== false))
         : sound && preferences.sound !== false)
       if (soundItems) chime()
-      if (popupItems.length) a.toast(popupItems.length === 1 ? popupItems[0].text : `${popupItems.length} new Quorlyth notifications`)
+      if (popupItems.length) {
+        setScreenPopups(current => [...current.filter(item => !popupItems.some(freshItem => freshItem.key === item.key)), ...popupItems].slice(-3))
+        a.toast(popupItems.length === 1 ? popupItems[0].text : `${popupItems.length} new Quorlyth notifications`)
+      }
       const desktopItems = fresh.filter(n => n.kind !== 'message' || preferences.messageNotifications !== false)
       if (preferences.desktopNotifications !== false && document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         desktopItems.forEach(n => {
@@ -398,6 +405,8 @@ export default function App() {
           </Suspense>
         </section>
       </main>
+      <PageAssist onAskBot={() => { void loadQuorlythBot().catch(() => {}); setBotMounted(true) }} />
+      <NotificationPopups items={screenPopups} onDismiss={dismissScreenPopup} onOpen={n => { void us.patch({ read: { [n.key]: true } }) }} />
       {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
