@@ -60,6 +60,16 @@ export interface WorkAttachment {
   uploadedAt: number
 }
 export type WorkSubmissionStatus = 'submitted' | 'approved' | 'changes_requested'
+export interface WorkEvidenceAIReview {
+  status: 'aligned' | 'needs_changes' | 'unclear' | 'unavailable'
+  alignmentScore: number
+  summary: string
+  matchedCriteria: string[]
+  gaps: string[]
+  recommendations: string[]
+  reviewedAt: number
+  scopeNote: string
+}
 export interface WorkSubmission {
   id: string
   ideaId: string
@@ -75,4 +85,5 @@ export interface WorkSubmission {
   reviewedAt?: number
   reviewedBy?: string
   reviewNote?: string
+  aiReview?: WorkEvidenceAIReview
 }
