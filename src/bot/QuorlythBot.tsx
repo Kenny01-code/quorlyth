@@ -2735,14 +2735,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     const spaceSettingEdit = /\b(update|edit|change|set|rewrite)\b/i.test(s) && /\b(space settings|platform settings|space name|announcement|posting approval|scoring weights|ranking weights|idea ranking weights)\b/i.test(s)
     if (a.me && spaceSettingEdit) {
       if (!a.platformAdmin) throw new Error('Only a verified platform administrator can change global space settings.')
-      const patch: Partial<Pick<SpaceSettings, 'name' | 'tag' | 'ann' | 'appr'>> = {}
+      const patch: Partial<Pick<SpaceSettings, 'name' | 'tag' | 'ann' | 'appr' | 'wo' | 'wf' | 'wr'>> = {}
       const name = quotedAfter(/\b(?:space name|name)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
       const tag = quotedAfter(/\b(?:space tag|tagline|tag)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
       const announcement = quotedAfter(/\b(?:announcement|space announcement)\s+(?:to|as|with)\s*["“]([^"”]+)["”]/i)
-      const namedWeight = (label: string) => { const match = s.match(new RegExp('\\\\b' + label + '\\\\s*(?:weight)?\\\\s*(?:to|as|=|:)?\\\\s*(\\\\d{1,3})\\\\s*%?', 'i')); return match ? Number(match[1]) : undefined }
+      const namedWeight = (label: string) => { const match = s.match(new RegExp('\\\\b(?:' + label + ')\\\\s*(?:weight)?\\\\s*(?:to|as|=|:)?\\\\s*(\\\\d{1,3})\\\\s*%?', 'i')); return match ? Number(match[1]) : undefined }
       const originality = namedWeight('originality')
       const feasibility = namedWeight('feasibility')
-      const relevance = namedWeight('audience relevance|relevance')
+      const relevance = namedWeight('audience\\\\s+relevance|relevance')
       const genericWeights = s.match(/(?:weights|weighting)\\s*(?:to|as|=|:)?\\s*(\\d{1,3})\\s*%?\\s*[,/ ]+\\s*(\\d{1,3})\\s*%?\\s*[,/ ]+\\s*(\\d{1,3})\\s*%?/i)
       if ([originality, feasibility, relevance].some(value => value !== undefined) || genericWeights) {
         const values = genericWeights ? genericWeights.slice(1,4).map(Number) : [originality, feasibility, relevance]
