@@ -71,7 +71,7 @@ function displayDate(value?: number | null) {
 }
 
 function runLabel(status: WorkflowRun['status']) {
-  return status === 'running' ? 'Running' : status === 'success' ? 'Succeeded' : status === 'failed' ? 'Needs attention' : 'Skipped'
+  return status === 'running' ? 'Running now' : status === 'success' ? 'Succeeded' : status === 'failed' ? 'Needs attention' : 'Skipped'
 }
 
 function TriggerGlyph({ trigger }: { trigger: WorkflowTrigger }) {
@@ -308,7 +308,7 @@ function AutomationWorkspace() {
         <form id="wa-editor-form" className="wa-builder-grid" onSubmit={saveWorkflow}>
           <section className="wa-canvas glass pad">
             <div className="wa-canvas-heading">
-              <div><p className="wa-eyebrow">YOUR WORKFLOW</p><p>Connect a trigger to one or more actions. Active flows run when their Quorlyth event happens.</p></div>
+              <div><p className="wa-eyebrow">WORKFLOW CANVAS</p><p>Build a sequence from a trigger, an optional condition and ordered actions. Each action is recorded as it runs, and the flow stops visibly if a step fails.</p></div>
               <span className="wa-node-count">{editing.actions.length + 1} nodes</span>
             </div>
             <label className="wa-field"><span>Workflow name</span><input value={editing.name} onChange={event => patchEditing({ name: event.target.value })} maxLength={100} required placeholder="e.g. Review every new idea" /></label>
@@ -382,7 +382,7 @@ function AutomationWorkspace() {
               <div className="wa-side-metadata"><span>Trigger</span><strong>{TRIGGER_INFO[editing.trigger].title}</strong><span>Actions</span><strong>{editing.actions.length} step{editing.actions.length === 1 ? '' : 's'}</strong><span>Status</span><strong className={editing.status === 'active' ? 'wa-status-active' : ''}>{editing.status === 'active' ? 'Active after save' : 'Draft'}</strong></div>
             </section>
             <section className="glass pad wa-side-card"><p className="wa-eyebrow">PERSONALISE YOUR FLOW</p><h3>Use event fields</h3><p>These values are replaced with the event details when the workflow runs.</p><div className="wa-token-list"><code>{"{{event.title}}"}</code><code>{"{{event.body}}"}</code><code>{"{{event.id}}"}</code><code>{"{{workflow.name}}"}</code></div><p className="wa-side-note">The optional filter matches the idea or task text. Leave it blank to accept every matching trigger.</p></section>
-            <section className="glass pad wa-side-card wa-side-tip"><QuorlythGlyph name="info" size={18} /><div><strong>Automations stay under your control</strong><p>Drafts never run automatically. Turn a workflow active to let Quorlyth respond to its selected trigger.</p></div></section>
+            <section className="glass pad wa-side-card wa-side-tip"><QuorlythGlyph name="info" size={18} /><div><strong>Test with real actions</strong><p>Save the workflow, then use Run now. Notifications are saved to your inbox, task actions create a real workspace task, and webhook actions send a real HTTPS request. Use a test workspace or test endpoint while validating.</p></div></section>
           </aside>
         </form>
       </div>
@@ -394,7 +394,7 @@ function AutomationWorkspace() {
       <Head kicker="WORKFLOW AUTOMATION" title="Make work move on its own." right={<button className="btn p" type="button" onClick={() => beginNew()}><QuorlythGlyph name="add" size={15} />Build workflow</button>} />
 
       <section className="wa-hero glass pad">
-        <div className="wa-hero-copy"><span className="wa-hero-kicker"><QuorlythGlyph name="brand" size={14} />A little less busywork</span><h3>Connect the steps.<br /><span>Automate the handoff.</span></h3><p>Tell Quorlyth what starts a flow and what should happen next. Turn repeated work into a workflow that runs on its own.</p><div className="wa-hero-actions"><button className="btn p" type="button" onClick={() => beginNew()}><QuorlythGlyph name="add" size={15} />Create your first flow</button><button className="btn" type="button" onClick={() => setTab('runs')}><QuorlythGlyph name="progress" size={15} />View run history</button></div></div>
+        <div className="wa-hero-copy"><span className="wa-hero-kicker"><QuorlythGlyph name="brand" size={14} />A little less busywork</span><h3>Connect the steps.<br /><span>Automate the handoff.</span></h3><p>Choose a live event, narrow it with a condition, then connect ordered actions. Quorlyth records each step, keeps a run ledger and prevents duplicate tabs from claiming the same event twice.</p><div className="wa-hero-actions"><button className="btn p" type="button" onClick={() => beginNew()}><QuorlythGlyph name="add" size={15} />Create your first flow</button><button className="btn" type="button" onClick={() => setTab('runs')}><QuorlythGlyph name="progress" size={15} />View run history</button></div></div>
         <div className="wa-hero-visual" aria-label="Example workflow: idea submitted, filter, create review task">
           <div className="wa-float-label wa-label-trigger">TRIGGER</div>
           <div className="wa-preview-node"><span className="wa-preview-node-icon"><QuorlythGlyph name="idea" size={17} /></span><div><small>WHEN THIS HAPPENS</small><strong>New idea submitted</strong></div><QuorlythGlyph name="check" size={14} /></div>
@@ -440,7 +440,7 @@ function AutomationWorkspace() {
           </div> : <section className="glass pad wa-empty"><span className="wa-empty-symbol"><QuorlythGlyph name="timeline" size={24} /></span><p className="wa-eyebrow">{filter === 'all' ? 'NOTHING AUTOMATED YET' : 'NO MATCHING FLOWS'}</p><h3>{filter === 'all' ? 'Start with one repeated task.' : 'Nothing in this view yet.'}</h3><p>{filter === 'all' ? 'A workflow starts with one event and one useful action. Use a template to build your first one without starting from scratch.' : 'Change this filter or create a workflow to get started.'}</p><button className="btn p" type="button" onClick={() => filter === 'all' ? beginNew(TEMPLATES[0]) : setFilter('all')}><QuorlythGlyph name="add" size={15} />{filter === 'all' ? 'Start from a template' : 'Show all workflows'}</button></section>}
 
           <section className="wa-template-section">
-            <div className="wa-section-title"><div><p className="wa-eyebrow">STARTER FLOWS</p><h3>Pick a useful starting point.</h3><p>Each template opens in the builder so you can customise it before saving.</p></div><span className="wa-template-count">03 templates</span></div>
+            <div className="wa-section-title"><div><p className="wa-eyebrow">STARTER FLOWS</p><h3>Pick a useful starting point.</h3><p>Each template opens in the builder so you can customise it before saving.</p></div><span className="wa-template-count">{TEMPLATES.length} templates</span></div>
             <div className="wa-templates">
               {TEMPLATES.map((template, index) => (
                 <article className="glass pad wa-template-card" key={template.key}>
@@ -453,13 +453,13 @@ function AutomationWorkspace() {
         </>
       ) : (
         <section className="glass pad wa-runs-panel">
-          <div className="wa-section-title"><div><p className="wa-eyebrow">ACTIVITY</p><h3>What your workflows have done.</h3><p>Successful and failed executions are recorded here so you can inspect each step.</p></div></div>
+          <div className="wa-section-title"><div><p className="wa-eyebrow">ACTIVITY</p><h3>What your workflows have done.</h3><p>Live and completed runs appear here. Expand each run to inspect the action results, failure detail and execution sequence.</p></div></div>
           {notices.length > 0 && <div className="wa-notice-inbox"><div className="wa-section-title"><div><p className="wa-eyebrow">NOTICES</p><h3>Recent automation notifications</h3><p>Messages produced by your workflows when an event matches.</p></div><span className="wa-template-count">{notices.length} saved</span></div><div className="wa-notice-list">{notices.slice().sort((a,b)=>b.at-a.at).slice(0,8).map(notice => <article className="wa-notice-row" key={notice.id}><span className="wa-notice-icon"><QuorlythGlyph name="bell" size={15} /></span><div><strong>{notice.title || notice.workflowName || 'Automation notice'}</strong><p>{notice.message}</p><small>{displayDate(notice.at)}{notice.eventType ? ' · ' + notice.eventType : ''}</small></div></article>)}</div></div>}
           {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run now” on a workflow to test its actions, or activate a flow to run it automatically when the selected event happens.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
             {allRuns.map(run => <article className="wa-run-row" key={run.workflowId + ':' + run.id}>
-              <span className={'wa-run-status ' + run.status}>{run.status === 'success' ? <QuorlythGlyph name="check" size={15} /> : <QuorlythGlyph name="alert" size={15} />}</span>
-              <div className="wa-run-summary"><strong>{run.workflowName}</strong><p>{run.eventTitle || (run.trigger === 'manual' ? 'Manual test run' : TRIGGER_INFO[run.trigger as WorkflowTrigger]?.title || run.trigger)}</p><small>{displayDate(run.finishedAt)} · {run.steps.length} step{run.steps.length === 1 ? '' : 's'}</small>{run.steps.map(step => <div className="wa-run-step" key={step.id}><span className={step.status === 'success' ? 'wa-run-dot success' : 'wa-run-dot failed'} /><span>{step.title}</span><small>{step.status === 'success' ? step.detail : userFacingMutationError(step.detail, 'complete this workflow step')}</small></div>)}{run.error && <p className="wa-run-error">{userFacingMutationError(run.error, 'run this workflow')}</p>}</div>
-              <span className={'wa-badge ' + (run.status === 'success' ? 'is-active' : '')}>{runLabel(run.status)}</span>
+              <span className={'wa-run-status ' + run.status}>{run.status === 'success' ? <QuorlythGlyph name="check" size={15} /> : run.status === 'running' ? <QuorlythGlyph name="progress" size={15} /> : <QuorlythGlyph name="alert" size={15} />}</span>
+              <div className="wa-run-summary"><strong>{run.workflowName}</strong><p>{run.eventTitle || (run.trigger === 'manual' ? 'Manual test run' : TRIGGER_INFO[run.trigger as WorkflowTrigger]?.title || run.trigger)}</p><small>{displayDate(run.status === 'running' ? run.startedAt : run.finishedAt)} · {run.steps.length} of the configured step{run.steps.length === 1 ? '' : 's'} recorded</small>{run.steps.map(step => <div className="wa-run-step" key={step.id}><span className={'wa-run-dot ' + step.status} /><span>{step.title}</span><small>{step.status === 'success' || step.status === 'running' ? step.detail : userFacingMutationError(step.detail, 'complete this workflow step')}</small></div>)}{run.error && <p className="wa-run-error">{userFacingMutationError(run.error, 'run this workflow')}</p>}</div>
+              <span className={'wa-badge ' + (run.status === 'success' ? 'is-active' : run.status === 'running' ? 'is-running' : '')}>{runLabel(run.status)}</span>
             </article>)}
           </div>}
         </section>
