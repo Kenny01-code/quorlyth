@@ -545,6 +545,79 @@ function WorkspaceProjectView() {
     })
   }
 
+  async function syncOneMilestone(milestone: (typeof linkedMilestones)[number]) {
+    if (!a.backend || !a.me || !project || !canManage) throw new Error('Only a workspace owner or manager can sync the collaboration plan.')
+    const existing = projectTasks.find(task => task.milestoneId === milestone.id)
+    if (existing) return false
+    if (milestone.status === 'done') return false
+    const assigneeIds = [...new Set([
+      ...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []),
+      ...(milestone.assigneeId ? [milestone.assigneeId] : []),
+    ])].filter(userId => taskAssignees.some(member => member.userId === userId))
+    const now = Date.now()
+    const taskId = crypto.randomUUID()
+    const task: WorkspaceTask = {
+      id: taskId,
+      projectId: id,
+      title: milestone.title.trim().slice(0, 140),
+      description: String(milestone.description || 'Synced from the collaboration plan. Complete the deliverable and submit evidence here.').slice(0, 2000),
+      acceptanceCriteria: String(milestone.acceptanceCriteria || '').slice(0, 1000),
+      status: 'todo',
+      createdBy: a.me.id,
+      at: now,
+      updatedAt: now,
+      dueAt: milestone.dueAt ?? null,
+      assigneeIds,
+      assigneeId: assigneeIds[0] || null,
+      milestoneId: milestone.id,
+    }
+    await a.backend.store.create('standaloneTasks/' + taskId, task)
+    return true
+  }
+
+  async function syncCollaborationPlan() {
+    if (!a.backend || !a.me || !project || !canManage || busy === 'sync-plan') return
+    setError('')
+    setBusy('sync-plan')
+    let created = 0
+    let skipped = 0
+    try {
+      for (const milestone of linkedMilestones) {
+        if (milestone.status === 'done' || projectTasks.some(task => task.milestoneId === milestone.id)) {
+          skipped++
+          continue
+        }
+        if (await syncOneMilestone(milestone)) created++
+      }
+      a.toast(created
+        ? 'Synced ' + created + ' collaboration outcome' + (created === 1 ? '' : 's') + ' into workspace tasks.'
+        : 'The workspace tasks are already in sync with the open collaboration plan.')
+    } catch (failure) {
+      console.error('Collaboration plan sync stopped:', failure)
+      setError(userFacingMutationError(failure, 'sync the collaboration plan'))
+      a.toast('The plan sync stopped. Successfully created tasks are saved; run sync again to add any remaining outcomes.')
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function addTaskFromMilestone(milestone: (typeof linkedMilestones)[number]) {
+    if (!a.backend || !canManage || busy === 'sync-plan') return
+    setBusy('sync-plan')
+    setError('')
+    try {
+      const created = await syncOneMilestone(milestone)
+      if (created) a.toast('Workspace task created and linked to "' + milestone.title + '".')
+      else a.toast('This outcome already has a workspace task or is already complete.')
+    } catch (failure) {
+      const message = userFacingMutationError(failure, 'create the workspace task')
+      setError(message)
+      a.toast(message)
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function addTask(event: FormEvent) {
     event.preventDefault()
     if (!project || !a.backend || !a.me) return
@@ -946,6 +1019,24 @@ function WorkspaceProjectView() {
 
     {error && <div className="sw-error-banner" role="alert"><QuorlythGlyph name="alert" size={15} />{error}<button className="chip" type="button" onClick={() => setError('')}>Dismiss</button></div>}
 
+    {tab === 'overview' && project.linkedIdeaId && linkedMilestones.length > 0 && <section className="glass pad sw-panel" style={{ marginBottom: 16, display: 'grid', gap: 12 }}>
+      <div className="sw-section-heading"><div><p className="ql-eyebrow">SHARED SOURCE OF TRUTH</p><h3>Collaboration plan</h3><p>The project milestones below stay synced from Collaboration. Workspace tasks are the execution copies linked to each outcome.</p></div><span className="sw-count">{projectTasks.filter(task => !!task.milestoneId).length}/{linkedMilestones.length} tasks linked</span></div>
+      {linkedMilestones.map(milestone => {
+        const linkedTask = projectTasks.find(task => task.milestoneId === milestone.id)
+        return <div key={milestone.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 12, alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--line, rgba(255,255,255,.09))' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 7 }}><strong>{milestone.title}</strong><span className="sw-pill">{milestone.status === 'done' ? 'Approved complete' : milestone.status === 'in_progress' ? 'In progress' : milestone.blocked ? 'Blocked' : 'Queued'}</span></div>
+            {milestone.acceptanceCriteria && <small className="sw-muted" style={{ display: 'block', marginTop: 4 }}>Done when: {milestone.acceptanceCriteria}</small>}
+            <small className="sw-muted" style={{ display: 'block', marginTop: 3 }}>{assignedTaskIds(milestone).length ? 'Assigned to ' + assignedTaskIds(milestone).map(userId => a.nm(userId)).join(', ') : 'No assignee set'}{milestone.dueAt ? ' · Due ' + localDate(milestone.dueAt) : ''}</small>
+            {linkedTask && <small className="sw-verified" style={{ display: 'inline-flex', marginTop: 5 }}><QuorlythGlyph name="link" size={12}/>Workspace task: {linkedTask.status === 'done' ? 'approved complete' : linkedTask.status === 'in_progress' ? 'in progress' : 'queued'}</small>}
+          </div>
+          {!linkedTask && milestone.status !== 'done' && canManage && <button type="button" className="btn" disabled={busy === 'sync-plan'} onClick={() => void addTaskFromMilestone(milestone)}><QuorlythGlyph name="add" size={13}/>{busy === 'sync-plan' ? 'Syncing…' : 'Create task'}</button>}
+          {!linkedTask && milestone.status !== 'done' && !canManage && <span className="sw-muted">Awaiting task sync</span>}
+          {!linkedTask && milestone.status === 'done' && <span className="sw-muted">No work task needed</span>}
+        </div>
+      })}
+      {canManage && project.status === 'active' && <div className="acts" style={{ marginTop: 3 }}><button type="button" className="btn p" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="refresh" size={14}/>{busy === 'sync-plan' ? 'Syncing plan…' : 'Sync all open milestones to tasks'}</button></div>}
+    </section>}
     {tab === 'overview' && <section className="sw-two-column">
       <div className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">BUILD PLAN</p><h3>Next, make it actionable</h3><p>Give each outcome an owner and a definition of done.</p></div></div>
         {projectTasks.length ? <div className="sw-mini-task-list">{projectTasks.slice(0,5).map(task => <button className="sw-mini-task" key={task.id} type="button" onClick={() => setTab('tasks')}><span className={'sw-task-check '+(task.status==='done'?'is-done':'')}>{task.status==='done'?<QuorlythGlyph name="check" size={13}/>:null}</span><span><strong>{task.title}</strong><small>{assignedTaskIds(task).length ? 'Assigned to ' + assignedTaskIds(task).length + ': ' + assignedTaskIds(task).map(uid => a.nm(uid)).join(', ') : 'Unassigned'} · {task.status === 'todo' ? 'Queued' : task.status === 'in_progress' ? 'In progress' : 'Approved complete'}</small></span><QuorlythGlyph name="arrow" size={14}/></button>)}</div> : <div className="sw-empty-inline"><QuorlythGlyph name="milestone" size={21}/><strong>No tasks yet</strong><p>Break the project into manageable outcomes. Each task should define what done means.</p>{canManage && <button className="btn p" type="button" onClick={() => setTab('tasks')}><QuorlythGlyph name="add" size={14}/>Create first task</button>}</div>}
@@ -957,7 +1048,18 @@ function WorkspaceProjectView() {
     </section>}
 
     {tab === 'tasks' && <section className="glass pad sw-panel">
-      <div className="sw-section-heading"><div><p className="ql-eyebrow">EXECUTION PLAN</p><h3>Tasks and deliverables</h3><p>Complete tasks only after their evidence is reviewed. Link a task to a community milestone to sync approved progress back to the project.</p></div><span className="sw-count">{doneCount}/{projectTasks.length} complete</span></div>
+      <div className="sw-section-heading"><div><p className="ql-eyebrow">EXECUTION PLAN</p><h3>Tasks and deliverables</h3><p>Complete tasks only after their evidence is reviewed. Every synced task keeps a link to the original collaboration outcome.</p></div><span className="sw-count">{doneCount}/{projectTasks.length} complete</span></div>
+      {project.linkedIdeaId && linkedMilestones.length > 0 && <div className="sw-linked-plan-strip" style={{ display: 'grid', gap: 10, padding: 14, marginBottom: 16, borderRadius: 14, border: '1px solid var(--line, rgba(255,255,255,.11))', background: 'rgba(255,255,255,.025)' }}>
+        <div className="sw-section-heading"><div><p className="ql-eyebrow">LIVE COLLABORATION PLAN</p><h3 style={{ fontSize: 16 }}>Outcomes from Collaboration</h3><p>Synced tasks inherit each outcome's description, definition of done, due date and eligible assignees.</p></div><span className="sw-count">{projectTasks.filter(task => !!task.milestoneId).length}/{linkedMilestones.length} linked</span></div>
+        {linkedMilestones.map(milestone => {
+          const linkedTask = projectTasks.find(task => task.milestoneId === milestone.id)
+          return <div key={milestone.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, paddingTop: 9, borderTop: '1px solid var(--line, rgba(255,255,255,.08))' }}>
+            <div style={{ minWidth: 0 }}><strong>{milestone.title}</strong><small className="sw-muted" style={{ display: 'block', marginTop: 3 }}>{milestone.acceptanceCriteria || milestone.description || 'No acceptance criteria provided.'}</small></div>
+            {linkedTask ? <span className="sw-verified"><QuorlythGlyph name="link" size={12}/>Linked task: {linkedTask.status.replace('_',' ')}</span> : milestone.status === 'done' ? <span className="sw-muted">Outcome already approved</span> : canManage ? <button type="button" className="sw-link-button" disabled={busy === 'sync-plan'} onClick={() => void addTaskFromMilestone(milestone)}>Create workspace task <QuorlythGlyph name="arrow" size={12}/></button> : <span className="sw-muted">Waiting for manager sync</span>}
+          </div>
+        })}
+        {canManage && project.status === 'active' && <div className="acts" style={{ margin: 0 }}><button type="button" className="btn" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="refresh" size={14}/>{busy === 'sync-plan' ? 'Syncing…' : 'Sync all open milestones'}</button></div>}
+      </div>}
       {canManage && project.status==='active' && <form className="sw-task-form" onSubmit={addTask}>
         <p className="ql-eyebrow">ADD A TASK</p>
         <label className="sw-field"><span>Task title</span><input value={taskTitle} onChange={e=>setTaskTitle(e.target.value)} required maxLength={140} placeholder="What concrete result should be delivered?" /></label>
