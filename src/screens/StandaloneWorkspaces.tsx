@@ -1112,7 +1112,7 @@ function WorkspaceProjectView() {
           {!linkedTask && milestone.status === 'done' && <span className="sw-muted">No work task needed</span>}
         </div>
       })}
-      {canManage && project.status === 'active' && <div className="acts" style={{ marginTop: 3 }}><button type="button" className="btn p" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="refresh" size={14}/>{busy === 'sync-plan' ? 'Syncing plan…' : 'Sync all open milestones to tasks'}</button></div>}
+      {canManage && project.status === 'active' && <div className="acts" style={{ marginTop: 3 }}><button type="button" className="btn p" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="refresh" size={14}/>{busy === 'sync-plan' ? 'Syncing plan…' : 'Sync missing workspace tasks'}</button></div>}
     </section>}
     {tab === 'overview' && <section className="sw-two-column">
       <div className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">BUILD PLAN</p><h3>Next, make it actionable</h3><p>Give each outcome an owner and a definition of done.</p></div></div>
@@ -1135,7 +1135,7 @@ function WorkspaceProjectView() {
             {linkedTask ? <span className="sw-verified"><QuorlythGlyph name="link" size={12}/>Linked task: {linkedTask.status.replace('_',' ')}</span> : milestone.status === 'done' ? <span className="sw-muted">Outcome already approved</span> : canManage ? <button type="button" className="sw-link-button" disabled={busy === 'sync-plan'} onClick={() => void addTaskFromMilestone(milestone)}>Create workspace task <QuorlythGlyph name="arrow" size={12}/></button> : <span className="sw-muted">Waiting for manager sync</span>}
           </div>
         })}
-        {canManage && project.status === 'active' && <div className="acts" style={{ margin: 0 }}><button type="button" className="btn" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="refresh" size={14}/>{busy === 'sync-plan' ? 'Syncing…' : 'Sync all open milestones'}</button></div>}
+        {canManage && project.status === 'active' && <div className="acts" style={{ margin: 0 }}><button type="button" className="btn" disabled={busy === 'sync-plan' || !linkedMilestones.some(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))} onClick={() => void syncCollaborationPlan()}><QuorlythGlyph name="refresh" size={14}/>{busy === 'sync-plan' ? 'Syncing…' : 'Sync missing workspace tasks'}</button></div>}
       </div>}
       {canManage && project.status==='active' && <form className="sw-task-form" onSubmit={addTask}>
         <p className="ql-eyebrow">ADD A TASK</p>
