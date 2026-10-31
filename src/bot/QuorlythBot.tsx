@@ -6,7 +6,7 @@ import { Logo } from '../lib/Logo'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
-import { Chat, ChatMsg, Community, Idea, Profile } from '../lib/types'
+import { Chat, ChatMsg, Community, Idea, Profile, Status, SpaceSettings } from '../lib/types'
 import { emitWorkflowEvent, executeWorkflowActions, newWorkflowId, persistWorkflowRun } from '../lib/automation'
 import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTrigger } from '../lib/automation'
 import { cn, slug, when } from '../lib/util'
@@ -182,6 +182,15 @@ type PendingAction =
   | { type: 'deleteStandaloneTask'; taskId: string; workspaceId: string; workspaceTitle: string; currentTitle: string; linkedArtifactCount: number; attachmentCount: number }
   | { type: 'deleteStandaloneWorkspace'; workspaceId: string; name: string; counts: { tasks: number; artifacts: number; attachments: number; members: number; comments: number; repos: number; activity: number } }
   | { type: 'updateProfile'; patch: Partial<Pick<Profile, 'name' | 'head' | 'bio'>> }
+   | { type: 'setIdeaStatus'; ideaId: string; title: string; previousStatus: Status; status: Status }
+   | { type: 'voteIdea'; ideaId: string; title: string; action: 'back' | 'remove' }
+   | { type: 'addIdeaComment'; ideaId: string; title: string; text: string }
+   | { type: 'communityMembership'; cid: string; name: string; action: 'join' | 'leave' | 'request'; message: string }
+   | { type: 'decideVolunteer'; applicationId: string; ideaId: string; ideaTitle: string; applicantName: string; status: 'accepted' | 'declined' }
+   | { type: 'decideJoinRequest'; cid: string; userId: string; communityName: string; applicantName: string; status: 'approved' | 'declined' }
+   | { type: 'decideAIOrganizerRequest'; cid: string; userId: string; communityName: string; applicantName: string; status: 'approved' | 'declined' }
+   | { type: 'decideAccessRequest'; userId: string; applicantName: string; status: 'approved' | 'declined' }
+   | { type: 'updateSpaceSettings'; patch: Partial<Pick<SpaceSettings, 'name' | 'tag' | 'ann' | 'appr'>> }
   | { type: 'batchActions'; title: string; summary: string; actions: Array<{ action: PendingAction; rationale: string }> }
 
 function describeWorkflow(workflow: WorkflowDefinition): string {
@@ -235,6 +244,15 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'deleteStandaloneTask': return action.workspaceTitle + ' · ' + JSON.stringify(action.currentTitle) + ' · removes ' + action.linkedArtifactCount + ' linked evidence item' + (action.linkedArtifactCount === 1 ? '' : 's') + ' and ' + action.attachmentCount + ' private file attachment' + (action.attachmentCount === 1 ? '' : 's')
     case 'deleteStandaloneWorkspace': return JSON.stringify(action.name) + ' · ' + action.counts.tasks + ' tasks · ' + action.counts.artifacts + ' evidence items · ' + action.counts.members + ' team memberships · ' + action.counts.attachments + ' private file attachments'
     case 'updateProfile': return (action.patch.name ? 'Display name → ' + JSON.stringify(action.patch.name) : '') + (action.patch.head !== undefined ? ' · Headline → ' + JSON.stringify(action.patch.head) : '') + (action.patch.bio !== undefined ? ' · Bio → ' + JSON.stringify(action.patch.bio.slice(0, 220)) : '')
+    case 'setIdeaStatus': return JSON.stringify(action.title) + ' · ' + action.previousStatus + ' → ' + action.status
+    case 'voteIdea': return JSON.stringify(action.title) + (action.action === 'back' ? ' · Add your support' : ' · Remove your support')
+    case 'addIdeaComment': return JSON.stringify(action.title) + ' · Reply: ' + JSON.stringify(action.text.slice(0, 220))
+    case 'communityMembership': return action.name + ' · ' + (action.action === 'join' ? 'Join community' : action.action === 'leave' ? 'Leave community' : 'Request to join')
+    case 'decideVolunteer': return action.ideaTitle + ' · ' + (action.status === 'accepted' ? 'Accept' : 'Decline') + ' ' + action.applicantName + '’s collaboration request'
+    case 'decideJoinRequest': return action.communityName + ' · ' + (action.status === 'approved' ? 'Approve' : 'Decline') + ' ' + action.applicantName + '’s join request'
+    case 'decideAIOrganizerRequest': return action.communityName + ' · ' + (action.status === 'approved' ? 'Approve' : 'Decline') + ' ' + action.applicantName + '’s AI organizer request'
+    case 'decideAccessRequest': return (action.status === 'approved' ? 'Approve' : 'Decline') + ' platform access for ' + action.applicantName
+    case 'updateSpaceSettings': return 'Platform space settings · ' + Object.keys(action.patch).join(', ')
     case 'batchActions': return action.title + ' · ' + action.actions.length + ' coordinated changes' + String.fromCharCode(10) + action.actions.map((item, index) => (index + 1) + '. ' + pendingActionDetail(item.action, communities, ideas) + (item.rationale ? ' — ' + item.rationale : '')).join(String.fromCharCode(10)) + (action.summary ? String.fromCharCode(10) + action.summary : '')
   }
 }
@@ -2623,6 +2641,108 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       if (bio) profilePatch.bio = bio.slice(0, 280)
       if (Object.keys(profilePatch).length) return { type: 'updateProfile', patch: profilePatch }
     }
+    if (a.me && targetCommunity && !isDeleteRequest) {
+      const wantsLeave = /\b(leave|quit|unjoin)\b/i.test(s) && /\bcommunity\b/i.test(s)
+      const wantsJoin = /\b(join|request to join|apply to join)\b/i.test(s) && /\bcommunity\b/i.test(s)
+      if (wantsLeave || wantsJoin) {
+        if (wantsLeave && !a.joined(targetCommunity.id)) throw new Error('You are not currently a member of ' + targetCommunity.name + '.')
+        if (wantsLeave && a.ownsCommunity(targetCommunity.id)) throw new Error('The community owner cannot leave their own community. Transfer ownership first.')
+        if (wantsJoin && (targetCommunity.arch || a.joined(targetCommunity.id))) throw new Error(targetCommunity.arch ? 'This community is archived and cannot accept new members.' : 'You are already a member of this community.')
+        const requestAlreadyPending = a.data.joinRequests.some(item => item.cid === targetCommunity.id && item.userId === a.me!.id && item.status === 'pending')
+        if (wantsJoin && targetCommunity.joinApproval && requestAlreadyPending) throw new Error('Your request to join this community is already pending.')
+        const message = quotedAfter(/\b(?:join request message|request message|message)\s*(?:to|:|as)?\s*["“]([^"”]+)["”]/i)
+        return { type: 'communityMembership', cid: targetCommunity.id, name: targetCommunity.name, action: wantsLeave ? 'leave' : targetCommunity.joinApproval ? 'request' : 'join', message: message.slice(0, 500) }
+      }
+    }
+
+    if (a.me && targetIdea && !isDeleteRequest) {
+      const wantsRemoveVote = /\b(remove|withdraw|undo)\s+(?:my\s+)?(?:vote|support|backing)\b/i.test(s)
+      const wantsVote = /\b(vote for|back|support)\b/i.test(s) && /\b(?:idea|this|it)\b/i.test(s)
+      if (wantsRemoveVote || wantsVote) {
+        const alreadyVoted = a.iVoted(targetIdea.id)
+        if (wantsRemoveVote && !alreadyVoted) throw new Error('You have not backed this idea yet.')
+        if (wantsVote && alreadyVoted) throw new Error('You have already backed this idea.')
+        return { type: 'voteIdea', ideaId: targetIdea.id, title: targetIdea.title, action: wantsRemoveVote ? 'remove' : 'back' }
+      }
+
+      const commentText = quotedAfter(/\b(?:comment|reply|respond|post a reply)\b[\s\S]*?["“]([^"”]+)["”]/i)
+      if (/\b(comment on|reply to|respond to|post a reply on)\b/i.test(s) && commentText) {
+        if (!a.me) throw new Error('Sign in before replying to an idea discussion.')
+        if (commentText.length > 1000) throw new Error('A discussion reply must be 1,000 characters or fewer.')
+        return { type: 'addIdeaComment', ideaId: targetIdea.id, title: targetIdea.title, text: commentText }
+      }
+
+      const explicitIdeaDecision = /\b(select|hold|decline|reject|return to review|reopen for review)\b/i.test(s)
+        && /\b(?:idea|post|submission)\b/i.test(s)
+        && !/\b(evidence|work submission|deliverable)\b/i.test(s)
+      if (explicitIdeaDecision) {
+        const status: Status = /\b(select)\b/i.test(s) ? 'selected'
+          : /\b(hold)\b/i.test(s) ? 'held'
+            : /\b(decline|reject)\b/i.test(s) ? 'declined' : 'review'
+        if (!a.canManageCommunity(targetIdea.cid)) throw new Error('Only the community owner or a platform administrator can change an idea’s review status.')
+        const previousStatus = a.statusOf(targetIdea.id)
+        if (previousStatus === status) throw new Error('That idea is already marked ' + status + '.')
+        return { type: 'setIdeaStatus', ideaId: targetIdea.id, title: targetIdea.title, previousStatus, status }
+      }
+    }
+
+    const volunteerDecision = /\b(accept|approve|decline|reject)\b/i.test(s) && /\b(collaboration application|volunteer application|collaborator request|collaboration request|applicant)\b/i.test(s)
+    if (a.me && volunteerDecision) {
+      const applications = a.data.volunteers.filter(item => item.status === 'pending' && (!targetIdea || item.ideaId === targetIdea.id))
+      const namedApplicant = applications.filter(item => lower.includes(a.nm(item.applicantId).toLowerCase())).sort((x,y) => a.nm(y.applicantId).length-a.nm(x.applicantId).length)[0]
+      const application = namedApplicant || (applications.length === 1 ? applications[0] : undefined)
+      if (!application) throw new Error(applications.length > 1 ? 'There are multiple pending collaboration requests. Name the applicant or open the correct idea first.' : 'I could not find a pending collaboration request for that idea.')
+      const idea = a.data.ideas.find(item => item.id === application.ideaId)
+      if (!idea || !a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or a platform administrator can review collaboration applications.')
+      return { type: 'decideVolunteer', applicationId: application.id, ideaId: idea.id, ideaTitle: idea.title, applicantName: a.nm(application.applicantId), status: /\b(accept|approve)\b/i.test(s) ? 'accepted' : 'declined' }
+    }
+
+    const joinRequestDecision = /\b(approve|accept|decline|reject)\b/i.test(s) && /\b(join request|membership request)\b/i.test(s)
+    if (a.me && joinRequestDecision && targetCommunity) {
+      const requests = a.data.joinRequests.filter(item => item.cid === targetCommunity.id && item.status === 'pending')
+      const namedRequest = requests.find(item => lower.includes(a.nm(item.userId).toLowerCase()))
+      const request = namedRequest || (requests.length === 1 ? requests[0] : undefined)
+      if (!request) throw new Error(requests.length > 1 ? 'Several people are waiting to join. Name the person whose request you want to review.' : 'There is no pending join request in this community.')
+      if (!a.canManageCommunity(targetCommunity.id)) throw new Error('Only the community owner or a platform administrator can review join requests.')
+      return { type: 'decideJoinRequest', cid: targetCommunity.id, userId: request.userId, communityName: targetCommunity.name, applicantName: a.nm(request.userId), status: /\b(approve|accept)\b/i.test(s) ? 'approved' : 'declined' }
+    }
+
+    const aiOrganizerDecision = /\b(approve|accept|decline|reject)\b/i.test(s) && /\b(ai organizer|organizer access)\b/i.test(s)
+    if (a.me && aiOrganizerDecision && targetCommunity) {
+      const requests = a.data.aiOrganizerRequests.filter(item => item.cid === targetCommunity.id && item.status === 'pending')
+      const namedRequest = requests.find(item => lower.includes(a.nm(item.userId).toLowerCase()))
+      const request = namedRequest || (requests.length === 1 ? requests[0] : undefined)
+      if (!request) throw new Error(requests.length > 1 ? 'Several AI organizer requests are pending. Name the person whose request you want to review.' : 'There is no pending AI organizer request in this community.')
+      if (!a.canManageCommunity(targetCommunity.id)) throw new Error('Only the community owner or a platform administrator can review AI organizer requests.')
+      if (request.userId === a.me.id) throw new Error('You cannot approve or decline your own AI organizer request.')
+      return { type: 'decideAIOrganizerRequest', cid: targetCommunity.id, userId: request.userId, communityName: targetCommunity.name, applicantName: a.nm(request.userId), status: /\b(approve|accept)\b/i.test(s) ? 'approved' : 'declined' }
+    }
+
+    const accessDecision = /\b(approve|accept|decline|reject)\b/i.test(s) && /\b(platform access|access request|request to access quorlyth)\b/i.test(s)
+    if (a.me && accessDecision) {
+      if (!a.platformAdmin) throw new Error('Only a verified platform administrator can approve or decline global access requests.')
+      const pending = a.data.requests.filter(item => { const decision = a.data.decisions[item.id]; return !decision || decision.at < item.at })
+      const named = pending.find(item => lower.includes(a.nm(item.id).toLowerCase()))
+      const request = named || (pending.length === 1 ? pending[0] : undefined)
+      if (!request) throw new Error(pending.length ? 'Several platform access requests are pending. Name the applicant you want to review.' : 'There are no pending global access requests.')
+      return { type: 'decideAccessRequest', userId: request.id, applicantName: a.nm(request.id), status: /\b(approve|accept)\b/i.test(s) ? 'approved' : 'declined' }
+    }
+
+    const spaceSettingEdit = /\b(update|edit|change|set|rewrite)\b/i.test(s) && /\b(space settings|platform settings|space name|announcement|posting approval)\b/i.test(s)
+    if (a.me && spaceSettingEdit) {
+      if (!a.platformAdmin) throw new Error('Only a verified platform administrator can change global space settings.')
+      const patch: Partial<Pick<SpaceSettings, 'name' | 'tag' | 'ann' | 'appr'>> = {}
+      const name = quotedAfter(/\b(?:space name|name)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
+      const tag = quotedAfter(/\b(?:space tag|tagline|tag)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
+      const announcement = quotedAfter(/\b(?:announcement|space announcement)\s+(?:to|as|with)\s*["“]([^"”]+)["”]/i)
+      if (name) patch.name = name.slice(0, 100)
+      if (tag) patch.tag = tag.slice(0, 100)
+      if (announcement) patch.ann = announcement.slice(0, 240)
+      if (/\b(?:require|turn on|enable)\b[\s\S]*\b(?:post|posting) approval\b/i.test(s)) patch.appr = true
+      if (/\b(?:disable|turn off|remove)\b[\s\S]*\b(?:post|posting) approval\b/i.test(s)) patch.appr = false
+      if (!Object.keys(patch).length) throw new Error('Quote the new space name, tagline or announcement, or explicitly say to enable/disable posting approval.')
+      return { type: 'updateSpaceSettings', patch }
+    }
     const ideaMention = /\b(?:idea|post)\b/i.test(s) && !/\b(?:milestone|submission|submitted work|deliverable|evidence)\b/i.test(s)
     if (a.me && isDeleteRequest && ideaMention) {
       const idea = targetIdea
@@ -2987,6 +3107,15 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         case 'deleteAutomation':
         case 'runAutomation': return 'workflow:' + action.workflowId
         case 'updateProfile': return 'profile:' + (a.me?.id || '')
+        case 'setIdeaStatus': return 'idea-status:' + action.ideaId
+        case 'voteIdea': return 'vote:' + action.ideaId
+        case 'addIdeaComment': return 'comment:' + action.ideaId
+        case 'communityMembership': return 'membership:' + action.cid
+        case 'decideVolunteer': return 'volunteer:' + action.applicationId
+        case 'decideJoinRequest': return 'join-request:' + action.cid + ':' + action.userId
+        case 'decideAIOrganizerRequest': return 'ai-organizer:' + action.cid + ':' + action.userId
+        case 'decideAccessRequest': return 'access-request:' + action.userId
+        case 'updateSpaceSettings': return 'space-settings'
         case 'createStandaloneWorkspace': return 'new-workspace:' + action.title.toLowerCase()
         case 'updateStandaloneWorkspace':
         case 'setStandaloneWorkspaceStatus':
@@ -3092,6 +3221,53 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     let ok = false
     let successOverride = ''
     try {
+      } else if (action.type === 'setIdeaStatus') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!idea || !a.canManageCommunity(idea.cid) || a.statusOf(idea.id) !== action.previousStatus) throw new Error('The idea or your review permission changed after you reviewed this status update.')
+        ok = await a.setStatus(action.ideaId, action.status)
+      } else if (action.type === 'voteIdea') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!a.me || !idea || a.iVoted(action.ideaId) !== (action.action === 'remove')) throw new Error('The idea or your vote changed after you reviewed this action.')
+        ok = await a.vote(action.ideaId)
+      } else if (action.type === 'addIdeaComment') {
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!a.me || !idea || !action.text.trim()) throw new Error('Sign in and make sure the idea discussion is still available before replying.')
+        ok = await a.addComment(action.ideaId, action.text)
+      } else if (action.type === 'communityMembership') {
+        const community = a.data.communities.find(item => item.id === action.cid)
+        if (!a.me || !community || community.name !== action.name) throw new Error('That community is no longer available.')
+        if (action.action === 'leave') {
+          if (!a.joined(action.cid) || a.ownsCommunity(action.cid)) throw new Error('You can only leave a community you currently belong to, and owners must transfer ownership first.')
+          ok = await a.join(action.cid, false)
+        } else if (action.action === 'request') {
+          if (!community.joinApproval || community.arch || a.joined(action.cid)) throw new Error('This community no longer requires a join request or is not accepting members.')
+          ok = await a.requestCommunityJoin(action.cid, action.message)
+        } else {
+          if (community.joinApproval || community.arch || a.joined(action.cid)) throw new Error('This community is no longer open for direct joining.')
+          ok = await a.join(action.cid, true)
+        }
+      } else if (action.type === 'decideVolunteer') {
+        const application = a.data.volunteers.find(item => item.id === action.applicationId)
+        const idea = a.data.ideas.find(item => item.id === action.ideaId)
+        if (!application || application.status !== 'pending' || application.ideaId !== action.ideaId || !idea || !a.canManageCommunity(idea.cid)) throw new Error('This collaboration request is no longer pending or your review permission changed.')
+        ok = await a.decideVolunteer(action.applicationId, action.status)
+      } else if (action.type === 'decideJoinRequest') {
+        const request = a.data.joinRequests.find(item => item.cid === action.cid && item.userId === action.userId && item.status === 'pending')
+        if (!request || !a.canManageCommunity(action.cid)) throw new Error('This join request is no longer pending or you no longer manage the community.')
+        ok = await a.reviewCommunityJoinRequest(action.cid, action.userId, action.status)
+      } else if (action.type === 'decideAIOrganizerRequest') {
+        const request = a.data.aiOrganizerRequests.find(item => item.cid === action.cid && item.userId === action.userId && item.status === 'pending')
+        if (!request || request.userId === a.me?.id || !a.canManageCommunity(action.cid)) throw new Error('This AI organizer request is no longer pending or your review permission changed.')
+        ok = await a.reviewCommunityAIOrganizerRequest(action.cid, action.userId, action.status)
+      } else if (action.type === 'decideAccessRequest') {
+        const request = a.data.requests.find(item => item.id === action.userId)
+        const decision = a.data.decisions[action.userId]
+        if (!a.platformAdmin || !request || (decision && decision.at >= request.at)) throw new Error('This access request is no longer pending or your platform administrator role is not active.')
+        ok = await a.decide(action.userId, action.status)
+      } else if (action.type === 'updateSpaceSettings') {
+        if (!a.platformAdmin) throw new Error('Only a verified platform administrator can change global space settings.')
+        if (!Object.keys(action.patch).length) throw new Error('No platform space settings were included in this change.')
+        ok = await a.saveSettings(action.patch)
       if (action.type === 'community') {
         if (!a.me) throw new Error('Sign in before creating a community.')
         const result = await a.createCommunityDetailed(action)
@@ -3473,6 +3649,15 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           deleteStandaloneWorkspace: 'Workspace and linked project records deleted.',
           batchActions: 'One-click organization plan applied.',
           updateProfile: 'Profile updated successfully.',
+          setIdeaStatus: 'Idea review status updated successfully.',
+          voteIdea: 'Idea support updated successfully.',
+          addIdeaComment: 'Your discussion reply was posted.',
+          communityMembership: 'Community membership updated successfully.',
+          decideVolunteer: 'Collaboration application reviewed.',
+          decideJoinRequest: 'Community join request reviewed.',
+          decideAIOrganizerRequest: 'AI organizer request reviewed.',
+          decideAccessRequest: 'Platform access request reviewed.',
+          updateSpaceSettings: 'Platform space settings saved.'
         }
         if (!nested) {
           const next = add(cur, { r: 'a', t: successOverride || labels[action.type] })
@@ -3741,6 +3926,15 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           deleteStandaloneTask: 'Delete task and linked evidence',
           deleteStandaloneWorkspace: 'Delete workspace and linked records',
           updateProfile: 'Update your profile',
+                   setIdeaStatus: 'Change idea review status',
+                   voteIdea: 'Back or unback an idea',
+                   addIdeaComment: 'Post an idea discussion reply',
+                   communityMembership: 'Join or leave a community',
+                   decideVolunteer: 'Review collaboration request',
+                   decideJoinRequest: 'Review community join request',
+                   decideAIOrganizerRequest: 'Review AI organizer request',
+                   decideAccessRequest: 'Review platform access request',
+                   updateSpaceSettings: 'Update platform space settings',
                 } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'batchActions'
                   ? 'Review the coordinated plan above. One confirmation applies the selected actions in sequence. Every action rechecks current permissions and record state; independent actions continue if another action fails. Requested destructive actions and external effects are included only when explicitly requested.'
                   : pendingAction.type === 'deleteCommunity'
