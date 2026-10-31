@@ -1067,7 +1067,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const idea = data.ideas.find(item => item.id === (project?.ideaId || milestone.projectId))
         if (!project || !idea) throw new Error('The linked project could not be found.')
         if (project.status !== 'active') throw new Error('Reopen the community project before completing a milestone.')
-        if (!canManageCommunity(idea.cid)) throw new Error('An authorized community owner must complete this milestone after checking its workspace evidence.')
 
         const task = await st.get('standaloneTasks/' + workspaceTaskId)
         const artifact = await st.get('standaloneArtifacts/' + artifactId)
@@ -1082,6 +1081,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!workspace || workspace.linkedIdeaId !== idea.id || linkedProjectId !== milestone.projectId) {
           throw new Error('This task belongs to a workspace that is not connected to this community project.')
         }
+        let workspaceManager = workspace.createdBy === me.id
+        if (!workspaceManager) {
+          const membership = await st.get('standaloneProjectMembers/' + task.projectId + '__' + me.id)
+          workspaceManager = membership?.projectId === task.projectId
+            && membership?.userId === me.id
+            && membership?.status === 'active'
+            && ['owner', 'manager'].includes(membership?.role)
+        }
+        if (!canManageCommunity(idea.cid) && !workspaceManager) {
+          throw new Error('Only an authorized community owner or linked workspace manager can complete this milestone after reviewing its evidence.')
+        }
         if (artifact.status !== 'approved' || !artifact.reviewedBy || artifact.reviewedBy === artifact.submittedBy) {
           throw new Error('A different authorized reviewer must approve the workspace evidence before the milestone can be completed.')
         }
@@ -1091,7 +1101,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!hasAcceptedEvidence) throw new Error('The workspace task has no previewable evidence to support its completion.')
         if (milestone.status === 'done') return
 
-        const milestonePatch = { status: 'done' as const, updatedAt: Date.now() }
+        const milestonePatch = {
+          status: 'done' as const,
+          workspaceTaskId,
+          evidenceArtifactId: artifactId,
+          updatedAt: Date.now(),
+        }
         await up('milestones/' + milestoneId, milestonePatch)
         setData(d => ({ ...d, milestones: d.milestones.map(item => item.id === milestoneId ? { ...item, ...milestonePatch } : item) }))
       }, 'Milestone completed from approved workspace evidence'),
