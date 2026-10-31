@@ -876,8 +876,25 @@ function WorkspaceProjectView() {
     await runAction(action, async () => {
       if (!a.backend || !a.me) throw new Error('Sign in again before submitting project evidence.')
       if (artifactType === 'github') {
-        await githubAction(a, 'verify_artifact', id, { taskId: artifactTask, artifactUrl: artifactUrl.trim() })
-        a.toast('GitHub source verified. A project manager must review it before the task can be completed.')
+        const verified = await githubAction(a, 'verify_artifact', id, { taskId: artifactTask, artifactUrl: artifactUrl.trim() })
+        const artifact = verified?.artifact
+        if (artifact?.id) {
+          const aiReview = await reviewEvidenceAgainstTask(evidenceTask, {
+            kind: 'github_' + String(artifact.kind || 'source'),
+            summary: String(artifact.summary || evidenceTask.title),
+            url: String(artifact.url || artifactUrl.trim()),
+            githubMetadata: artifact.sourceMetadata && typeof artifact.sourceMetadata === 'object' ? artifact.sourceMetadata : {},
+          })
+          try {
+            await githubAction(a, 'save_ai_review', id, { artifactId: artifact.id, aiReview })
+            a.toast('GitHub source verified and Quorlyth completed its preliminary plan-alignment review. Human approval is still required.')
+          } catch (reviewError) {
+            console.warn('Quorlyth could not persist the GitHub evidence pre-review:', reviewError)
+            a.toast('GitHub source verified. Automatic alignment review could not be saved; a manager must inspect it manually.')
+          }
+        } else {
+          a.toast('GitHub source verified. A project manager must review it before the task can be completed.')
+        }
       } else {
         const now = Date.now()
         const artifactId = crypto.randomUUID()
@@ -899,18 +916,28 @@ function WorkspaceProjectView() {
             }
           }
           const kind = artifactType
+          const evidenceSummary = artifactSummary.trim().slice(0, 1200)
+          const aiReview = await reviewEvidenceAgainstTask(evidenceTask, {
+            kind,
+            summary: evidenceSummary,
+            ...(artifactType === 'file' ? {} : { url: artifactUrl.trim() }),
+            files: attachments.map(file => ({ name: file.name, size: file.size, mimeType: file.mimeType })),
+          })
           const record: WorkspaceArtifact = {
             id: artifactId, projectId: id, taskId: artifactTask, provider: 'manual', kind,
             ...(artifactType === 'file' ? { attachments } : { url: artifactUrl.trim() }),
-            summary: artifactSummary.trim().slice(0, 1200),
+            summary: evidenceSummary,
             status: 'submitted', verificationStatus: 'submitted_evidence',
             submittedBy: a.me.id, submittedAt: now, updatedAt: now,
             sourceMetadata: { source: artifactType === 'file' ? 'private_file_upload' : 'user_submitted_link', submittedAt: now },
+            aiReview,
           }
           await a.backend.store.create('standaloneArtifacts/' + artifactId, record)
-          a.toast(artifactType === 'file'
-            ? 'Private files submitted. A manager must review them before the task can be completed.'
-            : 'Evidence link submitted. It is not source-verified; a manager can review it.')
+          a.toast(aiReview.status === 'needs_changes'
+            ? 'Evidence submitted. Quorlyth flagged gaps against the plan and included suggested fixes for the human reviewer.'
+            : aiReview.status === 'aligned'
+              ? 'Evidence submitted. Quorlyth found an initial match with the plan; a human reviewer must still inspect and approve it.'
+              : 'Evidence submitted. Quorlyth could not confirm alignment from the available details; a human reviewer must inspect it.')
         } catch (error) {
           if (a.backend.deleteWorkFile) {
             await Promise.all(attachments.map(file => a.backend!.deleteWorkFile!(file.path).catch(() => undefined)))
@@ -1167,12 +1194,23 @@ function WorkspaceProjectView() {
           return <article className="sw-artifact" key={artifact.id}>
             <div className="sw-artifact__top"><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div className="sw-artifact__identity"><p className="ql-eyebrow">{artifact.provider==='github'?(artifact.kind==='pull_request'?'PULL REQUEST':'COMMIT'):(artifact.kind==='file'?'FILE SUBMISSION':artifact.kind==='demo'?'DEMO / PROTOTYPE':artifact.kind==='document'?'DOCUMENT / REPORT':'PROJECT LINK')} · {localDate(artifact.verifiedAt||artifact.submittedAt)}</p><h4>{artifact.summary||'GitHub source record'}</h4><p>{artifact.repositoryFullName||(typeof meta.repository==='string'?meta.repository:artifact.provider==='github'?'GitHub':'External link')} · Submitted by {a.nm(artifact.submittedBy)}</p></div><span className={'sw-review-status status-'+artifact.status}>{statusLabel}</span></div>
             <div className="sw-source-confirmation"><QuorlythGlyph name="check" size={14}/><span>{artifact.provider==='github'?<>GitHub API confirmed this source{meta.authorLogin?' · @'+String(meta.authorLogin):''}{meta.signatureVerified===true?' · Signed commit verified':''}</>:<>Contributor-submitted evidence · not source-verified</>}</span>{artifact.url&&<span>Preview available below</span>}</div>
+            {artifact.aiReview && <section className="sw-ai-evidence-review" style={{ display: 'grid', gap: 8, padding: 13, marginTop: 12, borderRadius: 13, border: '1px solid var(--line, rgba(255,255,255,.12))', background: 'rgba(255,255,255,.025)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                <strong><QuorlythGlyph name="sparkles" size={14}/> Quorlyth plan-alignment review</strong>
+                <span className={'sw-pill' + (artifact.aiReview.status === 'aligned' ? ' is-done' : '')}>{artifact.aiReview.status === 'aligned' ? 'Likely aligned' : artifact.aiReview.status === 'needs_changes' ? 'Gaps detected' : artifact.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Needs human judgement'} · {artifact.aiReview.alignmentScore}/100</span>
+              </div>
+              <p className="sw-muted">{artifact.aiReview.summary}</p>
+              {!!artifact.aiReview.matchedCriteria.length && <div><small className="ql-eyebrow">POSSIBLE MATCHES</small><ul className="sw-ai-review-list">{artifact.aiReview.matchedCriteria.map((item,index)=><li key={'match-'+index}>{item}</li>)}</ul></div>}
+              {!!artifact.aiReview.gaps.length && <div><small className="ql-eyebrow">GAPS TO CHECK</small><ul className="sw-ai-review-list">{artifact.aiReview.gaps.map((item,index)=><li key={'gap-'+index}>{item}</li>)}</ul></div>}
+              {!!artifact.aiReview.recommendations.length && <div><small className="ql-eyebrow">SUGGESTED NEXT ACTIONS</small><ul className="sw-ai-review-list">{artifact.aiReview.recommendations.map((item,index)=><li key={'rec-'+index}>{item}</li>)}</ul></div>}
+              <small className="sw-muted">{artifact.aiReview.scopeNote} · {localDate(artifact.aiReview.reviewedAt)}</small>
+            </section>}
             {artifact.url && <EvidencePreview url={artifact.url} name={artifact.summary || artifact.kind || "Submitted evidence"} summary={artifact.summary} compact={false} />}
             {typeof meta.message==='string'&&<p className="sw-artifact__message">{meta.message.slice(0,700)}</p>}
             {artifact.attachments?.map(attachment=><WorkspaceEvidenceAttachment key={attachment.path} attachment={attachment}/>)}
             {typeof meta.title==='string'&&<p className="sw-artifact__message">{meta.title.slice(0,300)}{typeof meta.state==='string'?' · '+meta.state:''}{meta.merged===true?' · Merged':''}</p>}
             {artifact.reviewNote&&<div className="sw-review-note"><strong>{artifact.status==='approved'?'Reviewer note':'Requested changes'}</strong><p>{artifact.reviewNote}</p>{artifact.reviewedBy&&artifact.reviewedAt&&<small>Reviewed by {a.nm(artifact.reviewedBy)} · {localDate(artifact.reviewedAt)}</small>}</div>}
-            {canManage&&project.status==='active'&&artifact.status==='submitted'&&artifact.submittedBy!==a.me?.id&&<div className="sw-review-controls"><label className="sw-field"><span>Reviewer feedback <small>Optional for approval, required for changes</small></span><textarea rows={2} maxLength={1600} value={reviewNotes[artifact.id]||''} onChange={e=>setReviewNotes(current=>({...current,[artifact.id]:e.target.value}))} placeholder="Check the source against the task's definition of done." /></label><div className="acts"><button type="button" className="btn" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'changes_requested')}><QuorlythGlyph name="rotate" size={14}/>Request changes</button><button type="button" className="btn p" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'approved')}><QuorlythGlyph name="check" size={14}/>Approve evidence</button></div></div>}
+            {canManage&&project.status==='active'&&artifact.status==='submitted'&&artifact.submittedBy!==a.me?.id&&<div className="sw-review-controls"><label className="sw-field"><span>Reviewer feedback <small>Optional for approval, required for changes</small></span><textarea rows={2} maxLength={1600} value={reviewNotes[artifact.id]||''} onChange={e=>setReviewNotes(current=>({...current,[artifact.id]:e.target.value}))} placeholder="Check the source against the task's definition of done." /></label>{artifact.aiReview?.recommendations?.length>0&&<button type="button" className="sw-link-button" onClick={()=>setReviewNotes(current=>({...current,[artifact.id]:[...artifact.aiReview!.gaps,...artifact.aiReview!.recommendations].join('\n').slice(0,1600)}))}>Use Quorlyth's suggested feedback <QuorlythGlyph name="arrow" size={12}/></button>}<div className="acts"><button type="button" className="btn" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'changes_requested')}><QuorlythGlyph name="rotate" size={14}/>Request changes</button><button type="button" className="btn p" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'approved')}><QuorlythGlyph name="check" size={14}/>Approve evidence</button></div></div>}
           </article>
         })}</div>}
       </section>
