@@ -1,0 +1,11 @@
+.notification-popups{position:fixed;z-index:82;right:18px;bottom:18px;width:min(390px,calc(100vw - 28px));display:grid;gap:9px;pointer-events:none}
+.notification-popup{display:flex;align-items:flex-start;gap:11px;padding:12px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:linear-gradient(145deg,rgba(29,29,29,.97),rgba(8,8,8,.97));box-shadow:0 16px 42px rgba(0,0,0,.38);backdrop-filter:blur(24px);pointer-events:auto;animation:notification-popup-in .2s ease-out}
+.notification-popup-icon{display:grid;place-items:center;width:33px;height:33px;flex:0 0 auto;border:1px solid rgba(255,255,255,.11);border-radius:10px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.83)}
+.notification-popup-copy{display:grid;gap:3px;flex:1;min-width:0;padding:0;border:0;background:transparent;text-align:left;color:inherit;cursor:pointer}
+.notification-popup-copy strong{font-size:11px;font-weight:600}
+.notification-popup-copy span{font-size:10px;line-height:1.5;color:rgba(255,255,255,.62);overflow-wrap:anywhere}
+.notification-popup-copy small{margin-top:3px;font-size:9px;color:rgba(255,255,255,.42)}
+.notification-popup-close{width:23px;height:23px;flex:0 0 auto;border:0;border-radius:7px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.55);cursor:pointer}
+@keyframes notification-popup-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:640px){.notification-popups{right:9px;bottom:9px;width:calc(100vw - 18px)}}
+@media(prefers-reduced-motion:reduce){.notification-popup{animation:none}}
