@@ -101,18 +101,20 @@ Deno.serve(async (req: Request) => {
     }
 
     let role = "";
+    let hasExplicitMembership = false;
     if (project.data.createdBy === user.id) {
       role = "owner";
     } else {
       const member = await getDoc("standaloneProjectMembers/" + projectId + "__" + user.id);
-      if (member?.data.userId === user.id && member.data.projectId === projectId && member.data.status === "active") {
+      hasExplicitMembership = member?.data.userId === user.id && member.data.projectId === projectId;
+      if (hasExplicitMembership && member?.data.status === "active") {
         role = cleanText(member.data.role, 30);
       }
     }
 
     // Connected collaboration workspaces inherit the accepted team from their
-    // source idea. This mirrors the workspace's permission-checked virtual roster.
-    if (!role && project.data.linkedIdeaId) {
+    // source idea only when no explicit workspace role overrides that access.
+    if (!role && !hasExplicitMembership && project.data.linkedIdeaId) {
       const ideaId = cleanText(project.data.linkedIdeaId, 120);
       const idea = ideaId ? await getDoc("ideas/" + ideaId) : null;
       const communityId = cleanText(idea?.data?.cid, 120);
