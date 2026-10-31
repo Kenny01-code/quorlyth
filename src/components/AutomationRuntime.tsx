@@ -162,6 +162,33 @@ export function AutomationRuntime() {
       }
     }, error => console.warn('Workflow evidence trigger could not refresh:', error)))
 
+    unsubscribes.push(store.subscribe('workSubmissions', docs => {
+      if (!alive) return
+      if (!workSubmissionsReady) {
+        docs.forEach(doc => workSubmissionStatuses.set(doc.id, String(doc.data?.status || 'submitted')))
+        workSubmissionsReady = true
+        return
+      }
+      for (const doc of docs) {
+        const nextStatus = String(doc.data?.status || 'submitted')
+        const previousStatus = workSubmissionStatuses.get(doc.id)
+        workSubmissionStatuses.set(doc.id, nextStatus)
+        const payload = {
+          id: doc.id,
+          projectId: String(doc.data?.projectId || ''),
+          milestoneId: String(doc.data?.milestoneId || ''),
+          title: String(doc.data?.summary || 'Milestone evidence submitted'),
+          summary: String(doc.data?.summary || ''),
+          status: nextStatus,
+          at: Number(doc.data?.updatedAt || doc.data?.submittedAt) || Date.now(),
+        }
+        if (!previousStatus) emitWorkflowEvent('evidence.submitted', payload)
+        else if (previousStatus === 'submitted' && (nextStatus === 'approved' || nextStatus === 'changes_requested')) {
+          emitWorkflowEvent('evidence.reviewed', payload)
+        }
+      }
+    }, error => console.warn('Workflow collaboration evidence trigger could not refresh:', error)))
+
     const onWorkflowEvent = (raw: Event) => {
       const detail = (raw as CustomEvent<WorkflowEventDetail>).detail
       if (!detail?.type) return
