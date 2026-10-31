@@ -2739,11 +2739,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       const name = quotedAfter(/\b(?:space name|name)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
       const tag = quotedAfter(/\b(?:space tag|tagline|tag)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
       const announcement = quotedAfter(/\b(?:announcement|space announcement)\s+(?:to|as|with)\s*["“]([^"”]+)["”]/i)
-      const namedWeight = (label: string) => { const match = s.match(new RegExp('\\\\b(?:' + label + ')\\\\s*(?:weight)?\\\\s*(?:to|as|=|:)?\\\\s*(\\\\d{1,3})\\\\s*%?', 'i')); return match ? Number(match[1]) : undefined }
+      const namedWeight = (label: string) => { const match = s.match(new RegExp('\\b(?:' + label + ')\\s*(?:weight)?\\s*(?:to|as|=|:)?\\s*(\\d{1,3})\\s*%?', 'i')); return match ? Number(match[1]) : undefined }
       const originality = namedWeight('originality')
       const feasibility = namedWeight('feasibility')
       const relevance = namedWeight('audience\\\\s+relevance|relevance')
-      const genericWeights = s.match(/(?:weights|weighting)\\s*(?:to|as|=|:)?\\s*(\\d{1,3})\\s*%?\\s*[,/ ]+\\s*(\\d{1,3})\\s*%?\\s*[,/ ]+\\s*(\\d{1,3})\\s*%?/i)
+      const genericWeights = s.match(/(?:weights|weighting)\s*(?:to|as|=|:)?\s*(\d{1,3})\s*%?\s*[,/ ]+\s*(\d{1,3})\s*%?\s*[,/ ]+\s*(\d{1,3})\s*%?/i)
       if ([originality, feasibility, relevance].some(value => value !== undefined) || genericWeights) {
         const values = genericWeights ? genericWeights.slice(1,4).map(Number) : [originality, feasibility, relevance]
         if (values.some(value => value === undefined || !Number.isInteger(value) || value < 0 || value > 100)) throw new Error('Set all three weights as whole-number percentages from 0 to 100: originality, feasibility and audience relevance.')
