@@ -3,6 +3,7 @@ import { useApp } from '../data/AppProvider'
 import {
   WorkflowDefinition,
   WorkflowEventDetail,
+  WorkflowRun,
   WORKFLOW_EVENT_NAME,
   emitWorkflowEvent,
   executeWorkflowActions,
@@ -193,7 +194,7 @@ export function AutomationRuntime() {
               eventTitle: String(detail.payload?.title || detail.payload?.summary || ''),
               steps: [],
             })
-            const saveProgress = async run => {
+            const saveProgress = async (run: WorkflowRun) => {
               await store.update(runPath, {
                 ...run,
                 workflowId: workflow.id,
@@ -208,7 +209,7 @@ export function AutomationRuntime() {
             await persistWorkflowRun(store, path, run)
             if (alive && run.status === 'failed') app.toast('Automation "' + workflow.name + '" stopped: ' + (run.error || 'an action failed'))
           } catch (error) {
-            const message = String(error?.message || error)
+            const message = error instanceof Error ? error.message : String(error)
             if (/23505|duplicate key|unique constraint/i.test(message)) return
             console.error('Workflow execution could not be recorded:', error)
             if (alive) app.toast('Automation "' + workflow.name + '" could not finish. Check its configuration.')
