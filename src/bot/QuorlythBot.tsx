@@ -190,7 +190,7 @@ type PendingAction =
    | { type: 'decideJoinRequest'; cid: string; userId: string; communityName: string; applicantName: string; status: 'approved' | 'declined' }
    | { type: 'decideAIOrganizerRequest'; cid: string; userId: string; communityName: string; applicantName: string; status: 'approved' | 'declined' }
    | { type: 'decideAccessRequest'; userId: string; applicantName: string; status: 'approved' | 'declined' }
-   | { type: 'updateSpaceSettings'; patch: Partial<Pick<SpaceSettings, 'name' | 'tag' | 'ann' | 'appr'>> }
+   | { type: 'updateSpaceSettings'; patch: Partial<Pick<SpaceSettings, 'name' | 'tag' | 'ann' | 'appr' | 'wo' | 'wf' | 'wr'>> }
   | { type: 'batchActions'; title: string; summary: string; actions: Array<{ action: PendingAction; rationale: string }> }
 
 function describeWorkflow(workflow: WorkflowDefinition): string {
@@ -2732,19 +2732,29 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       return { type: 'decideAccessRequest', userId: request.id, applicantName: a.nm(request.id), status: /\b(approve|accept)\b/i.test(s) ? 'approved' : 'declined' }
     }
 
-    const spaceSettingEdit = /\b(update|edit|change|set|rewrite)\b/i.test(s) && /\b(space settings|platform settings|space name|announcement|posting approval)\b/i.test(s)
+    const spaceSettingEdit = /\b(update|edit|change|set|rewrite)\b/i.test(s) && /\b(space settings|platform settings|space name|announcement|posting approval|scoring weights|ranking weights|idea ranking weights)\b/i.test(s)
     if (a.me && spaceSettingEdit) {
       if (!a.platformAdmin) throw new Error('Only a verified platform administrator can change global space settings.')
       const patch: Partial<Pick<SpaceSettings, 'name' | 'tag' | 'ann' | 'appr'>> = {}
       const name = quotedAfter(/\b(?:space name|name)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
       const tag = quotedAfter(/\b(?:space tag|tagline|tag)\s+(?:to|as)\s*["“]([^"”]+)["”]/i)
       const announcement = quotedAfter(/\b(?:announcement|space announcement)\s+(?:to|as|with)\s*["“]([^"”]+)["”]/i)
+      const namedWeight = (label: string) => { const match = s.match(new RegExp('\\\\b' + label + '\\\\s*(?:weight)?\\\\s*(?:to|as|=|:)?\\\\s*(\\\\d{1,3})\\\\s*%?', 'i')); return match ? Number(match[1]) : undefined }
+      const originality = namedWeight('originality')
+      const feasibility = namedWeight('feasibility')
+      const relevance = namedWeight('audience relevance|relevance')
+      const genericWeights = s.match(/(?:weights|weighting)\\s*(?:to|as|=|:)?\\s*(\\d{1,3})\\s*%?\\s*[,/ ]+\\s*(\\d{1,3})\\s*%?\\s*[,/ ]+\\s*(\\d{1,3})\\s*%?/i)
+      if ([originality, feasibility, relevance].some(value => value !== undefined) || genericWeights) {
+        const values = genericWeights ? genericWeights.slice(1,4).map(Number) : [originality, feasibility, relevance]
+        if (values.some(value => value === undefined || !Number.isInteger(value) || value < 0 || value > 100)) throw new Error('Set all three weights as whole-number percentages from 0 to 100: originality, feasibility and audience relevance.')
+        patch.wo = values[0] as number; patch.wf = values[1] as number; patch.wr = values[2] as number
+      }
       if (name) patch.name = name.slice(0, 100)
       if (tag) patch.tag = tag.slice(0, 100)
       if (announcement) patch.ann = announcement.slice(0, 240)
       if (/\b(?:require|turn on|enable)\b[\s\S]*\b(?:post|posting) approval\b/i.test(s)) patch.appr = true
       if (/\b(?:disable|turn off|remove)\b[\s\S]*\b(?:post|posting) approval\b/i.test(s)) patch.appr = false
-      if (!Object.keys(patch).length) throw new Error('Quote the new space name, tagline or announcement, or explicitly say to enable/disable posting approval.')
+      if (!Object.keys(patch).length) throw new Error('Quote the new space name, tagline or announcement, set all three scoring weights, or explicitly say to enable/disable posting approval.')
       return { type: 'updateSpaceSettings', patch }
     }
     const ideaMention = /\b(?:idea|post)\b/i.test(s) && !/\b(?:milestone|submission|submitted work|deliverable|evidence)\b/i.test(s)
