@@ -2742,7 +2742,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       const namedWeight = (label: string) => { const match = s.match(new RegExp('\\b(?:' + label + ')\\s*(?:weight)?\\s*(?:to|as|=|:)?\\s*(\\d{1,3})\\s*%?', 'i')); return match ? Number(match[1]) : undefined }
       const originality = namedWeight('originality')
       const feasibility = namedWeight('feasibility')
-      const relevance = namedWeight('audience\\\\s+relevance|relevance')
+      const relevance = namedWeight('relevance')
       const genericWeights = s.match(/(?:weights|weighting)\s*(?:to|as|=|:)?\s*(\d{1,3})\s*%?\s*[,/ ]+\s*(\d{1,3})\s*%?\s*[,/ ]+\s*(\d{1,3})\s*%?/i)
       if ([originality, feasibility, relevance].some(value => value !== undefined) || genericWeights) {
         const values = genericWeights ? genericWeights.slice(1,4).map(Number) : [originality, feasibility, relevance]
