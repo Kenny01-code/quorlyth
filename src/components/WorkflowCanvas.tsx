@@ -12,6 +12,7 @@ import {
   WorkflowEdge,
   WorkflowNode,
   WorkflowRun,
+  WorkflowTrigger,
   newWorkflowId,
   workflowGraphFor,
   workflowWithGraph,
@@ -45,7 +46,6 @@ function positionedNodes(nodes: WorkflowNode[], edges: WorkflowEdge[]): PlacedNo
   const trigger = nodes.find(node => node.type === 'trigger')
   const condition = nodes.find(node => node.type === 'condition')
   const actionNodes = nodes.filter((node): node is Extract<WorkflowNode, { type: 'action' }> => node.type === 'action')
-  const incoming = new Set(edges.map(edge => edge.target))
   const firstActionFor = (handle: 'true' | 'false' | 'next') => {
     const sourceId = condition?.id || trigger?.id
     const edge = edges.find(item => item.source === sourceId && item.sourceHandle === handle)
@@ -184,7 +184,7 @@ export function WorkflowCanvas({
     if (!startNode) return
     const chain = branchActions(nodes, graph.edges, branch)
     const action = newAction(type)
-    const node: WorkflowNode = { id: action.id, type: 'action', action, position: { x: hasCondition ? 790 : 570, y: 220 + (chain.length * 175) } }
+    const node: WorkflowNode = { id: action.id, type: 'action', action, position: { x: hasCondition ? 790 : 570, y: hasCondition ? (branch === 'false' ? 430 : 65) + (chain.length * 175) : 220 + (chain.length * 175) } }
     const nextEdges = [...graph.edges]
     const tail = chain[chain.length - 1]
     nextEdges.push({
