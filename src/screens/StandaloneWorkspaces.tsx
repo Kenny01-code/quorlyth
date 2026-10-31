@@ -573,8 +573,14 @@ function WorkspaceProjectView() {
       assigneeId: assigneeIds[0] || null,
       milestoneId: milestone.id,
     }
-    await a.backend.store.create('standaloneTasks/' + taskId, task)
-    return true
+    try {
+      await a.backend.store.create(taskPath, task)
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (/23505|duplicate key|unique constraint/i.test(message)) return false
+      throw error
+    }
   }
 
   async function syncCollaborationPlan() {
