@@ -42,8 +42,17 @@ export function Av({ id, size = 30 }: { id: string; size?: number }) {
 }
 
 export function Toast() {
-  const { toastMsg } = useApp()
-  return <div id="tst" className={cn('glass', toastMsg && 'on')} role="status">{toastMsg}</div>
+  const { toastMsg, toastKind } = useApp()
+  return (
+    <div
+      id="tst"
+      className={cn('glass', toastMsg && 'on', toastKind === 'permission' && 'permission-notice', toastKind === 'auth' && 'auth-feedback')}
+      role={toastKind === 'permission' ? 'alert' : 'status'}
+      aria-live={toastKind === 'permission' ? 'assertive' : 'polite'}
+    >
+      {toastMsg}
+    </div>
+  )
 }
 
 export function Bar({ value }: { value: number }) {
