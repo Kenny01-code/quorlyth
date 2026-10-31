@@ -1106,6 +1106,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         await st.create('workSubmissions/' + id, submission)
         setData(d => ({ ...d, workSubmissions: [submission, ...d.workSubmissions.filter(item => item.id !== id)] }))
+        emitWorkflowEvent('evidence.submitted', {
+          id,
+          projectId: submission.projectId,
+          milestoneId,
+          title: submission.summary.slice(0, 180),
+          summary: submission.summary,
+          at: submittedAt,
+        })
         if (milestone.status === 'todo') {
           const updatedAt = Date.now()
           await up('milestones/' + milestoneId, { status: 'in_progress', updatedAt })
@@ -1130,6 +1138,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const patch = { status, reviewNote: cleanNote, reviewedAt, reviewedBy: me.id, updatedAt: reviewedAt }
         await st.update('workSubmissions/' + submissionId, patch)
         setData(d => ({ ...d, workSubmissions: d.workSubmissions.map(item => item.id === submissionId ? { ...item, ...patch } : item) }))
+        emitWorkflowEvent('evidence.reviewed', {
+          id: submissionId,
+          projectId: submission.projectId,
+          milestoneId: submission.milestoneId,
+          title: submission.summary.slice(0, 180),
+          summary: cleanNote || submission.summary,
+          status,
+          at: reviewedAt,
+        })
         if (status === 'approved') {
           const milestone = data.milestones.find(item => item.id === submission.milestoneId)
           if (milestone && milestone.status !== 'done' && project.status === 'active') {
