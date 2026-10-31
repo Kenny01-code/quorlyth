@@ -9,6 +9,7 @@ import {
   executeWorkflowActions,
   persistWorkflowRun,
   workflowMatchesEvent,
+  workflowRunDocumentId,
 } from '../lib/automation'
 
 /**
@@ -208,7 +209,7 @@ export function AutomationRuntime() {
 
         void (async () => {
           const path = 'data/users/' + userId + '/automations/' + workflow.id
-          const runPath = 'data/users/' + userId + '/automation-runs/' + encodeURIComponent(runKey).slice(0, 180)
+          const runPath = 'data/users/' + userId + '/automation-runs/' + workflowRunDocumentId(workflow.id, detail.type, eventId || String(now))
           try {
             // A stable INSERT claim prevents two open tabs or devices from
             // executing the same workflow for the same database event.
