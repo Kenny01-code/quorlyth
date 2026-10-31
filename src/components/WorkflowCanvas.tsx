@@ -274,7 +274,7 @@ export function WorkflowCanvas({
               <button type="button" onClick={() => setZoom(value => Math.max(.65, Number((value - .1).toFixed(2))))} aria-label="Zoom out">−</button>
               <span>{Math.round(zoom * 100)}%</span>
               <button type="button" onClick={() => setZoom(value => Math.min(1.25, Number((value + .1).toFixed(2))))} aria-label="Zoom in">+</button>
-              <button type="button" onClick={() => setZoom(1)} aria-label="Reset zoom"><QuorlythGlyph name="refresh" size={13} /></button>
+              <button type="button" onClick={() => setZoom(1)} aria-label="Reset zoom"><QuorlythGlyph name="rotate" size={13} /></button>
             </div>
           </header>
 
@@ -344,7 +344,7 @@ export function WorkflowCanvas({
             <button type="button" onClick={() => addAction(condition ? 'true' : 'next', 'webhook')}><QuorlythGlyph name="send" size={15} />Webhook</button>
             {condition && <><span className="wfc-palette-divider" /><button type="button" className="wfc-false-add" onClick={() => addAction('false', 'notify')}>+ False route</button></>}
           </div>
-          <p className="wfc-canvas-hint"><QuorlythGlyph name="move" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Live execution states appear on the same nodes.</p>
+          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Live execution states appear on the same nodes.</p>
         </section>
 
         <aside className="wfc-inspector">
@@ -352,7 +352,7 @@ export function WorkflowCanvas({
           {!selected ? <p className="wfc-muted">Choose a node to inspect its settings.</p> : selected.type === 'trigger' ? <>
             <label className="wfc-field"><span>Start when</span><select value={selected.trigger} onChange={event => updateTrigger(event.target.value as WorkflowTrigger)}>{(Object.keys(TRIGGER_INFO) as WorkflowTrigger[]).map(type => <option value={type} key={type}>{TRIGGER_INFO[type].title}</option>)}</select></label>
             <p className="wfc-description">{TRIGGER_INFO[selected.trigger].description}</p>
-            <div className="wfc-info-block"><QuorlythGlyph name="activity" size={16} /><div><strong>Realtime event listener</strong><p>When Quorlyth is open, this trigger listens for matching Supabase Realtime changes in data your account can access.</p></div></div>
+            <div className="wfc-info-block"><QuorlythGlyph name="live" size={16} /><div><strong>Realtime event listener</strong><p>When Quorlyth is open, this trigger listens for matching Supabase Realtime changes in data your account can access.</p></div></div>
           </> : selected.type === 'condition' ? <>
             <label className="wfc-field"><span>Check this value</span><select value={selected.field} onChange={event => updateNode(selected.id, { field: event.target.value as WorkflowConditionField } as Partial<WorkflowNode>)}>{(Object.keys(CONDITION_FIELD_INFO) as WorkflowConditionField[]).map(field => <option value={field} key={field}>{CONDITION_FIELD_INFO[field]}</option>)}</select></label>
             <label className="wfc-field"><span>Operator</span><select value={selected.operator} onChange={event => updateNode(selected.id, { operator: event.target.value as WorkflowConditionOperator } as Partial<WorkflowNode>)}>{(Object.keys(CONDITION_OPERATOR_INFO) as WorkflowConditionOperator[]).map(operator => <option value={operator} key={operator}>{CONDITION_OPERATOR_INFO[operator]}</option>)}</select></label>
@@ -375,7 +375,7 @@ export function WorkflowCanvas({
               <label className="wfc-field"><span>Definition of done</span><textarea value={selected.action.acceptanceCriteria || ''} onChange={event => updateAction(selected.id, { acceptanceCriteria: event.target.value })} rows={2} maxLength={1000} /></label>
             </>}
             {selected.action.type === 'webhook' && <label className="wfc-field"><span>HTTPS endpoint</span><input type="url" value={selected.action.url || ''} onChange={event => updateAction(selected.id, { url: event.target.value })} placeholder="https://your-service.com/webhooks/quorlyth" /><small>Only an HTTPS POST is sent. No account secrets or API keys are included.</small></label>}
-            <div className="wfc-info-block"><QuorlythGlyph name="shield" size={16} /><div><strong>Runs with your permissions</strong><p>Task creation is still checked by your workspace access and Supabase row-level security.</p></div></div>
+            <div className="wfc-info-block"><QuorlythGlyph name="lock" size={16} /><div><strong>Runs with your permissions</strong><p>Task creation is still checked by your workspace access and Supabase row-level security.</p></div></div>
             <button className="wfc-remove-node" type="button" onClick={() => removeAction(selected.id)}><QuorlythGlyph name="trash" size={14} />Remove this action</button>
           </>}
           <div className="wfc-inspector-footer"><span>Live status</span><strong className={runStatus(selected?.id || '') ? 'is-' + runStatus(selected?.id || '') : ''}>{runStatus(selected?.id || '') || 'Waiting for next run'}</strong></div>
