@@ -59,6 +59,7 @@ export function AutomationRuntime() {
     let tasksReady = false
     let milestonesReady = false
     let artifactsReady = false
+    let workSubmissionsReady = false
 
     // Supabase realtime lets a running Quorlyth session react to changes made by
     // other people in collections this user is already allowed to read. The local
