@@ -97,6 +97,8 @@ export default function App() {
   // Download the full bot experience only after the user opens its lightweight launcher.
   const [botMounted, setBotMounted] = useState(false)
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
+  const [pageBotPrompt, setPageBotPrompt] = useState('')
+  const [pageBotPromptRequest, setPageBotPromptRequest] = useState(0)
   const [deferredLauncherHidden, setDeferredLauncherHidden] = useState(false)
   const [showDeferredLauncherRestore, setShowDeferredLauncherRestore] = useState(false)
   const deferredRestoreTimer = useRef<number | null>(null)
@@ -107,6 +109,12 @@ export default function App() {
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
+  const openBotWithPrompt = useCallback((prompt: string) => {
+    setPageBotPrompt(prompt)
+    setPageBotPromptRequest(request => request + 1)
+    setBotMounted(true)
+    void loadQuorlythBot().catch(() => {})
+  }, [])
   // Warm the assistant chunk after the first paint so mobile taps do not pay the full download cost.
   // This runs asynchronously and never blocks the page's first render.
   useEffect(() => {
@@ -293,7 +301,20 @@ export default function App() {
       const convo = conversations.find(c => c.id === latest.conversationId)
       const title = convo?.type === 'group' ? (convo.title || 'group chat') : 'your private chat'
       const sender = a.nm(latest.senderId)
-      if (preferences.messagePopups !== false) a.toast('New message from ' + sender + ' · ' + title)
+      if (preferences.messagePopups !== false) {
+        const messageText = 'New message from ' + sender + ' · ' + title
+        a.toast(messageText)
+        if (!document.hidden) setScreenPopups(current => [...current.filter(item => item.id !== latest.id), {
+          key: 'message_' + latest.id,
+          at: Number(latest.at) || Date.now(),
+          icon: 'message',
+          text: messageText,
+          kind: 'message',
+          id: latest.id,
+          target: latest.conversationId,
+          unread: true,
+        }].slice(-3))
+      }
       if (preferences.messageSounds ?? (sound && preferences.sound !== false)) chime()
       if (preferences.desktopNotifications !== false && typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
         try { new Notification('New message from ' + sender, { body: latest.text.slice(0, 120), tag: latest.conversationId }) } catch {}
@@ -405,7 +426,7 @@ export default function App() {
           </Suspense>
         </section>
       </main>
-      <PageAssist onAskBot={() => { void loadQuorlythBot().catch(() => {}); setBotMounted(true) }} />
+      <PageAssist onAskBot={openBotWithPrompt} />
       <NotificationPopups items={screenPopups} onDismiss={dismissScreenPopup} onOpen={n => { void us.patch({ read: { [n.key]: true } }) }} />
       {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
@@ -449,7 +470,7 @@ export default function App() {
           <button type="button" onClick={restoreDeferredLauncher}>Undo</button>
           <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
         </div>}
-      </> : <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
+      </> : <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} initialPrompt={pageBotPrompt} promptRequest={pageBotPromptRequest} /></Suspense>}
       <Toast />
       <WritingAssistant />
     </>
