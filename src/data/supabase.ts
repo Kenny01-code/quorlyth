@@ -85,12 +85,12 @@ export async function createSupabaseStore(url: string, key: string) {
       const { data: authData, error: authError } = await sb.auth.getUser()
       if (authError || !authData.user) throw new Error('Sign in before recording account activity.')
       const userId = authData.user.id
-      const { error } = await sb.from('growth_events').insert({
+      const { error } = await sb.from('growth_events').upsert({
         user_id: userId,
         actor_id: userId,
         event_name: eventName,
         event_key: eventKey.slice(0, 256),
-      })
+      }, { onConflict: 'user_id,event_name,event_key', ignoreDuplicates: true })
       // Event keys are idempotent by design. A repeat visit or retry is not a failure.
       if (error && error.code !== '23505') throw new Error(error.message || 'Could not record account activity')
     },
@@ -134,16 +134,19 @@ export async function createSupabaseStore(url: string, key: string) {
       const next = deepMerge(cur, patch)
       const isRootWorkSubmission = path.startsWith('workSubmissions/') && !path.slice('workSubmissions/'.length).includes('/')
       const isRootProject = path.startsWith('projects/') && !path.slice('projects/'.length).includes('/')
-      if (isRootWorkSubmission || isRootProject) {
-        // These records have narrow UPDATE permissions. Upsert also evaluates
-        // INSERT RLS on conflict, which would wrongly deny AI organizers who can
-        // update an existing project brief but cannot create the project itself.
+      const isRootMilestone = path.startsWith('milestones/') && !path.slice('milestones/'.length).includes('/')
+      if (isRootWorkSubmission || isRootProject || isRootMilestone) {
+        // These records have narrow UPDATE permissions. A direct UPDATE avoids
+        // evaluating restrictive INSERT policies during an upsert (notably the
+        // AI-organized milestone guard) when a teammate starts or edits work.
         const { data, error } = await sb.from('docs').update({ data: next }).eq('path', path).select('path').maybeSingle()
         if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the update')
         if (!data) {
           throw new Error(isRootProject
             ? 'Project update permission denied or this project is no longer available.'
-            : 'Review permission denied or this submission is no longer pending.')
+            : isRootMilestone
+              ? 'Milestone update permission denied or this milestone is no longer available.'
+              : 'Review permission denied or this submission is no longer pending.')
         }
         return
       }
