@@ -73,10 +73,10 @@ test('Normal chat starts ElevenLabs speech while the answer is still streaming',
   assert.match(bot, /preferElevenLabsVoice:\s*true/)
 })
 
-test('Opening QuorlythBot no longer shows a separate loading panel', async () => {
+test('Opening QuorlythBot no longer shows a separate loading panel and supports proactive page prompts', async () => {
   const app = await readSource('src/App.tsx')
   assert.doesNotMatch(app, /qbot-open-fallback/)
-  assert.match(app, /<Suspense fallback=\{null\}><QuorlythBot initialOpen voiceRequest=\{botVoiceRequest\} \/><\/Suspense>/)
+  assert.match(app, /<Suspense fallback=\{null\}><QuorlythBot initialOpen voiceRequest=\{botVoiceRequest\} initialPrompt=\{pageBotPrompt\} promptRequest=\{pageBotPromptRequest\} \/><\/Suspense>/)
   assert.match(app, /Warm the assistant chunk after the first paint/)
 })
 
