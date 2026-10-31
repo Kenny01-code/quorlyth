@@ -1,5 +1,5 @@
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Nav } from './components/Nav'
 import { AutomationRuntime } from './components/AutomationRuntime'
 import { Toast } from './components/ui'
@@ -309,7 +309,7 @@ export default function App() {
           at: Number(latest.at) || Date.now(),
           icon: 'message',
           text: messageText,
-          kind: 'message',
+          kind: 'message' as const,
           id: latest.id,
           target: latest.conversationId,
           unread: true,
