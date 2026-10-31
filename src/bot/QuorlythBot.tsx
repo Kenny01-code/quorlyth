@@ -196,8 +196,12 @@ type PendingAction =
 function describeWorkflow(workflow: WorkflowDefinition): string {
   const trigger = workflow.trigger === 'manual' ? 'Manual trigger'
     : workflow.trigger === 'idea.created' ? 'When an idea is created'
-      : workflow.trigger === 'task.completed' ? 'When a task is completed'
-        : 'When a workspace is created'
+      : workflow.trigger === 'task.started' ? 'When a task starts'
+        : workflow.trigger === 'task.completed' ? 'When a task is completed'
+          : workflow.trigger === 'workspace.created' ? 'When a workspace is created'
+            : workflow.trigger === 'milestone.started' ? 'When a milestone starts'
+              : workflow.trigger === 'evidence.submitted' ? 'When evidence is submitted'
+                : 'When evidence is reviewed'
   const actions = workflow.actions.map(action => {
     if (action.type === 'notify') return 'notify'
     if (action.type === 'create_task') return 'create task' + (action.projectId ? ' in a selected workspace' : '')
@@ -2672,11 +2676,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         return { type: 'addIdeaComment', ideaId: targetIdea.id, title: targetIdea.title, text: commentText }
       }
 
-      const explicitIdeaDecision = /\b(select|hold|decline|reject|return to review|reopen for review)\b/i.test(s)
+      const explicitIdeaDecision = /\b(select|approve|hold|decline|reject|return to review|reopen for review)\b/i.test(s)
         && /\b(?:idea|post|submission)\b/i.test(s)
         && !/\b(evidence|work submission|deliverable)\b/i.test(s)
       if (explicitIdeaDecision) {
-        const status: Status = /\b(select)\b/i.test(s) ? 'selected'
+        const status: Status = /\b(select|approve)\b/i.test(s) ? 'selected'
           : /\b(hold)\b/i.test(s) ? 'held'
             : /\b(decline|reject)\b/i.test(s) ? 'declined' : 'review'
         if (!a.canManageCommunity(targetIdea.cid)) throw new Error('Only the community owner or a platform administrator can change an idea’s review status.')
@@ -3221,7 +3225,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     let ok = false
     let successOverride = ''
     try {
-      } else if (action.type === 'setIdeaStatus') {
+      if (action.type === 'setIdeaStatus') {
         const idea = a.data.ideas.find(item => item.id === action.ideaId)
         if (!idea || !a.canManageCommunity(idea.cid) || a.statusOf(idea.id) !== action.previousStatus) throw new Error('The idea or your review permission changed after you reviewed this status update.')
         ok = await a.setStatus(action.ideaId, action.status)
@@ -3268,7 +3272,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         if (!a.platformAdmin) throw new Error('Only a verified platform administrator can change global space settings.')
         if (!Object.keys(action.patch).length) throw new Error('No platform space settings were included in this change.')
         ok = await a.saveSettings(action.patch)
-      if (action.type === 'community') {
+      } else if (action.type === 'community') {
         if (!a.me) throw new Error('Sign in before creating a community.')
         const result = await a.createCommunityDetailed(action)
         ok = result.ok
