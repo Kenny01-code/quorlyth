@@ -172,6 +172,44 @@ Deno.serve(async (req: Request) => {
       return respond(200, { ok: true, repository: repoDoc, commits, note: "GitHub confirmed this public repository and its visible commit metadata. The repository's authors are not yet linked to Quorlyth accounts." });
     }
 
+    if (action === "save_ai_review") {
+      if (!["owner", "manager", "contributor"].includes(role)) {
+        return respond(403, { error: "Workspace viewers cannot attach an evidence pre-review." });
+      }
+      const artifactId = cleanText(body.artifactId, 100);
+      if (!artifactId || !/^[A-Za-z0-9_-]{1,100}$/.test(artifactId)) {
+        return respond(400, { error: "Choose a valid evidence record." });
+      }
+      const artifact = await getDoc("standaloneArtifacts/" + artifactId);
+      if (!artifact || artifact.data.projectId !== projectId || artifact.data.submittedBy !== user.id || artifact.data.status !== "submitted") {
+        return respond(403, { error: "Only the contributor who submitted pending evidence can attach its AI pre-review." });
+      }
+      const rawReview = body.aiReview && typeof body.aiReview === "object" ? body.aiReview as Record<string, unknown> : {};
+      const reviewStatus = cleanText(rawReview.status, 30);
+      if (!["aligned", "needs_changes", "unclear", "unavailable"].includes(reviewStatus)) {
+        return respond(400, { error: "The evidence review status is invalid." });
+      }
+      const score = Number(rawReview.alignmentScore);
+      const cleanList = (value: unknown) => Array.isArray(value)
+        ? value.slice(0, 6).map(item => cleanText(item, 300)).filter(Boolean)
+        : [];
+      const aiReview = {
+        status: reviewStatus,
+        alignmentScore: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0,
+        summary: cleanText(rawReview.summary, 1200) || "No AI review summary was supplied.",
+        matchedCriteria: cleanList(rawReview.matchedCriteria),
+        gaps: cleanList(rawReview.gaps),
+        recommendations: cleanList(rawReview.recommendations),
+        reviewedAt: Date.now(),
+        scopeNote: "Preliminary AI alignment check. Quorlyth assessed the task definition and submitted description/metadata. It did not independently open private files or prove that an external link works. A human workspace reviewer must inspect the deliverable before approval.",
+      };
+      const { error: reviewWriteError } = await serviceClient.from("docs")
+        .update({ data: { ...artifact.data, aiReview, updatedAt: Date.now() } })
+        .eq("path", "standaloneArtifacts/" + artifactId);
+      if (reviewWriteError) throw new Error("The AI pre-review ran, but Quorlyth could not attach it to the evidence record.");
+      return respond(200, { ok: true, aiReview });
+    }
+
     if (action === "verify_artifact") {
       if (!["owner", "manager", "contributor"].includes(role)) return respond(403, { error: "Project viewers cannot submit contribution evidence." });
       const taskId = cleanText(body.taskId, 100);
