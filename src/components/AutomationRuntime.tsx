@@ -100,11 +100,64 @@ export function AutomationRuntime() {
         const nextStatus = String(doc.data?.status || 'todo')
         const previousStatus = taskStatuses.get(doc.id)
         taskStatuses.set(doc.id, nextStatus)
-        if (previousStatus && previousStatus !== 'done' && nextStatus === 'done') {
-          emitWorkflowEvent('task.completed', { id: doc.id, taskId: doc.id, projectId: String(doc.data?.projectId || ''), title: String(doc.data?.title || ''), summary: String(doc.data?.description || ''), at: Number(doc.data?.updatedAt) || Date.now() })
+        const payload = {
+          id: doc.id,
+          taskId: doc.id,
+          projectId: String(doc.data?.projectId || ''),
+          title: String(doc.data?.title || ''),
+          summary: String(doc.data?.description || ''),
+          at: Number(doc.data?.updatedAt) || Date.now(),
         }
+        if (previousStatus === 'todo' && nextStatus === 'in_progress') emitWorkflowEvent('task.started', payload)
+        if (previousStatus && previousStatus !== 'done' && nextStatus === 'done') emitWorkflowEvent('task.completed', payload)
       }
     }, error => console.warn('Workflow task trigger could not refresh:', error)))
+
+    unsubscribes.push(store.subscribe('milestones', docs => {
+      if (!alive) return
+      if (!milestonesReady) {
+        docs.forEach(doc => milestoneStatuses.set(doc.id, String(doc.data?.status || 'todo')))
+        milestonesReady = true
+        return
+      }
+      for (const doc of docs) {
+        const nextStatus = String(doc.data?.status || 'todo')
+        const previousStatus = milestoneStatuses.get(doc.id)
+        milestoneStatuses.set(doc.id, nextStatus)
+        if (previousStatus === 'todo' && nextStatus === 'in_progress') emitWorkflowEvent('milestone.started', {
+          id: doc.id,
+          projectId: String(doc.data?.projectId || ''),
+          title: String(doc.data?.title || ''),
+          summary: String(doc.data?.acceptanceCriteria || doc.data?.description || ''),
+          at: Number(doc.data?.updatedAt) || Date.now(),
+        })
+      }
+    }, error => console.warn('Workflow milestone trigger could not refresh:', error)))
+
+    unsubscribes.push(store.subscribe('standaloneArtifacts', docs => {
+      if (!alive) return
+      if (!artifactsReady) {
+        docs.forEach(doc => artifactStatuses.set(doc.id, String(doc.data?.status || 'submitted')))
+        artifactsReady = true
+        return
+      }
+      for (const doc of docs) {
+        const nextStatus = String(doc.data?.status || 'submitted')
+        const previousStatus = artifactStatuses.get(doc.id)
+        artifactStatuses.set(doc.id, nextStatus)
+        const payload = {
+          id: doc.id,
+          projectId: String(doc.data?.projectId || ''),
+          taskId: String(doc.data?.taskId || ''),
+          title: String(doc.data?.summary || 'Evidence submitted'),
+          summary: String(doc.data?.summary || ''),
+          status: nextStatus,
+          at: Number(doc.data?.updatedAt || doc.data?.submittedAt) || Date.now(),
+        }
+        if (!previousStatus) emitWorkflowEvent('evidence.submitted', payload)
+        else if (previousStatus === 'submitted' && (nextStatus === 'approved' || nextStatus === 'changes_requested')) emitWorkflowEvent('evidence.reviewed', payload)
+      }
+    }, error => console.warn('Workflow evidence trigger could not refresh:', error)))
 
     const onWorkflowEvent = (raw: Event) => {
       const detail = (raw as CustomEvent<WorkflowEventDetail>).detail
