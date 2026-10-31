@@ -18,16 +18,20 @@ import {
   persistWorkflowRun,
 } from '../lib/automation'
 
-type WorkflowProject = { id: string; title: string; status?: string; docId?: string }
+type WorkflowProject = { id: string; title: string; createdBy?: string; status?: string; docId?: string }
+type WorkflowMember = { id: string; projectId: string; userId: string; role: string; status: string }
+type WorkflowRunRecord = WorkflowRun & { workflowId?: string; workflowName?: string }
 type WorkflowNotice = { id: string; title: string; message: string; workflowName?: string; eventType?: string; at: number; read?: boolean }
 type MainTab = 'workflows' | 'runs'
 type WorkflowFilter = 'all' | 'active' | 'draft'
 type Template = { key: string; name: string; description: string; trigger: WorkflowTrigger; action: WorkflowActionType; message?: string }
 
 const TEMPLATES: Template[] = [
-  { key: 'idea-alert', name: 'New idea alert', description: 'Get a Quorlyth notification whenever a community idea is submitted.', trigger: 'idea.created', action: 'notify', message: 'New idea submitted: {{event.title}}' },
-  { key: 'task-handoff', name: 'Completed task handoff', description: 'Keep the next step moving when a workspace task is completed.', trigger: 'task.completed', action: 'notify', message: 'Task completed: {{event.title}}. Review the workspace and plan the next step.' },
-  { key: 'idea-review', name: 'Idea → review task', description: 'Turn each new idea into a real task in a workspace you choose.', trigger: 'idea.created', action: 'create_task' },
+  { key: 'idea-alert', name: 'New idea alert', description: 'Notify your team when a fresh community idea enters the system.', trigger: 'idea.created', action: 'notify', message: 'New idea submitted: {{event.title}}' },
+  { key: 'task-handoff', name: 'Completed task handoff', description: 'Send a handoff notice when a contributor completes an assigned task.', trigger: 'task.completed', action: 'notify', message: 'Task completed: {{event.title}}. Review the evidence and confirm the next step.' },
+  { key: 'idea-review', name: 'Idea → delivery task', description: 'Turn a new idea into a real task inside a workspace you manage.', trigger: 'idea.created', action: 'create_task' },
+  { key: 'evidence-review', name: 'Evidence review alert', description: 'Notify a reviewer whenever a contributor submits work for inspection.', trigger: 'evidence.submitted', action: 'notify', message: 'Evidence submitted for {{event.title}}. Check Quorlyth’s alignment notes and inspect the deliverable.' },
+  { key: 'milestone-start', name: 'Milestone progress update', description: 'Keep the team informed when an assigned collaboration outcome moves into progress.', trigger: 'milestone.started', action: 'notify', message: 'Work has started on {{event.title}}. Keep the definition of done visible.' },
 ]
 
 function freshAction(type: WorkflowActionType): WorkflowAction {
@@ -67,11 +71,17 @@ function displayDate(value?: number | null) {
 }
 
 function runLabel(status: WorkflowRun['status']) {
-  return status === 'success' ? 'Succeeded' : status === 'failed' ? 'Needs attention' : 'Skipped'
+  return status === 'running' ? 'Running' : status === 'success' ? 'Succeeded' : status === 'failed' ? 'Needs attention' : 'Skipped'
 }
 
 function TriggerGlyph({ trigger }: { trigger: WorkflowTrigger }) {
-  const glyph = trigger === 'idea.created' ? 'idea' : trigger === 'task.completed' ? 'complete' : trigger === 'workspace.created' ? 'workspace' : 'start'
+  const glyph = trigger === 'idea.created' ? 'idea'
+    : trigger === 'task.completed' ? 'complete'
+    : trigger === 'task.started' || trigger === 'milestone.started' ? 'start'
+    : trigger === 'workspace.created' ? 'workspace'
+    : trigger === 'evidence.submitted' ? 'upload'
+    : trigger === 'evidence.reviewed' ? 'review'
+    : 'start'
   return <QuorlythGlyph name={glyph} size={18} />
 }
 
@@ -102,6 +112,8 @@ function AutomationWorkspace() {
   const collectionPath = userId ? 'data/users/' + userId + '/automations' : ''
   const workflows = usePrivateWorkflowCollection<WorkflowDefinition>(collectionPath)
   const projects = usePrivateWorkflowCollection<WorkflowProject>('standaloneProjects')
+  const projectMembers = usePrivateWorkflowCollection<WorkflowMember>('standaloneProjectMembers')
+  const runRecords = usePrivateWorkflowCollection<WorkflowRunRecord>(userId ? 'data/users/' + userId + '/automation-runs' : '')
   const notices = usePrivateWorkflowCollection<WorkflowNotice>(userId ? 'data/users/' + userId + '/automation-notifications' : '')
   const [tab, setTab] = useState<MainTab>('workflows')
   const [filter, setFilter] = useState<WorkflowFilter>('all')
@@ -109,14 +121,25 @@ function AutomationWorkspace() {
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
 
+  const manageableProjects = projects.filter(project =>
+    project.status !== 'completed'
+    && (project.createdBy === userId || projectMembers.some(member =>
+      member.projectId === project.id && member.userId === userId && member.status === 'active'
+      && (member.role === 'owner' || member.role === 'manager')))
+  )
   const orderedWorkflows = useMemo(() => [...workflows].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)), [workflows])
   const visibleWorkflows = orderedWorkflows.filter(workflow => filter === 'all' || workflow.status === filter)
-  const allRuns = useMemo(() => workflows.flatMap(workflow => (workflow.runHistory || []).map(run => ({
-    ...run, workflowId: workflow.id, workflowName: workflow.name,
-  }))).sort((a, b) => b.finishedAt - a.finishedAt), [workflows])
+  const allRuns = useMemo(() => {
+    const byId = new Map<string, WorkflowRunRecord>()
+    runRecords.forEach(run => byId.set(run.id, run))
+    workflows.forEach(workflow => (workflow.runHistory || []).forEach(run => {
+      if (!byId.has(run.id)) byId.set(run.id, { ...run, workflowId: workflow.id, workflowName: workflow.name })
+    }))
+    return [...byId.values()].sort((a, b) => (b.finishedAt || b.startedAt) - (a.finishedAt || a.startedAt))
+  }, [workflows, runRecords])
   const activeCount = workflows.filter(workflow => workflow.status === 'active').length
-  const runCount = workflows.reduce((sum, workflow) => sum + (workflow.runHistory?.length || 0), 0)
-  const failedCount = workflows.reduce((sum, workflow) => sum + (workflow.runHistory || []).filter(run => run.status === 'failed').length, 0)
+  const runCount = allRuns.length
+  const failedCount = allRuns.filter(run => run.status === 'failed').length
 
   function beginNew(template?: Template) {
     if (!userId) return
