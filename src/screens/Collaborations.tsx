@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react'
-import type { ChatAttachment, Comment, WorkAttachment } from '../lib/types'
+import type { ChatAttachment, Comment, WorkAttachment, WorkSubmission } from '../lib/types'
 import { ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
