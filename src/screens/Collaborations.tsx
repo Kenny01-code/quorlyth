@@ -11,6 +11,7 @@ import { useApp, useComments } from '../data/AppProvider'
 import { when } from '../lib/util'
 import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
 import { isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
+import { userFacingMutationError } from '../lib/userFacingErrors'
 
 
 type WorkspaceTab = 'overview' | 'plan' | 'evidence' | 'team'
@@ -876,7 +877,7 @@ function Workspace() {
             <p className="ql-evidence-record__summary">{submission.summary}</p>
             {submission.aiReview && <section className="ql-evidence-review-note" style={{ display: 'grid', gap: 8, marginTop: 12, borderColor: submission.aiReview.status === 'needs_changes' ? 'rgba(255,154,118,.32)' : 'var(--line, rgba(255,255,255,.12))' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                <strong><QuorlythGlyph name="sparkles" size={14}/> Quorlyth plan-alignment review</strong>
+                <strong><QuorlythGlyph name="review" size={14}/> Quorlyth plan-alignment review</strong>
                 <span className="ql-evidence-decision">{submission.aiReview.status === 'aligned' ? 'Likely aligned' : submission.aiReview.status === 'needs_changes' ? 'Gaps detected' : submission.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Human judgement needed'} · {submission.aiReview.alignmentScore}/100</span>
               </div>
               <p>{submission.aiReview.summary}</p>
