@@ -7,6 +7,7 @@ import '../styles/page-assist.css'
 type Guidance = { title: string; message: string; nextStep?: string }
 
 const PAGE_GUIDES: Record<string, { name: string; goal: string; fallback: Guidance }> = {
+  '/signin': { name: 'Sign in', goal: 'Explain signing in or creating an account and how public pages work.', fallback: { title: 'Welcome back', message: 'Sign in with your account to access your communities, workspace and saved activity. You can still explore public pages without signing in.', nextStep: 'Use the sign-in form to continue securely.' } },
   '/': { name: 'Home', goal: 'Explain Quorlyth’s purpose and how a signed-in creator can get started.', fallback: { title: 'Welcome to Quorlyth', message: 'Quorlyth brings communities, ideas and collaborative delivery into one place. Start by exploring a community or checking your workspace.', nextStep: 'Open your dashboard to see what needs attention.' } },
   '/onboarding': { name: 'Getting started', goal: 'Help the user complete onboarding and understand the first actions after sign-up.', fallback: { title: 'Let’s get you set up', message: 'Complete the essentials so your profile and community activity are ready. You can return to settings later to fine-tune preferences.', nextStep: 'Finish the required onboarding fields.' } },
   '/architecture': { name: 'System architecture', goal: 'Explain the architecture and system map, including the native automation runtime.', fallback: { title: 'Explore the system map', message: 'This page explains how Quorlyth’s application pieces connect. The Automations page contains your saved workflow definitions, execution history and visual trigger-to-action map.', nextStep: 'Open Automations to inspect a specific workflow.' } },
@@ -47,8 +48,8 @@ export function PageAssist({ onAskBot }: { onAskBot: (prompt: string) => void })
     let active = true
     setVisible(false)
     setContent(null)
-    if (!app.ready || !app.me || !guide || app.demo) return
-    const key = 'quorlyth:page-assist:v1:' + app.me.id + ':' + location.pathname
+    if (!app.ready || !guide) return
+    const key = 'quorlyth:page-assist:v1:' + (app.me?.id || 'visitor') + ':' + location.pathname
     try {
       if (sessionStorage.getItem(key) === 'dismissed' || sessionStorage.getItem(key) === 'shown') return
       sessionStorage.setItem(key, 'shown')
@@ -60,7 +61,7 @@ export function PageAssist({ onAskBot }: { onAskBot: (prompt: string) => void })
     void askJson<Guidance>(JSON.stringify({
       page: guide.name,
       route: location.pathname,
-      accountRole: app.owner ? 'verified platform owner' : app.platformAdmin ? 'platform administrator' : 'signed-in user',
+      accountRole: app.owner ? 'verified platform owner' : app.platformAdmin ? 'platform administrator' : app.me ? 'signed-in user' : app.demo ? 'demo visitor' : 'visitor',
       pageGoal: guide.goal,
       request: 'Write one short contextual help card: a clear title, a useful explanation and one concrete next step. Be specific to this Quorlyth page. Do not claim that any action has been performed. Do not ask the user to click an AI suggestion.',
     }), {
@@ -80,7 +81,7 @@ export function PageAssist({ onAskBot }: { onAskBot: (prompt: string) => void })
 
   if (!visible || !content) return null
   const dismiss = () => {
-    try { if (app.me) sessionStorage.setItem('quorlyth:page-assist:v1:' + app.me.id + ':' + location.pathname, 'dismissed') } catch {}
+    try { sessionStorage.setItem('quorlyth:page-assist:v1:' + (app.me?.id || 'visitor') + ':' + location.pathname, 'dismissed') } catch {}
     setVisible(false)
   }
   return (
