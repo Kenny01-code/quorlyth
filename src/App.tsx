@@ -287,8 +287,6 @@ export default function App() {
       })
       if (!visibleIncoming.length) return
       const latest = visibleIncoming[visibleIncoming.length - 1]
-      const convo = conversations.find(c => c.id === latest.conversationId)
-      const title = convo?.type === 'group' ? (convo.title || 'group chat') : 'your private chat'
       const sender = a.nm(latest.senderId)
       // New messages remain in the inbox and bell panel, without a screen popup.
       if (preferences.messageSounds ?? (sound && preferences.sound !== false)) chime()
