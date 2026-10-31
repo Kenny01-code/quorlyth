@@ -124,7 +124,7 @@ async function assessMilestoneEvidence(input: {
 export interface App {
   ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data; settingsLoaded: boolean; platformRolesReady: boolean
   enterDemo: () => void; exitDemo: () => Promise<void>; signOut: () => Promise<void>
-  toast: (m: string) => void; toastMsg: string
+  toast: (m: string) => void; toastMsg: string; toastKind: 'permission' | 'auth' | ''
   nm: (id: string) => string; avatar: (id: string) => string
   votesOf: (ideaId: string) => number; iVoted: (ideaId: string) => boolean; statusOf: (ideaId: string) => Status
   joined: (cid: string) => boolean
@@ -193,11 +193,58 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [platformAdmin, setPlatformAdmin] = useState(false)
   const [platformOwnerRole, setPlatformOwnerRole] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
+  const [toastKind, setToastKind] = useState<'permission' | 'auth' | ''>('')
   const tt = useRef<number>()
   const realBackend = useRef<Backend | null>(null)
   const authOff = useRef<() => void>(() => {})
 
-  const toast = useCallback((m: string) => { setToastMsg(m); clearTimeout(tt.current); tt.current = window.setTimeout(() => setToastMsg(''), 2400) }, [])
+  const toast = useCallback((m: string) => {
+    const authRoute = typeof window !== 'undefined' && window.location.pathname === '/signin'
+    const permissionFailure = /permission denied|row.?level security|new row violates|violates .*policy|not authorized|forbidden|insufficient privilege|access denied|couldn't confirm your access/i.test(String(m || ''))
+    const accountCreatedAt = Number(me?.createdAt)
+    const now = Date.now()
+    const newAccount = !!me?.id
+      && Number.isFinite(accountCreatedAt)
+      && accountCreatedAt > 0
+      && accountCreatedAt <= now + 60_000
+      && now - accountCreatedAt <= 7 * 24 * 60 * 60 * 1000
+
+    let shouldShow = authRoute
+    let kind: 'permission' | 'auth' | '' = authRoute ? 'auth' : ''
+    let message = String(m || '').trim()
+
+    if (!authRoute && permissionFailure && newAccount) {
+      const noticeKey = 'quorlyth:permission-notice-shown:v1:' + me!.id
+      let alreadyShown = false
+      try {
+        alreadyShown = localStorage.getItem(noticeKey) === '1'
+        if (!alreadyShown) localStorage.setItem(noticeKey, '1')
+      } catch {
+        try {
+          alreadyShown = sessionStorage.getItem(noticeKey) === '1'
+          if (!alreadyShown) sessionStorage.setItem(noticeKey, '1')
+        } catch { /* If storage is blocked, keep the message suppressed rather than repeat it. */ }
+      }
+      if (!alreadyShown) {
+        shouldShow = true
+        kind = 'permission'
+        message = "You don't have permission to do this yet. Ask your community or workspace owner for access."
+      }
+    }
+
+    window.clearTimeout(tt.current)
+    if (!shouldShow) {
+      setToastMsg('')
+      setToastKind('')
+      return
+    }
+    setToastMsg(message)
+    setToastKind(kind)
+    tt.current = window.setTimeout(() => {
+      setToastMsg('')
+      setToastKind('')
+    }, kind === 'permission' ? 4200 : 2400)
+  }, [me?.id, me?.createdAt])
 
   useEffect(() => {
     let off = () => {}
@@ -574,7 +621,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 }
     return {
-      ready, startupError, backend, me, owner, platformOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg,
+      ready, startupError, backend, me, owner, platformOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, toastKind,
       nm: id => data.profiles[id]?.name || data.profiles[id]?.authName || (me && id === me.id ? me.name : 'Member'),
       avatar: id => data.profiles[id]?.photo || data.profiles[id]?.authAvatarUrl || (me && id === me.id ? me.avatarUrl || '' : ''),
       votesOf,
