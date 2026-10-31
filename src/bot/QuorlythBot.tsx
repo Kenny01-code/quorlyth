@@ -163,6 +163,7 @@ type PendingAction =
   | { type: 'updateProject'; projectId: string; ideaTitle: string; oldSummary: string; summary: string }
   | { type: 'addMilestone'; projectId: string; ideaTitle: string; title: string; description: string; priority: 'low' | 'normal' | 'high' | 'critical'; acceptanceCriteria: string }
   | { type: 'updateMilestone'; milestoneId: string; projectId: string; oldTitle: string; patch: { title?: string; description?: string; status?: 'in_progress' } }
+   | { type: 'assignMilestone'; milestoneId: string; projectId: string; milestoneTitle: string; ideaTitle: string; assigneeIds: string[]; assigneeNames: string[] }
   | { type: 'deleteMilestone'; milestoneId: string; projectId: string; title: string; ideaTitle: string }
   | { type: 'reviewSubmission'; submissionId: string; projectId: string; ideaTitle: string; milestoneTitle: string; revision: number; submitterName: string; decision: 'approved' | 'changes_requested'; reviewNote: string }
   | { type: 'createAutomation'; workflow: WorkflowDefinition }
@@ -215,6 +216,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
     case 'updateProject': return action.ideaTitle + ' · Project brief: ' + JSON.stringify(action.oldSummary.slice(0, 140)) + ' → ' + JSON.stringify(action.summary.slice(0, 180))
     case 'addMilestone': return action.ideaTitle + ' · ' + JSON.stringify(action.title) + ' · ' + action.priority + ' priority' + (action.description ? ' · ' + JSON.stringify(action.description.slice(0, 150)) : '')
     case 'updateMilestone': return 'Milestone: ' + JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.status ? ' · Status → In progress' : '') + (action.patch.description ? ' · Description updated' : '')
+    case 'assignMilestone': return action.ideaTitle + ' · ' + JSON.stringify(action.milestoneTitle) + ' · Assigned to ' + (action.assigneeNames.length ? action.assigneeNames.join(', ') : 'nobody (unassigned)')
     case 'deleteMilestone': return JSON.stringify(action.title) + ' · ' + action.ideaTitle + ' · linked work submissions and private attachments may be removed'
     case 'reviewSubmission': return (action.decision === 'approved' ? 'Approve' : 'Request changes to') + ' revision ' + action.revision + ' for ' + action.milestoneTitle + ' · submitted by ' + action.submitterName + (action.reviewNote ? ' · reviewer note: ' + JSON.stringify(action.reviewNote.slice(0, 240)) : '')
     case 'createAutomation': return describeWorkflow(action.workflow)
@@ -1261,7 +1263,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
 
   function isExplicitVoiceTaskRequest(text: string): boolean {
     const source = text.trim()
-    const imperative = /^(?:(?:hey|okay)[,\s]+)?(?:(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?|i want you to\s+|i need you to\s+|help me\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore)\b/i
+    const imperative = /^(?:(?:hey|okay)[,\s]+)?(?:(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?|i want you to\s+|i need you to\s+|help me\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|reassign|unassign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore)\b/i
     const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?)\b/i
     return imperative.test(source) && target.test(source)
   }
@@ -2726,6 +2728,42 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       }
     }
 
+    const requestsMilestoneAssignment = /\b(assign|reassign|unassign)\b/i.test(s)
+      && /\b(milestone|deliverable|collaboration task)\b/i.test(s)
+    if (a.me && requestsMilestoneAssignment && !isDeleteRequest) {
+      const idea = activeIdea
+      const milestones = idea ? a.data.milestones.filter(item => item.projectId === idea.id) : []
+      const named = milestones.filter(item => lower.includes(item.title.toLowerCase())).sort((first, second) => second.title.length - first.title.length)[0]
+      const milestone = named || (milestones.length === 1 ? milestones[0] : undefined)
+      if (!idea || !milestone) throw new Error(milestones.length > 1
+        ? 'I found several milestones. Name the exact milestone you want me to assign.'
+        : 'Open the collaboration workspace and name the milestone or deliverable you want assigned.')
+      if (!a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or a platform administrator can assign collaboration milestones.')
+      const community = a.data.communities.find(item => item.id === idea.cid)
+      const allowedAssigneeIds = Array.from(new Set([
+        idea.authorId,
+        community?.ownerId,
+        community?.createdBy,
+        ...a.data.volunteers.filter(item => item.ideaId === idea.id && item.status === 'accepted').map(item => item.applicantId),
+      ].filter((id): id is string => !!id)))
+      const wantsEveryone = /\b(everyone|all (?:the )?(?:collaborators|contributors|team members)|the whole team|all accepted collaborators|every teammate)\b/i.test(s)
+      const wantsUnassigned = /\b(unassign|remove all assignees|clear assignments)\b/i.test(s)
+      const namedAssignees = allowedAssigneeIds.filter(id => {
+        const name = a.nm(id).trim().toLowerCase()
+        return name.length > 1 && lower.includes(name)
+      })
+      const assigneeIds = wantsUnassigned ? [] : wantsEveryone ? allowedAssigneeIds : namedAssignees
+      if (!wantsUnassigned && !assigneeIds.length) throw new Error('I could not match anyone you named to this collaboration team. Name an accepted collaborator, or say “assign everyone”.')
+      return {
+        type: 'assignMilestone',
+        milestoneId: milestone.id,
+        projectId: idea.id,
+        milestoneTitle: milestone.title,
+        ideaTitle: idea.title,
+        assigneeIds,
+        assigneeNames: assigneeIds.map(id => a.nm(id) || 'Team member'),
+      }
+    }
     const updateMilestoneVerb = editVerb || /\b(start|begin|mark)\b/i.test(s)
     if (a.me && !isDeleteRequest && updateMilestoneVerb && /\bmilestone\b/i.test(s) && !/\b(?:add|create|make)\b/i.test(s)) {
       const idea = activeIdea
@@ -2939,6 +2977,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         case 'updateProject': return 'project:' + action.projectId
         case 'addMilestone': return 'new-milestone:' + action.projectId + ':' + action.title.toLowerCase()
         case 'updateMilestone':
+        case 'assignMilestone':
         case 'deleteMilestone': return 'milestone:' + action.milestoneId
         case 'reviewSubmission': return 'submission:' + action.submissionId
         case 'createAutomation': return 'new-workflow:' + action.workflow.name.toLowerCase()
@@ -3098,6 +3137,13 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           priority: action.priority,
           acceptanceCriteria: action.acceptanceCriteria,
         })
+      } else if (action.type === 'assignMilestone') {
+        const milestone = a.data.milestones.find(item => item.id === action.milestoneId)
+        const idea = a.data.ideas.find(item => item.id === action.projectId)
+        if (!a.me || !milestone || milestone.projectId !== action.projectId || !idea || !a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or a platform administrator can assign this collaboration milestone.')
+        const updated = await a.updateMilestone(action.milestoneId, { assigneeIds: action.assigneeIds, assigneeId: action.assigneeIds[0] || null })
+        ok = updated
+        successOverride = action.assigneeIds.length ? 'Milestone assigned to ' + action.assigneeNames.join(', ') + '.' : 'Milestone assignments cleared.'
       } else if (action.type === 'updateMilestone') {
         const milestone = a.data.milestones.find(item => item.id === action.milestoneId)
         const idea = a.data.ideas.find(item => item.id === action.projectId)
@@ -3407,6 +3453,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           updateProject: 'Project brief updated successfully.',
           addMilestone: 'Milestone added successfully.',
           updateMilestone: 'Milestone updated successfully.',
+          assignMilestone: 'Collaboration milestone assignment updated successfully.',
           deleteMilestone: 'Milestone and linked work submissions deleted successfully.',
           reviewSubmission: 'Evidence submission reviewed successfully.',
           createAutomation: 'Automation saved successfully.',
@@ -3674,6 +3721,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   updateProject: 'Edit project brief',
                   addMilestone: 'Add milestone',
                   updateMilestone: 'Edit milestone',
+           assignMilestone: 'Assign collaboration milestone',
                   deleteMilestone: 'Delete milestone',
           reviewSubmission: 'Review evidence submission',
           createAutomation: 'Create automation workflow',
