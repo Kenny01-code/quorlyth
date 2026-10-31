@@ -1263,7 +1263,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
     const automationCommand = /\b(?:automation|automations|workflow|workflows|automate)\b/i.test(request)
       && /\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute)\b/i.test(request)
     const workspaceCommand = /\b(workspace|project space|standalone task|workspace task|independent project|task)\b/i.test(request)
-      && /\b(create|build|set up|make|add|edit|update|rename|rewrite|revise|organize|improve|start|begin|mark|complete|close|reopen|reactivate|delete|remove)\b/i.test(request)
+      && /\b(create|build|set up|make|add|edit|update|rename|rewrite|revise|organize|improve|start|begin|mark|complete|close|reopen|reactivate|assign|reassign|unassign|delete|remove)\b/i.test(request)
       && (!loc.pathname.startsWith('/collaboration/') || /\b(standalone|independent workspace|project space)\b/i.test(request) || loc.pathname.startsWith('/workspaces/'))
 
     setView('chat')
@@ -2962,7 +2962,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0 }: { initial
 
       try {
         const automationVerb = /\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute|duplicate|clone|copy)\b/i.test(command)
-        const workspaceVerb = /\b(create|build|set up|make|add|edit|update|rename|rewrite|revise|organize|improve|start|begin|mark|complete|close|reopen|reactivate|delete|remove)\b/i.test(command)
+        const workspaceVerb = /\b(create|build|set up|make|add|edit|update|rename|rewrite|revise|organize|improve|start|begin|mark|complete|close|reopen|reactivate|assign|reassign|unassign|delete|remove)\b/i.test(command)
         let planned: PendingAction | null = null
         if (/\b(automation|automations|workflow|workflows)\b/i.test(command) && automationVerb) {
           planned = await planAutomationAction(command)
