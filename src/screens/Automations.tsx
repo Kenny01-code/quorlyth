@@ -165,7 +165,7 @@ function AutomationWorkspace() {
     if (name.length < 2) return setError('Give this workflow a name so you can find it again.')
     if (!editing.actions.length) return setError('Add at least one action after the trigger.')
     for (const action of editing.actions) {
-      if (action.type === 'create_task' && !action.projectId) return setError('Choose a workspace for the task action.')
+      if (action.type === 'create_task' && (!action.projectId || !manageableProjects.some(project => project.id === action.projectId))) return setError('Choose a workspace you own or manage for the task action.')
       if (action.type === 'webhook' && !/^https:\/\//i.test(action.url || '')) return setError('Webhook actions need a valid HTTPS URL.')
     }
     const next: WorkflowDefinition = { ...editing, name: name.slice(0, 100), description: editing.description.trim().slice(0, 500), ownerId: userId, updatedAt: Date.now() }
@@ -215,11 +215,36 @@ function AutomationWorkspace() {
     if (!app.backend || !userId) return
     setBusy('run-' + workflow.id)
     setError('')
-    const event = { type: 'manual' as const, payload: { title: 'Manual test run', summary: 'Started from the workflow builder', at: Date.now() } }
+    const startedAt = Date.now()
+    const event = {
+      type: 'manual' as const,
+      payload: { id: newWorkflowId(), title: 'Manual test run', summary: 'Started from the workflow builder', at: startedAt },
+    }
+    const runPath = 'data/users/' + userId + '/automation-runs/' + encodeURIComponent(workflow.id + ':manual:' + event.payload.id)
     try {
-      const run = await executeWorkflowActions(workflow, userId, app.backend.store, event, app.toast)
+      await app.backend.store.create(runPath, {
+        id: event.payload.id,
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        trigger: 'manual',
+        status: 'running',
+        startedAt,
+        finishedAt: 0,
+        eventTitle: event.payload.title,
+        steps: [],
+      })
+      const saveProgress = async (run: WorkflowRun) => {
+        await app.backend!.store.update(runPath, {
+          ...run,
+          workflowId: workflow.id,
+          workflowName: workflow.name,
+          updatedAt: Date.now(),
+        })
+      }
+      const run = await executeWorkflowActions(workflow, userId, app.backend.store, event, app.toast, saveProgress)
+      await saveProgress(run)
       await persistWorkflowRun(app.backend.store, collectionPath + '/' + workflow.id, run)
-      app.toast(run.status === 'success' ? 'Workflow run finished.' : userFacingMutationError(run.error || 'An action failed', 'run this workflow'))
+      app.toast(run.status === 'success' ? 'Workflow test finished successfully.' : userFacingMutationError(run.error || 'An action failed', 'run this workflow'))
       setTab('runs')
     } catch (failure) {
       const message = userFacingMutationError(failure, 'run this workflow')
@@ -325,8 +350,8 @@ function AutomationWorkspace() {
                   <p className="wa-action-description">{ACTION_INFO[action.type].description}</p>
                   {action.type === 'notify' && <label className="wa-field"><span>Notification message</span><textarea value={action.message || ''} onChange={event => patchAction(action.id, { message: event.target.value })} rows={2} maxLength={1000} placeholder="New event: {{event.title}}" /></label>}
                   {action.type === 'create_task' && <>
-                    <label className="wa-field"><span>Create task in workspace</span><select required value={action.projectId || ''} onChange={event => patchAction(action.id, { projectId: event.target.value })}><option value="">Choose a workspace…</option>{projects.filter(project => project.status !== 'completed').map(project => <option value={project.id} key={project.id}>{project.title}</option>)}</select></label>
-                    {!projects.length && <p className="wa-inline-help">Create a workspace first. <button type="button" className="wa-text-link" onClick={() => nav('/workspaces')}>Open Workspaces <QuorlythGlyph name="arrow" size={12} /></button></p>}
+                    <label className="wa-field"><span>Create task in workspace</span><select required value={action.projectId || ''} onChange={event => patchAction(action.id, { projectId: event.target.value })}><option value="">Choose a workspace…</option>{manageableProjects.map(project => <option value={project.id} key={project.id}>{project.title}</option>)}</select></label>
+                    {!manageableProjects.length && <p className="wa-inline-help">Create a workspace or ask its owner to make you a manager. <button type="button" className="wa-text-link" onClick={() => nav('/workspaces')}>Open Workspaces <QuorlythGlyph name="arrow" size={12} /></button></p>}
                     <label className="wa-field"><span>Task title <small>Supports {"{{event.title}}"}</small></span><input value={action.taskTitle || ''} onChange={event => patchAction(action.id, { taskTitle: event.target.value })} maxLength={140} required placeholder="Follow up: {{event.title}}" /></label>
                     <label className="wa-field"><span>Task description</span><textarea value={action.taskDescription || ''} onChange={event => patchAction(action.id, { taskDescription: event.target.value })} rows={2} maxLength={2000} placeholder="Created by {{workflow.name}}. Context: {{event.body}}" /></label>
                     <label className="wa-field"><span>Definition of done <small>Optional</small></span><input value={action.acceptanceCriteria || ''} onChange={event => patchAction(action.id, { acceptanceCriteria: event.target.value })} maxLength={1000} placeholder="What should count as complete?" /></label>
