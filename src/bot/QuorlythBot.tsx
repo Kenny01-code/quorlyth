@@ -2615,7 +2615,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     }
 
     const activeIdeaId = loc.pathname.match(/^\/(?:idea|collaboration)\/([^/]+)/)?.[1]
-      || (loc.pathname === '/projects' ? new URLSearchParams(loc.search).get('idea') || '' : '')
+      || (['/projects', '/queue'].includes(loc.pathname) ? new URLSearchParams(loc.search).get('idea') || '' : '')
     const activeIdea = a.data.ideas.find(idea => idea.id === activeIdeaId)
     const mentionedIdea = a.data.ideas
       .filter(idea => idea.title && lower.includes(idea.title.toLowerCase()))
@@ -3160,6 +3160,24 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         if (!planned || planned.type === 'batchActions') { skipped.push('not supported by an existing handler'); continue }
         if (['deleteCommunity', 'deleteIdea', 'deleteMilestone', 'deleteAutomation', 'deleteStandaloneTask', 'deleteStandaloneWorkspace'].includes(planned.type) && !explicitDelete) {
           skipped.push('unrequested deletion'); continue
+        }
+        const explicitUserRequest = requestText.toLowerCase()
+        const explicitIntentByType: Partial<Record<PendingAction['type'], RegExp>> = {
+          communityMembership: /\b(join|leave|quit|unjoin|request to join|apply to join)\b/i,
+          voteIdea: /\b(back|support|vote|remove my vote|withdraw my support)\b/i,
+          addIdeaComment: /\b(comment|reply|respond)\b/i,
+          setIdeaStatus: /\b(select|approve|hold|decline|reject|return to review|reopen for review)\b/i,
+          decideVolunteer: /\b(accept|approve|decline|reject)\b[\s\S]*\b(collaboration|applicant|volunteer)\b/i,
+          decideJoinRequest: /\b(approve|accept|decline|reject)\b[\s\S]*\b(join|membership) request\b/i,
+          decideAIOrganizerRequest: /\b(approve|accept|decline|reject)\b[\s\S]*\b(ai organizer|organizer access)\b/i,
+          decideAccessRequest: /\b(approve|accept|decline|reject)\b[\s\S]*\b(platform access|access request)\b/i,
+          updateSpaceSettings: /\b(update|edit|change|set|rewrite)\b[\s\S]*\b(space settings|platform settings|space name|announcement|posting approval)\b/i,
+          assignStandaloneTask: /\b(assign|reassign|unassign)\b[\s\S]*\b(task|workspace|everyone|team|teammate|member)\b/i,
+          assignMilestone: /\b(assign|reassign|unassign)\b[\s\S]*\b(milestone|deliverable|collaborator|contributor|team)\b/i,
+        }
+        const explicitIntent = explicitIntentByType[planned.type]
+        if (explicitIntent && !explicitIntent.test(explicitUserRequest)) {
+          skipped.push('sensitive action not explicitly requested'); continue
         }
         if (planned.type === 'runAutomation' && !explicitRun) { skipped.push('unrequested workflow execution'); continue }
         if (planned.type === 'toggleAutomation' && planned.status === 'active' && !explicitActivate) { skipped.push('unrequested activation'); continue }
