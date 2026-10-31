@@ -33,7 +33,7 @@ const ME_KEY = 'quorlyth:me'
 const LOCAL_ACCOUNTS_KEY = 'quorlyth:accounts:v1'
 const OWNER_CLAIM_MIGRATION = 'quorlyth:owner-claim-v1'
 
-interface LocalAccount { id: string; email: string; name: string; salt: string; hash: string }
+interface LocalAccount { id: string; email: string; name: string; salt: string; hash: string; createdAt?: number }
 
 function localAccounts(): Record<string, LocalAccount> {
   try { return JSON.parse(localStorage.getItem(LOCAL_ACCOUNTS_KEY) || '{}') } catch { return {} }
@@ -52,13 +52,20 @@ async function passwordHash(password: string, salt: Uint8Array): Promise<string>
   return bytesToBase64(new Uint8Array(bits))
 }
 
-function localSession(account: Pick<LocalAccount, 'id' | 'email' | 'name'>): Me {
-  return { id: account.id, email: account.email, name: account.name }
+function localSession(account: Pick<LocalAccount, 'id' | 'email' | 'name' | 'createdAt'>): Me {
+  return { id: account.id, email: account.email, name: account.name, ...(account.createdAt ? { createdAt: account.createdAt } : {}) }
 }
 
 function localAuth(): Auth {
   const subs = new Set<(m: Me | null) => void>()
-  const get = (): Me | null => { try { return JSON.parse(localStorage.getItem(ME_KEY) || 'null') } catch { return null } }
+  const get = (): Me | null => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(ME_KEY) || 'null') as Me | null
+      if (!saved) return null
+      const account = saved.email ? localAccounts()[saved.email.toLowerCase()] : undefined
+      return { ...saved, ...(saved.createdAt || !account?.createdAt ? {} : { createdAt: account.createdAt }) }
+    } catch { return null }
+  }
   const emit = () => subs.forEach(f => f(get()))
   return {
     mode: 'local',
@@ -82,7 +89,7 @@ function localAuth(): Auth {
       const salt = crypto.getRandomValues(new Uint8Array(16))
       const account: LocalAccount = {
         id: 'u_' + crypto.randomUUID(), email: normalized,
-        name: normalized.split('@')[0], salt: bytesToBase64(salt), hash: await passwordHash(password, salt),
+        name: normalized.split('@')[0], salt: bytesToBase64(salt), hash: await passwordHash(password, salt), createdAt: Date.now(),
       }
       accounts[normalized] = account
       localStorage.setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts))
@@ -126,6 +133,7 @@ export async function createBackend(): Promise<Backend> {
           email: u.email,
           name: metadata.full_name || metadata.name || google.full_name || google.name || (u.email || '').split('@')[0],
           avatarUrl: metadata.avatar_url || metadata.picture || google.avatar_url || google.picture || google.photo_url,
+          ...(Number.isFinite(Date.parse(String(u.created_at || ''))) ? { createdAt: Date.parse(String(u.created_at)) } : {}),
         }
       }
       const auth: Auth = {
