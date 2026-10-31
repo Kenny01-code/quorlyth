@@ -850,6 +850,17 @@ function Workspace() {
               <span className={'ql-evidence-decision status-' + submission.status}>{decisionLabel}</span>
             </div>
             <p className="ql-evidence-record__summary">{submission.summary}</p>
+            {submission.aiReview && <section className="ql-evidence-review-note" style={{ display: 'grid', gap: 8, marginTop: 12, borderColor: submission.aiReview.status === 'needs_changes' ? 'rgba(255,154,118,.32)' : 'var(--line, rgba(255,255,255,.12))' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <strong><QuorlythGlyph name="sparkles" size={14}/> Quorlyth plan-alignment review</strong>
+                <span className="ql-evidence-decision">{submission.aiReview.status === 'aligned' ? 'Likely aligned' : submission.aiReview.status === 'needs_changes' ? 'Gaps detected' : submission.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Human judgement needed'} · {submission.aiReview.alignmentScore}/100</span>
+              </div>
+              <p>{submission.aiReview.summary}</p>
+              {!!submission.aiReview.matchedCriteria.length && <div><small className="ql-eyebrow">POSSIBLE MATCHES</small><ul>{submission.aiReview.matchedCriteria.map((item,index)=><li key={'match-'+index}>{item}</li>)}</ul></div>}
+              {!!submission.aiReview.gaps.length && <div><small className="ql-eyebrow">GAPS TO CHECK</small><ul>{submission.aiReview.gaps.map((item,index)=><li key={'gap-'+index}>{item}</li>)}</ul></div>}
+              {!!submission.aiReview.recommendations.length && <div><small className="ql-eyebrow">RECOMMENDED NEXT STEPS</small><ul>{submission.aiReview.recommendations.map((item,index)=><li key={'rec-'+index}>{item}</li>)}</ul></div>}
+              <small className="ql-muted">{submission.aiReview.scopeNote} · {dateLabel(submission.aiReview.reviewedAt)}</small>
+            </section>}
             {submission.reviewNote && <div className="ql-evidence-review-note"><strong>{submission.status === 'approved' ? 'Reviewer note' : 'Requested changes'}</strong><p>{submission.reviewNote}</p>{submission.reviewedBy && submission.reviewedAt && <small>Reviewed by {a.nm(submission.reviewedBy)} · {dateLabel(submission.reviewedAt)}</small>}</div>}
             <div className="ql-evidence-record__files">
               {submission.attachments.map(attachment => <WorkspaceEvidenceFile key={attachment.path} attachment={attachment} />)}
