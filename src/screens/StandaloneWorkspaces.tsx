@@ -305,6 +305,9 @@ function WorkspaceProjectList() {
 
   const visible = projects.filter(project => {
     if (!a.me) return false
+    const explicitMembership = members.find(member => member.projectId === project.id && member.userId === a.me!.id)
+    if (project.createdBy === a.me.id) return true
+    if (explicitMembership) return explicitMembership.status === 'active' || explicitMembership.status === 'invited'
     const linkedIdea = project.linkedIdeaId ? a.data.ideas.find(idea => idea.id === project.linkedIdeaId) : undefined
     const linkedCommunity = linkedIdea ? a.data.communities.find(community => community.id === linkedIdea.cid) : undefined
     const linkedCollaborators = linkedIdea ? [
@@ -313,9 +316,7 @@ function WorkspaceProjectList() {
       linkedCommunity?.createdBy,
       ...a.data.volunteers.filter(item => item.ideaId === linkedIdea.id && item.status === 'accepted').map(item => item.applicantId),
     ].filter(Boolean) : []
-    return project.createdBy === a.me.id
-      || members.some(member => member.projectId === project.id && member.userId === a.me!.id && member.status !== 'removed')
-      || linkedCollaborators.includes(a.me.id)
+    return linkedCollaborators.includes(a.me.id)
   }).sort((x, y) => (y.updatedAt || y.at) - (x.updatedAt || x.at))
   const invitedCount = visible.filter(project => members.some(member => member.projectId === project.id && member.userId === a.me?.id && member.status === 'invited')).length
 
@@ -440,7 +441,7 @@ function WorkspaceProjectView() {
     .sort((first, second) => second.revision - first.revision || second.submittedAt - first.submittedAt)
   const explicitTeam = members.filter(item => item.projectId === id && item.status === 'active')
   const implicitTeam: WorkspaceMember[] = linkedCollaboratorIds
-    .filter(userId => !explicitTeam.some(member => member.userId === userId))
+    .filter(userId => !members.some(member => member.projectId === id && member.userId === userId))
     .map(userId => ({
       id: id + '__' + userId,
       projectId: id,
@@ -453,10 +454,14 @@ function WorkspaceProjectView() {
     }))
   const team = [...explicitTeam, ...implicitTeam]
   const invitation = members.find(item => item.projectId === id && item.userId === a.me?.id && item.status === 'invited')
+  const explicitMembership = members.find(item => item.projectId === id && item.userId === a.me?.id)
   const myMembership = explicitTeam.find(item => item.userId === a.me?.id)
   const isOwner = !!a.me && project?.createdBy === a.me.id
   const hasLinkedCollaborationAccess = !!a.me?.id && linkedCollaboratorIds.includes(a.me.id)
-  const role = isOwner ? 'owner' : myMembership?.role || (hasLinkedCollaborationAccess ? 'contributor' : undefined)
+  const role = isOwner ? 'owner'
+    : explicitMembership
+      ? (explicitMembership.status === 'active' ? explicitMembership.role : undefined)
+      : (hasLinkedCollaborationAccess ? 'contributor' : undefined)
   const canManage = !!role && ['owner','manager'].includes(role)
   const canContribute = !!role && ['owner','manager','contributor'].includes(role)
   const taskAssignees = team.filter(member => member.status === 'active' && member.role !== 'viewer')
