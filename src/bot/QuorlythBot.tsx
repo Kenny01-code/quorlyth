@@ -3181,7 +3181,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           decideJoinRequest: /\b(approve|accept|decline|reject)\b[\s\S]*\b(join|membership) request\b/i,
           decideAIOrganizerRequest: /\b(approve|accept|decline|reject)\b[\s\S]*\b(ai organizer|organizer access)\b/i,
           decideAccessRequest: /\b(approve|accept|decline|reject)\b[\s\S]*\b(platform access|access request)\b/i,
-          updateSpaceSettings: /\b(update|edit|change|set|rewrite)\b[\s\S]*\b(space settings|platform settings|space name|announcement|posting approval)\b/i,
+          updateSpaceSettings: /\b(update|edit|change|set|rewrite)\b[\s\S]*\b(space settings|platform settings|space name|announcement|posting approval|scoring weights|ranking weights|idea ranking weights)\b/i,
           assignStandaloneTask: /\b(assign|reassign|unassign)\b[\s\S]*\b(task|workspace|everyone|team|teammate|member)\b/i,
           assignMilestone: /\b(assign|reassign|unassign)\b[\s\S]*\b(milestone|deliverable|collaborator|contributor|team)\b/i,
         }
