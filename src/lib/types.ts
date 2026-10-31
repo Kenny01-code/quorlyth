@@ -1,6 +1,6 @@
 export type Status = 'review' | 'selected' | 'held' | 'declined' | 'promoted'
 export const STATUS_LABEL: Record<Status, string> = { review: 'In review', selected: 'Selected', held: 'Held', declined: 'Declined', promoted: 'Ready to share' }
-export interface Me { id: string; name: string; email?: string; avatarUrl?: string }
+export interface Me { id: string; name: string; email?: string; avatarUrl?: string; createdAt?: number }
 export interface CommunityBadge { label: string; icon: string }
 export interface Community { id: string; name: string; ownerId?: string; createdBy?: string; purpose?: string; icon?: string; cover?: string; vis?: 'listed' | 'unlisted'; post?: 'anyone' | 'members' | 'owner'; moderatorIds?: string[]; joinApproval?: boolean; welcome?: string; rules?: string; arch?: boolean; pinned?: string; memberBadges?: Record<string, string>; badges?: CommunityBadge[]; at: number }
 export interface Idea { id: string; title: string; body?: string; cid: string; authorId: string; tags?: string[]; at: number }
