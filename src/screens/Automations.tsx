@@ -290,6 +290,19 @@ function AutomationWorkspace() {
       : current)
   }
 
+  function moveAction(id: string, offset: -1 | 1) {
+    setEditing(current => {
+      if (!current) return current
+      const from = current.actions.findIndex(action => action.id === id)
+      const to = from + offset
+      if (from < 0 || to < 0 || to >= current.actions.length) return current
+      const actions = [...current.actions]
+      const [moved] = actions.splice(from, 1)
+      actions.splice(to, 0, moved)
+      return { ...current, actions, updatedAt: Date.now() }
+    })
+  }
+
   function removeAction(id: string) {
     setEditing(current => current ? { ...current, actions: current.actions.filter(action => action.id !== id), updatedAt: Date.now() } : current)
   }
@@ -309,7 +322,7 @@ function AutomationWorkspace() {
           <section className="wa-canvas glass pad">
             <div className="wa-canvas-heading">
               <div><p className="wa-eyebrow">WORKFLOW CANVAS</p><p>Build a sequence from a trigger, an optional condition and ordered actions. Each action is recorded as it runs, and the flow stops visibly if a step fails.</p></div>
-              <span className="wa-node-count">{editing.actions.length + 1} nodes</span>
+              <span className="wa-node-count">{editing.actions.length + 2} nodes</span>
             </div>
             <label className="wa-field"><span>Workflow name</span><input value={editing.name} onChange={event => patchEditing({ name: event.target.value })} maxLength={100} required placeholder="e.g. Review every new idea" /></label>
             <label className="wa-field"><span>What should this workflow do?</span><textarea value={editing.description} onChange={event => patchEditing({ description: event.target.value })} rows={2} maxLength={500} placeholder="A quick description for future you." /></label>
@@ -331,7 +344,7 @@ function AutomationWorkspace() {
             <div className="wa-filter-node">
               <div className="wa-filter-icon"><QuorlythGlyph name="sliders" size={16} /></div>
               <div className="wa-filter-fields">
-                <strong>Optional filter</strong><p>Only continue when the event text includes a phrase.</p>
+                <strong>Optional filter</strong><p>Only pass events whose title, summary or body contains the phrase.</p>
                 <input value={editing.condition || ''} onChange={event => patchEditing({ condition: event.target.value })} maxLength={120} placeholder="e.g. dashboard · leave empty to allow every event" />
               </div>
               <span className="wa-optional">OPTIONAL</span>
@@ -343,7 +356,7 @@ function AutomationWorkspace() {
               <div className="wa-flow-node wa-action-node" key={action.id}>
                 <div className="wa-node-icon"><ActionGlyph type={action.type} /></div>
                 <div className="wa-node-content">
-                  <div className="wa-action-title-row"><p className="wa-node-kind">ACTION {String(index + 1).padStart(2, '0')}</p><button className="wa-icon-btn" type="button" onClick={() => removeAction(action.id)} aria-label="Remove action" title="Remove action"><QuorlythGlyph name="trash" size={15} /></button></div>
+                  <div className="wa-action-title-row"><p className="wa-node-kind">ACTION {String(index + 1).padStart(2, '0')} · {index === 0 ? 'FIRST' : index === editing.actions.length - 1 ? 'LAST' : 'IN SEQUENCE'}</p><div className="wa-node-tools"><button className="wa-icon-btn" type="button" onClick={() => moveAction(action.id, -1)} disabled={index === 0} aria-label="Move action earlier" title="Move action earlier"><QuorlythGlyph name="chevron-up" size={14} /></button><button className="wa-icon-btn" type="button" onClick={() => moveAction(action.id, 1)} disabled={index === editing.actions.length - 1} aria-label="Move action later" title="Move action later"><QuorlythGlyph name="chevron-down" size={14} /></button><button className="wa-icon-btn" type="button" onClick={() => removeAction(action.id)} aria-label="Remove action" title="Remove action"><QuorlythGlyph name="trash" size={15} /></button></div></div>
                   <select className="wa-action-type" value={action.type} onChange={event => patchAction(action.id, { ...freshAction(event.target.value as WorkflowActionType), id: action.id })}>
                     {(Object.keys(ACTION_INFO) as WorkflowActionType[]).map(type => <option key={type} value={type}>{ACTION_INFO[type].title}</option>)}
                   </select>
