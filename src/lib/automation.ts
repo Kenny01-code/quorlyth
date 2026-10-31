@@ -1,6 +1,6 @@
 import type { DocStore } from '../data/docstore'
 
-export type WorkflowTrigger = 'manual' | 'idea.created' | 'task.completed' | 'workspace.created'
+export type WorkflowTrigger = 'manual' | 'idea.created' | 'task.started' | 'task.completed' | 'workspace.created' | 'milestone.started' | 'evidence.submitted' | 'evidence.reviewed'
 export type WorkflowActionType = 'notify' | 'create_task' | 'webhook'
 
 export interface WorkflowAction {
@@ -18,7 +18,7 @@ export interface WorkflowAction {
 export interface WorkflowRunStep {
   id: string
   title: string
-  status: 'success' | 'failed'
+  status: 'running' | 'success' | 'failed'
   detail: string
   at: number
 }
@@ -26,7 +26,7 @@ export interface WorkflowRunStep {
 export interface WorkflowRun {
   id: string
   trigger: WorkflowTrigger | 'manual.run'
-  status: 'success' | 'failed' | 'skipped'
+  status: 'running' | 'success' | 'failed' | 'skipped'
   startedAt: number
   finishedAt: number
   steps: WorkflowRunStep[]
@@ -71,8 +71,12 @@ export const WORKFLOW_EVENT_NAME = 'quorlyth:workflow-event'
 export const TRIGGER_INFO: Record<WorkflowTrigger, { title: string; description: string }> = {
   manual: { title: 'Run manually', description: 'Start this workflow whenever you choose.' },
   'idea.created': { title: 'A new idea is submitted', description: 'Runs when someone shares an idea in a Quorlyth community.' },
+  'task.started': { title: 'A teammate starts a task', description: 'Runs when an assigned workspace contributor begins work.' },
   'task.completed': { title: 'A workspace task is completed', description: 'Runs after a standalone workspace task has been completed.' },
   'workspace.created': { title: 'A workspace is created', description: 'Runs when you create a new independent project workspace.' },
+  'milestone.started': { title: 'A collaboration milestone starts', description: 'Runs when an assigned collaborator starts a planned outcome.' },
+  'evidence.submitted': { title: 'Work evidence is submitted', description: 'Runs when a contributor submits a deliverable for review.' },
+  'evidence.reviewed': { title: 'Evidence is reviewed', description: 'Runs when a workspace reviewer approves evidence or requests changes.' },
 }
 
 export const ACTION_INFO: Record<WorkflowActionType, { title: string; description: string }> = {
@@ -124,15 +128,36 @@ export async function executeWorkflowActions(
   store: DocStore,
   event: WorkflowEventDetail,
   notify?: (message: string) => void,
+  onProgress?: (run: WorkflowRun) => Promise<void> | void,
 ): Promise<WorkflowRun> {
   const startedAt = Date.now()
   const steps: WorkflowRunStep[] = []
   const runId = newWorkflowId()
   let failed = false
+  const progress = async (status: WorkflowRun['status']) => {
+    try {
+      await onProgress?.({
+        id: runId,
+        trigger: event.type,
+        status,
+        startedAt,
+        finishedAt: status === 'running' ? 0 : Date.now(),
+        steps: steps.map(step => ({ ...step })),
+        eventTitle: String(event.payload.title || event.payload.summary || ''),
+        ...(failed ? { error: steps.find(step => step.status === 'failed')?.detail || 'An action failed.' } : {}),
+      })
+    } catch (error) {
+      // Progress persistence is observational. A temporary history-write failure
+      // must not cause an already completed action to be executed a second time.
+      console.warn('Workflow run progress could not be persisted:', error)
+    }
+  }
 
   for (const action of workflow.actions) {
     const at = Date.now()
-    const step: WorkflowRunStep = { id: action.id || newWorkflowId(), title: action.title || ACTION_INFO[action.type].title, status: 'success', detail: '', at }
+    const step: WorkflowRunStep = { id: action.id || newWorkflowId(), title: action.title || ACTION_INFO[action.type].title, status: 'running', detail: 'Running action…', at }
+    steps.push(step)
+    await progress('running')
     try {
       if (action.type === 'notify') {
         const message = interpolate(action.message || '{{workflow.name}} finished for {{event.title}}', workflow, event) || workflow.name + ' ran successfully.'
@@ -202,11 +227,13 @@ export async function executeWorkflowActions(
       step.status = 'failed'
       step.detail = error instanceof Error ? error.message.slice(0, 400) : 'This action failed. Check its configuration and try again.'
     }
-    steps.push(step)
+    if (step.status === 'running') step.status = 'success'
+    if (step.status === 'success' && !step.detail) step.detail = 'Action completed.'
+    await progress(step.status === 'failed' ? 'failed' : 'running')
     if (step.status === 'failed') break
   }
 
-  return {
+  const run: WorkflowRun = {
     id: runId,
     trigger: event.type,
     status: failed ? 'failed' : 'success',
@@ -216,6 +243,8 @@ export async function executeWorkflowActions(
     eventTitle: String(event.payload.title || event.payload.summary || ''),
     ...(failed ? { error: steps.find(step => step.status === 'failed')?.detail || 'An action failed.' } : {}),
   }
+  await progress(run.status)
+  return run
 }
 
 export async function persistWorkflowRun(store: DocStore, path: string, run: WorkflowRun) {
