@@ -7,7 +7,6 @@ import { Intro } from './components/Intro'
 import { Palette } from './components/Palette'
 import { Shortcuts } from './components/Shortcuts'
 import { NotifPanel } from './components/NotifPanel'
-import { NotificationPopups } from './components/NotificationPopups'
 import { PageAssist } from './components/PageAssist'
 import { WritingAssistant } from './components/WritingAssistant'
 import { Logo } from './lib/Logo'
@@ -80,8 +79,6 @@ export default function App() {
   const [palette, setPalette] = useState(false)
   const [keys, setKeys] = useState(false)
   const [bell, setBell] = useState(false)
-  const [screenPopups, setScreenPopups] = useState<import('./lib/notifs').Notif[]>([])
-  const dismissScreenPopup = useCallback((key: string) => setScreenPopups(items => items.filter(item => item.key !== key)), [])
   // Play the branded welcome animation once per browser, then remember it across sessions.
   // Existing returning visitors who already heard the sign-in hello also skip the intro.
   const [intro, setIntro] = useState(() => {
@@ -225,8 +222,7 @@ export default function App() {
     }
   }, [a.me?.id])
 
-  // One chime per event batch, a toast in-app, and one browser alert per event while
-  // the page is backgrounded. Every item remains in the persistent notification panel.
+  // Keep updates in the persistent bell panel without interrupting the current screen.
   useEffect(() => {
     if (!a.ready) return
     if (known.current === null) {
@@ -247,17 +243,10 @@ export default function App() {
     )
     if (fresh.length) {
       const preferences = us.st.preferences || {}
-      const popupItems = fresh.filter(n => n.kind === 'message'
-        ? preferences.messageNotifications !== false && preferences.messagePopups !== false
-        : preferences.inAppNotifications !== false)
       const soundItems = fresh.some(n => n.kind === 'message'
         ? preferences.messageNotifications !== false && (preferences.messageSounds ?? (sound && preferences.sound !== false))
         : sound && preferences.sound !== false)
       if (soundItems) chime()
-      if (popupItems.length) {
-        setScreenPopups(current => [...current.filter(item => !popupItems.some(freshItem => freshItem.key === item.key)), ...popupItems].slice(-3))
-        a.toast(popupItems.length === 1 ? popupItems[0].text : `${popupItems.length} new Quorlyth notifications`)
-      }
       const desktopItems = fresh.filter(n => n.kind !== 'message' || preferences.messageNotifications !== false)
       if (preferences.desktopNotifications !== false && document.hidden && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         desktopItems.forEach(n => {
@@ -267,7 +256,7 @@ export default function App() {
       // Mark every observed event as known even when the person has muted its pop-ups.
       fresh.forEach(n => known.current!.add(n.key))
     }
-  }, [notifs, a.ready, a.toast, sound, us.st.preferences])
+  }, [notifs, a.ready, sound, us.st.preferences])
 
   // Message notifications are account-scoped and work from every page, not only the inbox.
   useEffect(() => {
@@ -301,27 +290,14 @@ export default function App() {
       const convo = conversations.find(c => c.id === latest.conversationId)
       const title = convo?.type === 'group' ? (convo.title || 'group chat') : 'your private chat'
       const sender = a.nm(latest.senderId)
-      if (preferences.messagePopups !== false) {
-        const messageText = 'New message from ' + sender + ' · ' + title
-        a.toast(messageText)
-        if (!document.hidden) setScreenPopups(current => [...current.filter(item => item.id !== latest.id), {
-          key: 'message_' + latest.id,
-          at: Number(latest.at) || Date.now(),
-          icon: 'message',
-          text: messageText,
-          kind: 'message' as const,
-          id: latest.id,
-          target: latest.conversationId,
-          unread: true,
-        }].slice(-3))
-      }
+      // New messages remain in the inbox and bell panel, without a screen popup.
       if (preferences.messageSounds ?? (sound && preferences.sound !== false)) chime()
       if (preferences.desktopNotifications !== false && typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
         try { new Notification('New message from ' + sender, { body: latest.text.slice(0, 120), tag: latest.conversationId }) } catch {}
       }
     }, e => console.warn('Could not load messages for notifications', e))
     return () => { offConversations(); offMessages(); offChatPreferences(); knownMessages.current = null }
-  }, [a.backend, a.me?.id, a.demo, a.nm, a.toast, sound, us.st.preferences])
+  }, [a.backend, a.me?.id, a.demo, a.nm, sound, us.st.preferences])
 
   // keyboard: Ctrl K, /, ?, g then a letter, Escape
   useEffect(() => {
@@ -427,7 +403,6 @@ export default function App() {
         </section>
       </main>
       <PageAssist onAskBot={openBotWithPrompt} />
-      <NotificationPopups items={screenPopups} onDismiss={dismissScreenPopup} onOpen={n => { void us.patch({ read: { [n.key]: true } }) }} />
       {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
