@@ -15,6 +15,7 @@ import {
   WorkflowTrigger,
   executeWorkflowActions,
   newWorkflowId,
+  workflowRunDocumentId,
   persistWorkflowRun,
 } from '../lib/automation'
 
@@ -220,7 +221,7 @@ function AutomationWorkspace() {
       type: 'manual' as const,
       payload: { id: newWorkflowId(), title: 'Manual test run', summary: 'Started from the workflow builder', at: startedAt },
     }
-    const runPath = 'data/users/' + userId + '/automation-runs/' + encodeURIComponent(workflow.id + ':manual:' + event.payload.id)
+    const runPath = 'data/users/' + userId + '/automation-runs/' + workflowRunDocumentId(workflow.id, 'manual', event.payload.id)
     try {
       await app.backend.store.create(runPath, {
         id: event.payload.id,

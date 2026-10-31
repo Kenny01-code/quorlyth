@@ -158,7 +158,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   }, [loc.pathname, owner])
 
   return (
-    <nav className="glass" id="nav" aria-label="Main navigation">
+    <nav className={cn("glass", !me && "nav-public")} id="nav" aria-label="Main navigation">
       <button className="lgb" onClick={onReplay} title="Replay intro" aria-label="Replay Quorlyth introduction"><Logo size={26} breathe /></button>
       <b className="nav-wordmark">{'QUORLYTH'.split('').map((c, i) => <span key={i} style={{ ['--word-index' as any]: i }}>{c}</span>)}</b>
       <div className="navwrap" ref={wrap}>

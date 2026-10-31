@@ -6,6 +6,10 @@
 export function userFacingMutationError(error: unknown, action = 'complete this action'): string {
   const raw = String((error as { message?: unknown } | null)?.message || error || '').trim()
 
+  if (/Invalid document path or payload/i.test(raw)) {
+    return "Quorlyth couldn't save this workflow run record. Refresh the page and try again. If it happens again, contact support with the time of the failed run."
+  }
+
   if (/42501|row.?level security|new row violates|violates .*policy|permission denied|not authorized|forbidden|insufficient privilege|access denied/i.test(raw)) {
     return "Quorlyth couldn't confirm your access to " + action + ". Refresh and try again. If it keeps happening, contact the community owner or a platform administrator."
   }
