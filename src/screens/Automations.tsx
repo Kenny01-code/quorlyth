@@ -4,6 +4,7 @@ import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { WorkflowMap } from '../components/WorkflowMap'
+import { WorkflowCanvas } from '../components/WorkflowCanvas'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import {
@@ -18,6 +19,9 @@ import {
   newWorkflowId,
   workflowRunDocumentId,
   persistWorkflowRun,
+  workflowGraphFor,
+  workflowWithGraph,
+  validateWorkflowGraph,
 } from '../lib/automation'
 
 type WorkflowProject = { id: string; title: string; createdBy?: string; status?: string; docId?: string }
@@ -50,16 +54,24 @@ function freshAction(type: WorkflowActionType): WorkflowAction {
 
 function freshWorkflow(ownerId: string, template?: Template): WorkflowDefinition {
   const now = Date.now()
+  const id = newWorkflowId()
+  const trigger = template?.trigger || 'manual'
   const action = freshAction(template?.action || 'notify')
   if (template?.message) action.message = template.message
+  const triggerNodeId = newWorkflowId()
   return {
-    id: newWorkflowId(),
+    id,
     ownerId,
     name: template?.name || 'Untitled workflow',
     description: template?.description || '',
-    trigger: template?.trigger || 'manual',
+    trigger,
     condition: '',
     actions: [action],
+    nodes: [
+      { id: triggerNodeId, type: 'trigger', trigger, position: { x: 60, y: 255 } },
+      { id: action.id, type: 'action', action, position: { x: 570, y: 220 } },
+    ],
+    edges: [{ id: newWorkflowId(), source: triggerNodeId, target: action.id, sourceHandle: 'next' }],
     status: 'draft',
     runHistory: [],
     createdAt: now,
@@ -151,9 +163,9 @@ function AutomationWorkspace() {
   }
 
   function beginEdit(workflow: WorkflowDefinition) {
+    const graph = workflowGraphFor(workflow)
     setEditing({
-      ...workflow,
-      actions: workflow.actions.map(action => ({ ...action })),
+      ...workflowWithGraph(workflow, graph.nodes, graph.edges),
       runHistory: workflow.runHistory || [],
     })
     setError('')
@@ -165,7 +177,8 @@ function AutomationWorkspace() {
     if (!editing || !app.backend || !userId) return
     const name = editing.name.trim()
     if (name.length < 2) return setError('Give this workflow a name so you can find it again.')
-    if (!editing.actions.length) return setError('Add at least one action after the trigger.')
+    const graphError = validateWorkflowGraph(editing)
+    if (graphError) return setError(graphError)
     for (const action of editing.actions) {
       if (action.type === 'create_task' && (!action.projectId || !manageableProjects.some(project => project.id === action.projectId))) return setError('Choose a workspace you own or manage for the task action.')
       if (action.type === 'webhook' && !/^https:\/\//i.test(action.url || '')) return setError('Webhook actions need a valid HTTPS URL.')
@@ -213,7 +226,7 @@ function AutomationWorkspace() {
     await updateWorkflow(workflow, { status }, status === 'active' ? 'Workflow activated.' : 'Workflow paused.')
   }
 
-  async function runWorkflow(workflow: WorkflowDefinition) {
+  async function runWorkflow(workflow: WorkflowDefinition, keepEditorOpen = false) {
     if (!app.backend || !userId) return
     setBusy('run-' + workflow.id)
     setError('')
@@ -247,7 +260,7 @@ function AutomationWorkspace() {
       await saveProgress(run)
       await persistWorkflowRun(app.backend.store, collectionPath + '/' + workflow.id, run)
       app.toast(run.status === 'success' ? 'Workflow test finished successfully.' : userFacingMutationError(run.error || 'An action failed', 'run this workflow'))
-      setTab('runs')
+      if (!keepEditorOpen) setTab('runs')
     } catch (failure) {
       const message = userFacingMutationError(failure, 'run this workflow')
       setError(message)
@@ -274,131 +287,32 @@ function AutomationWorkspace() {
     }
   }
 
-  function patchEditing(patch: Partial<WorkflowDefinition>) {
-    setEditing(current => current ? { ...current, ...patch, updatedAt: Date.now() } : current)
-  }
-
-  function patchAction(id: string, patch: Partial<WorkflowAction>) {
-    setEditing(current => current ? {
-      ...current,
-      actions: current.actions.map(action => action.id === id ? { ...action, ...patch } : action),
-      updatedAt: Date.now(),
-    } : current)
-  }
-
-  function addAction(type: WorkflowActionType) {
-    setEditing(current => current && current.actions.length < 6
-      ? { ...current, actions: [...current.actions, freshAction(type)], updatedAt: Date.now() }
-      : current)
-  }
-
-  function moveAction(id: string, offset: -1 | 1) {
-    setEditing(current => {
-      if (!current) return current
-      const from = current.actions.findIndex(action => action.id === id)
-      const to = from + offset
-      if (from < 0 || to < 0 || to >= current.actions.length) return current
-      const actions = [...current.actions]
-      const [moved] = actions.splice(from, 1)
-      actions.splice(to, 0, moved)
-      return { ...current, actions, updatedAt: Date.now() }
-    })
-  }
-
-  function removeAction(id: string) {
-    setEditing(current => current ? { ...current, actions: current.actions.filter(action => action.id !== id), updatedAt: Date.now() } : current)
-  }
-
   if (editing) {
+    const latestRun = allRuns.find(run => run.workflowId === editing.id) || editing.runHistory?.[0] || null
     return (
-      <div className="wa-screen">
+      <div className="wa-screen wa-screen-graph">
         <div className="wa-editor-top">
           <button className="wa-back" type="button" onClick={() => { setEditing(null); setError('') }}><QuorlythGlyph name="back" size={15} />Back to workflows</button>
           <div className="wa-editor-actions">
-            <label className="wa-activate-toggle"><span>{editing.status === 'active' ? 'Active' : 'Draft'}</span><input type="checkbox" checked={editing.status === 'active'} onChange={event => patchEditing({ status: event.target.checked ? 'active' : 'draft' })} /><i /></label>
+            <button className="btn" type="button" onClick={() => void runWorkflow(editing, true)} disabled={busy === 'run-' + editing.id}>
+              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Testing…' : 'Test workflow'}
+            </button>
             <button className="btn p" type="submit" form="wa-editor-form" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
           </div>
         </div>
-        <Head kicker="WORKFLOW BUILDER" title="Design your flow." />
-        <form id="wa-editor-form" className="wa-builder-grid" onSubmit={saveWorkflow}>
-          <section className="wa-canvas glass pad">
-            <div className="wa-canvas-heading">
-              <div><p className="wa-eyebrow">WORKFLOW CANVAS</p><p>Build a sequence from a trigger, an optional condition and ordered actions. Each action is recorded as it runs, and the flow stops visibly if a step fails.</p></div>
-              <span className="wa-node-count">{editing.actions.length + 2} nodes</span>
-            </div>
-            <label className="wa-field"><span>Workflow name</span><input value={editing.name} onChange={event => patchEditing({ name: event.target.value })} maxLength={100} required placeholder="e.g. Review every new idea" /></label>
-            <label className="wa-field"><span>What should this workflow do?</span><textarea value={editing.description} onChange={event => patchEditing({ description: event.target.value })} rows={2} maxLength={500} placeholder="A quick description for future you." /></label>
-
-            <div className="wa-flow-node wa-trigger-node">
-              <div className="wa-node-icon"><TriggerGlyph trigger={editing.trigger} /></div>
-              <div className="wa-node-content">
-                <p className="wa-node-kind">TRIGGER · WHEN THIS HAPPENS</p>
-                <h3>{TRIGGER_INFO[editing.trigger].title}</h3>
-                <p>{TRIGGER_INFO[editing.trigger].description}</p>
-                <label className="wa-field"><span>Start this workflow when…</span><select value={editing.trigger} onChange={event => patchEditing({ trigger: event.target.value as WorkflowTrigger })}>
-                  {(Object.keys(TRIGGER_INFO) as WorkflowTrigger[]).map(trigger => <option key={trigger} value={trigger}>{TRIGGER_INFO[trigger].title}</option>)}
-                </select></label>
-              </div>
-              <span className="wa-node-state">01</span>
-            </div>
-
-            <div className="wa-connector"><span /><i /></div>
-            <div className="wa-filter-node">
-              <div className="wa-filter-icon"><QuorlythGlyph name="sliders" size={16} /></div>
-              <div className="wa-filter-fields">
-                <strong>Optional filter</strong><p>Only pass events whose title, summary or body contains the phrase.</p>
-                <input value={editing.condition || ''} onChange={event => patchEditing({ condition: event.target.value })} maxLength={120} placeholder="e.g. dashboard · leave empty to allow every event" />
-              </div>
-              <span className="wa-optional">OPTIONAL</span>
-            </div>
-
-            <div className="wa-connector"><span /><i /></div>
-            <div className="wa-actions-heading"><div><p className="wa-node-kind">THEN DO THIS · ACTIONS</p><h3>What should happen next?</h3></div><span>{editing.actions.length}/6</span></div>
-            {editing.actions.map((action, index) => (
-              <div className="wa-flow-node wa-action-node" key={action.id}>
-                <div className="wa-node-icon"><ActionGlyph type={action.type} /></div>
-                <div className="wa-node-content">
-                  <div className="wa-action-title-row"><p className="wa-node-kind">ACTION {String(index + 1).padStart(2, '0')} · {index === 0 ? 'FIRST' : index === editing.actions.length - 1 ? 'LAST' : 'IN SEQUENCE'}</p><div className="wa-node-tools"><button className="wa-icon-btn" type="button" onClick={() => moveAction(action.id, -1)} disabled={index === 0} aria-label="Move action earlier" title="Move action earlier"><QuorlythGlyph name="arrow-up" size={14} /></button><button className="wa-icon-btn" type="button" onClick={() => moveAction(action.id, 1)} disabled={index === editing.actions.length - 1} aria-label="Move action later" title="Move action later"><QuorlythGlyph name="arrow" size={14} /></button><button className="wa-icon-btn" type="button" onClick={() => removeAction(action.id)} aria-label="Remove action" title="Remove action"><QuorlythGlyph name="trash" size={15} /></button></div></div>
-                  <select className="wa-action-type" value={action.type} onChange={event => patchAction(action.id, { ...freshAction(event.target.value as WorkflowActionType), id: action.id })}>
-                    {(Object.keys(ACTION_INFO) as WorkflowActionType[]).map(type => <option key={type} value={type}>{ACTION_INFO[type].title}</option>)}
-                  </select>
-                  <p className="wa-action-description">{ACTION_INFO[action.type].description}</p>
-                  {action.type === 'notify' && <label className="wa-field"><span>Notification message</span><textarea value={action.message || ''} onChange={event => patchAction(action.id, { message: event.target.value })} rows={2} maxLength={1000} placeholder="New event: {{event.title}}" /></label>}
-                  {action.type === 'create_task' && <>
-                    <label className="wa-field"><span>Create task in workspace</span><select required value={action.projectId || ''} onChange={event => patchAction(action.id, { projectId: event.target.value })}><option value="">Choose a workspace…</option>{manageableProjects.map(project => <option value={project.id} key={project.id}>{project.title}</option>)}</select></label>
-                    {!manageableProjects.length && <p className="wa-inline-help">Create a workspace or ask its owner to make you a manager. <button type="button" className="wa-text-link" onClick={() => nav('/workspaces')}>Open Workspaces <QuorlythGlyph name="arrow" size={12} /></button></p>}
-                    <label className="wa-field"><span>Task title <small>Supports {"{{event.title}}"}</small></span><input value={action.taskTitle || ''} onChange={event => patchAction(action.id, { taskTitle: event.target.value })} maxLength={140} required placeholder="Follow up: {{event.title}}" /></label>
-                    <label className="wa-field"><span>Task description</span><textarea value={action.taskDescription || ''} onChange={event => patchAction(action.id, { taskDescription: event.target.value })} rows={2} maxLength={2000} placeholder="Created by {{workflow.name}}. Context: {{event.body}}" /></label>
-                    <label className="wa-field"><span>Definition of done <small>Optional</small></span><input value={action.acceptanceCriteria || ''} onChange={event => patchAction(action.id, { acceptanceCriteria: event.target.value })} maxLength={1000} placeholder="What should count as complete?" /></label>
-                  </>}
-                  {action.type === 'webhook' && <label className="wa-field"><span>HTTPS endpoint</span><input type="url" value={action.url || ''} onChange={event => patchAction(action.id, { url: event.target.value })} required placeholder="https://your-service.com/webhooks/quorlyth" /><small className="wa-help">Quorlyth sends a JSON POST with the event title, ID, type and workflow name. No API keys are included.</small></label>}
-                </div>
-                <span className="wa-node-state">{String(index + 2).padStart(2, '0')}</span>
-              </div>
-            ))}
-
-            <div className="wa-add-action">
-              <span className="wa-add-line" />
-              <p>Add another step</p>
-              <div className="wa-action-palette">
-                <button type="button" onClick={() => addAction('notify')} disabled={editing.actions.length >= 6}><QuorlythGlyph name="bell" size={15} />Notify</button>
-                <button type="button" onClick={() => addAction('create_task')} disabled={editing.actions.length >= 6}><QuorlythGlyph name="workspace" size={15} />Create task</button>
-                <button type="button" onClick={() => addAction('webhook')} disabled={editing.actions.length >= 6}><QuorlythGlyph name="send" size={15} />Webhook</button>
-              </div>
-            </div>
-            {error && <p className="wa-error" role="alert">{error}</p>}
-            <div className="wa-bottom-actions"><button className="btn" type="button" onClick={() => { setEditing(null); setError('') }}>Cancel</button><button className="btn p" type="submit" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button></div>
-          </section>
-
-          <aside className="wa-builder-rail">
-            <section className="glass pad wa-side-card">
-              <p className="wa-eyebrow">LIVE PREVIEW</p><h3>{editing.name || 'Untitled workflow'}</h3><p>{editing.description || 'Give this flow a short description.'}</p>
-              <div className="wa-mini-flow"><span><TriggerGlyph trigger={editing.trigger} /></span><i /><span><ActionGlyph type={editing.actions[0]?.type || 'notify'} /></span>{editing.actions.length > 1 && <b>+{editing.actions.length - 1}</b>}</div>
-              <div className="wa-side-metadata"><span>Trigger</span><strong>{TRIGGER_INFO[editing.trigger].title}</strong><span>Actions</span><strong>{editing.actions.length} step{editing.actions.length === 1 ? '' : 's'}</strong><span>Status</span><strong className={editing.status === 'active' ? 'wa-status-active' : ''}>{editing.status === 'active' ? 'Active after save' : 'Draft'}</strong></div>
-            </section>
-            <section className="glass pad wa-side-card"><p className="wa-eyebrow">PERSONALISE YOUR FLOW</p><h3>Use event fields</h3><p>These values are replaced with the event details when the workflow runs.</p><div className="wa-token-list"><code>{"{{event.title}}"}</code><code>{"{{event.body}}"}</code><code>{"{{event.id}}"}</code><code>{"{{workflow.name}}"}</code></div><p className="wa-side-note">The optional filter matches the idea or task text. Leave it blank to accept every matching trigger.</p></section>
-            <section className="glass pad wa-side-card wa-side-tip"><QuorlythGlyph name="info" size={18} /><div><strong>Test with real actions</strong><p>Save the workflow, then use Run now. Notifications are saved to your inbox, task actions create a real workspace task, and webhook actions send a real HTTPS request. Use a test workspace or test endpoint while validating.</p></div></section>
-          </aside>
+        <Head kicker="WORKFLOW BUILDER" title="Connect the nodes." />
+        <form id="wa-editor-form" className="wa-graph-editor-form" onSubmit={saveWorkflow}>
+          <WorkflowCanvas
+            workflow={editing}
+            projects={manageableProjects.map(project => ({ id: project.id, title: project.title }))}
+            latestRun={latestRun}
+            onChange={next => setEditing({ ...next, updatedAt: Date.now() })}
+          />
+          {error && <p className="wa-error" role="alert">{error}</p>}
+          <div className="wa-bottom-actions">
+            <button className="btn" type="button" onClick={() => { setEditing(null); setError('') }}>Cancel</button>
+            <button className="btn p" type="submit" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
+          </div>
         </form>
       </div>
     )
