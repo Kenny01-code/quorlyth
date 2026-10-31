@@ -50,9 +50,13 @@ export function AutomationRuntime() {
     const seenIdeas = new Set<string>()
     const seenProjects = new Set<string>()
     const taskStatuses = new Map<string, string>()
+    const milestoneStatuses = new Map<string, string>()
+    const artifactStatuses = new Map<string, string>()
     let ideasReady = false
     let projectsReady = false
     let tasksReady = false
+    let milestonesReady = false
+    let artifactsReady = false
 
     // Supabase realtime lets a running Quorlyth session react to changes made by
     // other people in collections this user is already allowed to read. The local
