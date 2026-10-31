@@ -91,6 +91,18 @@ export function newWorkflowId() {
     : 'wf-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9)
 }
 
+/**
+ * Database document paths only allow letters, numbers, underscores and hyphens.
+ * Workflow/event keys are allowed to contain punctuation, so never URL-encode
+ * them into a docs path (percent-escapes are rejected by the database guard).
+ */
+export function workflowRunDocumentId(workflowId: string, trigger: string, eventId: string) {
+  const safeSegment = (value: string) =>
+    String(value || '').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
+  const id = [workflowId, trigger, eventId].map(safeSegment).filter(Boolean).join('--').slice(0, 180)
+  return id || newWorkflowId()
+}
+
 export function emitWorkflowEvent(type: WorkflowTrigger, payload: WorkflowEventPayload = {}) {
   if (typeof window === 'undefined' || type === 'manual') return
   window.dispatchEvent(new CustomEvent<WorkflowEventDetail>(WORKFLOW_EVENT_NAME, {
