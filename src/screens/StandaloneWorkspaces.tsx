@@ -930,14 +930,25 @@ function WorkspaceProjectView() {
             status: 'submitted', verificationStatus: 'submitted_evidence',
             submittedBy: a.me.id, submittedAt: now, updatedAt: now,
             sourceMetadata: { source: artifactType === 'file' ? 'private_file_upload' : 'user_submitted_link', submittedAt: now },
-            aiReview,
           }
           await a.backend.store.create('standaloneArtifacts/' + artifactId, record)
-          a.toast(aiReview.status === 'needs_changes'
-            ? 'Evidence submitted. Quorlyth flagged gaps against the plan and included suggested fixes for the human reviewer.'
+          let aiReviewSaved = false
+          try {
+            if (a.backend.auth.mode === 'supabase') {
+              await githubAction(a, 'save_ai_review', id, { artifactId, aiReview })
+            } else {
+              await a.backend.store.update('standaloneArtifacts/' + artifactId, { aiReview })
+            }
+            aiReviewSaved = true
+          } catch (reviewError) {
+            console.warn('Quorlyth pre-review could not be attached to this evidence:', reviewError)
+          }
+          const statusMessage = aiReview.status === 'needs_changes'
+            ? 'Quorlyth flagged gaps against the plan and included suggested fixes.'
             : aiReview.status === 'aligned'
-              ? 'Evidence submitted. Quorlyth found an initial match with the plan; a human reviewer must still inspect and approve it.'
-              : 'Evidence submitted. Quorlyth could not confirm alignment from the available details; a human reviewer must inspect it.')
+              ? 'Quorlyth found an initial match with the plan.'
+              : 'Quorlyth could not confirm alignment from the available details.'
+          a.toast('Evidence submitted. ' + statusMessage + (aiReviewSaved ? ' A human reviewer must still inspect and decide.' : ' The AI pre-review could not be saved; a human reviewer must inspect it manually.'))
         } catch (error) {
           if (a.backend.deleteWorkFile) {
             await Promise.all(attachments.map(file => a.backend!.deleteWorkFile!(file.path).catch(() => undefined)))
