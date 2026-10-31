@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
+import { WorkflowMap } from '../components/WorkflowMap'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import {
@@ -476,6 +477,7 @@ function AutomationWorkspace() {
               <span className={'wa-badge ' + (run.status === 'success' ? 'is-active' : run.status === 'running' ? 'is-running' : '')}>{runLabel(run.status)}</span>
             </article>)}
           </div>}
+          <WorkflowMap workflows={workflows} runs={allRuns} />
         </section>
       )}
     </div>
