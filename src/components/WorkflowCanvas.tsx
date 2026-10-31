@@ -175,7 +175,13 @@ export function WorkflowCanvas({
     if (existingEdge) {
       nextEdges.push({ ...existingEdge, id: newWorkflowId(), source: decisionId, sourceHandle: 'true', label: 'true' })
     }
-    commit(nextNodes, nextEdges)
+    const truePath = branchActions(nextNodes, nextEdges, 'true')
+    const arrangedNodes = nextNodes.map(node => {
+      if (node.type !== 'action') return node
+      const index = truePath.findIndex(actionNode => actionNode.id === node.id)
+      return index < 0 ? node : { ...node, position: { x: 790, y: 65 + index * 175 } }
+    })
+    commit(arrangedNodes, nextEdges)
     setSelectedId(decisionId)
   }
 
