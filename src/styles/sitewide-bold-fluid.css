@@ -185,3 +185,24 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Keep public navigation usable after sign-out and on the sign-in screen. */
+@media (max-width: 860px) {
+  #nav.nav-public b.nav-wordmark {
+    display: none !important;
+  }
+  #nav.nav-public .navmain .nav-item {
+    gap: 0;
+    padding: 9px 9px;
+    font-size: 11px;
+  }
+  #nav.nav-public .navmain .nav-item > span {
+    display: inline !important;
+  }
+  #nav.nav-public .navmain .nav-item > svg {
+    display: none;
+  }
+  #nav.nav-public .navend {
+    display: none;
+  }
+}
