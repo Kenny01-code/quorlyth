@@ -22,7 +22,7 @@ import '../styles/workflow-canvas.css'
 
 type ProjectOption = { id: string; title: string }
 type RunStatus = 'running' | 'success' | 'failed' | 'skipped'
-type PlacedNode = WorkflowNode & { position: { x: number; y: number } }
+type PlacedNode = WorkflowNode extends infer Node ? Node extends WorkflowNode ? Omit<Node, 'position'> & { position: { x: number; y: number } } : never : never
 type DragState = { id: string; pointerId: number; startX: number; startY: number; originX: number; originY: number }
 
 const NODE_WIDTH = 250
@@ -135,8 +135,8 @@ export function WorkflowCanvas({
   const [drag, setDrag] = useState<DragState | null>(null)
   const nodes = useMemo(() => positionedNodes(graph.nodes, graph.edges), [graph.nodes, graph.edges])
   const selected = nodes.find(node => node.id === selectedId) || nodes[0]
-  const condition = nodes.find((node): node is Extract<WorkflowNode, { type: 'condition' }> => node.type === 'condition')
-  const trigger = nodes.find((node): node is Extract<WorkflowNode, { type: 'trigger' }> => node.type === 'trigger')
+  const condition = nodes.find((node): node is Extract<PlacedNode, { type: 'condition' }> => node.type === 'condition')
+  const trigger = nodes.find((node): node is Extract<PlacedNode, { type: 'trigger' }> => node.type === 'trigger')
   const trueActions = branchActions(nodes, graph.edges, condition ? 'true' : 'next')
   const falseActions = condition ? branchActions(nodes, graph.edges, 'false') : []
   const latestSteps = new Map((latestRun?.steps || []).map(step => [step.nodeId || step.id, step]))
