@@ -1332,7 +1332,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),
       useComments: () => [],
     }
-  }, [ready, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, st])
+  }, [ready, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, toastKind, st])
 
   return <Ctx.Provider value={app}>{children}</Ctx.Provider>
 }
