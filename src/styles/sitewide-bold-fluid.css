@@ -206,3 +206,123 @@ body {
     display: none;
   }
 }
+
+
+/* Signed-out navigation stays a complete, visible part of the app shell at every width. */
+@media (max-width: 860px) {
+  #nav.nav-public {
+    display: flex !important;
+    align-items: center !important;
+    width: calc(100% - 12px) !important;
+    max-width: calc(100% - 12px) !important;
+    min-height: 48px;
+    gap: 5px !important;
+    padding: 5px 6px !important;
+    overflow: hidden !important;
+  }
+
+  #nav.nav-public .lgb {
+    display: grid !important;
+    flex: 0 0 auto !important;
+    place-items: center;
+    padding: 5px !important;
+  }
+
+  #nav.nav-public b.nav-wordmark {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap;
+    font-size: 9px !important;
+    letter-spacing: .11em;
+    margin-right: 2px;
+  }
+
+  #nav.nav-public .navwrap {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #nav.nav-public .navmain {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 3px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+  }
+
+  #nav.nav-public .navmain .nav-item {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    justify-content: center;
+    gap: 5px !important;
+    padding: 8px 8px !important;
+    white-space: nowrap;
+    font-size: 10px !important;
+  }
+
+  #nav.nav-public .navmain .nav-item > svg {
+    display: block !important;
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+  }
+
+  #nav.nav-public .navmain .nav-item > span {
+    display: inline !important;
+  }
+
+  #nav.nav-public .navend {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    align-items: center;
+    gap: 2px !important;
+  }
+
+  #nav.nav-public .navend .bl,
+  #nav.nav-public .navend .srch,
+  #nav.nav-public .navend .navav {
+    display: inline-flex !important;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #nav.nav-public .navend .srch span,
+  #nav.nav-public .navend .srch kbd {
+    display: none !important;
+  }
+}
+
+@media (max-width: 540px) {
+  #nav.nav-public {
+    gap: 3px !important;
+    padding: 4px 5px !important;
+  }
+
+  #nav.nav-public b.nav-wordmark {
+    font-size: 8px !important;
+    letter-spacing: .08em;
+  }
+
+  #nav.nav-public .navmain .nav-item {
+    gap: 4px !important;
+    padding: 7px 7px !important;
+    font-size: 9px !important;
+  }
+
+  #nav.nav-public .navmain .nav-item > svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  #nav.nav-public .navend button {
+    padding: 7px !important;
+  }
+}
