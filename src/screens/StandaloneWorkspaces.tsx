@@ -626,6 +626,37 @@ function WorkspaceProjectView() {
     }
   }
 
+  const missingMilestoneSyncKey = linkedMilestones
+    .filter(milestone => milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id))
+    .map(milestone => milestone.id + ':' + String(milestone.updatedAt || milestone.at))
+    .join('|')
+
+  // Keep the workspace task list in step with the shared collaboration plan.
+  // Deterministic task IDs make this safe across reloads, retries and open tabs.
+  useEffect(() => {
+    if (!project?.linkedIdeaId || project.status !== 'active' || !canManage || !missingMilestoneSyncKey) return
+    let cancelled = false
+    void (async () => {
+      const missing = linkedMilestones.filter(milestone =>
+        milestone.status !== 'done' && !projectTasks.some(task => task.milestoneId === milestone.id)
+      )
+      for (const milestone of missing) {
+        if (cancelled) break
+        try {
+          await syncOneMilestone(milestone)
+        } catch (failure) {
+          console.warn('A collaboration outcome could not sync into its workspace task:', failure)
+          if (!cancelled) {
+            const message = userFacingMutationError(failure, 'sync a collaboration outcome')
+            setError(message)
+            a.toast(message)
+          }
+        }
+      }
+    })()
+    return () => { cancelled = true }
+  }, [project?.id, project?.linkedIdeaId, project?.status, canManage, missingMilestoneSyncKey, a.backend?.store, a.me?.id])
+
   async function addTask(event: FormEvent) {
     event.preventDefault()
     if (!project || !a.backend || !a.me) return
