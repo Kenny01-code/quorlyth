@@ -109,8 +109,30 @@ Deno.serve(async (req: Request) => {
         role = cleanText(member.data.role, 30);
       }
     }
+
+    // Connected collaboration workspaces inherit the accepted team from their
+    // source idea. This mirrors the workspace's permission-checked virtual roster.
+    if (!role && project.data.linkedIdeaId) {
+      const ideaId = cleanText(project.data.linkedIdeaId, 120);
+      const idea = ideaId ? await getDoc("ideas/" + ideaId) : null;
+      const communityId = cleanText(idea?.data?.cid, 120);
+      const community = communityId ? await getDoc("communities/" + communityId) : null;
+      const isIdeaAuthor = idea?.data?.authorId === user.id;
+      const isCommunityOwner = community?.data?.ownerId === user.id || community?.data?.createdBy === user.id;
+      let isAcceptedCollaborator = false;
+      if (ideaId) {
+        const { data: volunteerRows, error: volunteerError } = await serviceClient
+          .from("docs").select("data").like("path", "volunteers/%").limit(1000);
+        if (volunteerError) throw new Error("Could not verify the linked collaboration team.");
+        isAcceptedCollaborator = (volunteerRows || []).some((row: { data: Record<string, unknown> }) =>
+          row.data.ideaId === ideaId && row.data.applicantId === user.id && row.data.status === "accepted"
+        );
+      }
+      if (isIdeaAuthor || isCommunityOwner || isAcceptedCollaborator) role = "contributor";
+    }
+
     if (!["owner", "manager", "contributor", "viewer"].includes(role)) {
-      return respond(403, { error: "You need an active project invitation to connect GitHub evidence here." });
+      return respond(403, { error: "You need active workspace access or an accepted collaboration role to use this integration." });
     }
 
     if (action === "connect_repository") {
