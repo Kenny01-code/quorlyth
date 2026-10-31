@@ -53,6 +53,7 @@ export function AutomationRuntime() {
     const taskStatuses = new Map<string, string>()
     const milestoneStatuses = new Map<string, string>()
     const artifactStatuses = new Map<string, string>()
+    const workSubmissionStatuses = new Map<string, string>()
     let ideasReady = false
     let projectsReady = false
     let tasksReady = false
