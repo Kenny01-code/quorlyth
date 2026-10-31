@@ -6,7 +6,8 @@ import '../styles/notification-popups.css'
 
 function destination(n: Notif) {
   const target = n.target || n.id || ''
-  if (n.kind === 'idea' || n.kind === 'comment' || n.kind === 'vote' || n.kind === 'promo' || n.kind === 'collaboration') return '/idea/' + target
+  if (n.kind === 'promo') return '/promote'
+  if (n.kind === 'idea' || n.kind === 'comment' || n.kind === 'vote' || n.kind === 'collaboration') return '/idea/' + target
   if (n.kind === 'settings') return '/settings?tab=requests'
   if (n.kind === 'access') return '/access'
   if (n.kind === 'join') return '/communities/' + target.split('__')[0] + '?tab=join-requests'
