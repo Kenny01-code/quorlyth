@@ -352,14 +352,14 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
               </details>}
               {milestone.acceptanceCriteria && <div className="ql-acceptance"><QuorlythGlyph name="document" size={15} /><div><strong>Definition of done</strong><p>{milestone.acceptanceCriteria}</p></div></div>}
               {milestone.blocked && milestone.status !== 'done' && <div className="ql-blocker-note"><QuorlythGlyph name="blocked" size={16} /><div><strong>Blocked</strong><p>{milestone.blockedNote || 'Waiting on a dependency or decision.'}</p></div></div>}
-              {(canEdit || canManage) && <div className="ql-milestone-actions">
+              {(() => { const assignedIds = getMilestoneAssigneeIds(milestone); const canStart = canCollaborate && active && milestone.status === 'todo' && !milestone.blocked && (!assignedIds.length || assignedIds.includes(a.me?.id || '')); return (canEdit || canManage || canStart) ? <div className="ql-milestone-actions">
                 {canEdit && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => beginEdit(milestone)}><QuorlythGlyph name="plan" size={14} />Edit details</button>}
                 {canEdit && !milestone.blocked && milestone.status !== 'done' && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void toggleBlocked(milestone)}><QuorlythGlyph name="blocked" size={14} />Mark blocked</button>}
                 {canEdit && milestone.blocked && milestone.status !== 'done' && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void toggleBlocked(milestone)}><QuorlythGlyph name="complete" size={14} />Clear blocker</button>}
-                {canEdit && milestone.status === 'todo' && (!getMilestoneAssigneeIds(milestone).length || getMilestoneAssigneeIds(milestone).includes(a.me?.id || '')) && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="start" size={14} />Start work</button>}
+                {canStart && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="start" size={14} />Start work</button>}
                 {canEdit && milestone.status === 'done' && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeStatus(milestone, 'in_progress')}><QuorlythGlyph name="progress" size={14} />Reopen</button>}
                 {canManage && <button type="button" className="ql-quiet-action ql-danger-action" disabled={!!busyId} onClick={() => void removeMilestone(milestone)}><QuorlythGlyph name="trash" size={14} />Delete milestone</button>}
-              </div>}
+              </div> : null })()}
               <section className="ql-workspace-evidence-notice" aria-label="Workspace evidence flow">
                 <span className="ql-workspace-evidence-notice__mark"><QuorlythGlyph name="workspace" size={18} /></span>
                 <div className="ql-workspace-evidence-notice__copy">
