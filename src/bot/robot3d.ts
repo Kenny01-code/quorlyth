@@ -5,7 +5,7 @@ import { ACESFilmicToneMapping, AdditiveBlending, AmbientLight, BoxGeometry, Can
 import { THEMES } from './robot-themes'
 export { THEMES }
 
-export function robot3d(cv,opt){opt=opt||{};var W=cv.clientWidth||320,H=cv.clientHeight||320,r=new WebGLRenderer({canvas:cv,antialias:true,alpha:true});r.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<=760?1.2:1.45));r.setSize(W,H,false);r.outputEncoding=sRGBEncoding;r.toneMapping=ACESFilmicToneMapping;r.toneMappingExposure=1.15;
+export function robot3d(cv,opt){opt=opt||{};var W=cv.clientWidth||320,H=cv.clientHeight||320,r=new WebGLRenderer({canvas:cv,antialias:true,alpha:true});r.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<=760?1.0:1.25));r.setSize(W,H,false);r.outputEncoding=sRGBEncoding;r.toneMapping=ACESFilmicToneMapping;r.toneMappingExposure=1.15;
 var sc=new Scene(),cam=new PerspectiveCamera(30,W/H,.1,60),es=new Scene(),root=new Group();sc.add(root);es.background=new Color(0x040404);
 function pn(w,h,x,y,z,ry,rx,c){var m=new Mesh(new PlaneGeometry(w,h),new MeshBasicMaterial({color:c||0xffffff,side:DoubleSide}));m.position.set(x,y,z);m.rotation.set(rx||0,ry||0,0);es.add(m)}
 pn(8,3,0,6,2,0,Math.PI/2);pn(2,9,-7,0,3,1.1);pn(2,9,7,0,3,-1.1);pn(10,1.5,0,-5,4,0,-.6,0x777777);pn(6,6,0,2,-8,0,0,0x333333);
