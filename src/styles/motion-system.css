@@ -381,3 +381,26 @@ main .grid > .glass:nth-child(8) { animation-delay: 280ms; }
 @media (prefers-reduced-motion: reduce) {
   .hero .orb { transition: none; transform: translate(-50%,-50%); }
 }
+
+
+/* Single, quiet active state: no stacked animated pill plus outlined button. */
+#nav .navmain .nav-item.on {
+  color: #fff !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#nav .navmain .nav-item:focus-visible {
+  outline: none !important;
+  box-shadow: inset 0 -2px 0 rgba(255,255,255,.88) !important;
+}
+
+/* Route changes should feel immediate, not wait behind a long entrance animation. */
+:root {
+  --qth-motion-fast: 120ms;
+  --qth-motion-base: 180ms;
+}
+main > * {
+  animation-duration: 160ms !important;
+}
