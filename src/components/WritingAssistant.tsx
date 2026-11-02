@@ -36,7 +36,7 @@ export function WritingAssistant() {
   // Always discover focused textareas, even when no writing overlay currently exists.
   // The positioning effect below is mounted only while a textarea is selected.
   useEffect(() => {
-    const onFocusIn = (event: FocusEvent) => {
+    const onFocusIn = (event: Pick<FocusEvent, 'target'>) => {
       const node = event.target as HTMLElement | null
       if (!node || node.closest('.q-writing-assistant-ui')) return
 
@@ -68,6 +68,12 @@ export function WritingAssistant() {
       setError('')
     }
     document.addEventListener('focusin', onFocusIn, true)
+    // The component may be loaded in response to the first focus event.
+    // Pick up that already-focused textarea so lazy loading feels seamless.
+    const activeElement = document.activeElement
+    if (activeElement instanceof HTMLTextAreaElement) {
+      onFocusIn({ target: activeElement })
+    }
     return () => document.removeEventListener('focusin', onFocusIn, true)
   }, [target])
 

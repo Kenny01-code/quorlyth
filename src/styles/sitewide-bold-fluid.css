@@ -103,13 +103,12 @@ body {
   box-shadow:
     0 24px 62px -34px rgba(0, 0, 0, 0.98),
     inset 0 1px 0 rgba(255, 255, 255, 0.11);
-  -webkit-backdrop-filter: blur(28px) saturate(145%);
-  backdrop-filter: blur(28px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(132%);
+  backdrop-filter: blur(16px) saturate(132%);
   transition:
-    background-color 0.28s ease,
-    border-color 0.28s ease,
-    box-shadow 0.32s ease,
-    transform 0.32s cubic-bezier(0.2, 0.75, 0.25, 1);
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.2s ease;
 }
 
 #root :is(.glass, .lift, .card, .panel):hover {
@@ -177,6 +176,15 @@ body {
   outline-offset: 3px;
 }
 
+
+/* Lower the compositing cost of repeated translucent surfaces on small screens. */
+@media (max-width: 860px) {
+  #root :is(.glass, .lift, .card, .panel, .popover, .dropdown, .menu) {
+    -webkit-backdrop-filter: blur(10px) saturate(118%);
+    backdrop-filter: blur(10px) saturate(118%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #root *,
   #root *::before,
@@ -186,143 +194,211 @@ body {
   }
 }
 
-/* Keep public navigation usable after sign-out and on the sign-in screen. */
-@media (max-width: 860px) {
-  #nav.nav-public b.nav-wordmark {
-    display: none !important;
-  }
-  #nav.nav-public .navmain .nav-item {
-    gap: 0;
-    padding: 9px 9px;
-    font-size: 11px;
-  }
-  #nav.nav-public .navmain .nav-item > span {
-    display: inline !important;
-  }
-  #nav.nav-public .navmain .nav-item > svg {
-    display: none;
-  }
-  #nav.nav-public .navend {
-    display: none;
-  }
+
+/* Signed-out navigation is always present and remains usable at every viewport. */
+#nav.nav-public[data-auth-state="signed-out"] {
+  position: sticky !important;
+  top: max(8px, env(safe-area-inset-top, 0px)) !important;
+  z-index: 60 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  width: max-content;
+  max-width: calc(100% - 20px) !important;
+  min-height: 50px;
+  margin: 8px auto 0 !important;
+  padding: 6px !important;
+  gap: 5px !important;
+  overflow: hidden !important;
+  pointer-events: auto !important;
 }
 
+#nav.nav-public[data-auth-state="signed-out"] .lgb,
+#nav.nav-public[data-auth-state="signed-out"] b.nav-wordmark,
+#nav.nav-public[data-auth-state="signed-out"] .navwrap,
+#nav.nav-public[data-auth-state="signed-out"] .navmain,
+#nav.nav-public[data-auth-state="signed-out"] .navend,
+#nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item,
+#nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item > svg,
+#nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item > span {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
 
-/* Signed-out navigation stays a complete, visible part of the app shell at every width. */
+#nav.nav-public[data-auth-state="signed-out"] .lgb {
+  display: grid !important;
+  flex: 0 0 auto !important;
+  place-items: center;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 4px !important;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] b.nav-wordmark {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  margin: 0 5px 0 0 !important;
+  padding: 0 3px !important;
+  color: rgba(255,255,255,.92) !important;
+  font-size: 10px !important;
+  letter-spacing: .12em !important;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .navwrap {
+  display: flex !important;
+  flex: 0 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .navmain {
+  display: flex !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: 100% !important;
+  gap: 3px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overscroll-behavior-x: contain;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-height: 36px;
+  padding: 8px 10px !important;
+  border-radius: 999px;
+  color: rgba(255,255,255,.74) !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item > svg {
+  display: block !important;
+  width: 15px !important;
+  height: 15px !important;
+  flex: 0 0 auto !important;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item > span {
+  display: inline !important;
+  color: inherit !important;
+  white-space: nowrap !important;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item.on {
+  color: #080809 !important;
+  background: #f4f4f5 !important;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .nav-active-pill,
+#nav.nav-public[data-auth-state="signed-out"] .nsl {
+  display: none !important;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .navend {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 3px !important;
+  margin-left: 2px;
+}
+
+#nav.nav-public[data-auth-state="signed-out"] .navend .bl,
+#nav.nav-public[data-auth-state="signed-out"] .navend .srch,
+#nav.nav-public[data-auth-state="signed-out"] .navend .navav {
+  display: inline-flex !important;
+  visibility: visible !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 7px !important;
+  margin: 0 !important;
+}
+
 @media (max-width: 860px) {
-  #nav.nav-public {
-    display: flex !important;
-    align-items: center !important;
+  #nav.nav-public[data-auth-state="signed-out"] {
     width: calc(100% - 12px) !important;
     max-width: calc(100% - 12px) !important;
-    min-height: 48px;
-    gap: 5px !important;
-    padding: 5px 6px !important;
-    overflow: hidden !important;
-  }
-
-  #nav.nav-public .lgb {
-    display: grid !important;
-    flex: 0 0 auto !important;
-    place-items: center;
+    justify-content: space-between !important;
+    gap: 3px !important;
     padding: 5px !important;
   }
 
-  #nav.nav-public b.nav-wordmark {
-    display: inline-flex !important;
-    flex: 0 0 auto !important;
-    white-space: nowrap;
-    font-size: 9px !important;
-    letter-spacing: .11em;
-    margin-right: 2px;
-  }
-
-  #nav.nav-public .navwrap {
-    display: flex !important;
-    flex: 1 1 auto !important;
-    width: auto !important;
+  #nav.nav-public[data-auth-state="signed-out"] .navwrap {
+    flex: 1 1 0 !important;
     min-width: 0 !important;
-    overflow: hidden !important;
   }
 
-  #nav.nav-public .navmain {
-    display: flex !important;
-    flex: 1 1 auto !important;
+  #nav.nav-public[data-auth-state="signed-out"] .navmain {
+    flex: 1 1 0 !important;
     width: 100% !important;
-    min-width: 0 !important;
-    gap: 3px !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    scrollbar-width: none;
   }
 
-  #nav.nav-public .navmain .nav-item {
-    display: inline-flex !important;
-    flex: 0 0 auto !important;
-    align-items: center !important;
-    justify-content: center;
-    gap: 5px !important;
-    padding: 8px 8px !important;
-    white-space: nowrap;
+  #nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item {
+    padding: 8px 9px !important;
     font-size: 10px !important;
   }
 
-  #nav.nav-public .navmain .nav-item > svg {
-    display: block !important;
-    width: 15px;
-    height: 15px;
-    flex: 0 0 auto;
-  }
-
-  #nav.nav-public .navmain .nav-item > span {
-    display: inline !important;
-  }
-
-  #nav.nav-public .navend {
-    display: flex !important;
-    flex: 0 0 auto !important;
-    align-items: center;
-    gap: 2px !important;
-  }
-
-  #nav.nav-public .navend .bl,
-  #nav.nav-public .navend .srch,
-  #nav.nav-public .navend .navav {
-    display: inline-flex !important;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #nav.nav-public .navend .srch span,
-  #nav.nav-public .navend .srch kbd {
+  #nav.nav-public[data-auth-state="signed-out"] .navend .srch span,
+  #nav.nav-public[data-auth-state="signed-out"] .navend .srch kbd {
     display: none !important;
   }
 }
 
 @media (max-width: 540px) {
-  #nav.nav-public {
-    gap: 3px !important;
-    padding: 4px 5px !important;
+  #nav.nav-public[data-auth-state="signed-out"] {
+    min-height: 46px;
+    gap: 2px !important;
+    padding: 4px !important;
   }
 
-  #nav.nav-public b.nav-wordmark {
+  #nav.nav-public[data-auth-state="signed-out"] b.nav-wordmark {
     font-size: 8px !important;
-    letter-spacing: .08em;
+    letter-spacing: .075em !important;
+    margin-right: 1px !important;
   }
 
-  #nav.nav-public .navmain .nav-item {
+  #nav.nav-public[data-auth-state="signed-out"] .lgb {
+    min-width: 30px;
+    min-height: 30px;
+  }
+
+  #nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item {
     gap: 4px !important;
+    min-height: 33px;
     padding: 7px 7px !important;
     font-size: 9px !important;
   }
 
-  #nav.nav-public .navmain .nav-item > svg {
-    width: 14px;
-    height: 14px;
+  #nav.nav-public[data-auth-state="signed-out"] .navmain .nav-item > svg {
+    width: 13px !important;
+    height: 13px !important;
   }
 
-  #nav.nav-public .navend button {
-    padding: 7px !important;
+  #nav.nav-public[data-auth-state="signed-out"] .navend {
+    gap: 1px !important;
+  }
+
+  #nav.nav-public[data-auth-state="signed-out"] .navend .bl,
+  #nav.nav-public[data-auth-state="signed-out"] .navend .srch,
+  #nav.nav-public[data-auth-state="signed-out"] .navend .navav {
+    min-width: 29px;
+    min-height: 29px;
+    padding: 5px !important;
   }
 }
