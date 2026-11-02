@@ -1,4 +1,4 @@
-import { THEMES } from './robot3d'
+import { THEMES } from './robot-themes'
 export { THEMES }
 
 export interface Voice { id: string; n: string; g: 'f' | 'm'; d: string; theme: string; ai: string }
