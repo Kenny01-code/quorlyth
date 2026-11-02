@@ -45,7 +45,7 @@ export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolea
       })
     }
     // The sign-in form and primary button render before the heavy WebGL chunk is requested.
-    if (defer) loadTimer = window.setTimeout(loadRobot, 350)
+    if (defer) loadTimer = window.setTimeout(loadRobot, 500)
     else loadRobot()
     return () => {
       cancelled = true

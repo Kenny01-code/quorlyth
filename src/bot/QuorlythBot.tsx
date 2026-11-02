@@ -1,3 +1,5 @@
+import '../styles/bot.css'
+import '../styles/bot-composer-fluid-black.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -3849,7 +3851,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 </div>
               </header>
               <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
-                <Robot ref={robot} theme={theme} calm={bs.calm} drag />
+                <Robot ref={robot} theme={theme} calm={bs.calm} drag defer />
                 <div className={cn('ast-cap', caption && 'on')}>{caption}</div><div className="bnm">QuorlythBot</div>
               </div>
               {live && (

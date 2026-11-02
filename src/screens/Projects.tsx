@@ -1,3 +1,4 @@
+import '../styles/standalone-workspaces.css'
 import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'

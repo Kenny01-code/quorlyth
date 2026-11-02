@@ -1,3 +1,4 @@
+import '../styles/automations.css'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Gate } from '../components/Gate'

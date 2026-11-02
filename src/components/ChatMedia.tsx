@@ -1,3 +1,4 @@
+import '../styles/chat-media.css'
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Icon } from '../lib/Icon'
 import type { ChatAttachment as ChatAttachmentData } from '../lib/types'

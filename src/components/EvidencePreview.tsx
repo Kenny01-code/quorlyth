@@ -1,3 +1,4 @@
+import '../styles/evidence-preview.css'
 import { useEffect, useMemo, useState } from 'react'
 
 type EvidencePreviewProps = {

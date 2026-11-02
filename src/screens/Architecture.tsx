@@ -4,6 +4,7 @@ import { useApp } from '../data/AppProvider'
 import type { WorkflowDefinition } from '../lib/automation'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
+import '../styles/public-architecture.css'
 import '../styles/architecture-live.css'
 import '../styles/github-architecture-map.css'
 
