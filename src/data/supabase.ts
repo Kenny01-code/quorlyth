@@ -230,7 +230,7 @@ export async function createSupabaseStore(url: string, key: string) {
         refreshTimer = setTimeout(() => {
           refreshTimer = undefined
           void load()
-        }, 35)
+        }, 85)
       }
 
       const token = Symbol(collection)
