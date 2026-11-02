@@ -64,3 +64,70 @@ test('signed-out navigation stays visible and its links remain usable on mobile'
   assert.match(css, /\.nav-item > span[\s\S]{0,160}display: inline !important/)
   assert.match(css, /@media \(max-width: 540px\)/)
 })
+
+
+test('heavy feature styles are split from the initial global stylesheet', async () => {
+  const [main, messages, chatMedia, bot, automations] = await Promise.all([
+    readSource('src/main.tsx'),
+    readSource('src/screens/Messages.tsx'),
+    readSource('src/components/ChatMedia.tsx'),
+    readSource('src/bot/QuorlythBot.tsx'),
+    readSource('src/screens/Automations.tsx'),
+  ])
+  for (const globalStyle of [
+    /styles\/messages\.css/,
+    /styles\/messages-final\.css/,
+    /styles\/messages-reference\.css/,
+    /styles\/messages-neuroglass\.css/,
+    /styles\/messages-icon-centering\.css/,
+    /styles\/bot\.css/,
+    /styles\/bot-composer-fluid-black\.css/,
+    /styles\/automations\.css/,
+  ]) assert.doesNotMatch(main, globalStyle)
+  assert.match(messages, /styles\/messages\.css/)
+  assert.match(messages, /styles\/messages-neuroglass\.css/)
+  assert.match(chatMedia, /styles\/chat-media\.css/)
+  assert.match(bot, /styles\/bot\.css/)
+  assert.match(automations, /styles\/automations\.css/)
+})
+
+test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the bot chunk', async () => {
+  const [config, themes, robot3d, robot, bot] = await Promise.all([
+    readSource('src/bot/config.ts'),
+    readSource('src/bot/robot-themes.ts'),
+    readSource('src/bot/robot3d.ts'),
+    readSource('src/bot/Robot.tsx'),
+    readSource('src/bot/QuorlythBot.tsx'),
+  ])
+  assert.match(config, /from '\.\/robot-themes'/)
+  assert.doesNotMatch(config, /from '\.\/robot3d'/)
+  assert.match(themes, /export const THEMES/)
+  assert.match(robot3d, /from ["']three["']/)
+  assert.match(robot, /import\('\.\/robot3d'\)/)
+  assert.match(bot, /<Robot[^>]+defer/)
+})
+
+test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', async () => {
+  const robot3d = await readSource('src/bot/robot3d.ts')
+  assert.match(robot3d, /1000\/40/)
+  assert.match(robot3d, /document\.visibilityState/)
+  assert.match(robot3d, /document\.removeEventListener\(["']visibilitychange["']/)
+  assert.match(robot3d, /window\.innerWidth<=760\?1\.2:1\.45/)
+})
+
+test('the top navigation uses one active-state surface, not a duplicate animated pill', async () => {
+  const [nav, css] = await Promise.all([
+    readSource('src/components/Nav.tsx'),
+    readSource('src/styles/sitewide-liquid-glass.css'),
+  ])
+  assert.doesNotMatch(nav, /nav-active-pill|activePill|useLayoutEffect/)
+  assert.match(nav, /active\(i\.path\) && 'on'/)
+  assert.match(css, /nav button\.on/)
+})
+
+test('QuorlythBot sidebar is narrower without removing its navigation', async () => {
+  const css = await readSource('src/styles/bot.css')
+  assert.match(css, /grid-template-columns:\s*minmax\(176px, 186px\) minmax\(0, 1fr\)/)
+  assert.match(css, /width:\s*min\(224px, calc\(100% - 44px\)\)/)
+  assert.match(css, /\.bs-l/)
+})
