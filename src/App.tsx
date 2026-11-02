@@ -3,9 +3,6 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
-import { Palette } from './components/Palette'
-import { Shortcuts } from './components/Shortcuts'
-import { NotifPanel } from './components/NotifPanel'
 import { Logo } from './lib/Logo'
 import { QuorlythLoader } from './components/QuorlythLoader'
 const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.Landing })))
@@ -36,6 +33,9 @@ const loadQuorlythBot = () => import('./bot/QuorlythBot').then(m => ({ default: 
 const QuorlythBot = lazy(loadQuorlythBot)
 const AutomationRuntime = lazy(() => import('./components/AutomationRuntime').then(m => ({ default: m.AutomationRuntime })))
 const WritingAssistant = lazy(() => import('./components/WritingAssistant').then(m => ({ default: m.WritingAssistant })))
+const Palette = lazy(() => import('./components/Palette').then(m => ({ default: m.Palette })))
+const Shortcuts = lazy(() => import('./components/Shortcuts').then(m => ({ default: m.Shortcuts })))
+const NotifPanel = lazy(() => import('./components/NotifPanel').then(m => ({ default: m.NotifPanel })))
 import { useApp } from './data/AppProvider'
 import { useUserState } from './lib/userState'
 import { chime, useNotifs } from './lib/notifs'
@@ -399,9 +399,9 @@ export default function App() {
           </Suspense>
         </section>
       </main>
-      {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
-      {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
-      {keys && <Shortcuts onClose={() => setKeys(false)} />}
+      {bell && <Suspense fallback={null}><NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} /></Suspense>}
+      {palette && <Suspense fallback={null}><Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} /></Suspense>}
+      {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
       {!botMounted ? <>
         {!deferredLauncherHidden && <button
           id="astl"
