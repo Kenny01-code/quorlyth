@@ -118,7 +118,7 @@ test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', 
 test('the top navigation uses one active-state surface, not a duplicate animated pill', async () => {
   const [nav, css] = await Promise.all([
     readSource('src/components/Nav.tsx'),
-    readSource('src/styles/sitewide-liquid-glass.css'),
+    readSource('src/styles/app.css'),
   ])
   assert.doesNotMatch(nav, /nav-active-pill|activePill|useLayoutEffect/)
   assert.match(nav, /active\(i\.path\) && 'on'/)
