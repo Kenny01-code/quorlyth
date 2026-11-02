@@ -7,7 +7,6 @@ import { Intro } from './components/Intro'
 import { Palette } from './components/Palette'
 import { Shortcuts } from './components/Shortcuts'
 import { NotifPanel } from './components/NotifPanel'
-import { PageAssist } from './components/PageAssist'
 import { WritingAssistant } from './components/WritingAssistant'
 import { Logo } from './lib/Logo'
 import { QuorlythLoader } from './components/QuorlythLoader'
@@ -94,8 +93,6 @@ export default function App() {
   // Download the full bot experience only after the user opens its lightweight launcher.
   const [botMounted, setBotMounted] = useState(false)
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
-  const [pageBotPrompt, setPageBotPrompt] = useState('')
-  const [pageBotPromptRequest, setPageBotPromptRequest] = useState(0)
   const [deferredLauncherHidden, setDeferredLauncherHidden] = useState(false)
   const [showDeferredLauncherRestore, setShowDeferredLauncherRestore] = useState(false)
   const deferredRestoreTimer = useRef<number | null>(null)
@@ -106,18 +103,6 @@ export default function App() {
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
-  const openBotWithPrompt = useCallback((prompt: string) => {
-    setPageBotPrompt(prompt)
-    setPageBotPromptRequest(request => request + 1)
-    setBotMounted(true)
-    void loadQuorlythBot().catch(() => {})
-  }, [])
-  // Warm the assistant chunk after the first paint so mobile taps do not pay the full download cost.
-  // This runs asynchronously and never blocks the page's first render.
-  useEffect(() => {
-    const timer = window.setTimeout(() => { void loadQuorlythBot().catch(() => {}) }, 650)
-    return () => window.clearTimeout(timer)
-  }, [])
   useEffect(() => {
     const summonLiveTalk = (event: KeyboardEvent) => {
       if (!(event.altKey && event.shiftKey && event.code === 'KeyQ') || event.repeat || event.ctrlKey || event.metaKey) return
@@ -400,7 +385,6 @@ export default function App() {
           </Suspense>
         </section>
       </main>
-      <PageAssist onAskBot={openBotWithPrompt} />
       {bell && <NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} />}
       {palette && <Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} />}
       {keys && <Shortcuts onClose={() => setKeys(false)} />}
@@ -443,7 +427,7 @@ export default function App() {
           <button type="button" onClick={restoreDeferredLauncher}>Undo</button>
           <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
         </div>}
-      </> : <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} initialPrompt={pageBotPrompt} promptRequest={pageBotPromptRequest} /></Suspense>}
+      </> : <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
       <Toast />
       <WritingAssistant />
     </>
