@@ -6,12 +6,12 @@ const readSource = path => readFile(new URL('../' + path, import.meta.url), 'utf
 
 test('Supabase collection subscriptions use indexed path ranges', async () => {
   const source = await readSource('src/data/supabase.ts')
-  assert.match(source, /const prefix = collection + '\/'/)
-  assert.match(source, /const upperBound = collection + '0'/)
-  assert.match(source, /.gte\('path', prefix\)/)
-  assert.match(source, /.lt\('path', upperBound\)/)
-  assert.doesNotMatch(source, /.like\('path', collection + '\/%'\)/)
-  assert.match(source, /.filter\(r => isDirectChild\(collection, r\.path\)\)/)
+  assert.ok(source.includes("const prefix = collection + '/'"))
+  assert.ok(source.includes("const upperBound = collection + '0'"))
+  assert.ok(source.includes(".gte('path', prefix)"))
+  assert.ok(source.includes(".lt('path', upperBound)"))
+  assert.ok(!source.includes(".like('path', collection + '/%'"))
+  assert.ok(source.includes(".filter(r => isDirectChild(collection, r.path))"))
 })
 
 test('collection boundaries include the separator but exclude the next collection', async () => {
