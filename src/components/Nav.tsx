@@ -28,6 +28,8 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/database', label: 'Database', icon: 'db', owner: true, platformOwnerOnly: true },
 ]
 
+const preloadedRoutes = new Set<string>()
+
 function preloadRoute(path: string) {
   // Warm a route chunk on hover/focus so navigation does not start downloading after the click.
   const normalized = path.startsWith('/communities/') ? '/communities'
@@ -62,7 +64,15 @@ function preloadRoute(path: string) {
     '/signin': () => import('../screens/SignIn'),
     '/demo': () => import('../screens/Dashboard'),
   }
-  try { void (loaders[normalized] || loaders[path])?.().catch(() => {}) } catch {}
+  const loader = loaders[normalized] || loaders[path]
+  const key = normalized || path
+  if (!loader || preloadedRoutes.has(key)) return
+  preloadedRoutes.add(key)
+  try {
+    void loader().catch(() => { preloadedRoutes.delete(key) })
+  } catch {
+    preloadedRoutes.delete(key)
+  }
 }
 export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests, accessSent, demo, onDemo, onReplay }: { onSearch: () => void; onBell: () => void; unread: number; pendingRequests: number; unreadRequests: number; accessSent: boolean; demo: boolean; onDemo: () => void; onReplay: () => void }) {
   const nav = useNavigate()
