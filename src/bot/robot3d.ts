@@ -2,7 +2,8 @@
 // 3D QuorlythBot robot (three.js r128). Ported from the single file version.
 import { ACESFilmicToneMapping, AdditiveBlending, AmbientLight, BoxGeometry, CanvasTexture, Color, CylinderGeometry, DirectionalLight, DoubleSide, Group, Mesh, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial, PMREMGenerator, PerspectiveCamera, PlaneGeometry, Scene, SphereGeometry, Sprite, SpriteMaterial, TorusGeometry, WebGLRenderer, sRGBEncoding } from "three"
 
-export const THEMES={pearl:{n:"Pearl",p:0xeeeeee,b:0x070707,c:0xdddddd,g:0xffffff,g1:"#ffffff",g2:"#8a8a8a",cr:"230,230,230"},onyx:{n:"Onyx",p:0x1b1b1d,b:0x000000,c:0xcfcfcf,g:0xffffff,g1:"#d8d8d8",g2:"#1b1b1d",cr:"200,200,200"},champagne:{n:"Champagne",p:0xd9bd82,b:0x0c0905,c:0xf0d58a,g:0xffe6a8,g1:"#f3dfa8",g2:"#a8873f",cr:"232,198,120"},rose:{n:"Rose",p:0xe6bfb4,b:0x0b0707,c:0xf0b7a8,g:0xffd0c4,g1:"#f8d2c8",g2:"#b97a6c",cr:"236,170,152"},glacier:{n:"Glacier",p:0xc8dce8,b:0x05080a,c:0xb4cfe2,g:0xcfeaff,g1:"#d8efff",g2:"#6d93ad",cr:"150,200,235"},emerald:{n:"Emerald",p:0x2b5a48,b:0x030806,c:0x9fd8c0,g:0xbfffe0,g1:"#7fe0b6",g2:"#1d4535",cr:"90,200,150"},amethyst:{n:"Amethyst",p:0x765ea6,b:0x07050b,c:0xcbb8ee,g:0xe2d4ff,g1:"#cdb6f5",g2:"#503b78",cr:"170,140,235"}};
+import { THEMES } from './robot-themes'
+export { THEMES }
 
 export function robot3d(cv,opt){opt=opt||{};var W=cv.clientWidth||320,H=cv.clientHeight||320,r=new WebGLRenderer({canvas:cv,antialias:true,alpha:true});r.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<=760?1.4:1.75));r.setSize(W,H,false);r.outputEncoding=sRGBEncoding;r.toneMapping=ACESFilmicToneMapping;r.toneMappingExposure=1.15;
 var sc=new Scene(),cam=new PerspectiveCamera(30,W/H,.1,60),es=new Scene(),root=new Group();sc.add(root);es.background=new Color(0x040404);
