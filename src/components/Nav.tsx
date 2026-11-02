@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -69,14 +69,28 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   const loc = useLocation()
   const app = useApp()
   const { me, owner, platformOwner, platformAdmin } = app
-  const communityOwner = !!me && app.data.communities.some(c => app.ownsCommunity(c.id))
+  const communityOwner = useMemo(() => !!me && app.data.communities.some(community =>
+    community.ownerId ? community.ownerId === me.id
+      : community.createdBy ? community.createdBy === me.id
+        : platformOwner
+  ), [me?.id, app.data.communities, platformOwner])
+  const ownedCommunityIds = useMemo(() => new Set(
+    app.data.communities.filter(community => community.ownerId
+      ? community.ownerId === me?.id
+      : community.createdBy
+        ? community.createdBy === me?.id
+        : platformOwner
+    ).map(community => community.id)
+  ), [me?.id, app.data.communities, platformOwner])
+  const acceptedIdeaIds = useMemo(() => new Set(
+    app.data.volunteers.filter(item => item.applicantId === me?.id && item.status === 'accepted').map(item => item.ideaId)
+  ), [me?.id, app.data.volunteers])
   const workspaceManager = owner || communityOwner
-  const hasAccessibleProject = !!me && app.data.ideas.some(idea => {
-    const relevant = app.ownsCommunity(idea.cid)
-      || idea.authorId === me.id
-      || app.data.volunteers.some(v => v.ideaId === idea.id && v.applicantId === me.id && v.status === 'accepted')
-    return relevant && (!!app.data.projects[idea.id] || ['selected', 'promoted'].includes(app.statusOf(idea.id)))
-  })
+  const hasAccessibleProject = useMemo(() => !!me && app.data.ideas.some(idea => {
+    const relevant = ownedCommunityIds.has(idea.cid) || idea.authorId === me.id || acceptedIdeaIds.has(idea.id)
+    const status = app.data.reviews[idea.id]?.status || app.data.outcomes[idea.id]?.status
+    return relevant && (!!app.data.projects[idea.id] || status === 'selected' || status === 'promoted')
+  }), [me?.id, app.data.ideas, app.data.projects, app.data.reviews, app.data.outcomes, ownedCommunityIds, acceptedIdeaIds])
   const main = useRef<HTMLDivElement>(null)
   const wrap = useRef<HTMLDivElement>(null)
   const thumb = useRef<HTMLElement>(null)
@@ -158,7 +172,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   }, [loc.pathname, owner])
 
   return (
-    <nav className={cn("glass", !me && "nav-public")} id="nav" aria-label="Main navigation">
+    <nav className={cn("glass", !me && "nav-public")} id="nav" aria-label="Main navigation" data-auth-state={me ? "signed-in" : "signed-out"}>
       <button className="lgb" onClick={onReplay} title="Replay intro" aria-label="Replay Quorlyth introduction"><Logo size={26} breathe /></button>
       <b className="nav-wordmark">{'QUORLYTH'.split('').map((c, i) => <span key={i} style={{ ['--word-index' as any]: i }}>{c}</span>)}</b>
       <div className="navwrap" ref={wrap}>
