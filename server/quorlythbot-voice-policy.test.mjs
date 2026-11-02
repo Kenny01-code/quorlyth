@@ -73,11 +73,37 @@ test('Normal chat starts ElevenLabs speech while the answer is still streaming',
   assert.match(bot, /preferElevenLabsVoice:\s*true/)
 })
 
-test('Opening QuorlythBot no longer shows a separate loading panel and supports proactive page prompts', async () => {
+test('Automatic page-guide popups are removed and QuorlythBot loads only on explicit request', async () => {
   const app = await readSource('src/App.tsx')
+  assert.doesNotMatch(app, /PageAssist|pageBotPrompt|page-assist|quorlyth:page-assist/)
+  assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
+  assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
+  assert.match(app, /onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
+  assert.match(app, /const QuorlythBot = lazy\(loadQuorlythBot\)/)
   assert.doesNotMatch(app, /qbot-open-fallback/)
-  assert.match(app, /<Suspense fallback=\{null\}><QuorlythBot initialOpen voiceRequest=\{botVoiceRequest\} initialPrompt=\{pageBotPrompt\} promptRequest=\{pageBotPromptRequest\} \/><\/Suspense>/)
-  assert.match(app, /Warm the assistant chunk after the first paint/)
+})
+
+test('Heavy writing tools are lazy-loaded after the user focuses a textarea', async () => {
+  const app = await readSource('src/App.tsx')
+  const writingAssistant = await readSource('src/components/WritingAssistant.tsx')
+  assert.match(app, /const WritingAssistant = lazy\(\(\) => import\('\.\/components\/WritingAssistant'\)/)
+  assert.match(app, /writingAssistantMounted && <Suspense fallback=\{null\}><WritingAssistant \/><\/Suspense>/)
+  assert.match(app, /onFirstTextareaFocus/)
+  assert.match(writingAssistant, /activeElement instanceof HTMLTextAreaElement/)
+})
+
+test('Signed-out navigation remains visible and scrollable on narrow screens', async () => {
+  const [app, nav, css] = await Promise.all([
+    readSource('src/App.tsx'),
+    readSource('src/components/Nav.tsx'),
+    readSource('src/styles/sitewide-bold-fluid.css'),
+  ])
+  assert.match(nav, /!me && "nav-public"/)
+  assert.match(nav, /data-auth-state=\{me \? "signed-in" : "signed-out"\}/)
+  assert.match(css, /#nav\.nav-public\[data-auth-state="signed-out"\][\s\S]*?visibility:\s*visible !important/)
+  assert.match(css, /\.nav-public\[data-auth-state="signed-out"\] \.navmain[\s\S]*?overflow-x:\s*auto !important/)
+  assert.match(css, /\.nav-public\[data-auth-state="signed-out"\] \.navmain \.nav-item > span[\s\S]*?display:\s*inline !important/)
+  assert.doesNotMatch(app, /PageAssist/)
 })
 
 test('Chat provider failover bounds stalled header and first-token waits', async () => {
