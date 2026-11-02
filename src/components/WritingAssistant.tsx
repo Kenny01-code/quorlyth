@@ -68,6 +68,12 @@ export function WritingAssistant() {
       setError('')
     }
     document.addEventListener('focusin', onFocusIn, true)
+    // The component may be loaded in response to the first focus event.
+    // Pick up that already-focused textarea so lazy loading feels seamless.
+    const activeElement = document.activeElement
+    if (activeElement instanceof HTMLTextAreaElement) {
+      onFocusIn({ target: activeElement } as FocusEvent)
+    }
     return () => document.removeEventListener('focusin', onFocusIn, true)
   }, [target])
 
