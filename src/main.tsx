@@ -8,8 +8,6 @@ import './styles/loader.css'
 import './styles/project-work.css'
 import './styles/sitewide-bold-fluid.css'
 import './styles/overlay-contrast.css'
-import './styles/workspace-shell.css'
-import './styles/standalone-workspaces.css'
 import './styles/motion-system.css'
 
 import './styles/hidden-scrollbars.css'
