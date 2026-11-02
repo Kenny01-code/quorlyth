@@ -196,12 +196,16 @@ export async function createSupabaseStore(url: string, key: string) {
         // the UI back after a newer update has already arrived.
         const sequence = ++loadSequence
         try {
-          // Exclude deeper descendants on the server rather than downloading all
-          // nested comments/children and discarding them in the browser.
+          // Use a primary-key range instead of LIKE. The '/' separator is
+          // immediately before '0' in ASCII, so [collection/, collection0)
+          // covers the complete collection prefix and can use docs_pkey.
+          // Keep the direct-child guard below so nested records remain excluded.
+          const prefix = collection + '/'
+          const upperBound = collection + '0'
           const { data, error } = await sb.from('docs')
             .select('path,data')
-            .like('path', collection + '/%')
-            .not('path', 'like', collection + '/%/%')
+            .gte('path', prefix)
+            .lt('path', upperBound)
           if (stopped || sequence !== loadSequence) return
           if (error) {
             reportError(error)
