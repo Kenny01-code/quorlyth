@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Backend, createBackend } from '../backend'
 import { askJson } from '../ai/client'
 import { ChatAttachment, Comment, Community, CommunityAIOrganizerRequest, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkEvidenceAIReview, WorkSubmission } from '../lib/types'
@@ -365,7 +365,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setSettingsSnapshot(null)
     const s = backend.store
-    const set = (k: keyof Data, v: any) => setData(d => ({ ...d, [k]: v }))
+    const set = (k: keyof Data, v: any) => startTransition(() => setData(d => ({ ...d, [k]: v })))
     let readErrorShown = false
     const onReadError = (error: unknown) => {
       console.error('Quorlyth shared-data read failed:', error)
@@ -1014,7 +1014,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...(aiOrganized ? { aiOrganized: true } : {}),
         }
         const milestone: Milestone = { id, projectId, title: cleanTitle, description: description.trim().slice(0, 2000), status: 'todo', createdBy: me!.id, at, updatedAt: at, ...extra }
-        await st!.set('milestones/' + id, { projectId, title: cleanTitle, description: description.trim().slice(0, 2000), status: 'todo', createdBy: me!.id, at, updatedAt: at, ...extra })
+        await st!.create('milestones/' + id, { projectId, title: cleanTitle, description: description.trim().slice(0, 2000), status: 'todo', createdBy: me!.id, at, updatedAt: at, ...extra })
         setData(d => ({ ...d, milestones: [...d.milestones.filter(item => item.id !== id), milestone] }))
       }, 'Milestone added'),
       updateMilestone: (milestoneId, patch) => w(async () => {
