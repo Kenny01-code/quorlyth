@@ -83,6 +83,11 @@ test('heavy feature styles are split from the initial global stylesheet', async 
     /styles\/bot\.css/,
     /styles\/bot-composer-fluid-black\.css/,
     /styles\/automations\.css/,
+    /styles\/public-architecture\.css/,
+    /styles\/backup-restore\.css/,
+    /styles\/evidence-preview\.css/,
+    /styles\/standalone-workspaces\.css/,
+    /styles\/workspace-shell\.css/,
   ]) assert.doesNotMatch(main, globalStyle)
   assert.match(messages, /styles\/messages\.css/)
   assert.match(messages, /styles\/messages-neuroglass\.css/)
@@ -146,6 +151,18 @@ test('feature-only CSS is not loaded until its route or component is used', asyn
   assert.match(messages, /styles\/messages\.css/)
   assert.match(bot, /styles\/bot\.css/)
   assert.match(automation, /styles\/automations\.css/)
+  const architecturePage = await readSource('src/screens/Architecture.tsx')
+  const workspacesPage = await readSource('src/screens/StandaloneWorkspaces.tsx')
+  const projectsPage = await readSource('src/screens/Projects.tsx')
+  const collaborationsPage = await readSource('src/screens/Collaborations.tsx')
+  const evidence = await readSource('src/components/EvidencePreview.tsx')
+  const backup = await readSource('src/components/BackupRestore.tsx')
+  assert.match(architecturePage, /styles\/public-architecture\.css/)
+  assert.match(workspacesPage, /styles\/standalone-workspaces\.css/)
+  assert.match(projectsPage, /styles\/standalone-workspaces\.css/)
+  assert.match(collaborationsPage, /styles\/workspace-shell\.css/)
+  assert.match(evidence, /styles\/evidence-preview\.css/)
+  assert.match(backup, /styles\/backup-restore\.css/)
 })
 
 test('navigation route chunks are preloaded once across hover, pointer-down and focus', async () => {
