@@ -12,7 +12,6 @@ import './styles/workspace-shell.css'
 import './styles/standalone-workspaces.css'
 import './styles/evidence-preview.css'
 import './styles/backup-restore.css'
-import './styles/public-architecture.css'
 import './styles/motion-system.css'
 
 import './styles/hidden-scrollbars.css'
