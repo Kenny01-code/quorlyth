@@ -1,3 +1,5 @@
+import '../styles/bot.css'
+import '../styles/bot-composer-fluid-black.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
