@@ -1358,3 +1358,14 @@
     transition: none !important;
   }
 }
+
+
+/* Slightly narrower internal QuorlythBot sidebar keeps the conversation canvas spacious. */
+@media (min-width: 981px) {
+  #ast #bot.qbot-sidebar-compact-v2:not(.narrow).side-on {
+    grid-template-columns: minmax(176px, 186px) minmax(0, 1fr) !important;
+  }
+}
+#ast #bot.qbot-sidebar-compact-v2.narrow > .bs.qbot-sidebar-drawer {
+  width: min(224px, calc(100% - 44px)) !important;
+}
