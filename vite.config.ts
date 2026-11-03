@@ -10,7 +10,6 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('/node_modules/three/')) return 'three'
           if (id.includes('/node_modules/jspdf/')) return 'pdf-export'
-          if (id.endsWith('/src/components/Charts.tsx')) return 'charts'
         },
       },
     },
