@@ -1,5 +1,5 @@
 import '../styles/standalone-workspaces.css'
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
@@ -142,7 +142,7 @@ type GithubRepository = {
   defaultBranch: string; language?: string; stars: number; openIssues: number; sourceVerified: boolean
   lastSyncedAt: number; docId?: string
 }
-type WorkspaceComment = { id: string; projectId: string; authorId: string; text: string; at: number; attachments?: ChatAttachment[]; docId?: string }
+type WorkspaceComment = { id: string; projectId: string; authorId: string; text: string; at: number; attachments?: ChatAttachment[]; mentionedUserIds?: string[]; mentionedEveryone?: boolean; docId?: string }
 
 function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
   submission: WorkSubmission
@@ -508,6 +508,10 @@ function WorkspaceProjectView() {
   const [commentText, setCommentText] = useState('')
   const [commentFiles, setCommentFiles] = useState<File[]>([])
   const [commentVoiceNote, setCommentVoiceNote] = useState<VoiceNoteDraft | null>(null)
+  const [commentMentionedUserIds, setCommentMentionedUserIds] = useState<string[]>([])
+  const [commentMentionedEveryone, setCommentMentionedEveryone] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState<{ start: number; end: number; query: string } | null>(null)
+  const commentInput = useRef<HTMLTextAreaElement>(null)
   // Keep discussion interactions consistent with the collaboration workspace panel.
   const [discussionMode, setDiscussionMode] = useState<'inline' | 'expanded' | 'minimized'>('inline')
   const [reviewNotes, setReviewNotes] = useState<Record<string,string>>({})
@@ -1047,6 +1051,58 @@ function WorkspaceProjectView() {
     })
   }
 
+  const mentionCandidates = useMemo(() => {
+    if (!mentionQuery) return []
+    const query = mentionQuery.query.trim().toLocaleLowerCase()
+    const everyone = {
+      userId: '__everyone__',
+      name: 'Everyone',
+      detail: `${Math.max(0, team.filter(member => member.status === 'active' && member.userId !== a.me?.id).length)} active teammates`,
+    }
+    const people = team
+      .filter(member => member.status === 'active' && member.userId !== a.me?.id)
+      .map(member => ({ userId: member.userId, name: a.nm(member.userId), detail: member.role }))
+      .filter(person => person.name && !person.name.startsWith('Member · '))
+      .filter(person => !query || person.name.toLocaleLowerCase().includes(query))
+      .sort((first, second) => first.name.localeCompare(second.name))
+      .slice(0, 6)
+    return (!query || 'everyone'.includes(query) || 'all teammates'.includes(query)) && people.length
+      ? [everyone, ...people]
+      : people
+  }, [mentionQuery, team, a.me?.id, a.nm])
+
+  function updateCommentDraft(value: string, caret: number) {
+    setCommentText(value)
+    const beforeCaret = value.slice(0, caret)
+    const match = /(^|\\s)@([^\\s@]*)$/.exec(beforeCaret)
+    if (!match) {
+      setMentionQuery(null)
+      return
+    }
+    setMentionQuery({ start: match.index + match[1].length, end: caret, query: match[2] })
+  }
+
+  function insertWorkspaceMention(userId: string) {
+    const current = mentionQuery
+    const input = commentInput.current
+    if (!current || !input) return
+    const label = userId === '__everyone__' ? 'everyone' : a.nm(userId)
+    const next = commentText.slice(0, current.start) + '@' + label + ' ' + commentText.slice(current.end)
+    setCommentText(next)
+    if (userId === '__everyone__') {
+      setCommentMentionedEveryone(true)
+      setCommentMentionedUserIds(team.filter(member => member.status === 'active' && member.userId !== a.me?.id).map(member => member.userId))
+    } else {
+      setCommentMentionedUserIds(currentIds => [...new Set([...currentIds, userId])])
+    }
+    setMentionQuery(null)
+    const caret = current.start + label.length + 2
+    requestAnimationFrame(() => {
+      input.focus()
+      input.setSelectionRange(caret, caret)
+    })
+  }
+
   async function postComment(event: FormEvent) {
     event.preventDefault()
     if (!a.backend || !a.me) return
@@ -1070,14 +1126,27 @@ function WorkspaceProjectView() {
           })
         }
         const text = cleanText || (commentVoiceNote ? 'Sent a voice note.' : 'Shared an attachment.')
+        const explicitEveryone = commentMentionedEveryone && /(^|\\s)@everyone\\b/i.test(cleanText)
+        const mentionedUserIds = [...new Set([
+          ...(explicitEveryone ? team.filter(member => member.status === 'active' && member.userId !== a.me!.id).map(member => member.userId) : []),
+          ...commentMentionedUserIds.filter(userId => {
+            const name = a.nm(userId).trim()
+            return name && cleanText.toLocaleLowerCase().includes('@' + name.toLocaleLowerCase())
+          }),
+        ])]
         const comment: WorkspaceComment = {
           id: commentId, projectId: id, authorId: a.me!.id, text, at: now,
           ...(attachments.length ? { attachments } : {}),
+          ...(mentionedUserIds.length ? { mentionedUserIds } : {}),
+          ...(explicitEveryone ? { mentionedEveryone: true } : {}),
         }
         await a.backend!.store.create('standaloneComments/' + commentId, comment)
         setCommentText('')
         setCommentFiles([])
         setCommentVoiceNote(null)
+        setCommentMentionedUserIds([])
+        setCommentMentionedEveryone(false)
+        setMentionQuery(null)
         a.toast('Team update posted.')
       } catch (error) {
         await Promise.all(attachments.map(file => a.backend?.deleteChatFile?.(file.path).catch(() => undefined)))
@@ -1365,15 +1434,32 @@ function WorkspaceProjectView() {
                       <small>{new Date(comment.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</small>
                     </div>
                     <p>{comment.text}</p>
+                    {!!comment.mentionedUserIds?.length && <div className="sw-comment-mentions" aria-label="Tagged teammates"><span>Tagged</span>{comment.mentionedEveryone ? <b>@everyone</b> : comment.mentionedUserIds.map(userId => <b key={userId}>@{a.nm(userId)}</b>)}</div>}
                     <ChatAttachmentList attachments={comment.attachments} />
                   </div>
                 </article>)
               : <div className="sw-empty-inline"><QuorlythGlyph name="message" size={20}/><strong>No discussion yet</strong><p>Post a decision, blocker or next step to get the conversation started.</p></div>}
           </div>
           {canContribute && <form className="sw-comment-form" onSubmit={postComment} style={{ marginTop: 'auto' }}>
-            <label className="sw-field"><span>Message the team</span><textarea value={commentText} onChange={e=>setCommentText(e.target.value)} maxLength={3000} rows={discussionMode === 'expanded' ? 3 : 2} placeholder="Share a decision, attach a file, or record a voice note." /></label>
+            <label className="sw-field"><span>Message the team</span><div className="sw-comment-editor">
+              <textarea ref={commentInput} value={commentText} onChange={e=>updateCommentDraft(e.target.value, e.currentTarget.selectionStart)} onKeyDown={event => {
+                if (event.key === 'Escape' && mentionQuery) { event.preventDefault(); setMentionQuery(null); return }
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault()
+                  if (mentionQuery && mentionCandidates.length) { insertWorkspaceMention(mentionCandidates[0].userId); return }
+                  event.currentTarget.form?.requestSubmit()
+                }
+              }} maxLength={3000} rows={discussionMode === 'expanded' ? 3 : 2} placeholder="Message the team. Type @ to tag someone or @everyone." aria-label="Message the project team. Press Enter to send and Shift plus Enter for a new line." />
+              {mentionQuery && mentionCandidates.length > 0 && <div className="sw-mention-menu" role="listbox" aria-label="Mention a teammate">
+                {mentionCandidates.map(person => <button key={person.userId} type="button" role="option" aria-selected="false" onMouseDown={event => event.preventDefault()} onClick={() => insertWorkspaceMention(person.userId)}>
+                  <span className="sw-mention-avatar">{person.userId === '__everyone__' ? <QuorlythGlyph name="team" size={14}/> : <Av id={person.userId} size={26}/>}</span>
+                  <span><strong>{person.userId === '__everyone__' ? '@everyone' : '@' + person.name}</strong><small>{person.detail}</small></span>
+                  {person.userId === '__everyone__' && <em>All</em>}
+                </button>)}
+              </div>}
+            </div></label>
             <ChatMediaComposer files={commentFiles} onFilesChange={setCommentFiles} voiceNote={commentVoiceNote} onVoiceNoteChange={setCommentVoiceNote} disabled={busy==='comment'} />
-            <button className="btn p" disabled={busy==='comment'||(!commentText.trim()&&!commentFiles.length&&!commentVoiceNote)}><QuorlythGlyph name="send" size={14}/>{busy==='comment'?'Posting…':'Post update'}</button>
+            <div className="sw-comment-compose-footer"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{commentText.length}/3000</span><button className="btn p" type="submit" disabled={busy==='comment'||(!commentText.trim()&&!commentFiles.length&&!commentVoiceNote)}><QuorlythGlyph name="send" size={14}/>{busy==='comment'?'Sending…':'Send'}</button></div>
           </form>}
         </>}
       </section>
