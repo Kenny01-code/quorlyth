@@ -461,7 +461,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const onCollectionRead = (error: unknown) => onReadError(error)
     if (s.subscribeMany) {
       const off = s.subscribeMany(collections, snapshot => {
-        for (const collection of collections) publishCollection(collection, snapshot[collection] || [])
+        for (const [collection, docs] of Object.entries(snapshot)) publishCollection(collection, docs)
       }, onCollectionRead)
       return off
     }
