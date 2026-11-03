@@ -429,3 +429,17 @@ test('docs RLS consolidation keeps each specialized predicate and removes duplic
     assert.equal((await db.query('select count(*)::int as n from pg_policies where schemaname=$1 and tablename=$2 and policyname=$3', ['public', 'docs', policy])).rows[0].n, 0, policy + ' should be consolidated')
   }
 })
+
+test('daily growth event RPC derives identity and UTC day from the authenticated request', async () => {
+  const migration = await readFile(new URL('../supabase/migrations/20261103110000_track_active_day_with_server_derived_identity.sql', import.meta.url), 'utf8')
+  assert.match(migration, /create or replace function public\.track_active_day\(\)/i)
+  assert.match(migration, /security definer/i)
+  assert.match(migration, /set search_path = ''/i)
+  assert.match(migration, /set row_security = off/i)
+  assert.match(migration, /auth\.uid\(\)/)
+  assert.match(migration, /'active_day'/)
+  assert.match(migration, /now\(\) at time zone 'UTC'/i)
+  assert.match(migration, /on conflict \(user_id, event_name, event_key\) do nothing/i)
+  assert.match(migration, /revoke all on function public\.track_active_day\(\) from public, anon, authenticated/i)
+  assert.match(migration, /grant execute on function public\.track_active_day\(\) to authenticated/i)
+})

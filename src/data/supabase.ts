@@ -82,6 +82,12 @@ export async function createSupabaseStore(url: string, key: string) {
       return records
     },
     async trackGrowthEvent(eventName: SelfTrackedGrowthEventName, eventKey = '') {
+      if (eventName === 'active_day') {
+        // Server-derived auth.uid() and UTC date keep this self-only event within RLS.
+        const { error } = await sb.rpc('track_active_day')
+        if (error) throw new Error(error.message || 'Could not record daily account activity')
+        return
+      }
       const { data: authData, error: authError } = await sb.auth.getUser()
       if (authError || !authData.user) throw new Error('Sign in before recording account activity.')
       const userId = authData.user.id
