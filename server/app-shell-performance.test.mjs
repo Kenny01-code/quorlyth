@@ -289,12 +289,15 @@ test('daily growth telemetry waits until core data hydration and uses one server
 })
 
 test('dashboard chart code is not forced into the initial shared entry chunk', async () => {
-  const [vite, dashboard, app] = await Promise.all([
+  const [vite, dashboard, app, analytics] = await Promise.all([
     readSource('vite.config.ts'),
     readSource('src/screens/Dashboard.tsx'),
     readSource('src/App.tsx'),
+    readSource('src/screens/Analytics.tsx'),
   ])
   assert.doesNotMatch(vite, /src\/components\/Charts\.tsx.*return ['"]charts['"]/)
+  assert.doesNotMatch(vite, /node_modules\/jspdf\/.*return ['"]pdf-export['"] /)
   assert.match(dashboard, /from ['"]\.\.\/components\/Charts['"]/)
   assert.match(app, /const Dashboard = lazy\(\(\) => import\('\.\/screens\/Dashboard'\)/)
+  assert.match(analytics, /await import\('jspdf'\)/)
 })
