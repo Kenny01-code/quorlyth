@@ -52,16 +52,19 @@ test('new AI-organizer milestones use an insert instead of an upsert', async () 
   assert.match(supabase, /async create\(path, data\)[\s\S]{0,180}sb\.from\('docs'\)\.insert/)
 })
 
-test('signed-out navigation stays visible and its links remain usable on mobile', async () => {
+test('signed-in and signed-out users share one navigation shell while links remain role-filtered', async () => {
   const [nav, css] = await Promise.all([
     readSource('src/components/Nav.tsx'),
     readSource('src/styles/sitewide-bold-fluid.css'),
   ])
-  assert.match(nav, /!me && "nav-public"/)
+  assert.match(nav, /className="glass" id="nav"/)
   assert.match(nav, /data-auth-state=\{me \? "signed-in" : "signed-out"\}/)
-  assert.match(css, /#nav\.nav-public\[data-auth-state="signed-out"\][\s\S]{0,500}display: flex !important/)
-  assert.match(css, /\.navmain[\s\S]{0,900}overflow-x: auto !important/)
-  assert.match(css, /\.nav-item > span[\s\S]{0,160}display: inline !important/)
+  assert.match(nav, /if \(me && !app\.dataReady\) return false/)
+  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin'\]\.includes\(i\.path\)/)
+  assert.doesNotMatch(nav, /nav-public/)
+  assert.match(css, /One navigation shell for guests and signed-in accounts/)
+  assert.match(css, /#nav \.navmain \.nav-item > span\s*\{\s*display: inline !important/)
+  assert.match(css, /#nav \.navend \.srch/)
   assert.match(css, /@media \(max-width: 540px\)/)
 })
 
@@ -185,6 +188,42 @@ test('navigation has one selected surface and compact feedback timing', async ()
 test('database realtime bursts are coalesced before reloading a collection', async () => {
   const supabase = await readSource('src/data/supabase.ts')
   assert.match(supabase, /refreshTimer = setTimeout\(\(\) => \{[\s\S]*?\}, 85\)/)
+})
+
+test('the first account snapshot is published only after every collection has loaded', async () => {
+  const provider = await readSource('src/data/AppProvider.tsx')
+  const app = await readSource('src/App.tsx')
+  assert.doesNotMatch(provider, /APP_DATA_CACHE_PREFIX|readCachedAppData|writeCachedAppData/)
+  assert.match(provider, /requiredKeys\.every\(required => received\.has\(required\)\)/)
+  assert.match(provider, /startTransition\(\(\) => setData\(\{ \.\.\.EMPTY, \.\.\.staged \}\)\)/)
+  assert.match(app, /a\.me && !a\.dataReady/)
+  assert.match(app, /Loading your latest Quorlyth data/)
+})
+
+test('idle activity tracking throttles synchronous browser-storage writes', async () => {
+  const provider = await readSource('src/data/AppProvider.tsx')
+  assert.match(provider, /lastActivity - lastPersistedActivity >= 15_000/)
+  assert.doesNotMatch(provider, /const markActivity = \(\) => \{\s*localStorage\.setItem/)
+  assert.match(provider, /window\.addEventListener\('scroll', markActivity, \{ passive: true \}\)/)
+})
+
+test('QuorlythBot private chats are scoped to the current account during render', async () => {
+  const botData = await readSource('src/bot/useBotData.ts')
+  assert.match(botData, /snapshot\.owner === base/)
+  assert.match(botData, /setSnapshot\(\{ owner, docs: next \}\)/)
+  assert.doesNotMatch(botData, /setDocs\(/)
+})
+
+test('the 3D bot animation loop pauses when its view is inactive', async () => {
+  const [robot, renderer, bot] = await Promise.all([
+    readSource('src/bot/Robot.tsx'),
+    readSource('src/bot/robot3d.ts'),
+    readSource('src/bot/QuorlythBot.tsx'),
+  ])
+  assert.match(robot, /active\?: boolean/)
+  assert.match(renderer, /active:function\(v\)/)
+  assert.match(renderer, /alive&&active&&document\.visibilityState/)
+  assert.match(bot, /active=\{!minimized/)
 })
 
 test('QuorlythBot uses a narrower sidebar and a lower GPU pixel ratio', async () => {
