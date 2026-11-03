@@ -30,3 +30,24 @@
 .sw-comment .chat-media-attachment-copy b{font-size:10px}
 .sw-comment .chat-media-attachment-copy small{font-size:9px}
 @media(max-width:540px){.chat-media-limit{width:100%;margin-left:0}.chat-media-attachment audio{width:100%}.chat-media-attachment{flex-wrap:wrap}}
+
+
+/* One compact attachment control opens the upload / voice-note chooser. */
+.chat-media-menu-root{position:relative;display:inline-flex;align-items:center}
+.chat-media-symbol{position:relative;display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;padding:0;border:1px solid rgba(255,255,255,.15);border-radius:12px;background:linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.025));color:rgba(250,250,253,.9);cursor:pointer;transition:background .16s,border-color .16s,transform .16s}
+.chat-media-symbol:hover:not(:disabled){background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28);transform:translateY(-1px)}
+.chat-media-symbol:disabled{opacity:.38;cursor:not-allowed}
+.chat-media-symbol-count{position:absolute;top:-5px;right:-5px;display:grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border:1px solid rgba(8,8,9,.95);border-radius:99px;background:#f5f5f5;color:#09090a;font-size:9px;font-weight:700;line-height:1}
+.chat-media-menu{position:absolute;left:0;bottom:calc(100% + 9px);z-index:30;display:grid;gap:3px;width:min(250px,calc(100vw - 56px));padding:6px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(12,12,14,.97);box-shadow:0 18px 48px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:chat-media-menu-in .14s ease-out both}
+.chat-media-menu button{display:flex;align-items:center;gap:11px;min-height:49px;width:100%;padding:8px 10px;border:0;border-radius:9px;background:transparent;color:rgba(250,250,253,.86);text-align:left;cursor:pointer}
+.chat-media-menu button:hover:not(:disabled){background:rgba(255,255,255,.08)}
+.chat-media-menu button:disabled{opacity:.38;cursor:not-allowed}
+.chat-media-menu button>svg{flex:0 0 17px;color:rgba(255,255,255,.72)}
+.chat-media-menu button>span{display:grid;gap:2px;min-width:0}
+.chat-media-menu button b{font-size:11px;font-weight:560}
+.chat-media-menu button small{color:rgba(235,235,243,.45);font-size:9px}
+.chat-media-recording-state{display:inline-flex;align-items:center;gap:9px;min-height:36px;padding:6px 10px;border:1px solid rgba(255,105,105,.34);border-radius:12px;background:rgba(196,43,63,.12);color:#ffd8dc;font:inherit;font-size:11px;cursor:pointer}
+.chat-media-recording-state .chat-recording-dot{flex:0 0 7px}
+.chat-media-stop{margin-left:3px;padding:3px 7px;border:1px solid rgba(255,255,255,.14);border-radius:7px;background:rgba(0,0,0,.18);font-size:9px;font-weight:600}
+@keyframes chat-media-menu-in{from{opacity:0;transform:translateY(5px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.chat-media-menu{animation:none}.chat-media-symbol{transition:none}}
