@@ -15,7 +15,7 @@ export async function createSupabaseStore(url: string, key: string) {
   // channel and can trigger a burst of redundant SELECTs.
   const realtimeListeners = new Map<symbol, {
     collections: string[]
-    refresh: () => void
+    refresh: (collections?: string[]) => void
     onRealtimeError: (status: string, error: unknown) => void
   }>()
   let sharedDocsChannel: ReturnType<typeof sb.channel> | null = null
@@ -28,13 +28,16 @@ export async function createSupabaseStore(url: string, key: string) {
         const oldPath = (payload.old as { path?: unknown } | null)?.path
         const changedPaths = [newPath, oldPath].filter((path): path is string => typeof path === 'string')
         for (const listener of realtimeListeners.values()) {
-          // Some DELETE payloads may contain only the primary key; if a future
-          // payload omits it entirely, refresh safely rather than miss an update.
-          if (!changedPaths.length || changedPaths.some(path =>
-            listener.collections.some(collection => isDirectChild(collection, path))
-          )) {
+          // Route known path changes to only the affected collection queries.
+          // A missing path still triggers a full reconciliation for safety.
+          if (!changedPaths.length) {
             listener.refresh()
+            continue
           }
+          const changedCollections = [...new Set(changedPaths.flatMap(path =>
+            listener.collections.filter(collection => isDirectChild(collection, path))
+          ))]
+          if (changedCollections.length) listener.refresh(changedCollections)
         }
       })
       .subscribe((status, error) => {
@@ -307,41 +310,65 @@ export async function createSupabaseStore(url: string, key: string) {
         }, delay)
       }
 
-      const load = async () => {
+      const load = async (requestedCollections?: string[]) => {
         if (stopped) return
         const sequence = ++loadSequence
         try {
-          // All rows returned here are still restricted by the caller's Supabase
-          // RLS identity. Group only direct children of the requested collections.
-          // This replaces N simultaneous initial SELECTs with one ordered read.
+          const targets = requestedCollections
+            ? [...new Set(requestedCollections)].filter(collection => watchedSet.has(collection))
+            : watchedCollections
+          if (!targets.length) return
           const grouped: Record<string, Doc[]> = Object.fromEntries(
-            watchedCollections.map(collection => [collection, [] as Doc[]]),
+            targets.map(collection => [collection, [] as Doc[]]),
           )
-          const pageSize = 1000
-          for (let offset = 0; ; offset += pageSize) {
-            const { data, error } = await sb.from('docs')
-              .select('path,data')
-              .order('path', { ascending: true })
-              .range(offset, offset + pageSize - 1)
+
+          if (!requestedCollections) {
+            // Initial account hydration: one RLS-scoped ordered read replaces the
+            // previous fan-out of up to 18 independent collection SELECT requests.
+            const pageSize = 1000
+            for (let offset = 0; ; offset += pageSize) {
+              const { data, error } = await sb.from('docs')
+                .select('path,data')
+                .order('path', { ascending: true })
+                .range(offset, offset + pageSize - 1)
+              if (stopped || sequence !== loadSequence) return
+              if (error) throw error
+              const rows = data || []
+              for (const row of rows) {
+                const slash = row.path.indexOf('/')
+                if (slash <= 0) continue
+                const collection = row.path.slice(0, slash)
+                if (!watchedSet.has(collection) || !isDirectChild(collection, row.path)) continue
+                grouped[collection].push({
+                  id: row.path.slice(slash + 1),
+                  data: row.data,
+                })
+              }
+              if (rows.length < pageSize) break
+            }
+          } else {
+            // Once hydrated, update only collections affected by a specific
+            // Realtime event. This keeps ordinary writes from re-reading the
+            // whole account snapshot.
+            const results = await Promise.all(targets.map(async collection => {
+              const prefix = collection + '/'
+              const upperBound = collection + '0'
+              const { data, error } = await sb.from('docs')
+                .select('path,data')
+                .gte('path', prefix)
+                .lt('path', upperBound)
+              if (error) throw error
+              return {
+                collection,
+                docs: (data || [])
+                  .filter(row => isDirectChild(collection, row.path))
+                  .map(row => ({ id: row.path.slice(collection.length + 1), data: row.data })),
+              }
+            }))
             if (stopped || sequence !== loadSequence) return
-            if (error) {
-              reportError(error)
-              scheduleRetry()
-              return
-            }
-            const rows = data || []
-            for (const row of rows) {
-              const slash = row.path.indexOf('/')
-              if (slash <= 0) continue
-              const collection = row.path.slice(0, slash)
-              if (!watchedSet.has(collection) || !isDirectChild(collection, row.path)) continue
-              grouped[collection].push({
-                id: row.path.slice(slash + 1),
-                data: row.data,
-              })
-            }
-            if (rows.length < pageSize) break
+            for (const result of results) grouped[result.collection] = result.docs
           }
+
           if (stopped || sequence !== loadSequence) return
           if (retryTimer) clearTimeout(retryTimer)
           retryTimer = undefined
@@ -355,12 +382,23 @@ export async function createSupabaseStore(url: string, key: string) {
         }
       }
 
-      const queueRefresh = () => {
+      const pendingRefreshes = new Set<string>()
+      let refreshEverything = false
+      const queueRefresh = (requestedCollections?: string[]) => {
         if (stopped) return
+        if (!requestedCollections) {
+          refreshEverything = true
+          pendingRefreshes.clear()
+        } else if (!refreshEverything) {
+          requestedCollections.forEach(collection => pendingRefreshes.add(collection))
+        }
         if (refreshTimer) clearTimeout(refreshTimer)
         refreshTimer = setTimeout(() => {
           refreshTimer = undefined
-          void load()
+          const scope = refreshEverything ? undefined : [...pendingRefreshes]
+          refreshEverything = false
+          pendingRefreshes.clear()
+          void load(scope)
         }, 100)
       }
 
