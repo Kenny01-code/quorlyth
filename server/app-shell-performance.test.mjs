@@ -276,3 +276,14 @@ test('initial Supabase identity uses verified JWT claims before a server user lo
   assert.match(current, /if \(error\)[\s\S]*?sb\.auth\.getUser\(\)/)
   assert.match(current, /created_at: session\.user\?\.created_at/)
 })
+
+test('daily growth telemetry waits until core data hydration and uses one server-derived write', async () => {
+  const [provider, supabase] = await Promise.all([
+    readSource('src/data/AppProvider.tsx'),
+    readSource('src/data/supabase.ts'),
+  ])
+  assert.match(provider, /backend\.auth\.mode !== 'supabase' \|\| !dataScopeReady/)
+  assert.match(provider, /trackGrowthEvent\('active_day'\)/)
+  assert.doesNotMatch(provider, /trackGrowthEvent\('active_day', utcDay\)/)
+  assert.match(supabase, /if \(eventName === 'active_day'\)[\s\S]{0,220}sb\.rpc\('track_active_day'\)/)
+})
