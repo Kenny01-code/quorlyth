@@ -386,31 +386,90 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast('Some shared data could not load. Check your connection and refresh.')
       }
     }
-    const offs = [
-      s.subscribe('communities', d => publish('communities', asList<Community>(d).sort((a, b) => a.at - b.at)), onReadError),
-      s.subscribe('ideas', d => publish('ideas', asList<Idea>(d)), onReadError),
-      s.subscribe('profiles', d => publish('profiles', asMap<Profile>(d)), onReadError),
-      s.subscribe('config', d => publish('ownerId', d.find(x => x.id === 'owner')?.data?.id ?? null), onReadError),
-      ...(me ? [
-        s.subscribe('reviews', d => publish('reviews', asMap<Review>(d)), onReadError),
-        s.subscribe('ideaOutcomes', d => publish('outcomes', asMap<Pick<Review, 'status' | 'at'>>(d)), onReadError),
-        s.subscribe('votes', d => publish('votes', Object.fromEntries(d.map(x => [x.id, x.data?.ideas || {}]))), onReadError),
-        s.subscribe('members', d => publish('members', Object.fromEntries(d.map(x => [x.id, x.data?.c || {}]))), onReadError),
-        s.subscribe('requests', d => publish('requests', asList<Request>(d)), onReadError),
-        s.subscribe('communityJoinRequests', d => publish('joinRequests', asList<CommunityJoinRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
-        s.subscribe('communityAiOrganizerRequests', d => publish('aiOrganizerRequests', asList<CommunityAIOrganizerRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
-        s.subscribe('decisions', d => publish('decisions', asMap<Decision>(d)), onReadError),
-        s.subscribe('promotions', d => publish('promotions', asList<Promotion>(d).sort((a, b) => b.at - a.at)), onReadError),
-        s.subscribe('volunteers', d => publish('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
-        s.subscribe('projects', d => publish('projects', asMap<Project>(d)), onReadError),
-        s.subscribe('milestones', d => publish('milestones', asList<Milestone>(d).map(item => ({ ...item, status: String(item.status) === 'completed' ? 'done' as const : item.status })).sort((a, b) => a.at - b.at)), onReadError),
-        s.subscribe('workSubmissions', d => publish('workSubmissions', asList<WorkSubmission>(d).sort((a, b) => b.submittedAt - a.submittedAt)), onReadError),
-        s.subscribe('settings', d => {
-          publish('settings', d.find(x => x.id === 'space')?.data ?? null)
+    const collections = me
+      ? [
+          'communities', 'ideas', 'profiles', 'config',
+          'reviews', 'ideaOutcomes', 'votes', 'members', 'requests',
+          'communityJoinRequests', 'communityAiOrganizerRequests', 'decisions',
+          'promotions', 'volunteers', 'projects', 'milestones',
+          'workSubmissions', 'settings',
+        ]
+      : ['communities', 'ideas', 'profiles', 'config']
+
+    const publishCollection = (collection: string, docs: { id: string; data: any }[]) => {
+      switch (collection) {
+        case 'communities':
+          publish('communities', asList<Community>(docs).sort((a, b) => a.at - b.at))
+          break
+        case 'ideas':
+          publish('ideas', asList<Idea>(docs))
+          break
+        case 'profiles':
+          publish('profiles', asMap<Profile>(docs))
+          break
+        case 'config':
+          publish('ownerId', docs.find(x => x.id === 'owner')?.data?.id ?? null)
+          break
+        case 'reviews':
+          publish('reviews', asMap<Review>(docs))
+          break
+        case 'ideaOutcomes':
+          publish('outcomes', asMap<Pick<Review, 'status' | 'at'>>(docs))
+          break
+        case 'votes':
+          publish('votes', Object.fromEntries(docs.map(x => [x.id, x.data?.ideas || {}])))
+          break
+        case 'members':
+          publish('members', Object.fromEntries(docs.map(x => [x.id, x.data?.c || {}])))
+          break
+        case 'requests':
+          publish('requests', asList<Request>(docs))
+          break
+        case 'communityJoinRequests':
+          publish('joinRequests', asList<CommunityJoinRequest>(docs).sort((a, b) => b.at - a.at))
+          break
+        case 'communityAiOrganizerRequests':
+          publish('aiOrganizerRequests', asList<CommunityAIOrganizerRequest>(docs).sort((a, b) => b.at - a.at))
+          break
+        case 'decisions':
+          publish('decisions', asMap<Decision>(docs))
+          break
+        case 'promotions':
+          publish('promotions', asList<Promotion>(docs).sort((a, b) => b.at - a.at))
+          break
+        case 'volunteers':
+          publish('volunteers', asList<VolunteerApplication>(docs).sort((a, b) => b.at - a.at))
+          break
+        case 'projects':
+          publish('projects', asMap<Project>(docs))
+          break
+        case 'milestones':
+          publish('milestones', asList<Milestone>(docs)
+            .map(item => ({ ...item, status: String(item.status) === 'completed' ? 'done' as const : item.status }))
+            .sort((a, b) => a.at - b.at))
+          break
+        case 'workSubmissions':
+          publish('workSubmissions', asList<WorkSubmission>(docs).sort((a, b) => b.submittedAt - a.submittedAt))
+          break
+        case 'settings':
+          publish('settings', docs.find(x => x.id === 'space')?.data ?? null)
           if (me) setSettingsSnapshot({ backend, userId: me.id, loaded: true })
-        }, onReadError),
-      ] : []),
-    ]
+          break
+      }
+    }
+
+    const onCollectionRead = (error: unknown) => onReadError(error)
+    if (s.subscribeMany) {
+      const off = s.subscribeMany(collections, snapshot => {
+        for (const collection of collections) publishCollection(collection, snapshot[collection] || [])
+      }, onCollectionRead)
+      return off
+    }
+
+    // Local/demo stores retain their existing collection-level fallback.
+    const offs = collections.map(collection =>
+      s.subscribe(collection, docs => publishCollection(collection, docs), onCollectionRead),
+    )
     return () => offs.forEach(f => f())
   }, [backend, me?.id, ready, demo])
 
