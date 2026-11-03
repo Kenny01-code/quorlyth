@@ -323,12 +323,20 @@ export async function createSupabaseStore(url: string, key: string) {
           )
 
           if (!requestedCollections) {
-            // Initial account hydration: one RLS-scoped ordered read replaces the
-            // previous fan-out of up to 18 independent collection SELECT requests.
+            // Initial account hydration: one RLS-scoped read over only the app
+            // collections required for the first snapshot. Do not pull chat,
+            // activity, automation or other on-demand collections into startup.
+            const collectionFilters = targets.map(collection => {
+              if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(collection)) {
+                throw new Error('Invalid collection name in startup subscription.')
+              }
+              return `and(path.gte.${collection}/,path.lt.${collection}0)`
+            })
             const pageSize = 1000
             for (let offset = 0; ; offset += pageSize) {
               const { data, error } = await sb.from('docs')
                 .select('path,data')
+                .or(collectionFilters.join(','))
                 .order('path', { ascending: true })
                 .range(offset, offset + pageSize - 1)
               if (stopped || sequence !== loadSequence) return
