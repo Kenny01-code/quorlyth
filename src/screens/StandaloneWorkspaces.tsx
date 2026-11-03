@@ -525,6 +525,16 @@ function WorkspaceProjectView() {
     setProjectDueDate(dateInput(project?.dueAt))
   }, [project?.id, project?.title, project?.summary, project?.dueAt])
 
+  useEffect(() => {
+    // Never carry a draft or selected recipients from one private workspace into another.
+    setCommentText('')
+    setCommentFiles([])
+    setCommentVoiceNote(null)
+    setCommentMentionedUserIds([])
+    setCommentMentionedEveryone(false)
+    setMentionQuery(null)
+  }, [id])
+
   const profilePeople = useMemo(() => Object.keys(a.data.profiles || {})
     .filter(userId => userId !== a.me?.id && !members.some(member => member.projectId === id && member.userId === userId && member.status !== 'removed'))
     .map(userId => ({ id: userId, name: a.nm(userId) }))
