@@ -36,6 +36,24 @@ export function ChatMediaComposer({ files, onFilesChange, voiceNote, onVoiceNote
   const chunksRef = useRef<Blob[]>([])
   const startedAtRef = useRef(0)
   const fileInput = useRef<HTMLInputElement>(null)
+  const menuRoot = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const closeOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !menuRoot.current?.contains(event.target)) setMenuOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [menuOpen])
 
   useEffect(() => {
     if (!recording) return
@@ -67,6 +85,7 @@ export function ChatMediaComposer({ files, onFilesChange, voiceNote, onVoiceNote
 
   async function startRecording() {
     setIssue('')
+    setMenuOpen(false)
     if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       setIssue('Voice recording is not supported in this browser. You can attach an audio file instead.')
       return
@@ -127,16 +146,37 @@ export function ChatMediaComposer({ files, onFilesChange, voiceNote, onVoiceNote
     }
   }
 
+  const pendingCount = files.length + (voiceNote ? 1 : 0)
+  const mediaLimitReached = pendingCount >= MAX_FILES
+
   return <div className="chat-media-composer">
     <div className="chat-media-actions">
-      <button type="button" className="chat-media-action" disabled={disabled || recording || files.length + (voiceNote ? 1 : 0) >= MAX_FILES} onClick={() => fileInput.current?.click()}>
-        <Icon name="paperclip" size={15} /> Attach files
-      </button>
+      <div className="chat-media-menu-root" ref={menuRoot}>
+        {recording
+          ? <button type="button" className="chat-media-recording-state" disabled={disabled} onClick={stopRecording} aria-label="Stop voice recording">
+              <span className="chat-recording-dot" /> <span>Recording · {formatDuration(elapsedMs)}</span> <span className="chat-media-stop">Stop</span>
+            </button>
+          : <button
+              type="button"
+              className="chat-media-symbol"
+              disabled={disabled || mediaLimitReached}
+              onClick={() => setMenuOpen(open => !open)}
+              aria-label="Add an attachment or voice note"
+              title="Add an attachment or voice note"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+            ><Icon name="paperclip" size={17} />{pendingCount > 0 && <span className="chat-media-symbol-count">{pendingCount}</span>}</button>}
+        {menuOpen && !recording && <div className="chat-media-menu" role="menu" aria-label="Add to message">
+          <button type="button" role="menuitem" disabled={disabled || mediaLimitReached} onClick={() => { setMenuOpen(false); fileInput.current?.click() }}>
+            <Icon name="upload" size={15} /><span><b>Upload files</b><small>Images, documents, audio and more</small></span>
+          </button>
+          <button type="button" role="menuitem" disabled={disabled || mediaLimitReached} onClick={() => void startRecording()}>
+            <Icon name="mic" size={15} /><span><b>Record voice note</b><small>Record directly from your microphone</small></span>
+          </button>
+        </div>}
+      </div>
       <input ref={fileInput} className="chat-media-file-input" type="file" multiple accept={ACCEPTED} onChange={selectFiles} aria-label="Attach files" />
-      {recording
-        ? <button type="button" className="chat-media-action is-recording" disabled={disabled} onClick={stopRecording}><span className="chat-recording-dot" /> Stop recording · {formatDuration(elapsedMs)}</button>
-        : <button type="button" className="chat-media-action" disabled={disabled || files.length + (voiceNote ? 1 : 0) >= MAX_FILES} onClick={() => void startRecording()}><Icon name="mic" size={15} /> Record voice note</button>}
-      <span className="chat-media-limit">{files.length + (voiceNote ? 1 : 0)}/{MAX_FILES} · 25 MB each</span>
+      <span className="chat-media-limit">{pendingCount}/{MAX_FILES} attached · 25 MB each</span>
     </div>
     {(files.length > 0 || voiceNote) && <div className="chat-media-pending" aria-label="Attachments to send">
       {files.map((file, index) => <div className="chat-media-pending-item" key={file.name + '-' + file.size + '-' + index}>
