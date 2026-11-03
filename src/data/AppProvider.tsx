@@ -367,8 +367,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (requiredKeys.every(required => received.has(required))) {
           firstSnapshotPublished = true
           // Publish the first complete account snapshot in one React commit.
-          startTransition(() => setData({ ...EMPTY, ...staged }))
-          setInitialDataSnapshot({ backend, userId, ready: true })
+          startTransition(() => {
+            setData({ ...EMPTY, ...staged })
+            setInitialDataSnapshot({ backend, userId, ready: true })
+          })
         }
         return
       }
