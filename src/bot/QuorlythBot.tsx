@@ -3062,7 +3062,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   }
 
 
-  async function planUniversalActionBatch(requestText: string): Promise<PendingAction> {
+  async function planUniversalActionBatch(requestText: string): Promise<Extract<PendingAction, { type: 'batchActions' }>> {
     if (!a.me || !a.backend) throw new Error('Sign in to Quorlyth first. I can only organize saved site data your account can access.')
 
     const ideaId = loc.pathname.match(/^\/(?:idea|collaboration)\/([^/]+)/)?.[1]
