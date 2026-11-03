@@ -339,7 +339,7 @@ body {
   border: 1px solid rgba(255,255,255,.16) !important;
 }
 #nav .navend .navav .av { width: 30px; height: 30px; margin: 0; }
-@media (max-width: 1120px) {
+@media (max-width: 860px) {
   #nav .navmain .nav-item > span { display: none !important; }
   #nav .navmain .nav-item { min-width: 34px; padding: 8px !important; }
 }
