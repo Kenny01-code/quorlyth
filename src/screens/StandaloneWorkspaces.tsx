@@ -1066,9 +1066,9 @@ function WorkspaceProjectView() {
       .filter(person => !query || person.name.toLocaleLowerCase().includes(query))
       .sort((first, second) => first.name.localeCompare(second.name))
       .slice(0, 6)
-    return (!query || 'everyone'.includes(query) || 'all teammates'.includes(query)) && people.length
-      ? [everyone, ...people]
-      : people
+    const canMentionEveryone = team.some(member => member.status === 'active' && member.userId !== a.me?.id)
+      && (!query || 'everyone'.includes(query) || 'all teammates'.includes(query))
+    return [...(canMentionEveryone ? [everyone] : []), ...people]
   }, [mentionQuery, team, a.me?.id, a.nm])
 
   function updateCommentDraft(value: string, caret: number) {
