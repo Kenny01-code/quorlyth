@@ -52,6 +52,12 @@ export interface DocStore {
   delete(path: string): Promise<void>
   /** live list of the documents directly inside a collection */
   subscribe(collection: string, cb: (docs: Doc[]) => void, onError?: (error: unknown) => void): () => void
+  /** Load several RLS-visible collections in one request while retaining live collection-scoped refreshes. */
+  subscribeMany?(
+    collections: string[],
+    cb: (snapshot: Record<string, Doc[]>) => void,
+    onError?: (error: unknown) => void,
+  ): () => void
 }
 
 export function isDirectChild(collection: string, path: string) {
