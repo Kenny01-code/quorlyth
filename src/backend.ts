@@ -139,7 +139,33 @@ export async function createBackend(): Promise<Backend> {
       const auth: Auth = {
         mode: 'supabase',
         async accessToken() { const { data } = await sb.auth.getSession(); return data.session?.access_token || null },
-        async current() { const { data } = await sb.auth.getUser(); return toMe(data.user) },
+        async current() {
+          // Avoid blocking the first authenticated render on an Auth /user network roundtrip.
+          // getClaims verifies the signed JWT; this project uses ES256 so the SDK can verify
+          // locally with its cached JWKS. The session user is used only for created_at, a
+          // first-time UI hint - never for identity or authorization.
+          const { data: sessionData, error: sessionError } = await sb.auth.getSession()
+          if (sessionError) throw sessionError
+          const session = sessionData.session
+          if (!session) return null
+
+          const { data, error } = await sb.auth.getClaims()
+          if (error) {
+            // Preserve compatibility if the signing-key/JWKS verification path is temporarily unavailable.
+            const { data: userData, error: userError } = await sb.auth.getUser()
+            if (userError) throw userError
+            return toMe(userData.user)
+          }
+
+          const claims = data?.claims
+          if (!claims?.sub) return null
+          return toMe({
+            id: claims.sub,
+            email: claims.email,
+            user_metadata: claims.user_metadata || {},
+            created_at: session.user?.created_at,
+          })
+        },
         onChange(cb) { const { data } = sb.auth.onAuthStateChange((_e, s) => cb(toMe(s?.user))); return () => data.subscription.unsubscribe() },
         async signInGoogle() { const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error },
         async signInEmail(email, password) { const { error } = await sb.auth.signInWithPassword({ email, password }); if (error) throw error },
