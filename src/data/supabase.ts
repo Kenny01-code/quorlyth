@@ -14,7 +14,7 @@ export async function createSupabaseStore(url: string, key: string) {
   // channel per collection scales poorly because every docs write reaches every
   // channel and can trigger a burst of redundant SELECTs.
   const realtimeListeners = new Map<symbol, {
-    collection: string
+    collections: string[]
     refresh: () => void
     onRealtimeError: (status: string, error: unknown) => void
   }>()
@@ -30,7 +30,9 @@ export async function createSupabaseStore(url: string, key: string) {
         for (const listener of realtimeListeners.values()) {
           // Some DELETE payloads may contain only the primary key; if a future
           // payload omits it entirely, refresh safely rather than miss an update.
-          if (!changedPaths.length || changedPaths.some(path => isDirectChild(listener.collection, path))) {
+          if (!changedPaths.length || changedPaths.some(path =>
+            listener.collections.some(collection => isDirectChild(collection, path))
+          )) {
             listener.refresh()
           }
         }
@@ -245,7 +247,126 @@ export async function createSupabaseStore(url: string, key: string) {
 
       const token = Symbol(collection)
       realtimeListeners.set(token, {
-        collection,
+        collections: [collection],
+        refresh: queueRefresh,
+        onRealtimeError: (status, error) => {
+          reportError(error || new Error(`Realtime subscription status: ${status}`))
+          scheduleRetry()
+        },
+      })
+      ensureSharedDocsChannel()
+      void load()
+
+      return () => {
+        stopped = true
+        loadSequence += 1
+        if (retryTimer) clearTimeout(retryTimer)
+        if (refreshTimer) clearTimeout(refreshTimer)
+        realtimeListeners.delete(token)
+        if (realtimeListeners.size === 0 && sharedDocsChannel) {
+          const channel = sharedDocsChannel
+          sharedDocsChannel = null
+          void sb.removeChannel(channel)
+        }
+      }
+    },
+    subscribeMany(collections, cb, onError) {
+      const watchedCollections = [...new Set(collections.map(collection => collection.trim()).filter(Boolean))]
+      let lastErrorMessage = ''
+      let retryAttempt = 0
+      let retryTimer: ReturnType<typeof setTimeout> | undefined
+      let refreshTimer: ReturnType<typeof setTimeout> | undefined
+      let loadSequence = 0
+      let stopped = false
+
+      if (!watchedCollections.length) {
+        cb({})
+        return () => {}
+      }
+
+      const watchedSet = new Set(watchedCollections)
+      const reportError = (error: unknown) => {
+        const detail = error as { message?: string; code?: string; cause?: unknown } | null
+        const message = detail?.message || String(error)
+        const scopedError = Object.assign(new Error(`[shared data: ${watchedCollections.join(', ')}] ${message}`), {
+          collections: watchedCollections,
+          code: detail?.code,
+          cause: error,
+        })
+        if (message !== lastErrorMessage) onError?.(scopedError)
+        lastErrorMessage = message
+      }
+
+      const scheduleRetry = () => {
+        if (stopped || retryTimer) return
+        const delay = retryDelayForAttempt(retryAttempt)
+        retryAttempt = nextRetryAttempt(retryAttempt)
+        retryTimer = setTimeout(() => {
+          retryTimer = undefined
+          void load()
+        }, delay)
+      }
+
+      const load = async () => {
+        if (stopped) return
+        const sequence = ++loadSequence
+        try {
+          // All rows returned here are still restricted by the caller's Supabase
+          // RLS identity. Group only direct children of the requested collections.
+          // This replaces N simultaneous initial SELECTs with one ordered read.
+          const grouped: Record<string, Doc[]> = Object.fromEntries(
+            watchedCollections.map(collection => [collection, [] as Doc[]]),
+          )
+          const pageSize = 1000
+          for (let offset = 0; ; offset += pageSize) {
+            const { data, error } = await sb.from('docs')
+              .select('path,data')
+              .order('path', { ascending: true })
+              .range(offset, offset + pageSize - 1)
+            if (stopped || sequence !== loadSequence) return
+            if (error) {
+              reportError(error)
+              scheduleRetry()
+              return
+            }
+            const rows = data || []
+            for (const row of rows) {
+              const slash = row.path.indexOf('/')
+              if (slash <= 0) continue
+              const collection = row.path.slice(0, slash)
+              if (!watchedSet.has(collection) || !isDirectChild(collection, row.path)) continue
+              grouped[collection].push({
+                id: row.path.slice(slash + 1),
+                data: row.data,
+              })
+            }
+            if (rows.length < pageSize) break
+          }
+          if (stopped || sequence !== loadSequence) return
+          if (retryTimer) clearTimeout(retryTimer)
+          retryTimer = undefined
+          retryAttempt = 0
+          lastErrorMessage = ''
+          cb(grouped)
+        } catch (error) {
+          if (stopped || sequence !== loadSequence) return
+          reportError(error)
+          scheduleRetry()
+        }
+      }
+
+      const queueRefresh = () => {
+        if (stopped) return
+        if (refreshTimer) clearTimeout(refreshTimer)
+        refreshTimer = setTimeout(() => {
+          refreshTimer = undefined
+          void load()
+        }, 100)
+      }
+
+      const token = Symbol('collections')
+      realtimeListeners.set(token, {
+        collections: watchedCollections,
         refresh: queueRefresh,
         onRealtimeError: (status, error) => {
           reportError(error || new Error(`Realtime subscription status: ${status}`))
