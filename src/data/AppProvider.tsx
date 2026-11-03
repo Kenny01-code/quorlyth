@@ -330,13 +330,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, toast, demo])
 
   useEffect(() => {
-    if (!backend || !me || demo || backend.auth.mode !== 'supabase') return
-    const utcDay = new Date().toISOString().slice(0, 10)
-    void backend.store.trackGrowthEvent('active_day', utcDay).catch(error => {
+    // Daily growth telemetry is non-critical. Do not compete with the initial
+    // authenticated collection reads; write it only after the account snapshot is ready.
+    if (!backend || !me || demo || backend.auth.mode !== 'supabase' || !dataScopeReady) return
+    void backend.store.trackGrowthEvent('active_day').catch(error => {
       // Growth telemetry must never interrupt normal app usage.
       console.warn('Could not record daily active account:', error)
     })
-  }, [backend, me?.id, demo])
+  }, [backend, me?.id, demo, dataScopeReady])
 
   useEffect(() => {
     if (!backend || !ready) return
