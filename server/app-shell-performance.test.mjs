@@ -287,3 +287,14 @@ test('daily growth telemetry waits until core data hydration and uses one server
   assert.doesNotMatch(provider, /trackGrowthEvent\('active_day', utcDay\)/)
   assert.match(supabase, /if \(eventName === 'active_day'\)[\s\S]{0,220}sb\.rpc\('track_active_day'\)/)
 })
+
+test('dashboard chart code is not forced into the initial shared entry chunk', async () => {
+  const [vite, dashboard, app] = await Promise.all([
+    readSource('vite.config.ts'),
+    readSource('src/screens/Dashboard.tsx'),
+    readSource('src/App.tsx'),
+  ])
+  assert.doesNotMatch(vite, /src\/components\/Charts\.tsx.*return ['"]charts['"]/)
+  assert.match(dashboard, /from ['"]\.\.\/components\/Charts['"]/)
+  assert.match(app, /const Dashboard = lazy\(\(\) => import\('\.\/screens\/Dashboard'\)/)
+})
