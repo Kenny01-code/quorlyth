@@ -98,11 +98,14 @@ test('Signed-out navigation remains visible and scrollable on narrow screens', a
     readSource('src/components/Nav.tsx'),
     readSource('src/styles/sitewide-bold-fluid.css'),
   ])
-  assert.match(nav, /!me && "nav-public"/)
+  assert.match(nav, /className="glass" id="nav"/)
   assert.match(nav, /data-auth-state=\{me \? "signed-in" : "signed-out"\}/)
-  assert.match(css, /#nav\.nav-public\[data-auth-state="signed-out"\][\s\S]*?visibility:\s*visible !important/)
-  assert.match(css, /\.nav-public\[data-auth-state="signed-out"\] \.navmain[\s\S]*?overflow-x:\s*auto !important/)
-  assert.match(css, /\.nav-public\[data-auth-state="signed-out"\] \.navmain \.nav-item > span[\s\S]*?display:\s*inline !important/)
+  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin'\]\.includes\(i\.path\)/)
+  assert.doesNotMatch(nav, /nav-public/)
+  assert.match(css, /One navigation shell for guests and signed-in accounts/)
+  assert.match(css, /#nav \.navmain[\s\S]*?overflow-x: auto !important/)
+  assert.match(css, /#nav \.navmain \.nav-item > span\s*\{\s*display: inline !important/)
+  assert.match(css, /@media \(max-width: 540px\)/)
   assert.doesNotMatch(app, /PageAssist/)
 })
 
