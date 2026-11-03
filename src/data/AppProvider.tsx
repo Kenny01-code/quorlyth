@@ -14,36 +14,6 @@ interface Data {
 }
 const EMPTY: Data = { communities: [], ideas: [], reviews: {}, outcomes: {}, votes: {}, members: {}, profiles: {}, requests: [], joinRequests: [], aiOrganizerRequests: [], decisions: {}, promotions: [], volunteers: [], projects: {}, milestones: [], workSubmissions: [], settings: null, ownerId: null }
 
-const APP_DATA_CACHE_PREFIX = 'quorlyth:live-data:v1:'
-const APP_DATA_CACHE_OWNER = 'quorlyth:live-data-owner'
-
-function readCachedAppData(userId: string | null): Data | null {
-  if (!userId || typeof window === 'undefined') return null
-  try {
-    const raw = sessionStorage.getItem(APP_DATA_CACHE_PREFIX + userId)
-    if (!raw) return null
-    const saved = JSON.parse(raw) as { version?: number; data?: Partial<Data> }
-    if (saved.version !== 1 || !saved.data || typeof saved.data !== 'object') return null
-    return {
-      ...EMPTY,
-      ...saved.data,
-      reviews: saved.data.reviews || {}, outcomes: saved.data.outcomes || {},
-      votes: saved.data.votes || {}, members: saved.data.members || {},
-      profiles: saved.data.profiles || {}, decisions: saved.data.decisions || {},
-      projects: saved.data.projects || {}, settings: saved.data.settings ?? null,
-    }
-  } catch { return null }
-}
-
-function writeCachedAppData(userId: string, data: Data) {
-  if (!userId || typeof window === 'undefined') return
-  try {
-    const serialized = JSON.stringify({ version: 1, savedAt: Date.now(), data })
-    // Session storage is a fast visual cache, never the source of truth.
-    if (serialized.length <= 2_500_000) sessionStorage.setItem(APP_DATA_CACHE_PREFIX + userId, serialized)
-  } catch { /* Live data still loads when browser storage is full or disabled. */ }
-}
-
 const getMilestoneAssigneeIds = (milestone: Pick<Milestone, 'assigneeId' | 'assigneeIds'>): string[] =>
   [...new Set([...(Array.isArray(milestone.assigneeIds) ? milestone.assigneeIds : []), ...(milestone.assigneeId ? [milestone.assigneeId] : [])].filter(Boolean))]
 
@@ -122,7 +92,7 @@ async function assessMilestoneEvidence(input: {
 }
 
 export interface App {
-  ready: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data; settingsLoaded: boolean; platformRolesReady: boolean
+  ready: boolean; dataReady: boolean; startupError: string | null; backend: Backend | null; me: Me | null; owner: boolean; platformOwner: boolean; platformAdmin: boolean; demo: boolean; data: Data; settingsLoaded: boolean; platformRolesReady: boolean
   enterDemo: () => void; exitDemo: () => Promise<void>; signOut: () => Promise<void>
   toast: (m: string) => void; toastMsg: string; toastKind: 'permission' | 'auth' | ''
   nm: (id: string) => string; avatar: (id: string) => string
@@ -180,14 +150,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [demo, setDemo] = useState(() => sessionStorage.getItem('quorlyth:demo') === '1')
   const [ready, setReady] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
-  const [dataOwnerId, setDataOwnerId] = useState<string | null>(() => {
-    try { return sessionStorage.getItem(APP_DATA_CACHE_OWNER) } catch { return null }
-  })
-  const [dataState, setData] = useState<Data>(() => {
-    try { return readCachedAppData(sessionStorage.getItem(APP_DATA_CACHE_OWNER)) || EMPTY } catch { return EMPTY }
-  })
-  // Only expose cached snapshots to the account that owns them.
-  const data = dataOwnerId === (me?.id || null) ? dataState : EMPTY
+  const [dataState, setData] = useState<Data>(EMPTY)
+  const [initialDataSnapshot, setInitialDataSnapshot] = useState<{
+    backend: Backend
+    userId: string | null
+    ready: boolean
+  } | null>(null)
+  // Never render a previous account's snapshot. The active account sees data only
+  // after every required first-read has arrived from the current backend session.
+  const dataScopeReady = !!(backend
+    && initialDataSnapshot?.backend === backend
+    && initialDataSnapshot.userId === (me?.id || null)
+    && initialDataSnapshot.ready)
+  const data = dataScopeReady ? dataState : EMPTY
   const [settingsSnapshot, setSettingsSnapshot] = useState<{ backend: Backend; userId: string; loaded: boolean } | null>(null)
   const [platformRoleSnapshot, setPlatformRoleSnapshot] = useState<{ backend: Backend; userId: string; ready: boolean } | null>(null)
   const [platformAdmin, setPlatformAdmin] = useState(false)
@@ -287,6 +262,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const key = `quorlyth:last-activity:${me.id}`
     let timer = 0
     let signingOut = false
+    let lastActivity = Number(localStorage.getItem(key)) || Date.now()
+    let lastPersistedActivity = lastActivity
 
     const signOutIdle = async () => {
       if (signingOut) return
@@ -297,24 +274,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     const armTimer = () => {
       window.clearTimeout(timer)
-      const last = Number(localStorage.getItem(key)) || Date.now()
-      const remaining = IDLE_LOGOUT_MS - (Date.now() - last)
+      const remaining = IDLE_LOGOUT_MS - (Date.now() - lastActivity)
       if (remaining <= 0) { void signOutIdle(); return }
       timer = window.setTimeout(() => {
-        const latest = Number(localStorage.getItem(key)) || 0
-        if (Date.now() - latest >= IDLE_LOGOUT_MS) void signOutIdle()
+        if (Date.now() - lastActivity >= IDLE_LOGOUT_MS) void signOutIdle()
         else armTimer()
       }, remaining)
     }
     const markActivity = () => {
-      localStorage.setItem(key, String(Date.now()))
-      armTimer()
+      lastActivity = Date.now()
+      // Scroll/pointer events are frequent. Persist only occasionally instead of
+      // blocking the main thread with synchronous storage writes on every event.
+      if (lastActivity - lastPersistedActivity >= 15_000) {
+        try {
+          localStorage.setItem(key, String(lastActivity))
+          lastPersistedActivity = lastActivity
+        } catch { /* This tab still tracks activity in memory. */ }
+      }
     }
-    const onStorage = (event: StorageEvent) => { if (event.key === key) armTimer() }
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== key) return
+      const sharedActivity = Number(event.newValue) || 0
+      if (sharedActivity > lastActivity) {
+        lastActivity = sharedActivity
+        lastPersistedActivity = sharedActivity
+        armTimer()
+      }
+    }
     const onVisible = () => { if (!document.hidden) armTimer() }
 
-    if (!localStorage.getItem(key)) markActivity()
-    else armTimer()
+    try {
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, String(lastActivity))
+        lastPersistedActivity = lastActivity
+      }
+    } catch { /* This tab still tracks activity in memory. */ }
+    armTimer()
     window.addEventListener('pointerdown', markActivity, { passive: true })
     window.addEventListener('keydown', markActivity)
     window.addEventListener('scroll', markActivity, { passive: true })
@@ -344,28 +339,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [backend, me?.id, demo])
 
   useEffect(() => {
-    // Wait for auth resolution before selecting a cache so guest startup cannot
-    // overwrite a signed-in user's immediate first paint.
-    // During initial backend boot, keep the previous same-tab cache marker.
-    // The account ID check above prevents showing it before auth identifies the
-    // owner; clearing it here would defeat instant hydration on every reload.
-    if (!backend) return
-    if (!ready) return
+    if (!backend || !ready) return
 
     const userId = me?.id || null
-    const cached = !demo ? readCachedAppData(userId) : null
-    setDataOwnerId(userId)
-    setData(cached || EMPTY)
-    try {
-      // Retain the last account's cache key through sign-out. The in-memory
-      // owner scope is still reset to null, so none of that private data renders
-      // to a guest; signing back into the same account can hydrate immediately.
-      if (userId) sessionStorage.setItem(APP_DATA_CACHE_OWNER, userId)
-    } catch {}
-
+    setData(EMPTY)
+    setInitialDataSnapshot({ backend, userId, ready: false })
     setSettingsSnapshot(null)
+
     const s = backend.store
-    const set = (k: keyof Data, v: any) => startTransition(() => setData(d => ({ ...d, [k]: v })))
+    const requiredKeys: (keyof Data)[] = me
+      ? [
+          'communities', 'ideas', 'profiles', 'ownerId',
+          'reviews', 'outcomes', 'votes', 'members', 'requests',
+          'joinRequests', 'aiOrganizerRequests', 'decisions',
+          'promotions', 'volunteers', 'projects', 'milestones',
+          'workSubmissions', 'settings',
+        ]
+      : ['communities', 'ideas', 'profiles', 'ownerId']
+    const staged: Partial<Data> = {}
+    const received = new Set<keyof Data>()
+    let firstSnapshotPublished = false
+
+    const publish = (key: keyof Data, value: any) => {
+      if (!firstSnapshotPublished) {
+        ;(staged as any)[key] = value
+        received.add(key)
+        if (requiredKeys.every(required => received.has(required))) {
+          firstSnapshotPublished = true
+          // Publish the first complete account snapshot in one React commit.
+          startTransition(() => {
+            setData({ ...EMPTY, ...staged })
+            setInitialDataSnapshot({ backend, userId, ready: true })
+          })
+        }
+        return
+      }
+      startTransition(() => setData(current => ({ ...current, [key]: value })))
+    }
+
     let readErrorShown = false
     const onReadError = (error: unknown) => {
       console.error('Quorlyth shared-data read failed:', error)
@@ -375,26 +386,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     const offs = [
-      s.subscribe('communities', d => set('communities', asList<Community>(d).sort((a, b) => a.at - b.at)), onReadError),
-      s.subscribe('ideas', d => set('ideas', asList<Idea>(d)), onReadError),
-      s.subscribe('profiles', d => set('profiles', asMap<Profile>(d)), onReadError),
-      s.subscribe('config', d => set('ownerId', d.find(x => x.id === 'owner')?.data?.id ?? null), onReadError),
+      s.subscribe('communities', d => publish('communities', asList<Community>(d).sort((a, b) => a.at - b.at)), onReadError),
+      s.subscribe('ideas', d => publish('ideas', asList<Idea>(d)), onReadError),
+      s.subscribe('profiles', d => publish('profiles', asMap<Profile>(d)), onReadError),
+      s.subscribe('config', d => publish('ownerId', d.find(x => x.id === 'owner')?.data?.id ?? null), onReadError),
       ...(me ? [
-        s.subscribe('reviews', d => set('reviews', asMap<Review>(d)), onReadError),
-        s.subscribe('ideaOutcomes', d => set('outcomes', asMap<Pick<Review, 'status' | 'at'>>(d)), onReadError),
-        s.subscribe('votes', d => set('votes', Object.fromEntries(d.map(x => [x.id, x.data?.ideas || {}]))), onReadError),
-        s.subscribe('members', d => set('members', Object.fromEntries(d.map(x => [x.id, x.data?.c || {}]))), onReadError),
-        s.subscribe('requests', d => set('requests', asList<Request>(d)), onReadError),
-        s.subscribe('communityJoinRequests', d => set('joinRequests', asList<CommunityJoinRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
-        s.subscribe('communityAiOrganizerRequests', d => set('aiOrganizerRequests', asList<CommunityAIOrganizerRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
-        s.subscribe('decisions', d => set('decisions', asMap<Decision>(d)), onReadError),
-        s.subscribe('promotions', d => set('promotions', asList<Promotion>(d).sort((a, b) => b.at - a.at)), onReadError),
-        s.subscribe('volunteers', d => set('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
-        s.subscribe('projects', d => set('projects', asMap<Project>(d)), onReadError),
-        s.subscribe('milestones', d => set('milestones', asList<Milestone>(d).map(item => ({ ...item, status: String(item.status) === 'completed' ? 'done' as const : item.status })).sort((a, b) => a.at - b.at)), onReadError),
-        s.subscribe('workSubmissions', d => set('workSubmissions', asList<WorkSubmission>(d).sort((a, b) => b.submittedAt - a.submittedAt)), onReadError),
+        s.subscribe('reviews', d => publish('reviews', asMap<Review>(d)), onReadError),
+        s.subscribe('ideaOutcomes', d => publish('outcomes', asMap<Pick<Review, 'status' | 'at'>>(d)), onReadError),
+        s.subscribe('votes', d => publish('votes', Object.fromEntries(d.map(x => [x.id, x.data?.ideas || {}]))), onReadError),
+        s.subscribe('members', d => publish('members', Object.fromEntries(d.map(x => [x.id, x.data?.c || {}]))), onReadError),
+        s.subscribe('requests', d => publish('requests', asList<Request>(d)), onReadError),
+        s.subscribe('communityJoinRequests', d => publish('joinRequests', asList<CommunityJoinRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
+        s.subscribe('communityAiOrganizerRequests', d => publish('aiOrganizerRequests', asList<CommunityAIOrganizerRequest>(d).sort((a, b) => b.at - a.at)), onReadError),
+        s.subscribe('decisions', d => publish('decisions', asMap<Decision>(d)), onReadError),
+        s.subscribe('promotions', d => publish('promotions', asList<Promotion>(d).sort((a, b) => b.at - a.at)), onReadError),
+        s.subscribe('volunteers', d => publish('volunteers', asList<VolunteerApplication>(d).sort((a, b) => b.at - a.at)), onReadError),
+        s.subscribe('projects', d => publish('projects', asMap<Project>(d)), onReadError),
+        s.subscribe('milestones', d => publish('milestones', asList<Milestone>(d).map(item => ({ ...item, status: String(item.status) === 'completed' ? 'done' as const : item.status })).sort((a, b) => a.at - b.at)), onReadError),
+        s.subscribe('workSubmissions', d => publish('workSubmissions', asList<WorkSubmission>(d).sort((a, b) => b.submittedAt - a.submittedAt)), onReadError),
         s.subscribe('settings', d => {
-          set('settings', d.find(x => x.id === 'space')?.data ?? null)
+          publish('settings', d.find(x => x.id === 'space')?.data ?? null)
           if (me) setSettingsSnapshot({ backend, userId: me.id, loaded: true })
         }, onReadError),
       ] : []),
@@ -455,13 +466,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => { active = false }
   }, [backend, me?.id, demo])
 
-  useEffect(() => {
-    // Keep optimistic updates, not just subscription refreshes, available for an
-    // immediate next render. Account matching prevents writing old data under a
-    // newly authenticated identity.
-    if (!demo && me?.id && dataOwnerId === me.id) writeCachedAppData(me.id, dataState)
-  }, [dataState, dataOwnerId, me?.id, demo])
-
+  const dataReady = dataScopeReady
   const settingsLoaded = !!(backend && me && settingsSnapshot?.backend === backend && settingsSnapshot.userId === me.id && settingsSnapshot.loaded)
   const platformRolesReady = !me || !!(backend && platformRoleSnapshot?.backend === backend && platformRoleSnapshot.userId === me.id && platformRoleSnapshot.ready)
   const st = backend?.store
@@ -621,7 +626,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 }
     return {
-      ready, startupError, backend, me, owner, platformOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, toastKind,
+      ready, dataReady, startupError, backend, me, owner, platformOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, toastKind,
       nm: id => data.profiles[id]?.name || data.profiles[id]?.authName || (me && id === me.id ? me.name : 'Member'),
       avatar: id => data.profiles[id]?.photo || data.profiles[id]?.authAvatarUrl || (me && id === me.id ? me.avatarUrl || '' : ''),
       votesOf,
@@ -1332,7 +1337,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),
       useComments: () => [],
     }
-  }, [ready, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, toastKind, st])
+  }, [ready, dataReady, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, toastKind, st])
 
   return <Ctx.Provider value={app}>{children}</Ctx.Provider>
 }

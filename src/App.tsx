@@ -339,7 +339,7 @@ export default function App() {
     }
   }
 
-  if (!a.ready) return <main aria-label="Preparing Quorlyth" />
+  if (!a.ready) return <main aria-label="Preparing Quorlyth"><QuorlythLoader variant="route" label="Preparing Quorlyth" /></main>
   if (a.startupError) return (
     <main className="app-error">
       <section className="glass pad" role="alert">
@@ -361,8 +361,12 @@ export default function App() {
       {(a.me || a.demo) && <Suspense fallback={null}><AutomationRuntime /></Suspense>}
       <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
-      <main id="main" tabIndex={-1}>
-        <section className="on">
+      <main id="main" tabIndex={-1} aria-busy={!!a.me && (!a.dataReady || !a.platformRolesReady)}>
+        {a.me && (!a.dataReady || !a.platformRolesReady) ? (
+          <div className="qth-data-loading" role="status" aria-live="polite">
+            <QuorlythLoader variant="route" label="Loading your latest Quorlyth data" />
+          </div>
+        ) : <section className="on">
           <Suspense fallback={<DelayedRouteLoader />}>
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -397,7 +401,7 @@ export default function App() {
               <Route path="*" element={<MissingRoute />} />
             </Routes>
           </Suspense>
-        </section>
+        </section>}
       </main>
       {bell && <Suspense fallback={null}><NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} /></Suspense>}
       {palette && <Suspense fallback={null}><Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} /></Suspense>}

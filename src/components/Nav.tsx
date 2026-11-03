@@ -150,12 +150,13 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   }, [loc.pathname, owner])
 
   return (
-    <nav className={cn("glass", !me && "nav-public")} id="nav" aria-label="Main navigation" data-auth-state={me ? "signed-in" : "signed-out"}>
+    <nav className="glass" id="nav" aria-label="Main navigation" data-auth-state={me ? "signed-in" : "signed-out"} aria-busy={!!me && (!app.dataReady || !app.platformRolesReady)}>
       <button className="lgb" onClick={onReplay} title="Replay intro" aria-label="Replay Quorlyth introduction"><Logo size={26} breathe /></button>
       <b className="nav-wordmark">{'QUORLYTH'.split('').map((c, i) => <span key={i} style={{ ['--word-index' as any]: i }}>{c}</span>)}</b>
       <div className="navwrap" ref={wrap}>
         <div className="navmain" ref={main}>
           {ITEMS.filter(i => {
+            if (me && (!app.dataReady || !app.platformRolesReady)) return false
             if (i.platformAdminOnly) return !!platformAdmin && !demo
             if (i.platformOwnerOnly) return !!platformOwner && !demo
             if (i.path === '/projects' && !workspaceManager && !hasAccessibleProject) return false

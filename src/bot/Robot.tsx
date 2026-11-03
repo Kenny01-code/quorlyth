@@ -3,13 +3,16 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 export interface RobotApi {
   set(n: string): void; wave(ms?: number): void; welcome(): void; cheer(ms?: number): void
   think(on: boolean): void; listen(on: boolean): void; talk(on: boolean): void; bump(): void
-  no(): void; theme(n: string): void; spin(): void; turn(on: boolean): void; calm(on: boolean): void; dispose(): void
+  no(): void; theme(n: string): void; spin(): void; turn(on: boolean): void; calm(on: boolean): void
+  active(on: boolean): void; dispose(): void
 }
 
 /** The 3D QuorlythBot. Shows a retry button if the 3D scene cannot start. */
-export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; defer?: boolean; onReady?: () => void }>(function Robot({ theme = 'onyx', calm, drag, defer = false, onReady }, ref) {
+export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; defer?: boolean; active?: boolean; onReady?: () => void }>(function Robot({ theme = 'onyx', calm, drag, defer = false, active = true, onReady }, ref) {
   const cv = useRef<HTMLCanvasElement>(null)
   const api = useRef<RobotApi | null>(null)
+  const activeRef = useRef(active)
+  activeRef.current = active
   const [state, setState] = useState<'loading' | 'ok' | 'fail'>('loading')
   const [try_, setTry] = useState(0)
 
@@ -30,6 +33,7 @@ export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolea
           const R = robot3d(el, { tight: 1, drag: !!drag, theme, onerror: () => { if (!cancelled) setState('fail') } })
           if (cancelled) { R.dispose(); return }
           api.current = R
+          if (!activeRef.current) R.active(false)
           dispose = () => {
             R.dispose()
             if (api.current === R) api.current = null
@@ -56,6 +60,7 @@ export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolea
 
   useEffect(() => { api.current?.theme(theme) }, [theme])
   useEffect(() => { api.current?.calm(!!calm) }, [calm])
+  useEffect(() => { api.current?.active(active) }, [active])
 
   return (
     <>
