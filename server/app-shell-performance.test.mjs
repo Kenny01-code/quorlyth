@@ -262,3 +262,17 @@ test('global motion does not continuously animate the full-screen background or 
   assert.match(liquid, /#nav \.lgb svg\.lm\s*\{[\s\S]{0,100}animation: none !important/)
   assert.match(liquid, /#nav b\.nav-wordmark > span\s*\{[\s\S]{0,450}animation: none !important/)
 })
+
+test('initial Supabase identity uses verified JWT claims before a server user lookup', async () => {
+  const backend = await readSource('src/backend.ts')
+  const start = backend.indexOf('const auth: Auth = {')
+  const end = backend.indexOf('onChange(cb)', start)
+  assert.ok(start >= 0 && end > start, 'Supabase auth adapter is present')
+  const current = backend.slice(start, end)
+  assert.match(current, /async current\(\)[\s\S]*?sb\.auth\.getSession\(\)/)
+  assert.match(current, /sb\.auth\.getClaims\(\)/)
+  assert.match(current, /id: claims\.sub/)
+  assert.match(current, /user_metadata: claims\.user_metadata/)
+  assert.match(current, /if \(error\)[\s\S]*?sb\.auth\.getUser\(\)/)
+  assert.match(current, /created_at: session\.user\?\.created_at/)
+})
