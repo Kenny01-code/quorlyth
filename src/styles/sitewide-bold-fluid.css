@@ -195,7 +195,7 @@ body {
 }
 
 
-/* One compact navigation shell for guests and signed-in accounts.
+/* One navigation shell for guests and signed-in accounts. Compact shared sizing for both auth states.
    The auth/role filters choose links; the appearance and sizing stay consistent. */
 #nav {
   position: sticky !important;
