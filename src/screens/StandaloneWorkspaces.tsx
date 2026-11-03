@@ -1074,7 +1074,7 @@ function WorkspaceProjectView() {
   function updateCommentDraft(value: string, caret: number) {
     setCommentText(value)
     const beforeCaret = value.slice(0, caret)
-    const match = /(^|\\s)@([^\\s@]*)$/.exec(beforeCaret)
+    const match = /(^|\s)@([^\s@]*)$/.exec(beforeCaret)
     if (!match) {
       setMentionQuery(null)
       return
@@ -1126,7 +1126,7 @@ function WorkspaceProjectView() {
           })
         }
         const text = cleanText || (commentVoiceNote ? 'Sent a voice note.' : 'Shared an attachment.')
-        const explicitEveryone = commentMentionedEveryone && /(^|\\s)@everyone\\b/i.test(cleanText)
+        const explicitEveryone = commentMentionedEveryone && /(^|\s)@everyone\b/i.test(cleanText)
         const mentionedUserIds = [...new Set([
           ...(explicitEveryone ? team.filter(member => member.status === 'active' && member.userId !== a.me!.id).map(member => member.userId) : []),
           ...commentMentionedUserIds.filter(userId => {
