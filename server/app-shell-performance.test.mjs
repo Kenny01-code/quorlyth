@@ -196,7 +196,7 @@ test('the first account snapshot is published only after every collection has lo
   assert.doesNotMatch(provider, /APP_DATA_CACHE_PREFIX|readCachedAppData|writeCachedAppData/)
   assert.match(provider, /requiredKeys\.every\(required => received\.has\(required\)\)/)
   assert.match(provider, /startTransition\(\(\) => setData\(\{ \.\.\.EMPTY, \.\.\.staged \}\)\)/)
-  assert.match(app, /a\.me && !a\.dataReady/)
+  assert.match(app, /a.me && (!a.dataReady || !a.platformRolesReady)/)
   assert.match(app, /Loading your latest Quorlyth data/)
 })
 
