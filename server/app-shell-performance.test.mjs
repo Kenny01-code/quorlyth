@@ -35,7 +35,7 @@ test('the automation runtime is not mounted for signed-out visitors', async () =
 
 test('background realtime snapshots are scheduled as non-urgent updates', async () => {
   const provider = await readSource('src/data/AppProvider.tsx')
-  assert.match(provider, /startTransition\(\(\) => setData\(d => \(\{ \.\.\.d, \[k\]: v \}\)\)\)/)
+  assert.match(provider, /startTransition\(\(\) => setData\(current => \(\{ \.\.\.current, \[key\]: value \}\)\)\)/)
 })
 
 test('new AI-organizer milestones use an insert instead of an upsert', async () => {
