@@ -1468,7 +1468,7 @@ function WorkspaceProjectView() {
                 </button>)}
               </div>}
             </div></label>
-            <ChatMediaComposer files={commentFiles} onFilesChange={setCommentFiles} voiceNote={commentVoiceNote} onVoiceNoteChange={setCommentVoiceNote} disabled={busy==='comment'} />
+            <ChatMediaComposer key={id} files={commentFiles} onFilesChange={setCommentFiles} voiceNote={commentVoiceNote} onVoiceNoteChange={setCommentVoiceNote} disabled={busy==='comment'} />
             <div className="sw-comment-compose-footer"><span>Enter to send <i>·</i> Shift + Enter for a new line</span><span>{commentText.length}/3000</span><button className="btn p" type="submit" disabled={busy==='comment'||(!commentText.trim()&&!commentFiles.length&&!commentVoiceNote)}><QuorlythGlyph name="send" size={14}/>{busy==='comment'?'Sending…':'Send'}</button></div>
           </form>}
         </>}
