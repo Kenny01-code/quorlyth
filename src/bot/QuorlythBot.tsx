@@ -1321,7 +1321,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   function isExplicitVoiceTaskRequest(text: string): boolean {
     const source = text.trim()
     const imperative = /^(?:(?:hey|okay)[,\s]+)?(?:(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?|i want you to\s+|i need you to\s+|help me\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|reassign|unassign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore|automate|configure|manage|sync|generate|plan)\b/i
-    const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?|settings|analytics|dashboard|notifications?|collaborations?|members?|teammates?|evidence|announcements?)\b/i
+    const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?|settings|analytics|dashboard|notifications?|collaborations?|members?|teammates?|evidence|announcements?|site|website|quorlyth)\b/i
     return imperative.test(source) && target.test(source)
   }
 
@@ -3090,12 +3090,15 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       projects: Object.values(a.data.projects).slice(0, 20).map(item => ({ id: item.id, ideaId: item.ideaId, summary: String(item.summary || '').slice(0, 220), status: item.status, ideaTitle: a.data.ideas.find(i => i.id === item.ideaId)?.title || '' })),
       openMilestones: a.data.milestones.filter(item => item.status !== 'done' || item.blocked).slice(0, 24).map(item => ({ id: item.id, projectId: item.projectId, title: item.title, status: item.status, priority: item.priority || 'normal', blocked: !!item.blocked, projectTitle: a.data.ideas.find(i => i.id === item.projectId)?.title || '' })),
       supportedAreas: [
-        'Ideas: create/edit/delete with existing permission rules.',
-        'Communities: edit settings or cover; create or submit only when explicitly requested.',
-        'Projects and collaboration: edit project brief, add/edit milestones, and review evidence only when explicitly requested.',
-        'Profile: edit signed-in display name, headline and bio.',
-        'Automations: create/edit/duplicate/activate/pause/test/delete; triggers are manual, idea-created, task-completed or workspace-created; actions are in-app notification, workspace task creation or HTTPS webhook.',
-        'Standalone workspaces/tasks: create/edit/start/delete tasks, edit workspace brief/status, create/delete workspaces.',
+        'Navigation: open the correct Quorlyth screen or record using the existing route handlers.',
+        'Ideas: draft/create, edit, delete, support/un-support, comment, and manage review status under existing role rules.',
+        'Communities: create when explicitly requested, edit community details/cover, manage membership requests and organizer access, and respect owner/moderator posting rules.',
+        'Collaboration projects: edit project briefs, plan or update milestones, assign eligible collaborators, sync project outcomes, and review submitted work only when explicitly requested by an authorized reviewer.',
+        'Standalone workspaces: create/edit workspaces and tasks, assign active teammates, start work, sync linked outcomes, and close or delete only when explicitly requested and permitted.',
+        'Automations: create/edit/duplicate, activate/pause, test/run or delete saved workflows. Triggers and actions must come from the existing supported lists and never use an invented webhook destination.',
+        'Profile and platform settings: update the signed-in profile; change global name, announcement, access approval or scoring weights only for a verified platform administrator.',
+        'Participation and requests: join/leave/request community membership, back ideas, and handle collaboration, join, organizer or access requests only when explicitly asked and authorized.',
+        'Analytics and insight: explain, summarize or compare the currently available dashboard and analytics records. These are read-only unless a separate supported action is explicitly requested.',
       ],
     }
 
