@@ -251,3 +251,26 @@ details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7
 .sw-commit-entry .ql-evidence-preview--compact { margin:0 0 5px; padding:7px 9px; }
 .sw-repo-row > div { min-width:0; }
 .sw-repo-row > div > strong { display:block; color:rgba(250,250,252,.9); font-size:11px; font-weight:550; overflow-wrap:anywhere; }
+
+
+/* Project room: compact messenger composer, inline mention picker and tagged-recipient chips. */
+.sw-comment-editor{position:relative;min-width:0}
+.sw-comment-editor textarea{display:block;width:100%;min-height:76px;max-height:180px;resize:vertical;padding:12px 13px 34px;border:1px solid rgba(255,255,255,.13);border-radius:13px;background:rgba(0,0,0,.3);color:rgba(250,250,252,.92);font:inherit;font-size:12px;line-height:1.65;outline:none;transition:border-color .16s,background .16s}
+.sw-comment-editor textarea:focus{border-color:rgba(255,255,255,.34);background:rgba(0,0,0,.44)}
+.sw-comment-editor textarea::placeholder{color:rgba(240,240,243,.31)}
+.sw-mention-menu{position:absolute;left:8px;bottom:calc(100% - 6px);z-index:35;display:grid;gap:3px;width:min(300px,calc(100% - 16px));max-height:230px;overflow:auto;padding:6px;border:1px solid rgba(255,255,255,.16);border-radius:13px;background:rgba(12,12,14,.98);box-shadow:0 18px 46px rgba(0,0,0,.56);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.sw-mention-menu>button{display:flex;align-items:center;gap:9px;min-height:43px;padding:6px 8px;border:0;border-radius:9px;background:transparent;color:rgba(250,250,253,.9);text-align:left;cursor:pointer}
+.sw-mention-menu>button:hover,.sw-mention-menu>button:focus-visible{background:rgba(255,255,255,.09);outline:none}
+.sw-mention-avatar{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.85)}
+.sw-mention-menu>button>span:nth-child(2){display:grid;gap:2px;min-width:0;flex:1}
+.sw-mention-menu strong{font-size:11px;font-weight:560}
+.sw-mention-menu small{color:rgba(235,235,243,.43);font-size:9px}
+.sw-mention-menu em{padding:3px 6px;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:rgba(245,245,248,.62);font-size:8px;font-style:normal}
+.sw-comment-mentions{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.sw-comment-mentions>span{color:rgba(235,235,243,.35);font-size:9px}
+.sw-comment-mentions>b{padding:3px 7px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.045);color:rgba(250,250,253,.72);font-size:9px;font-weight:500}
+.sw-comment-compose-footer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:3px}
+.sw-comment-compose-footer>span{color:rgba(235,235,243,.35);font-size:9px}
+.sw-comment-compose-footer>span:nth-child(2){margin-left:auto}
+.sw-comment-compose-footer>span i{padding:0 4px;color:rgba(235,235,243,.2);font-style:normal}
+.sw-comment-compose-footer .btn{min-height:36px;padding:8px 13px;font-size:10px}
