@@ -249,6 +249,8 @@ test('shared glass surfaces avoid the global turbulence texture and oversized ba
   assert.doesNotMatch(css, /feTurbulence|var\(--grain\)|\.glass:after/)
   assert.match(css, /backdrop-filter:blur\(10px\) saturate\(118%\)/)
   assert.match(css, /transition:transform \.16s ease/)
+  assert.doesNotMatch(css, /\.astl:before|animation:astb|@keyframes astb/)
+  assert.match(css, /\.astl\{[^}]*animation:none/)
 })
 
 test('global motion does not continuously animate the full-screen background or glass shadows', async () => {
