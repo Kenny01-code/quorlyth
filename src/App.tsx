@@ -358,7 +358,7 @@ export default function App() {
         try { localStorage.setItem('qintro', '1') } catch {}
         try { sessionStorage.setItem('qintro', '1') } catch {}
       }} />}
-      {(a.me || a.demo) && <Suspense fallback={null}><AutomationRuntime /></Suspense>}
+      {(a.me || a.demo) && (!a.me || a.demo || (a.dataReady && a.platformRolesReady)) && <Suspense fallback={null}><AutomationRuntime /></Suspense>}
       <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main" tabIndex={-1} aria-busy={!!a.me && (!a.dataReady || !a.platformRolesReady)}>
@@ -410,7 +410,6 @@ export default function App() {
         {!deferredLauncherHidden && <button
           id="astl"
           className="astl"
-          onPointerEnter={() => { void loadQuorlythBot().catch(() => {}) }}
           onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
           aria-label="Open QuorlythBot for help with communities, ideas, analytics, workspaces, and collaborations"
           title="Ask QuorlythBot for help · Right-click to hide on desktop or press and hold on mobile"

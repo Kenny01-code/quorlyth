@@ -1,8 +1,8 @@
 /* Quorlyth motion system: subtle, responsive motion across the whole product. */
 :root {
   --qth-ease: cubic-bezier(.2,.75,.25,1);
-  --qth-motion-fast: 180ms;
-  --qth-motion-base: 320ms;
+  --qth-motion-fast: 120ms;
+  --qth-motion-base: 180ms;
 }
 @keyframes qth-page-enter {
   from { opacity: 0; transform: translate3d(0, 12px, 0); }
@@ -24,12 +24,18 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,.0); }
   50% { box-shadow: 0 0 0 4px rgba(255,255,255,.035); }
 }
-body:before { animation: qth-ambient-breathe 16s ease-in-out infinite alternate; }
-main > * { animation: qth-page-enter 440ms var(--qth-ease) both; }
+/* Keep the ambient background static; animating a full-screen fixed layer adds perpetual compositing work. */
+main > * { animation: qth-page-enter 160ms var(--qth-ease) both; }
 main > *:nth-child(2) { animation-delay: 35ms; }
 main > *:nth-child(3) { animation-delay: 65ms; }
 main > *:nth-child(4) { animation-delay: 95ms; }
-.glass, .sw-project-card, .sw-task, .sw-artifact, .q-work-panel, .ql-project-progress,
+.glass {
+  /* Avoid animating blurred shadow layers on every card during hover and route updates. */
+  transition: transform var(--qth-motion-fast) var(--qth-ease),
+    border-color var(--qth-motion-fast) ease,
+    background-color var(--qth-motion-fast) ease;
+}
+.sw-project-card, .sw-task, .sw-artifact, .q-work-panel, .ql-project-progress,
 .sw-linked-project-banner, .sw-linked-submission, .ql-linked-workspace {
   transition: transform var(--qth-motion-base) var(--qth-ease),
     border-color var(--qth-motion-base) ease,

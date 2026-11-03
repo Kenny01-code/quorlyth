@@ -326,7 +326,8 @@ body {
 }
 #nav .lgb svg.lm {
   transform-origin: 50% 50%;
-  animation: br2 6.5s cubic-bezier(.45, 0, .55, 1) infinite;
+  animation: none !important;
+  filter: none;
 }
 #nav b.nav-wordmark {
   display: flex !important;
@@ -346,14 +347,13 @@ body {
   display: inline-block;
   color: #fff;
   background: linear-gradient(112deg, #777 0%, #f4f4f4 24%, #fff 38%, #8f8f8f 53%, #fff 70%, #858585 100%);
-  background-size: 230% 100%;
-  background-position: 120% 50%;
+  background-size: 100% 100%;
+  background-position: 50% 50%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   transform-origin: 50% 72%;
-  animation: qNavWordFlow 7.4s cubic-bezier(.4, 0, .2, 1) infinite;
-  animation-delay: calc(var(--word-index, 0) * 105ms);
+  animation: none !important;
 }
 #nav b.nav-wordmark::after {
   content: "";
@@ -367,8 +367,8 @@ body {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.8), transparent);
   transform: scaleX(.18);
   transform-origin: center;
-  opacity: .3;
-  animation: qNavBrandLine 7.4s ease-in-out infinite;
+  opacity: .2;
+  animation: none !important;
 }
 @keyframes qNavWordFlow {
   0%, 100% { background-position: 120% 50%; transform: translateY(0) scale(.99); opacity: .76; }

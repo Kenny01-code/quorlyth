@@ -14,8 +14,9 @@ test('QuorlythBot is not downloaded automatically during startup', async () => {
   assert.match(app, /const QuorlythBot = lazy\(loadQuorlythBot\)/)
   assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
   assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
-  assert.match(app, /onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /onClick=\{\(\) => \{[\s\S]{0,180}loadQuorlythBot\(\)/)
+  assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
+  assert.match(app, /id="astl"[\s\S]{0,320}onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
+  assert.match(app, /id="astl"[\s\S]{0,500}onClick=\{\(\) => \{[\s\S]{0,180}loadQuorlythBot\(\)/)
 })
 
 test('AI writing tools are downloaded only after a textarea is focused', async () => {
@@ -30,7 +31,7 @@ test('AI writing tools are downloaded only after a textarea is focused', async (
 test('the automation runtime is not mounted for signed-out visitors', async () => {
   const app = await readSource('src/App.tsx')
   assert.match(app, /const AutomationRuntime = lazy\(\(\) => import\('\.\/components\/AutomationRuntime'\)/)
-  assert.match(app, /\(a\.me \|\| a\.demo\) && <Suspense fallback=\{null\}><AutomationRuntime \/><\/Suspense>/)
+  assert.match(app, /\(a\.me \|\| a\.demo\) && \(!a\.me \|\| a\.demo \|\| \(a\.dataReady && a\.platformRolesReady\)\) && <Suspense fallback=\{null\}><AutomationRuntime \/><\/Suspense>/)
 })
 
 test('background realtime snapshots are scheduled as non-urgent updates', async () => {
@@ -234,4 +235,30 @@ test('QuorlythBot uses a narrower sidebar and a lower GPU pixel ratio', async ()
   assert.match(css, /grid-template-columns:\s*minmax\(176px, 186px\) minmax\(0, 1fr\)/)
   assert.match(renderer, /window\.innerWidth<=760\?1\.0:1\.25/)
   assert.match(renderer, /1000\/40/)
+})
+
+test('top navigation retains the compact 50px shell rather than an oversized header', async () => {
+  const css = await readSource('src/styles/sitewide-bold-fluid.css')
+  assert.match(css, /min-height: 50px/)
+  assert.match(css, /font-size: 11px !important/)
+  assert.match(css, /min-width: 128px/)
+  assert.doesNotMatch(css, /min-height: 84px|font-size: 14px !important/)
+})
+
+test('shared glass surfaces avoid the global turbulence texture and oversized backdrop blur', async () => {
+  const css = await readSource('src/styles/app.css')
+  assert.doesNotMatch(css, /feTurbulence|var\(--grain\)|\.glass:after/)
+  assert.match(css, /backdrop-filter:blur\(10px\) saturate\(118%\)/)
+  assert.match(css, /transition:transform \.16s ease/)
+  assert.doesNotMatch(css, /\.astl:before|animation:astb|@keyframes astb/)
+  assert.match(css, /\.astl\{[^}]*animation:none/)
+})
+
+test('global motion does not continuously animate the full-screen background or glass shadows', async () => {
+  const motion = await readSource('src/styles/motion-system.css')
+  const liquid = await readSource('src/styles/sitewide-liquid-glass.css')
+  assert.doesNotMatch(motion, /body:before \{ animation: qth-ambient-breathe/)
+  assert.match(motion, /\.glass\s*\{[\s\S]{0,260}transition: transform var\(--qth-motion-fast\)/)
+  assert.match(liquid, /#nav \.lgb svg\.lm\s*\{[\s\S]{0,100}animation: none !important/)
+  assert.match(liquid, /#nav b\.nav-wordmark > span\s*\{[\s\S]{0,450}animation: none !important/)
 })

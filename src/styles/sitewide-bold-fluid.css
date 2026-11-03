@@ -195,37 +195,37 @@ body {
 }
 
 
-/* One navigation shell for guests and signed-in accounts.
-   Content/permissions change by role; the dark glass capsule never changes. */
+/* One navigation shell for guests and signed-in accounts. Compact shared sizing for both auth states.
+   The auth/role filters choose links; the appearance and sizing stay consistent. */
 #nav {
   position: sticky !important;
-  top: max(2px, env(safe-area-inset-top, 0px)) !important;
+  top: max(8px, env(safe-area-inset-top, 0px)) !important;
   z-index: 60 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
   width: fit-content !important;
   max-width: min(1180px, calc(100% - 20px)) !important;
-  min-height: 84px;
-  margin: 2px auto 0 !important;
-  padding: 9px 10px !important;
-  gap: 9px !important;
+  min-height: 50px;
+  margin: 8px auto 0 !important;
+  padding: 6px !important;
+  gap: 5px !important;
   overflow: hidden !important;
   pointer-events: auto !important;
   border: 1px solid rgba(255,255,255,.17) !important;
   border-radius: 999px !important;
   background: rgba(5,5,7,.84) !important;
-  box-shadow: 0 20px 58px -28px rgba(0,0,0,.98), inset 0 1px 0 rgba(255,255,255,.12) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(145%) !important;
-  backdrop-filter: blur(22px) saturate(145%) !important;
+  box-shadow: 0 14px 36px -26px rgba(0,0,0,.96), inset 0 1px 0 rgba(255,255,255,.12) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(118%) !important;
+  backdrop-filter: blur(10px) saturate(118%) !important;
 }
 #nav .lgb {
   display: grid !important;
   flex: 0 0 auto !important;
   place-items: center;
-  min-width: 46px;
-  min-height: 46px;
-  padding: 5px !important;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 4px !important;
 }
 #nav b.nav-wordmark {
   display: inline-flex !important;
@@ -234,8 +234,8 @@ body {
   padding: 0 3px !important;
   color: rgba(255,255,255,.92) !important;
   white-space: nowrap !important;
-  font-size: 12px !important;
-  letter-spacing: .13em !important;
+  font-size: 10px !important;
+  letter-spacing: .12em !important;
 }
 #nav .navwrap {
   display: flex !important;
@@ -250,7 +250,7 @@ body {
   width: auto !important;
   min-width: 0 !important;
   max-width: 100% !important;
-  gap: 5px !important;
+  gap: 3px !important;
   overflow-x: auto !important;
   overflow-y: hidden !important;
   scrollbar-width: none !important;
@@ -263,21 +263,21 @@ body {
   flex: 0 0 auto !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 9px !important;
-  min-height: 50px;
-  padding: 12px 15px !important;
+  gap: 6px !important;
+  min-height: 36px;
+  padding: 8px 10px !important;
   border: 1px solid transparent !important;
   border-radius: 999px !important;
   color: rgba(255,255,255,.73) !important;
   white-space: nowrap !important;
-  font-size: 14px !important;
+  font-size: 11px !important;
   line-height: 1.1 !important;
-  transition: color 160ms ease, background-color 180ms ease, border-color 180ms ease !important;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease !important;
 }
 #nav .navmain .nav-item > svg {
   display: block !important;
-  width: 17px !important;
-  height: 17px !important;
+  width: 15px !important;
+  height: 15px !important;
   flex: 0 0 auto !important;
 }
 #nav .navmain .nav-item > span {
@@ -296,9 +296,9 @@ body {
   display: flex !important;
   flex: 0 0 auto !important;
   align-items: center !important;
-  gap: 4px !important;
+  gap: 3px !important;
   margin-left: 3px !important;
-  padding-left: 7px !important;
+  padding-left: 6px !important;
   border-left: 1px solid rgba(255,255,255,.13) !important;
 }
 #nav .navend .bl,
@@ -308,20 +308,20 @@ body {
   flex: 0 0 auto !important;
   align-items: center !important;
   justify-content: center !important;
-  min-width: 48px;
-  min-height: 48px;
-  padding: 8px !important;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 7px !important;
   margin: 0 !important;
   color: rgba(255,255,255,.78) !important;
   border-radius: 999px !important;
   background: transparent !important;
 }
 #nav .navend .srch {
-  gap: 9px !important;
-  min-width: 170px;
-  min-height: 60px;
-  padding: 10px 15px !important;
-  font-size: 14px !important;
+  gap: 8px !important;
+  min-width: 128px;
+  min-height: 36px;
+  padding: 8px 12px !important;
+  font-size: 11px !important;
   border: 1px solid rgba(255,255,255,.14) !important;
   background: rgba(255,255,255,.055) !important;
 }
@@ -329,31 +329,27 @@ body {
 #nav .navend .srch kbd {
   display: inline-flex !important;
   align-items: center;
-  padding: 3px 6px;
+  padding: 2px 5px;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 7px;
   color: rgba(255,255,255,.5);
   font-size: 9px;
 }
 #nav .navend .navav {
-  width: 62px;
-  height: 62px;
+  width: 40px;
+  height: 40px;
   border: 1px solid rgba(255,255,255,.16) !important;
 }
-#nav .navend .navav .av { width: 42px; height: 42px; margin: 0; }
-@media (max-width: 860px) {
-  #nav .navmain .nav-item > span { display: none !important; }
-  #nav .navmain .nav-item { min-width: 34px; padding: 8px !important; }
-}
+#nav .navend .navav .av { width: 30px; height: 30px; margin: 0; }
 @media (max-width: 860px) {
   #nav {
-    min-height: 50px;
     width: calc(100% - 12px) !important;
     max-width: calc(100% - 12px) !important;
     justify-content: space-between !important;
     gap: 3px !important;
-    padding: 5px !important;
   }
+  #nav .navmain .nav-item > span { display: none !important; }
+  #nav .navmain .nav-item { min-width: 34px; padding: 8px !important; }
   #nav b.nav-wordmark { display: none !important; }
   #nav .navwrap { flex: 1 1 0 !important; min-width: 0 !important; }
   #nav .navmain { flex: 1 1 0 !important; width: 100% !important; }
@@ -372,11 +368,11 @@ body {
   #nav .navend .navav { min-width: 29px; min-height: 29px; padding: 5px !important; }
 }
 
-/* Main-thread/GPU budget: native scrolling, fewer large translucent paint regions. */
+/* Keep offscreen cards cheap to paint; preserve native scrolling and route behavior. */
 #main .glass {
-  -webkit-backdrop-filter: blur(14px) saturate(122%);
-  backdrop-filter: blur(14px) saturate(122%);
-  box-shadow: 0 18px 48px -34px rgba(0,0,0,.92), inset 0 1px 0 rgba(255,255,255,.095);
+  -webkit-backdrop-filter: blur(9px) saturate(116%);
+  backdrop-filter: blur(9px) saturate(116%);
+  box-shadow: 0 14px 36px -28px rgba(0,0,0,.94), inset 0 1px 0 rgba(255,255,255,.08);
 }
 @supports (content-visibility: auto) {
   #main .grid > .glass {
