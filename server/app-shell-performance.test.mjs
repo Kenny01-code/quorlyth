@@ -14,8 +14,9 @@ test('QuorlythBot is not downloaded automatically during startup', async () => {
   assert.match(app, /const QuorlythBot = lazy\(loadQuorlythBot\)/)
   assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
   assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
-  assert.match(app, /onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /onClick=\{\(\) => \{[\s\S]{0,180}loadQuorlythBot\(\)/)
+  assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
+  assert.match(app, /id="astl"[\s\S]{0,320}onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
+  assert.match(app, /id="astl"[\s\S]{0,500}onClick=\{\(\) => \{[\s\S]{0,180}loadQuorlythBot\(\)/)
 })
 
 test('AI writing tools are downloaded only after a textarea is focused', async () => {
