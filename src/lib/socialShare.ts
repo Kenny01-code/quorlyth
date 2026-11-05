@@ -17,7 +17,7 @@ export function socialShareUrl(
   const message = encodeURIComponent(text)
   const url = encodeURIComponent(pageUrl)
   const heading = encodeURIComponent(title)
-  const sharedText = pageUrl && !text.includes(pageUrl) ? text + '\\n' + pageUrl : text
+  const sharedText = pageUrl && !text.includes(pageUrl) ? text + '\n' + pageUrl : text
   const messageWithLink = encodeURIComponent(sharedText)
 
   switch (target) {
