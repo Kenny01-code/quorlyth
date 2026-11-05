@@ -79,3 +79,13 @@
 @media(prefers-reduced-motion:reduce) {
   .wa-ai-pulse,.wa-ai-build-step.is-running > i { animation:none; }
 }
+
+.wa-ai-live-preview {
+  display:grid; gap:7px; padding:11px 12px;
+  border:1px solid rgba(255,255,255,.09); border-radius:11px;
+  background:rgba(255,255,255,.025);
+}
+.wa-ai-live-preview > small { color:rgba(255,255,255,.38); font-size:9px; letter-spacing:.12em; }
+.wa-ai-live-preview > p { display:grid; grid-template-columns:76px minmax(0,1fr); gap:9px; margin:0; align-items:start; }
+.wa-ai-live-preview > p b { color:rgba(255,255,255,.48); font-size:10px; font-weight:500; }
+.wa-ai-live-preview > p span { color:rgba(255,255,255,.82); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
