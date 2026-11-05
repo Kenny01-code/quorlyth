@@ -5,6 +5,7 @@ import { Gate } from '../components/Gate'
 import { EmojiPicker } from '../components/Emoji'
 import { Av, Chip, Empty, Head } from '../components/ui'
 import { PromotionPreview } from '../components/PromotionPreview'
+import { SocialPublishingPanel } from '../components/SocialPublishingPanel'
 import { useApp, useComments } from '../data/AppProvider'
 import { askJson, streamChat } from '../ai/client'
 import { cleanTag, cn, when } from '../lib/util'
@@ -93,7 +94,7 @@ function Inner() {
         <Head kicker="Promote" title="Ready to share." />
         <div className="glass pad" style={{ maxWidth: 760, margin: '0 auto' }}><div className="done">
           <div className="score"><Icon name="approve" size={34} /></div><h2>Your post is ready.</h2>
-          <p className="mut" style={{ margin: '12px auto 0', maxWidth: 420 }}>Your credited post draft is saved in Quorlyth. Choose a social network below to open its sharing surface, or copy the caption for a manual post.</p>
+          <p className="mut" style={{ margin: '12px auto 0', maxWidth: 420 }}>Your credited post draft is saved in Quorlyth. You can publish directly to a connected account or use the share options below.</p>
           <div className="post" style={{ margin: '24px 0', textAlign: 'left', whiteSpace: 'pre-wrap' }}>{pub}</div>
           <div className="acts" style={{ justifyContent: 'center' }}>
             <button className="btn p" onClick={() => navigator.clipboard.writeText(pub).then(() => a.toast('Copied'))}>Copy post</button>
@@ -102,7 +103,7 @@ function Inner() {
           </div></div>
         <section className="q-social-share-block">
           <div className="q-social-share-heading">
-            <div><p className="ql-eyebrow">PUBLISH FROM YOUR CHANNEL</p><h3>Share this post</h3><p>Open a network's own sharing surface. Quorlyth keeps your credited draft; it does not sign in to your social accounts or publish on your behalf.</p></div>
+            <div><p className="ql-eyebrow">PUBLISH FROM YOUR CHANNEL</p><h3>Share this post</h3><p>Use a connected channel to publish this caption from Quorlyth, or open a network's own sharing surface.</p></div>
             <button type="button" className="btn p q-social-native-share" onClick={shareNative}><Icon name="share" size={15} />Share</button>
           </div>
           <div className="q-social-share-grid">
@@ -114,8 +115,9 @@ function Inner() {
             <button type="button" className="btn" onClick={() => copyAndOpenCreator('tiktok')}>Copy for TikTok <Icon name="arrow-up-right" size={13} /></button>
             <button type="button" className="btn" onClick={() => copyAndOpenCreator('youtube')}>Copy for YouTube <Icon name="arrow-up-right" size={13} /></button>
           </div>
-          <p className="q-social-share-footnote">These are share and copy workflows, not account connections. Direct publishing, scheduled posts and channel analytics require each provider's approved OAuth integration.</p>
+          <p className="q-social-share-footnote">Share links and copy workflows remain available even when a provider account is not connected.</p>
         </section>
+        <SocialPublishingPanel text={pub} link={sourceIdeaUrl} preferredPlatform={pm.plat} />
         </div>{pubs}
       </>
     )
