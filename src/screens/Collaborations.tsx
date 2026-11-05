@@ -662,6 +662,7 @@ function Workspace() {
       for (const item of chosenMilestones) {
         if (existingTitles.has(item.title.trim().toLowerCase())) {
           setAiApplyProgress(current => current.map(progressItem => progressItem.label === 'Create milestone: ' + item.title ? { ...progressItem, status: 'done' } : progressItem))
+          taskIndex++
           continue
         }
         setAiApplyProgress(current => current.map((progressItem, index) => index === taskIndex ? { ...progressItem, status: 'running' } : progressItem))
