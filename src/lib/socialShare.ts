@@ -17,22 +17,24 @@ export function socialShareUrl(
   const message = encodeURIComponent(text)
   const url = encodeURIComponent(pageUrl)
   const heading = encodeURIComponent(title)
+  const sharedText = pageUrl && !text.includes(pageUrl) ? text + '\\n' + pageUrl : text
+  const messageWithLink = encodeURIComponent(sharedText)
 
   switch (target) {
     case 'x':
-      return 'https://twitter.com/intent/tweet?text=' + message
+      return 'https://x.com/intent/tweet?text=' + messageWithLink
     case 'facebook':
       return 'https://www.facebook.com/sharer/sharer.php?u=' + url + '&quote=' + message
     case 'linkedin':
-      return 'https://www.linkedin.com/feed/?shareActive=true'
+      return 'https://www.linkedin.com/sharing/share-offsite/?url=' + url
     case 'threads':
-      return 'https://www.threads.net/intent/post?text=' + message
+      return 'https://www.threads.net/intent/post?text=' + messageWithLink
     case 'bluesky':
-      return 'https://bsky.app/intent/compose?text=' + message
+      return 'https://bsky.app/intent/compose?text=' + messageWithLink
     case 'reddit':
-      return 'https://www.reddit.com/submit?title=' + heading + '&selftext=' + message
+      return 'https://www.reddit.com/submit?title=' + heading + '&url=' + url + '&selftext=' + message
     case 'whatsapp':
-      return 'https://wa.me/?text=' + message
+      return 'https://wa.me/?text=' + messageWithLink
     case 'telegram':
       return 'https://t.me/share/url?url=' + url + '&text=' + message
   }
