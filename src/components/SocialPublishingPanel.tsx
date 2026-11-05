@@ -92,6 +92,7 @@ export function SocialPublishingPanel({ text, link, preferredPlatform }: {
       <span className="q-social-direct-count">{connections.length} connected</span>
     </div>
 
+    {error && <p className="q-social-alert" role="alert">{error}</p>}
     {loading ? <p className="dim">Checking connected channels…</p> : !connections.length ? <div className="q-social-no-connections">
       <p className="dim">Connect X, LinkedIn, a Facebook Page, an Instagram professional account or Pinterest to publish directly here.</p>
       <button type="button" className="btn p" onClick={() => navigate('/settings?tab=social')}>
@@ -118,7 +119,6 @@ export function SocialPublishingPanel({ text, link, preferredPlatform }: {
           {boards.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}
         </select>
       </label>}
-      {error && <p className="q-social-alert" role="alert">{error}</p>}
       {published && <p className="q-social-notice" role="status">
         Published successfully. {published.postUrl && <a href={published.postUrl} target="_blank" rel="noopener noreferrer">View post <Icon name="arrow-up-right" size={12} /></a>}
       </p>}
