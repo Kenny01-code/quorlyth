@@ -12,6 +12,7 @@ import { useUserState } from '../lib/userState'
 import { useNotifs } from '../lib/notifs'
 import { BackupRestore } from '../components/BackupRestore'
 import { socialShareUrl } from '../lib/socialShare'
+import { SocialAccountsSettings } from '../components/SocialAccountsSettings'
 import '../styles/social-sharing.css'
 
 export function Settings() {
@@ -24,7 +25,8 @@ function Inner() {
   const [searchParams, setSearchParams] = useSearchParams()
   const notifications = useNotifs(a, userState.st)
   const s = a.data.settings || {}
-  const [tab, setTab] = useState(() => a.platformAdmin && searchParams.get('tab') === 'requests' ? 2 : 0)
+  const [tab, setTab] = useState(() => searchParams.get('tab') === 'social' ? (a.platformAdmin ? 6 : 2) : a.platformAdmin && searchParams.get('tab') === 'requests' ? 2 : 0)
+  const socialTab = a.platformAdmin ? 6 : 2
   const initialSpace = { name: s.name || '', tag: s.tag || '', ann: s.ann || '', appr: !!s.appr }
   const [spaceDraft, setSpaceDraft, clearSpaceDraft] = useDraftState(`q-draft:${a.me?.id}:settings:space`, initialSpace)
   const { name, tag, ann, appr } = spaceDraft
@@ -38,7 +40,7 @@ function Inner() {
   const url = location.origin
   const inviteMessage = 'Join my space on Quorlyth: ' + url
   const text = encodeURIComponent(inviteMessage)
-  const tabs = a.platformAdmin ? ['Space', 'AI weights', 'Requests', 'Invite', 'Personal', 'Backup & restore'] : ['Personal', 'Backup & restore']
+  const tabs = a.platformAdmin ? ['Space', 'AI weights', 'Requests', 'Invite', 'Personal', 'Backup & restore', 'Connected accounts'] : ['Personal', 'Backup & restore', 'Connected accounts']
   const reqs = [...a.data.requests].sort((x, y) => y.at - x.at)
   const openReqs = reqs.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at })
   const unreadRequestKeys = notifications.filter(n => n.kind === 'settings' && n.unread).map(n => n.key)
@@ -50,8 +52,9 @@ function Inner() {
   }
 
   useEffect(() => {
-    if (a.platformAdmin && searchParams.get('tab') === 'requests') setTab(2)
-  }, [searchParams, a.platformAdmin])
+    if (searchParams.get('tab') === 'social') setTab(socialTab)
+    else if (a.platformAdmin && searchParams.get('tab') === 'requests') setTab(2)
+  }, [searchParams, a.platformAdmin, socialTab])
   useEffect(() => {
     if (a.platformAdmin && tab === 2 && unreadRequestKeys.length) void userState.patch({ read: Object.fromEntries(unreadRequestKeys.map(key => [key, true])) })
   }, [tab, unreadRequestKeys.join('|'), a.platformAdmin])
@@ -61,11 +64,12 @@ function Inner() {
       <Head kicker="Settings" title="Make it yours." />
       <div className="grid q" style={{ gridTemplateColumns: '.6fr 1.4fr' }}>
         <div className="glass" style={{ padding: 12 }}>
-          {tabs.map((t, i) => <div key={t} className={cn('row', tab === i && 'on')} tabIndex={0} onClick={() => { setTab(i); setSearchParams(i === 2 ? { tab: 'requests' } : {}, { replace: true }) }} onKeyDown={e => { if (e.key === 'Enter') { setTab(i); setSearchParams(i === 2 ? { tab: 'requests' } : {}, { replace: true }) } }}><div className="t"><h3 style={{ fontSize: 15 }}>{t}</h3></div>{i === 2 && openReqs.length > 0 && <b className={cn('nav-count', unreadRequestKeys.length > 0 && 'pulse')}>{openReqs.length > 9 ? '9+' : openReqs.length}</b>}</div>)}
+          {tabs.map((t, i) => <div key={t} className={cn('row', tab === i && 'on')} tabIndex={0} onClick={() => { setTab(i); setSearchParams(i === 2 && a.platformAdmin ? { tab: 'requests' } : i === socialTab ? { tab: 'social' } : {}, { replace: true }) }} onKeyDown={e => { if (e.key === 'Enter') { setTab(i); setSearchParams(i === 2 && a.platformAdmin ? { tab: 'requests' } : i === socialTab ? { tab: 'social' } : {}, { replace: true }) } }}><div className="t"><h3 style={{ fontSize: 15 }}>{t}</h3></div>{a.platformAdmin && i === 2 && openReqs.length > 0 && <b className={cn('nav-count', unreadRequestKeys.length > 0 && 'pulse')}>{openReqs.length > 9 ? '9+' : openReqs.length}</b>}</div>)}
         </div>
         <div className="glass pad">
           {(!a.platformAdmin && tab === 0 || a.platformAdmin && tab === 4) && <PersonalSettings />}
           {(!a.platformAdmin && tab === 1 || a.platformAdmin && tab === 5) && <BackupRestore />}
+          {tab === socialTab && <SocialAccountsSettings />}
           {a.platformAdmin && tab === 0 && <>
             <h3>Your space</h3><p className="dim" style={{ marginTop: 4 }}>Unfinished settings are saved as a draft on this device.</p>
             <label className="field"><span>Space name</span><input value={name} maxLength={60} onChange={e => setName(e.target.value)} placeholder="Your name or brand" /></label>
