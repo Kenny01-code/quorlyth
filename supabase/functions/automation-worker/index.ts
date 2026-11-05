@@ -400,26 +400,27 @@ async function processEvents() {
   let retried = 0;
   for (const event of events as AnyRecord[]) {
     const eventId = String(event.event_id || event.id || "");
+    const normalizedEvent = { ...event, id: eventId };
     let eventError = "";
     try {
       if (!eventId) throw new Error("The queue returned an event without an ID.");
       const matching = workflows.filter((item) =>
-        item.workflow.trigger === event.trigger_type &&
-        event.trigger_type !== "manual"
+        item.workflow.trigger === normalizedEvent.trigger_type &&
+        normalizedEvent.trigger_type !== "manual"
       );
 
       for (const item of matching) {
         const { data: allowed, error: permissionError } = await db.rpc("automation_user_can_receive_event", {
           p_user_id: item.ownerId,
-          p_trigger_type: event.trigger_type,
-          p_source_path: event.source_path,
-          p_payload: event.payload || {},
+          p_trigger_type: normalizedEvent.trigger_type,
+          p_source_path: normalizedEvent.source_path,
+          p_payload: normalizedEvent.payload || {},
         });
         if (permissionError) throw permissionError;
         if (allowed !== true) continue;
 
         try {
-          await executeWorkflow(item.workflow, item.ownerId, event);
+          await executeWorkflow(item.workflow, item.ownerId, normalizedEvent);
         } catch (error) {
           eventError = error instanceof Error ? error.message.slice(0, 500) : "Workflow execution failed.";
         }
