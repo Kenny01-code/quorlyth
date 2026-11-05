@@ -273,7 +273,7 @@ export function SocialAccountsSettings() {
               <input type="password" value={drafts[provider.id].clientSecret} onChange={event => setConfigField(provider.id, 'clientSecret', event.target.value)} placeholder={isConfigured ? 'Enter a new secret only when rotating it' : 'Paste the developer app client secret'} autoComplete="new-password" />
             </label>
             <button type="button" className="btn" disabled={isSaving || !drafts[provider.id].clientId.trim() || !drafts[provider.id].clientSecret.trim()} onClick={() => void configure(provider.id)}>
-              <Icon name="shield-check" size={14} />{isSaving ? 'Saving to Vault…' : 'Save OAuth app'}
+              <Icon name="lock" size={14} />{isSaving ? 'Saving to Vault…' : 'Save OAuth app'}
             </button>
           </div>}
           {!canConfigure && !isConfigured && <p className="dim q-social-owner-note">The Quorlyth platform owner must configure this developer app before accounts can connect.</p>}
