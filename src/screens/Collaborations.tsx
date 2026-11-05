@@ -319,7 +319,7 @@ function Workspace() {
   const [aiSelectedMilestones, setAiSelectedMilestones] = useState<string[] | null>(null)
   const [applyingPlan, setApplyingPlan] = useState(false)
   const [autoApplyPlanWhenReady, setAutoApplyPlanWhenReady] = useState(false)
-  const [aiApplyProgress, setAiApplyProgress] = useState<Array<{ label: string; status: 'running' | 'done' | 'failed' }>>([])
+  const [aiApplyProgress, setAiApplyProgress] = useState<Array<{ label: string; status: 'pending' | 'running' | 'done' | 'failed' }>>([])
   const [createMilestoneRequest, setCreateMilestoneRequest] = useState(0)
   const [submissionReviewNotes, setSubmissionReviewNotes] = useState<Record<string, string>>({})
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState('')
@@ -361,6 +361,11 @@ function Workspace() {
     ...Object.entries(a.data.votes).filter(([, votes]) => [...communityIdeaIds].some(communityIdeaId => !!votes?.[communityIdeaId])).map(([userId]) => userId),
   ].filter((uid): uid is string => !!uid))]
   const participantKey = discussionParticipantIds.join('|')
+  useEffect(() => {
+    if (!autoApplyPlanWhenReady || !project || !aiPlan || applyingPlan) return
+    void applyAIPlan()
+  }, [autoApplyPlanWhenReady, project?.id, aiPlan, applyingPlan])
+
   const partialAiSummary = (() => {
     const match = aiStreamText.match(/"project_summary"\s*:\s*"((?:\\.|[^"\\])*)/s)
     if (!match) return ''
@@ -642,7 +647,7 @@ function Workspace() {
       ...(shouldUpdateSummary ? [{ label: 'Update project brief' }] : []),
       ...chosenMilestones.map(item => ({ label: 'Create milestone: ' + item.title })),
     ]
-    setAiApplyProgress(tasks.map((task, index) => ({ label: task.label, status: index === 0 ? 'running' as const : 'running' as const })))
+    setAiApplyProgress(tasks.map((task, index) => ({ label: task.label, status: index === 0 ? 'running' as const : 'pending' as const })))
     setApplyingPlan(true)
     let created = 0
     try {
@@ -682,11 +687,6 @@ function Workspace() {
       setAutoApplyPlanWhenReady(false)
     }
   }
-
-  useEffect(() => {
-    if (!autoApplyPlanWhenReady || !project || !aiPlan || applyingPlan) return
-    void applyAIPlan()
-  }, [autoApplyPlanWhenReady, project?.id, aiPlan, applyingPlan])
 
   const updateDiscussionReply = (value: string, cursorPosition: number) => {
     setReply(value)
