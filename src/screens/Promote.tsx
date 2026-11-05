@@ -60,6 +60,33 @@ function Inner() {
     </section>
   ) : null
 
+  const sourceIdeaUrl = idea ? window.location.origin + '/idea/' + idea.id : window.location.origin + '/promote'
+  const shareTargets: { id: SocialShareTarget; label: string }[] = [
+    { id: 'x', label: 'X' }, { id: 'facebook', label: 'Facebook' }, { id: 'linkedin', label: 'LinkedIn' },
+    { id: 'threads', label: 'Threads' }, { id: 'bluesky', label: 'Bluesky' }, { id: 'reddit', label: 'Reddit' },
+    { id: 'whatsapp', label: 'WhatsApp' }, { id: 'telegram', label: 'Telegram' },
+  ]
+  const copyAndOpenCreator = (network: 'instagram' | 'tiktok' | 'youtube') => {
+    const destination = network === 'instagram' ? 'https://www.instagram.com/' : network === 'tiktok' ? 'https://www.tiktok.com/' : 'https://studio.youtube.com/'
+    window.open(destination, '_blank', 'noopener,noreferrer')
+    void navigator.clipboard.writeText((pub || '') + '\n\n' + sourceIdeaUrl).then(() => a.toast('Caption and source idea link copied. Paste them into ' + (network === 'youtube' ? 'YouTube Studio' : network === 'instagram' ? 'Instagram' : 'TikTok') + ' to finish your post.')).catch(() => a.toast('Could not copy the caption. You can still copy it from the post above.'))
+  }
+  const openShareTarget = (target: SocialShareTarget) => {
+    if (target === 'linkedin') {
+      openSocialShare('linkedin', pub || '', sourceIdeaUrl, 'A post from Quorlyth')
+      void navigator.clipboard.writeText((pub || '') + '\n\n' + sourceIdeaUrl).then(() => a.toast('Caption and source link copied. Paste them into your LinkedIn post.')).catch(() => a.toast('LinkedIn opened. Copy the caption from the post above.'))
+      return
+    }
+    openSocialShare(target, pub || '', sourceIdeaUrl, 'A post from Quorlyth')
+  }
+  const shareNative = () => {
+    if (typeof navigator.share === 'function') {
+      void navigator.share({ title: 'A post from Quorlyth', text: pub || '', url: sourceIdeaUrl }).catch(error => { if (error?.name !== 'AbortError') a.toast('Your device could not open the share sheet. Choose a network below.') })
+      return
+    }
+    void navigator.clipboard.writeText(pub || '').then(() => a.toast('Post copied. Paste it into your social app.')).catch(() => a.toast('Could not copy the post.'))
+  }
+
   if (pub !== null) {
     return (
       <>
@@ -110,7 +137,6 @@ function Inner() {
   }
 
   const credits = [...new Set([idea.authorId, ...comments.map(c => c.authorId)])]
-  const sourceIdeaUrl = window.location.origin + '/idea/' + idea.id
   const prompt = (extra = '') => `Write a social media post announcing that a creator is acting on an idea from their fan community. Platform: ${pm.plat}. Maximum length: ${LIM[pm.plat as SocialPromotionPlatform]} characters. Tone: ${pm.tone}. Length: ${({ short: 'under 50 words', medium: 'about 80 words', long: 'about 140 words' } as any)[pm.len]}. ${pm.tags ? 'Add 3 to 5 relevant hashtags at the end. ' : 'Use no hashtags. '}${pm.emo ? 'Use a few fitting emojis. ' : 'Use no emojis. '}Credit the community, do not name any individual. Do not invent facts, dates or numbers. ${pm.plat === 'x' ? 'Stay under 280 characters. ' : ''}${extra}\nIdea title: ${idea.title}\nIdea details: ${idea.body || '(none)'}`
 
   const syncTags = (text: string, tags: string[]) => {
@@ -148,31 +174,6 @@ function Inner() {
     return o.slice(0, 10)
   })()
   const chs = (k: keyof typeof pm, list: [string, string][]) => list.map(([v, l]) => <Chip key={v} on={pm[k] === v} onClick={() => setPm({ ...pm, [k]: v })}>{l}</Chip>)
-  const shareTargets: { id: SocialShareTarget; label: string }[] = [
-    { id: 'x', label: 'X' }, { id: 'facebook', label: 'Facebook' }, { id: 'linkedin', label: 'LinkedIn' },
-    { id: 'threads', label: 'Threads' }, { id: 'bluesky', label: 'Bluesky' }, { id: 'reddit', label: 'Reddit' },
-    { id: 'whatsapp', label: 'WhatsApp' }, { id: 'telegram', label: 'Telegram' },
-  ]
-  const copyAndOpenCreator = (network: 'instagram' | 'tiktok' | 'youtube') => {
-    const destination = network === 'instagram' ? 'https://www.instagram.com/' : network === 'tiktok' ? 'https://www.tiktok.com/' : 'https://studio.youtube.com/'
-    window.open(destination, '_blank', 'noopener,noreferrer')
-    void navigator.clipboard.writeText((pub || '') + '\n\n' + sourceIdeaUrl).then(() => a.toast('Caption and source idea link copied. Paste them into ' + (network === 'youtube' ? 'YouTube Studio' : network === 'instagram' ? 'Instagram' : 'TikTok') + ' to finish your post.')).catch(() => a.toast('Could not copy the caption. You can still copy it from the post above.'))
-  }
-  const openShareTarget = (target: SocialShareTarget) => {
-    if (target === 'linkedin') {
-      openSocialShare('linkedin', pub || '', sourceIdeaUrl, 'A post from Quorlyth')
-      void navigator.clipboard.writeText((pub || '') + '\n\n' + sourceIdeaUrl).then(() => a.toast('Caption and source link copied. Paste them into your LinkedIn post.')).catch(() => a.toast('LinkedIn opened. Copy the caption from the post above.'))
-      return
-    }
-    openSocialShare(target, pub || '', sourceIdeaUrl, 'A post from Quorlyth')
-  }
-  const shareNative = () => {
-    if (typeof navigator.share === 'function') {
-      void navigator.share({ title: 'A post from Quorlyth', text: pub || '', url: sourceIdeaUrl }).catch(error => { if (error?.name !== 'AbortError') a.toast('Your device could not open the share sheet. Choose a network below.') })
-      return
-    }
-    void navigator.clipboard.writeText(pub || '').then(() => a.toast('Post copied. Paste it into your social app.')).catch(() => a.toast('Could not copy the post.'))
-  }
   const flipTags = () => {
     const on = !pm.tags
     setPm({ ...pm, tags: on })
