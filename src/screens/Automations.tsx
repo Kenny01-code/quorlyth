@@ -1,4 +1,5 @@
 import '../styles/automations.css'
+import '../styles/automation-ai.css'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Gate } from '../components/Gate'
@@ -7,13 +8,18 @@ import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { WorkflowMap } from '../components/WorkflowMap'
 import { WorkflowCanvas } from '../components/WorkflowCanvas'
 import { useApp } from '../data/AppProvider'
+import { streamChat } from '../ai/client'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import {
   ACTION_INFO,
   TRIGGER_INFO,
   WorkflowAction,
   WorkflowActionType,
+  WorkflowConditionField,
+  WorkflowConditionOperator,
   WorkflowDefinition,
+  WorkflowEdge,
+  WorkflowNode,
   WorkflowRun,
   WorkflowTrigger,
   executeWorkflowActions,
@@ -32,6 +38,22 @@ type WorkflowNotice = { id: string; title: string; message: string; workflowName
 type MainTab = 'workflows' | 'runs'
 type WorkflowFilter = 'all' | 'active' | 'draft'
 type Template = { key: string; name: string; description: string; trigger: WorkflowTrigger; action: WorkflowActionType; message?: string }
+type AIWorkflowSpec = {
+  name?: string
+  description?: string
+  trigger?: string
+  condition?: { field?: string; operator?: string; value?: string } | null
+  actions?: Array<{ type?: string; title?: string; message?: string; projectId?: string; taskTitle?: string; taskDescription?: string; acceptanceCriteria?: string }>
+}
+type AIField = 'identity' | 'trigger' | 'condition' | 'actions'
+type AIBuildStep = { id: string; label: string; status: 'pending' | 'running' | 'done' | 'failed' }
+const AI_FIELDS: Array<{ id: AIField; label: string }> = [
+  { id: 'identity', label: 'Name & purpose' },
+  { id: 'trigger', label: 'Trigger' },
+  { id: 'condition', label: 'Filter' },
+  { id: 'actions', label: 'Actions' },
+]
+const pause = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))
 
 const TEMPLATES: Template[] = [
   { key: 'idea-alert', name: 'New idea alert', description: 'Notify your team when a fresh community idea enters the system.', trigger: 'idea.created', action: 'notify', message: 'New idea submitted: {{event.title}}' },
