@@ -3789,7 +3789,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           if (action.type === 'community' || action.type === 'deleteCommunity') nav('/communities')
           if (action.type === 'idea') nav('/communities/' + action.cid)
           if (action.type === 'deleteIdea') nav('/communities/' + action.cid)
-          if (action.type === 'createAutomation' || action.type === 'duplicateAutomation') nav('/architecture?automationCreated=' + encodeURIComponent(action.workflow.id) + '#arch-system-title')
+          if (action.type === 'createAutomation' || action.type === 'duplicateAutomation') nav('/automations?automationCreated=' + encodeURIComponent(action.workflow.id))
           if (action.type === 'createStandaloneWorkspace') nav('/workspaces/' + action.workspaceId)
           if (action.type === 'deleteStandaloneWorkspace') nav('/workspaces')
           if (action.type === 'createStandaloneTask' || action.type === 'updateStandaloneTask' || action.type === 'startStandaloneTask' || action.type === 'assignStandaloneTask' || action.type === 'deleteStandaloneTask') nav('/workspaces/' + action.workspaceId)
@@ -4095,7 +4095,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               {view === 'chat' && !live && (
                 <div className="bc">
                   {slash.length > 0 && <div className="bsl">{slash.map((s, i) => <button key={s.id} className={cn('bsi', i === slashSel && 'on')} onClick={() => { setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) }}><Icon name={s.icon} size={16} /><b>/{s.id}</b><span className="dim">{s.d}</span></button>)}</div>}
-                  {view === 'chat' && !live && !busy && <div className="qbot-quick-prompts" aria-label="Suggested prompts">
+                  {view === 'chat' && !live && !busy && !pendingAction && <div className="qbot-quick-prompts" aria-label="Suggested prompts">
                     {quickPrompts.map(item => <button key={item.label} type="button" className="chip" onClick={() => send(item.prompt)}>{item.label}</button>)}
                     <button type="button" className="chip on" onClick={() => send('One-click organize my Quorlyth site, prioritizing the current page and its linked records')}><Icon name="sparkles" size={13} />Organize with AI</button>
                   </div>}
