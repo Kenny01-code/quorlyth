@@ -1380,3 +1380,26 @@
     max-width: calc(100% - 20px) !important;
   }
 }
+
+
+/* Professional sidebar proportions: restore a comfortable reading width. */
+@media (min-width: 981px) {
+  #ast #bot.qbot-sidebar-compact-v2:not(.narrow).side-on {
+    grid-template-columns: minmax(272px, 288px) minmax(0, 1fr) !important;
+  }
+  #ast #bot.qbot-sidebar-compact-v2:not(.narrow).side-on > .bs:not(.qbot-sidebar-drawer) {
+    width: auto !important;
+    min-width: 272px !important;
+    max-width: 288px !important;
+  }
+}
+#ast #bot.qbot-sidebar-compact-v2.narrow > .bs.qbot-sidebar-drawer {
+  width: min(320px, calc(100% - 32px)) !important;
+  max-width: calc(100% - 24px) !important;
+}
+@media (max-width: 600px) {
+  #ast #bot.qbot-sidebar-compact-v2.narrow > .bs.qbot-sidebar-drawer {
+    width: min(312px, calc(100% - 28px)) !important;
+    max-width: calc(100% - 20px) !important;
+  }
+}
