@@ -462,7 +462,7 @@ function AutomationWorkspace() {
       const conditionNode: WorkflowNode | null = conditionData
         ? { id: conditionId, type: 'condition', ...conditionData, position: { x: 390, y: 220 } }
         : null
-      const actionNodes: WorkflowNode[] = actions.map((action, index) => ({
+      const actionNodes: Array<Extract<WorkflowNode, { type: 'action' }>> = actions.map((action, index) => ({
         id: action.id,
         type: 'action',
         action: { ...action },
