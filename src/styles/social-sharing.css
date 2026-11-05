@@ -113,3 +113,25 @@
   .q-social-callback { align-items:flex-start; flex-direction:column; }
   .q-social-direct-publish { padding:13px; }
 }
+
+/* Real social brand SVGs used by connected accounts and share targets. */
+.q-brand-svg { display:block; flex:none; width:17px; height:17px; fill:currentColor; }
+.q-brand-svg-x,
+.q-brand-svg-threads,
+.q-brand-svg-tiktok { color:#fff; }
+.q-brand-svg-linkedin { color:#0a66c2; }
+.q-brand-svg-facebook { color:#0866ff; }
+.q-brand-svg-instagram { color:#e4405f; }
+.q-brand-svg-pinterest { color:#e60023; }
+.q-brand-svg-bluesky { color:#0085ff; }
+.q-brand-svg-reddit { color:#ff4500; }
+.q-brand-svg-whatsapp { color:#25d366; }
+.q-brand-svg-telegram { color:#229ed9; }
+.q-brand-svg-youtube { color:#ff0033; }
+.q-social-provider-mark { gap:3px; }
+.q-social-provider-mark > .q-brand-svg { width:17px; height:17px; }
+.q-social-meta-mark > .q-brand-svg { width:13px; height:13px; }
+.q-social-share-mark > .q-brand-svg { width:15px; height:15px; }
+.q-social-share-manual .q-brand-svg { width:13px; height:13px; }
+
+.q-social-meta-mark { display:flex; align-items:center; justify-content:center; }

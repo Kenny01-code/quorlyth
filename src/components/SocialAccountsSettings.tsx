@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Icon } from '../lib/Icon'
+import { SocialBrandIcon } from './SocialBrandIcon'
 import { useApp } from '../data/AppProvider'
 import { loadSocialAccounts, socialAccountsRequest, type SocialConnection } from '../lib/socialAccounts'
 
@@ -221,7 +222,7 @@ export function SocialAccountsSettings() {
       </div>
       {loading ? <p className="dim">Loading your connected accounts…</p>
         : connections.length ? connections.map(connection => <article className="q-social-connection" key={connection.connection_id}>
-          <span className="q-social-provider-mark">{providerLabel(connection.provider).slice(0, 1)}</span>
+          <span className="q-social-provider-mark"><SocialBrandIcon name={connection.provider === 'meta' ? 'facebook' : connection.provider} /></span>
           <div className="q-social-connection-copy">
             <strong>{providerLabel(connection.provider)}</strong>
             <span>{connection.account_name || connection.username || 'Connected account'}</span>
@@ -249,7 +250,7 @@ export function SocialAccountsSettings() {
         const canConfigure = a.platformOwner
         return <article className="q-social-provider-card" key={provider.id}>
           <div className="q-social-provider-card-heading">
-            <span className="q-social-provider-mark">{provider.label.slice(0, 1)}</span>
+            <span className={provider.id === 'meta' ? 'q-social-provider-mark q-social-meta-mark' : 'q-social-provider-mark'}>{provider.id === 'meta' ? <><SocialBrandIcon name="facebook" /><SocialBrandIcon name="instagram" /></> : <SocialBrandIcon name={provider.id} />}</span>
             <div>
               <strong>{provider.label}</strong>
               <p>{provider.description}</p>

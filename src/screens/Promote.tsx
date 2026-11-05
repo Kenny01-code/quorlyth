@@ -5,6 +5,7 @@ import { Gate } from '../components/Gate'
 import { EmojiPicker } from '../components/Emoji'
 import { Av, Chip, Empty, Head } from '../components/ui'
 import { PromotionPreview } from '../components/PromotionPreview'
+import { SocialBrandIcon } from '../components/SocialBrandIcon'
 import { SocialPublishingPanel } from '../components/SocialPublishingPanel'
 import { useApp, useComments } from '../data/AppProvider'
 import { askJson, streamChat } from '../ai/client'
@@ -107,13 +108,13 @@ function Inner() {
             <button type="button" className="btn p q-social-native-share" onClick={shareNative}><Icon name="share" size={15} />Share</button>
           </div>
           <div className="q-social-share-grid">
-            {shareTargets.map(target => <button key={target.id} type="button" className="q-social-share-target" onClick={() => openShareTarget(target.id)}><span className="q-social-share-mark">{target.label.slice(0, 1)}</span><span>{target.label}</span><Icon name="arrow-up-right" size={13} /></button>)}
+            {shareTargets.map(target => <button key={target.id} type="button" className="q-social-share-target" onClick={() => openShareTarget(target.id)}><span className="q-social-share-mark"><SocialBrandIcon name={target.id} /></span><span>{target.label}</span><Icon name="arrow-up-right" size={13} /></button>)}
           </div>
           <div className="q-social-share-manual">
             <p className="dim">For networks that require you to finish the post in their app:</p>
-            <button type="button" className="btn" onClick={() => copyAndOpenCreator('instagram')}>Copy for Instagram <Icon name="arrow-up-right" size={13} /></button>
-            <button type="button" className="btn" onClick={() => copyAndOpenCreator('tiktok')}>Copy for TikTok <Icon name="arrow-up-right" size={13} /></button>
-            <button type="button" className="btn" onClick={() => copyAndOpenCreator('youtube')}>Copy for YouTube <Icon name="arrow-up-right" size={13} /></button>
+            <button type="button" className="btn" onClick={() => copyAndOpenCreator('instagram')}><SocialBrandIcon name="instagram" />Copy for Instagram <Icon name="arrow-up-right" size={13} /></button>
+            <button type="button" className="btn" onClick={() => copyAndOpenCreator('tiktok')}><SocialBrandIcon name="tiktok" />Copy for TikTok <Icon name="arrow-up-right" size={13} /></button>
+            <button type="button" className="btn" onClick={() => copyAndOpenCreator('youtube')}><SocialBrandIcon name="youtube" />Copy for YouTube <Icon name="arrow-up-right" size={13} /></button>
           </div>
           <p className="q-social-share-footnote">Share links and copy workflows remain available even when a provider account is not connected.</p>
         </section>
