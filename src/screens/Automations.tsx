@@ -188,12 +188,18 @@ function AutomationWorkspace() {
 
   function beginNew(template?: Template) {
     if (!userId) return
+    setAiBuildStatus('idle')
+    setAiBuildMessage('')
+    setAiBuildSteps([])
     setEditing(freshWorkflow(userId, template))
     setError('')
     setBusy('')
   }
 
   function beginEdit(workflow: WorkflowDefinition) {
+    setAiBuildStatus('idle')
+    setAiBuildMessage('')
+    setAiBuildSteps([])
     const graph = workflowGraphFor(workflow)
     setEditing({
       ...workflowWithGraph(workflow, graph.nodes, graph.edges),
@@ -203,8 +209,8 @@ function AutomationWorkspace() {
     setBusy('')
   }
 
-  async function saveWorkflow(event: FormEvent) {
-    event.preventDefault()
+  async function saveWorkflow(event?: FormEvent, activate = false) {
+    event?.preventDefault()
     if (!editing || !app.backend || !userId) return
     const name = editing.name.trim()
     if (name.length < 2) return setError('Give this workflow a name so you can find it again.')
@@ -214,7 +220,7 @@ function AutomationWorkspace() {
       if (action.type === 'create_task' && (!action.projectId || !manageableProjects.some(project => project.id === action.projectId))) return setError('Choose a workspace you own or manage for the task action.')
       if (action.type === 'webhook' && !/^https:\/\//i.test(action.url || '')) return setError('Webhook actions need a valid HTTPS URL.')
     }
-    const next: WorkflowDefinition = { ...editing, name: name.slice(0, 100), description: editing.description.trim().slice(0, 500), ownerId: userId, updatedAt: Date.now() }
+    const next: WorkflowDefinition = { ...editing, name: name.slice(0, 100), description: editing.description.trim().slice(0, 500), ownerId: userId, status: activate ? 'active' : editing.status, updatedAt: Date.now() }
     setBusy('save')
     setError('')
     try {
@@ -222,7 +228,7 @@ function AutomationWorkspace() {
       const current = await app.backend.store.get(path)
       if (current) await app.backend.store.set(path, next)
       else await app.backend.store.create(path, next)
-      app.toast(next.status === 'active' ? 'Workflow saved and activated.' : 'Workflow saved as a draft.')
+      app.toast(next.status === 'active' ? 'Workflow saved and activated. It is now listening for its trigger.' : 'Workflow saved as a draft.')
       setEditing(null)
       setTab('workflows')
       if (!current) nav('/architecture?automationCreated=' + encodeURIComponent(next.id) + '#arch-system-title')
@@ -513,7 +519,6 @@ function AutomationWorkspace() {
       }
       setAiBuildSteps(current => current.map(step => step.id === 'condition' ? { ...step, status: 'done' } : step.id === 'action-0' ? { ...step, status: 'running' } : step))
       await pause(160)
-      let previousVisible = conditionNode?.id || triggerNode.id
       for (let index = 0; index < actionNodes.length; index++) {
         const actionNode = actionNodes[index]
         const edge = edges.find(item => item.target === actionNode.id)
@@ -524,7 +529,6 @@ function AutomationWorkspace() {
           step.id === 'action-' + index ? { ...step, status: 'running' }
             : step.id === 'action-' + (index - 1) ? { ...step, status: 'done' }
               : step))
-        previousVisible = actionNode.id
         await pause(190)
       }
       setAiBuildSteps(current => current.map(step => step.id.startsWith('action-') ? { ...step, status: 'done' } : step.id === 'connections' ? { ...step, status: 'running' } : step))
