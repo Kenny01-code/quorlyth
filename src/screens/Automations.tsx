@@ -592,7 +592,7 @@ function AutomationWorkspace() {
               <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Testing…' : 'Run a test now'}
             </button>
             <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Save & activate</button>
-            <button className="btn p" type="submit" form="wa-editor-form" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save draft'}</button>
+            <button className="btn p" type="submit" form="wa-editor-form" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
           </div>
         </div>
         <Head kicker="WORKFLOW BUILDER" title="Watch your workflow take shape." />
@@ -627,7 +627,7 @@ function AutomationWorkspace() {
           <div className="wa-bottom-actions">
             <button className="btn" type="button" onClick={() => { setEditing(null); setError('') }}>Cancel</button>
             <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Save & activate</button>
-            <button className="btn p" type="submit" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save draft'}</button>
+            <button className="btn p" type="submit" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
           </div>
         </form>
       </div>
@@ -689,7 +689,7 @@ function AutomationWorkspace() {
           <button type="button" className="btn p" onClick={() => void buildWorkflowWithAI()} disabled={aiBuildStatus === 'generating' || aiBuildStatus === 'filling' || !aiFields.length}>
             <QuorlythGlyph name="idea" size={15} />{aiBuildStatus === 'generating' || aiBuildStatus === 'filling' ? 'Building workflow…' : aiTargetWorkflowId ? 'Build selected changes' : 'Build recommended workflow'}
           </button>
-          <span>Quorlyth never activates a new workflow without your approval.</span>
+          <span>New workflows stay drafts until you activate them. Existing flows keep their current status when saved.</span>
         </div>
         {aiBuildStatus !== 'idle' && <div className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildStatus === 'ready' ? 'Workflow ready for review' : aiBuildStatus === 'error' ? 'Workflow build needs attention' : aiBuildMessage || 'Quorlyth is working'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
