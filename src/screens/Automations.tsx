@@ -297,7 +297,7 @@ function AutomationWorkspace() {
     const startedAt = Date.now()
     const event = {
       type: 'manual' as const,
-      payload: { id: newWorkflowId(), title: 'Manual test run', summary: 'Started from the workflow builder', at: startedAt },
+      payload: { id: newWorkflowId(), title: 'Manual workflow run', summary: 'Started from the workflow builder', at: startedAt },
     }
     const runPath = 'data/users/' + userId + '/automation-runs/' + workflowRunDocumentId(workflow.id, 'manual', event.payload.id)
     try {
