@@ -95,7 +95,7 @@ export function SocialPublishingPanel({ text, link, preferredPlatform }: {
     {loading ? <p className="dim">Checking connected channels…</p> : !connections.length ? <div className="q-social-no-connections">
       <p className="dim">Connect X, LinkedIn, a Facebook Page, an Instagram professional account or Pinterest to publish directly here.</p>
       <button type="button" className="btn p" onClick={() => navigate('/settings?tab=social')}>
-        <Icon name="link-2" size={14} /> Connect a social account
+        <Icon name="link" size={14} /> Connect a social account
       </button>
     </div> : <>
       <label className="field">
