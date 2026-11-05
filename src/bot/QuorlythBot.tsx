@@ -916,7 +916,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           const message = 'I prepared one coordinated plan with ' + batch.actions.length + ' validated change(s). Review the exact targets below, then apply everything with one confirmation. I will recheck permissions for every write; destructive actions, evidence decisions, publishing, workflow runs and activation are only included when explicitly requested. Nothing has changed yet.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
           setOrganizationProgress(null)
-          setOrganizationProgress(null)
           setPendingAction(batch)
           return
         } catch (failure) {
@@ -1005,8 +1004,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             : 'I prepared the changes for review below. Nothing has been saved yet. Confirm to apply them, or cancel to leave everything unchanged.'
         persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
         setOrganizationProgress(null)
-        setOrganizationProgress(null)
-      setPendingAction(action)
+        setPendingAction(action)
         return
       }
 
@@ -1028,6 +1026,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             ? 'I translated your request into one validated Quorlyth action. Review the exact target below; I will recheck your permissions before applying it.'
             : 'I translated your request into ' + batch.actions.length + ' coordinated Quorlyth actions. Review every target below; I will recheck permissions before applying them.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          setOrganizationProgress(null)
           setPendingAction(batch)
           return
         } catch (failure) {
@@ -1392,6 +1391,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         }
       }
 
+      setOrganizationProgress(null)
       setPendingAction(action)
       const preview = pendingActionDetail(action, a.data.communities, a.data.ideas)
       const spokenPreview = preview.replace(/\\s+/g, ' ').slice(0, 280)
