@@ -362,12 +362,12 @@ function Workspace() {
   ].filter((uid): uid is string => !!uid))]
   const participantKey = discussionParticipantIds.join('|')
   const partialAiSummary = (() => {
-    const match = aiStreamText.match(/\"project_summary\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)/s)
+    const match = aiStreamText.match(/"project_summary"\s*:\s*"((?:\\.|[^"\\])*)/s)
     if (!match) return ''
-    try { return JSON.parse('\\"' + match[1] + '\\"') } catch { return match[1].replace(/\\\\n/g, ' ').replace(/\\\\\"/g, '\"') }
+    try { return JSON.parse('"' + match[1] + '"') as string } catch { return match[1].replace(/\\n/g, ' ').replace(/\\"/g, '"') }
   })()
-  const partialAiMilestoneTitles = [...aiStreamText.matchAll(/\"title\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)/g)]
-    .map(match => { try { return JSON.parse('\\"' + match[1] + '\\"') as string } catch { return match[1].replace(/\\\\n/g, ' ') } })
+  const partialAiMilestoneTitles = [...aiStreamText.matchAll(/"title"\s*:\s*"((?:\\.|[^"\\])*)/g)]
+    .map(match => { try { return JSON.parse('"' + match[1] + '"') as string } catch { return match[1].replace(/\\n/g, ' ') } })
     .filter(Boolean).slice(0, 7)
 
   async function reviewSubmission(submission: WorkSubmission, status: 'approved' | 'changes_requested') {
