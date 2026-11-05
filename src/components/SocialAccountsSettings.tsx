@@ -284,7 +284,7 @@ export function SocialAccountsSettings() {
                 : accounts.length + ' connected account' + (accounts.length === 1 ? '' : 's')}
             </span>
             <button type="button" className="btn p" disabled={!isConfigured || isConnecting || !!busy} onClick={() => void connect(provider.id)}>
-              <Icon name="link-2" size={14} />{isConnecting ? 'Opening provider…' : 'Connect ' + provider.label}
+              <Icon name="link" size={14} />{isConnecting ? 'Opening provider…' : 'Connect ' + provider.label}
             </button>
           </div>
         </article>
