@@ -250,7 +250,7 @@ export function SocialAccountsSettings() {
         const canConfigure = a.platformOwner
         return <article className="q-social-provider-card" key={provider.id}>
           <div className="q-social-provider-card-heading">
-            <span className="q-social-provider-mark">{provider.id === 'meta' ? <><SocialBrandIcon name="facebook" /><SocialBrandIcon name="instagram" /></> : <SocialBrandIcon name={provider.id} />}</span>
+            <span className={provider.id === 'meta' ? 'q-social-provider-mark q-social-meta-mark' : 'q-social-provider-mark'}>{provider.id === 'meta' ? <><SocialBrandIcon name="facebook" /><SocialBrandIcon name="instagram" /></> : <SocialBrandIcon name={provider.id} />}</span>
             <div>
               <strong>{provider.label}</strong>
               <p>{provider.description}</p>
