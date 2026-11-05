@@ -60,7 +60,7 @@ function partialJsonString(source: string, key: string): string {
 }
 
 function partialActionTitles(source: string): string[] {
-  return [...source.matchAll(/"title"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"/g)]
+  return [...source.matchAll(/"title"\s*:\s*"((?:\\.|[^"\\])*)"/g)]
     .map(match => match[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').trim())
     .filter(Boolean).slice(0, 5)
 }
