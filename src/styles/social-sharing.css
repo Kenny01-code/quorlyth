@@ -133,3 +133,5 @@
 .q-social-meta-mark > .q-brand-svg { width:13px; height:13px; }
 .q-social-share-mark > .q-brand-svg { width:15px; height:15px; }
 .q-social-share-manual .q-brand-svg { width:13px; height:13px; }
+
+.q-social-meta-mark { display:flex; align-items:center; justify-content:center; }
