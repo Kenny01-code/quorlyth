@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Icon } from '../lib/Icon'
 import { useApp } from '../data/AppProvider'
-import { loadSocialAccounts, socialAccountsRequest, SocialConnection, SocialProvider } from '../lib/socialAccounts'
+import { loadSocialAccounts, socialAccountsRequest, type SocialConnection } from '../lib/socialAccounts'
 
 type OAuthProvider = 'x' | 'linkedin' | 'meta' | 'pinterest'
 type ConfigDraft = { clientId: string; clientSecret: string }
