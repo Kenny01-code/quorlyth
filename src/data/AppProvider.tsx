@@ -1,7 +1,7 @@
 import { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Backend, createBackend } from '../backend'
 import { askJson } from '../ai/client'
-import { ChatAttachment, Comment, Community, CommunityAIOrganizerRequest, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkEvidenceAIReview, WorkSubmission } from '../lib/types'
+import { ChatAttachment, Comment, Community, CommunityAIOrganizerRequest, CommunityJoinRequest, Decision, Idea, Me, Milestone, MilestoneDetails, MilestonePatch, Profile, Project, Promotion, Request, Review, SocialPromotionPlatform, SpaceSettings, Status, VolunteerApplication, VolunteerStatus, WorkAttachment, WorkEvidenceAIReview, WorkSubmission } from '../lib/types'
 import { slug } from '../lib/util'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import { emitWorkflowEvent } from '../lib/automation'
@@ -117,7 +117,7 @@ export interface App {
   addComment: (ideaId: string, text: string, parentId?: string, mentionedUserIds?: string[], attachments?: ChatAttachment[]) => Promise<boolean>
   setStatus: (ideaId: string, status: Status, extra?: Partial<Review>) => Promise<boolean>
   saveReview: (ideaId: string, r: Partial<Review>) => Promise<boolean>
-  publish: (ideaId: string, text: string, credits: string[], platform?: 'instagram' | 'x' | 'tiktok' | 'linkedin') => Promise<boolean>
+  publish: (ideaId: string, text: string, credits: string[], platform?: SocialPromotionPlatform) => Promise<boolean>
   applyToCollaborate: (ideaId: string, message: string) => Promise<boolean>
   decideVolunteer: (applicationId: string, status: VolunteerStatus) => Promise<boolean>
   createProject: (ideaId: string, summary: string, dueAt?: number | null) => Promise<boolean>
