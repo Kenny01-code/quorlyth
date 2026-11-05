@@ -182,12 +182,43 @@ function PersonalSettings() {
       </div>
       <div style={{ flex: '1 1 220px', minWidth: 0 }}>
         <h3 style={{ fontSize: 15, marginBottom: 4 }}>Quorlyth logo</h3>
-        <p className="dim" style={{ fontSize: 12, lineHeight: 1.5, margin: 0 }}>Download the original site mark as a transparent, scalable SVG for documents, projects, and designs.</p>
+        <p className="dim" style={{ fontSize: 12, lineHeight: 1.5, margin: 0 }}>Download the Quorlyth site mark as a high-resolution PNG image with a transparent background.</p>
       </div>
-      <a className="btn p" href="/quorlyth-logo.svg" download="quorlyth-logo.svg" aria-label="Download the Quorlyth site logo as an SVG">
+      <button className="btn p" type="button" aria-label="Download the Quorlyth site logo as a PNG" onClick={async () => {
+        try {
+          const image = new Image()
+          image.src = '/quorlyth-logo.svg'
+          await image.decode()
+
+          const canvas = document.createElement('canvas')
+          canvas.width = 512
+          canvas.height = 512
+          const context = canvas.getContext('2d')
+          if (!context) throw new Error('PNG export is not available in this browser')
+          context.clearRect(0, 0, 512, 512)
+          context.drawImage(image, 0, 0, 512, 512)
+
+          const png = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG encoding failed')), 'image/png')
+          })
+          const url = URL.createObjectURL(png)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = 'quorlyth-logo.png'
+          link.style.display = 'none'
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+          a.toast('Quorlyth logo downloaded as PNG')
+        } catch (error) {
+          console.error('Could not export Quorlyth logo as PNG:', error)
+          a.toast('Could not download the logo. Please try again.')
+        }
+      }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3" /></svg>
-        Download logo
-      </a>
+        Download PNG
+      </button>
     </div>
     <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>Notification preferences are saved to your account. Email delivery depends on configured notification services.</p>
   </>
