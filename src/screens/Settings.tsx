@@ -97,7 +97,7 @@ function Inner() {
               <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Invite by email</h3><label className="field"><span>Their emails, separated by commas</span><input value={emails} onChange={e => setEmails(e.target.value)} placeholder="friend@email.com" /></label><div className="acts"><a className="btn p" href={`mailto:${encodeURIComponent(emails.replace(/\s+/g, ''))}?subject=${encodeURIComponent('Join me on Quorlyth')}&body=${text}`} onClick={() => clearInviteDraft('')}><Icon name="mail" size={16} />Write the email</a><button className="chip" onClick={() => clearInviteDraft('')}>Discard draft</button></div></div>
               <div className="glass pad q-social-invite" style={{ padding: 18 }}>
                 <h3 style={{ fontSize: 15 }}>Share across social channels</h3>
-                <p className="dim" style={{ margin: '6px 0 10px' }}>Open a network's share composer. Quorlyth does not need your social password or store a social login.</p>
+                <p className="dim" style={{ margin: '6px 0 10px' }}>Open a network's share composer. These are quick-share links, not account connections or direct publishing integrations.</p>
                 <p className="lnk" style={{ marginTop: 10 }}>{url}</p>
                 <div className="acts">
                   <button className="btn p" onClick={() => navigator.clipboard.writeText(url).then(() => { trackInviteShare(); a.toast('Link copied') }).catch(() => a.toast('Could not copy the link'))}><Icon name="link" size={16} />Copy link</button>
@@ -109,6 +109,9 @@ function Inner() {
                   <a className="btn" href={socialShareUrl('reddit', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Reddit</a>
                   <a className="btn" href={socialShareUrl('whatsapp', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>WhatsApp</a>
                   <a className="btn" href={socialShareUrl('telegram', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Telegram</a>
+                  <a className="btn" href={socialShareUrl('pinterest', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Pinterest</a>
+                  <a className="btn" href={socialShareUrl('mastodon', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Mastodon</a>
+                  <a className="btn" href={socialShareUrl('tumblr', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Tumblr</a>
                   <button className="btn" onClick={() => { void navigator.clipboard.writeText(inviteMessage).then(() => { trackInviteShare(); a.toast('Invite copied. Paste it into Instagram.') }).catch(() => a.toast('Could not copy the invite.')) }}>Copy for Instagram</button>
                   <button className="btn" onClick={() => { void navigator.clipboard.writeText(inviteMessage).then(() => { trackInviteShare(); a.toast('Invite copied. Paste it into TikTok.') }).catch(() => a.toast('Could not copy the invite.')) }}>Copy for TikTok</button>
                 </div>

@@ -35,7 +35,7 @@ export interface YouTubeSocialSignals {
   videos: YouTubeVideoSignal[]
 }
 export interface Review { id: string; o?: number; f?: number; r?: number; score?: number; reason?: string; youtubeRationale?: string; youtubeSignals?: YouTubeSocialSignals; status?: Status; at?: number }
-export type SocialPromotionPlatform = 'instagram' | 'x' | 'tiktok' | 'linkedin' | 'facebook' | 'threads' | 'bluesky' | 'reddit' | 'whatsapp' | 'telegram' | 'youtube'
+export type SocialPromotionPlatform = 'instagram' | 'x' | 'tiktok' | 'linkedin' | 'facebook' | 'threads' | 'bluesky' | 'reddit' | 'whatsapp' | 'telegram' | 'youtube' | 'pinterest' | 'mastodon' | 'tumblr'
 export interface Promotion { id: string; ideaId: string; text: string; credits: string[]; by: string; at: number; platform?: SocialPromotionPlatform }
 export interface Profile { id: string; name?: string; head?: string; bio?: string; photo?: string; authName?: string; authAvatarUrl?: string; at?: number }
 export interface Request { id: string; platforms?: string[]; aud?: string; note?: string; at: number }

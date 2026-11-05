@@ -315,6 +315,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const [live, setLive] = useState<Live>(null)
   const [pend, setPend] = useState('')
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const [organizationProgress, setOrganizationProgress] = useState<null | {
+    steps: Array<{ label: string; status: 'pending' | 'running' | 'success' | 'failed' }>
+    current: number
+    complete: boolean
+  }>(null)
   const [tour, setTour] = useState(-1)
   const [greet, setGreet] = useState('')
   const [size, setSize] = useState<null | { w: number; h: number }>(null)
@@ -334,6 +339,30 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const theme = bs.theme
   const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
   const wide = !narrow
+  const quickPrompts = loc.pathname.startsWith('/automations')
+    ? [
+        { label: 'Build a recommended workflow', prompt: 'Recommend and build the most useful automation for my current Quorlyth workspace. Show the workflow map and save it as a draft.' },
+        { label: 'Review failed runs', prompt: 'Review my recent automation runs and explain any failures or steps that need attention.' },
+      ]
+    : loc.pathname.startsWith('/messages')
+      ? [
+          { label: 'Summarize conversations', prompt: 'Summarize my recent conversations and highlight messages that need a reply.' },
+          { label: 'Suggest a reply', prompt: 'Help me write a thoughtful, natural reply to the conversation I am viewing.' },
+        ]
+      : loc.pathname.startsWith('/workspaces') || loc.pathname.startsWith('/collaboration')
+        ? [
+            { label: 'Review this workspace', prompt: 'Review the current workspace and suggest the most useful next actions, tasks and blockers.' },
+            { label: 'Organize project tasks', prompt: 'Organize the current workspace tasks into a clear, prioritized action plan. Show me the changes before applying them.' },
+          ]
+        : role === 'owner'
+          ? [
+              { label: 'Prioritize my ideas', prompt: 'Review the current community ideas and recommend which ones deserve attention this week.' },
+              { label: 'Suggest a community post', prompt: 'Suggest a fresh, engaging discussion post for my community based on its purpose and recent activity.' },
+            ]
+          : [
+              { label: 'Improve my idea', prompt: 'Help me improve the idea I am viewing so it is clearer and more compelling.' },
+              { label: 'Find my next step', prompt: 'Look at the page I am viewing and suggest one useful next step I can take.' },
+            ]
 
   useEffect(() => {
     const resize = () => {
@@ -886,6 +915,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           const draft = add(cur, { r: 'u', t })
           const message = 'I prepared one coordinated plan with ' + batch.actions.length + ' validated change(s). Review the exact targets below, then apply everything with one confirmation. I will recheck permissions for every write; destructive actions, evidence decisions, publishing, workflow runs and activation are only included when explicitly requested. Nothing has changed yet.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          setOrganizationProgress(null)
           setPendingAction(batch)
           return
         } catch (failure) {
@@ -914,6 +944,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 ? 'I prepared a manual test run of this workflow. Review the actions first; confirming may create tasks, send notifications, or call the configured HTTPS webhook.'
                 : 'I designed this automation using your available Quorlyth triggers and actions. Review the exact trigger, conditions, workspace targets, and actions below. It has not been saved or run yet.'
             persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            setOrganizationProgress(null)
             setPendingAction(automationAction)
             return
           }
@@ -946,6 +977,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 ? 'I prepared the task status change. The task will not be marked complete; completion still requires reviewed evidence.'
                 : 'I prepared this workspace change using your visible project data and access level. Review the exact workspace and task details below; nothing has been saved yet.'
             persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            setOrganizationProgress(null)
             setPendingAction(workspaceAction)
             return
           }
@@ -971,6 +1003,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             ? 'I prepared the in-app promotion for review. It will not publish to an external social network. Confirm only if the target and wording are correct.'
             : 'I prepared the changes for review below. Nothing has been saved yet. Confirm to apply them, or cancel to leave everything unchanged.'
         persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+        setOrganizationProgress(null)
         setPendingAction(action)
         return
       }
@@ -993,6 +1026,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             ? 'I translated your request into one validated Quorlyth action. Review the exact target below; I will recheck your permissions before applying it.'
             : 'I translated your request into ' + batch.actions.length + ' coordinated Quorlyth actions. Review every target below; I will recheck permissions before applying them.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          setOrganizationProgress(null)
           setPendingAction(batch)
           return
         } catch (failure) {
@@ -1357,6 +1391,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         }
       }
 
+      setOrganizationProgress(null)
       setPendingAction(action)
       const preview = pendingActionDetail(action, a.data.communities, a.data.ideas)
       const spokenPreview = preview.replace(/\\s+/g, ' ').slice(0, 280)
@@ -3261,15 +3296,38 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       robot.current?.think(true)
       const successes: PendingAction[] = []
       const failures: string[] = []
-      for (const item of action.actions) {
+      const progressSteps = action.actions.map(item => ({
+        label: pendingActionDetail(item.action, a.data.communities, a.data.ideas),
+        status: 'pending' as const,
+      }))
+      setOrganizationProgress({ steps: progressSteps, current: 0, complete: false })
+      for (let index = 0; index < action.actions.length; index += 1) {
+        const item = action.actions[index]
+        const label = progressSteps[index].label
+        setStatus('Applying change ' + (index + 1) + ' of ' + action.actions.length)
+        setThinkingTask(label)
+        setOrganizationProgress(current => current ? {
+          ...current,
+          current: index,
+          steps: current.steps.map((step, stepIndex) => stepIndex === index ? { ...step, status: 'running' } : step),
+        } : current)
         try {
           const applied = await confirmPendingAction(item.action, true)
           if (applied) successes.push(item.action)
-          else failures.push(pendingActionDetail(item.action, a.data.communities, a.data.ideas) + ' — did not report success')
+          else failures.push(label + ' — did not report success')
+          setOrganizationProgress(current => current ? {
+            ...current,
+            steps: current.steps.map((step, stepIndex) => stepIndex === index ? { ...step, status: applied ? 'success' : 'failed' } : step),
+          } : current)
         } catch (failure) {
-          failures.push(pendingActionDetail(item.action, a.data.communities, a.data.ideas) + ' — ' + userFacingMutationError(failure, 'apply this change'))
+          failures.push(label + ' — ' + userFacingMutationError(failure, 'apply this change'))
+          setOrganizationProgress(current => current ? {
+            ...current,
+            steps: current.steps.map((step, stepIndex) => stepIndex === index ? { ...step, status: 'failed' } : step),
+          } : current)
         }
       }
+      setOrganizationProgress(current => current ? { ...current, current: current.steps.length, complete: true } : current)
       const summaryLines = ['One-click organization finished: ' + successes.length + ' of ' + action.actions.length + ' changes applied.']
       if (successes.length) summaryLines.push('Applied: ' + successes.map(item => pendingActionDetail(item, a.data.communities, a.data.ideas)).join(' | '))
       if (failures.length) summaryLines.push('Needs attention: ' + failures.slice(0, 5).join(' | '))
@@ -3277,7 +3335,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       persist(next)
       setPendingAction(null)
       const createdWorkflow = successes.find((item): item is Extract<PendingAction, { type: 'createAutomation' | 'duplicateAutomation' }> => item.type === 'createAutomation' || item.type === 'duplicateAutomation')
-      if (createdWorkflow) nav('/architecture?automationCreated=' + encodeURIComponent(createdWorkflow.workflow.id) + '#arch-system-title')
+      if (createdWorkflow) nav('/automations?automationCreated=' + encodeURIComponent(createdWorkflow.workflow.id))
       else {
         const createdWorkspace = successes.find((item): item is Extract<PendingAction, { type: 'createStandaloneWorkspace' }> => item.type === 'createStandaloneWorkspace')
         if (createdWorkspace) nav('/workspaces/' + createdWorkspace.workspaceId)
@@ -3736,7 +3794,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           if (action.type === 'community' || action.type === 'deleteCommunity') nav('/communities')
           if (action.type === 'idea') nav('/communities/' + action.cid)
           if (action.type === 'deleteIdea') nav('/communities/' + action.cid)
-          if (action.type === 'createAutomation' || action.type === 'duplicateAutomation') nav('/architecture?automationCreated=' + encodeURIComponent(action.workflow.id) + '#arch-system-title')
+          if (action.type === 'createAutomation' || action.type === 'duplicateAutomation') nav('/automations?automationCreated=' + encodeURIComponent(action.workflow.id))
           if (action.type === 'createStandaloneWorkspace') nav('/workspaces/' + action.workspaceId)
           if (action.type === 'deleteStandaloneWorkspace') nav('/workspaces')
           if (action.type === 'createStandaloneTask' || action.type === 'updateStandaloneTask' || action.type === 'startStandaloneTask' || action.type === 'assignStandaloneTask' || action.type === 'deleteStandaloneTask') nav('/workspaces/' + action.workspaceId)
@@ -4006,7 +4064,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                    decideAIOrganizerRequest: 'Review AI organizer request',
                    decideAccessRequest: 'Review platform access request',
                    updateSpaceSettings: 'Update platform space settings',
-                } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'batchActions'
+                } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3>
+                {organizationProgress && <section className={'qbot-organization-progress ' + (organizationProgress.complete ? 'is-complete' : 'is-running')} role="status" aria-live="polite">
+                  <div className="qbot-organization-progress-head"><strong>{organizationProgress.complete ? 'Organization finished' : 'Applying your organization plan'}</strong><span>{organizationProgress.steps.filter(step => step.status === 'success' || step.status === 'failed').length} / {organizationProgress.steps.length} complete</span></div>
+                  <div className="qbot-organization-progress-list">{organizationProgress.steps.map((step, index) => <div className={'qbot-organization-progress-row is-' + step.status} key={index}><i>{step.status === 'success' ? '✓' : step.status === 'failed' ? '!' : step.status === 'running' ? '•' : '○'}</i><span>{step.label}</span><small>{step.status === 'pending' ? 'Queued' : step.status === 'running' ? 'Applying' : step.status === 'success' ? 'Applied' : 'Needs attention'}</small></div>)}</div>
+                </section>}
+                <p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'batchActions'
                   ? 'Review the coordinated plan above. One confirmation applies the selected actions in sequence. Every action rechecks current permissions and record state; independent actions continue if another action fails. Requested destructive actions and external effects are included only when explicitly requested.'
                   : pendingAction.type === 'deleteCommunity'
                   ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.'
@@ -4037,6 +4100,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               {view === 'chat' && !live && (
                 <div className="bc">
                   {slash.length > 0 && <div className="bsl">{slash.map((s, i) => <button key={s.id} className={cn('bsi', i === slashSel && 'on')} onClick={() => { setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) }}><Icon name={s.icon} size={16} /><b>/{s.id}</b><span className="dim">{s.d}</span></button>)}</div>}
+                  {view === 'chat' && !live && !busy && !pendingAction && <div className="qbot-quick-prompts" aria-label="Suggested prompts">
+                    {quickPrompts.map(item => <button key={item.label} type="button" className="chip" onClick={() => send(item.prompt)}>{item.label}</button>)}
+                    <button type="button" className="chip on" onClick={() => send(loc.pathname.startsWith('/automations')
+                      ? 'Create and recommend a complete automation workflow for my current Quorlyth setup. Use safe defaults, save it as a draft, and open the workflow map in Automation Studio.'
+                      : 'One-click organize my Quorlyth site, prioritizing the current page and its linked records')}><Icon name="sparkles" size={13} />Organize with AI</button>
+                  </div>}
                   <div className="ast-q">
                     {tour >= 0 && <><button className="chip on" onClick={() => { const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; setTour(tour + 1); step(steps, tour + 1) }}>Next</button><button className="chip" onClick={() => { setTour(-1); robot.current?.set('rest') }}>End tour</button></>}
                   </div>

@@ -1,6 +1,7 @@
 import '../styles/automations.css'
 import '../styles/automation-ai.css'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
@@ -154,6 +155,8 @@ function usePrivateWorkflowCollection<T extends { id?: string }>(collection: str
 
 function AutomationWorkspace() {
   const app = useApp()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const createdWorkflowId = searchParams.get('automationCreated') || ''
   const userId = app.me?.id || ''
   const collectionPath = userId ? 'data/users/' + userId + '/automations' : ''
   const workflows = usePrivateWorkflowCollection<WorkflowDefinition>(collectionPath)
@@ -222,6 +225,18 @@ function AutomationWorkspace() {
     setBusy('')
   }
 
+  useEffect(() => {
+    if (!createdWorkflowId) return
+    const workflow = workflows.find(item => item.id === createdWorkflowId)
+    if (!workflow) return
+    beginEdit(workflow)
+    setTab('workflows')
+    const next = new URLSearchParams(searchParams)
+    next.delete('automationCreated')
+    setSearchParams(next, { replace: true })
+    app.toast('Opened your new workflow in Automation Studio. Review its map before activating it.')
+  }, [createdWorkflowId, workflows, searchParams, setSearchParams])
+
   async function saveWorkflow(event?: FormEvent, activate = false) {
     event?.preventDefault()
     if (!editing || !app.backend || !userId) return
@@ -282,7 +297,7 @@ function AutomationWorkspace() {
     const startedAt = Date.now()
     const event = {
       type: 'manual' as const,
-      payload: { id: newWorkflowId(), title: 'Manual test run', summary: 'Started from the workflow builder', at: startedAt },
+      payload: { id: newWorkflowId(), title: 'Manual workflow run', summary: 'Started from the workflow builder', at: startedAt },
     }
     const runPath = 'data/users/' + userId + '/automation-runs/' + workflowRunDocumentId(workflow.id, 'manual', event.payload.id)
     try {
@@ -308,7 +323,7 @@ function AutomationWorkspace() {
       const run = await executeWorkflowActions(workflow, userId, app.backend.store, event, app.toast, saveProgress)
       await saveProgress(run)
       await persistWorkflowRun(app.backend.store, collectionPath + '/' + workflow.id, run)
-      app.toast(run.status === 'success' ? 'Workflow test finished successfully.' : userFacingMutationError(run.error || 'An action failed', 'run this workflow'))
+      app.toast(run.status === 'success' ? 'Workflow run finished successfully.' : userFacingMutationError(run.error || 'An action failed', 'run this workflow'))
       if (!keepEditorOpen) setTab('runs')
     } catch (failure) {
       const message = userFacingMutationError(failure, 'run this workflow')
@@ -593,10 +608,15 @@ function AutomationWorkspace() {
       const finalError = validateWorkflowGraph(next)
       if (finalError) throw new Error(finalError)
       await pause(160)
+      if (!existing) {
+        const draftPath = collectionPath + '/' + next.id
+        const alreadySaved = await app.backend.store.get(draftPath)
+        if (!alreadySaved) await app.backend.store.create(draftPath, next)
+      }
       setEditing(next)
       setAiBuildSteps(current => current.map(step => step.id === 'validation' ? { ...step, status: 'done' } : step))
       setAiBuildStatus('ready')
-      setAiBuildMessage(existing ? 'Your selected workflow has been updated in the builder. Review it, then save or activate it.' : 'Your recommended workflow is ready. Review the map, then save it as a draft or activate it.')
+      setAiBuildMessage(existing ? 'Your selected workflow is updated in the builder. Review it, then save your changes.' : 'Your recommended workflow has been saved as a draft automatically. Review the live map, then activate it when you are ready.')
       setError('')
     } catch (failure) {
       const message = failure instanceof Error ? failure.message : 'QuorlythBot could not build this workflow. Try again.'
@@ -631,24 +651,22 @@ function AutomationWorkspace() {
         <div className="wa-editor-top">
           <button className="wa-back" type="button" onClick={() => { setEditing(null); setError('') }}><QuorlythGlyph name="back" size={15} />Back to workflows</button>
           <div className="wa-editor-actions">
-            <button className="btn" type="button" onClick={() => void runWorkflow(editing, true)} disabled={busy === 'run-' + editing.id}>
-              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Testing…' : 'Run a test now'}
+            <button className="btn" type="button" title="Executes the configured actions immediately. Review the target workspace and action details first; task actions create real tasks." onClick={() => void runWorkflow(editing, true)} disabled={busy === 'run-' + editing.id}>
+              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Running…' : 'Run workflow now'}
             </button>
             <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Save & activate</button>
             <button className="btn p" type="submit" form="wa-editor-form" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
           </div>
         </div>
         <Head kicker="WORKFLOW BUILDER" title="Watch your workflow take shape." />
+        {latestRun && <section className={'wa-ai-build-status ' + (latestRun.status === 'running' ? 'is-generating' : latestRun.status === 'failed' ? 'is-error' : 'is-ready')} role="status" aria-live="polite">
+          <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{latestRun.status === 'running' ? 'Workflow is executing live' : latestRun.status === 'failed' ? 'Latest run needs attention' : 'Latest workflow run completed'}</strong><span>{latestRun.steps.filter(step => step.status === 'success' || step.status === 'failed').length} / {latestRun.steps.length} steps</span></div>
+          <div className="wa-ai-build-steps">{latestRun.steps.map(step => <div className={'wa-ai-build-step is-' + step.status} key={step.id}><i>{step.status === 'success' ? '✓' : step.status === 'failed' ? '!' : step.status === 'running' ? '·' : ''}</i><span>{step.title}</span><small>{step.status === 'success' || step.status === 'running' ? step.detail : step.status === 'failed' ? step.detail : 'Waiting'}</small></div>)}</div>
+          {latestRun.error && <p className="wa-ai-ready-note">{userFacingMutationError(latestRun.error, 'run this workflow')}</p>}
+        </section>}
         {aiBuildStatus !== 'idle' && <section className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildMessage || 'QuorlythBot is building your workflow'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
           <div className="wa-ai-build-steps">{aiBuildSteps.map(step => <div key={step.id} className={'wa-ai-build-step is-' + step.status}><i>{step.status === 'done' ? '✓' : step.status === 'failed' ? '!' : step.status === 'running' ? '·' : ''}</i><span>{step.label}</span><small>{step.status === 'done' ? 'Complete' : step.status === 'failed' ? 'Needs attention' : step.status === 'running' ? 'Working' : 'Queued'}</small></div>)}</div>
-          {aiBuildStatus === 'generating' && (aiLiveName || aiLiveDescription || aiLiveTrigger || aiLiveActionTitles.length > 0) && <div className="wa-ai-live-preview">
-            <small>LIVE WORKFLOW FIELDS</small>
-            {aiLiveName && <p><b>Name</b><span>{aiLiveName}</span></p>}
-            {aiLiveDescription && <p><b>Purpose</b><span>{aiLiveDescription}</span></p>}
-            {aiLiveTrigger && <p><b>Trigger</b><span>{TRIGGER_INFO[aiLiveTrigger as WorkflowTrigger]?.title || aiLiveTrigger}</span></p>}
-            {aiLiveActionTitles.map((title, index) => <p key={index}><b>Action {index + 1}</b><span>{title}</span></p>)}
-          </div>}
           {aiBuildStatus === 'generating' && (aiLiveName || aiLiveDescription || aiLiveTrigger || aiLiveActionTitles.length > 0) && <div className="wa-ai-live-preview">
             <small>LIVE WORKFLOW FIELDS</small>
             {aiLiveName && <p><b>Name</b><span>{aiLiveName}</span></p>}
@@ -707,6 +725,14 @@ function AutomationWorkspace() {
           <span>What should happen automatically?</span>
           <textarea value={aiPrompt} onChange={event => setAiPrompt(event.target.value)} rows={3} maxLength={1800} placeholder="Example: When someone submits a new idea, notify me. If the idea mentions a launch, create a follow-up task in my product workspace." />
         </label>
+        <div className="wa-ai-suggestions" aria-label="Suggested automations">
+          <span>Need an idea? Try one of these</span>
+          <div>
+            <button type="button" onClick={() => { setAiTargetWorkflowId(''); setAiPrompt('When a new idea is submitted, notify me with its title and community so I can review it quickly.') }}>New idea alerts</button>
+            <button type="button" onClick={() => { setAiTargetWorkflowId(''); setAiPrompt('When a contributor submits work evidence, notify the workspace reviewer with the task and submission details.') }}>Evidence review</button>
+            <button type="button" onClick={() => { setAiTargetWorkflowId(''); setAiPrompt('When a collaboration milestone starts, notify the project team and include the milestone name.') }}>Milestone updates</button>
+          </div>
+        </div>
         <div className="wa-ai-controls">
           <label><span>Workflow to edit</span>
             <select value={aiTargetWorkflowId} onChange={event => setAiTargetWorkflowId(event.target.value)}>
@@ -792,10 +818,10 @@ function AutomationWorkspace() {
         <section className="glass pad wa-runs-panel">
           <div className="wa-section-title"><div><p className="wa-eyebrow">ACTIVITY</p><h3>What your workflows have done.</h3><p>Live and completed runs appear here. Expand each run to inspect the action results, failure detail and execution sequence.</p></div></div>
           {notices.length > 0 && <div className="wa-notice-inbox"><div className="wa-section-title"><div><p className="wa-eyebrow">NOTICES</p><h3>Recent automation notifications</h3><p>Messages produced by your workflows when an event matches.</p></div><span className="wa-template-count">{notices.length} saved</span></div><div className="wa-notice-list">{notices.slice().sort((a,b)=>b.at-a.at).slice(0,8).map(notice => <article className="wa-notice-row" key={notice.id}><span className="wa-notice-icon"><QuorlythGlyph name="bell" size={15} /></span><div><strong>{notice.title || notice.workflowName || 'Automation notice'}</strong><p>{notice.message}</p><small>{displayDate(notice.at)}{notice.eventType ? ' · ' + notice.eventType : ''}</small></div></article>)}</div></div>}
-          {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run now” on a workflow to test its actions, or activate a flow to run it automatically when the selected event happens.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
+          {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run workflow now” to execute its actions immediately, or activate a flow to run automatically when the selected event happens.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
             {allRuns.map(run => <article className="wa-run-row" key={run.workflowId + ':' + run.id}>
               <span className={'wa-run-status ' + run.status}>{run.status === 'success' ? <QuorlythGlyph name="check" size={15} /> : run.status === 'running' ? <QuorlythGlyph name="progress" size={15} /> : <QuorlythGlyph name="alert" size={15} />}</span>
-              <div className="wa-run-summary"><strong>{run.workflowName}</strong><p>{run.eventTitle || (run.trigger === 'manual' ? 'Manual test run' : TRIGGER_INFO[run.trigger as WorkflowTrigger]?.title || run.trigger)}</p><small>{displayDate(run.status === 'running' ? run.startedAt : run.finishedAt)} · {run.steps.length} of the configured step{run.steps.length === 1 ? '' : 's'} recorded</small>{run.steps.map(step => <div className="wa-run-step" key={step.id}><span className={'wa-run-dot ' + step.status} /><span>{step.title}</span><small>{step.status === 'success' || step.status === 'running' ? step.detail : userFacingMutationError(step.detail, 'complete this workflow step')}</small></div>)}{run.error && <p className="wa-run-error">{userFacingMutationError(run.error, 'run this workflow')}</p>}</div>
+              <div className="wa-run-summary"><strong>{run.workflowName}</strong><p>{run.eventTitle || (run.trigger === 'manual' ? 'Manual workflow run' : TRIGGER_INFO[run.trigger as WorkflowTrigger]?.title || run.trigger)}</p><small>{displayDate(run.status === 'running' ? run.startedAt : run.finishedAt)} · {run.steps.length} of the configured step{run.steps.length === 1 ? '' : 's'} recorded</small>{run.steps.map(step => <div className="wa-run-step" key={step.id}><span className={'wa-run-dot ' + step.status} /><span>{step.title}</span><small>{step.status === 'success' || step.status === 'running' ? step.detail : userFacingMutationError(step.detail, 'complete this workflow step')}</small></div>)}{run.error && <p className="wa-run-error">{userFacingMutationError(run.error, 'run this workflow')}</p>}</div>
               <span className={'wa-badge ' + (run.status === 'success' ? 'is-active' : run.status === 'running' ? 'is-running' : '')}>{runLabel(run.status)}</span>
             </article>)}
           </div>}
