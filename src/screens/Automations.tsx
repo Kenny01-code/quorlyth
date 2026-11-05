@@ -337,10 +337,10 @@ function AutomationWorkspace() {
     const fieldsToChange = aiFields.map(field => AI_FIELDS.find(item => item.id === field)?.label || field)
     setError('')
     setAiBuildStatus('generating')
-    setAiBuildMessage('Reading your instructions and checking the available Quorlyth actions.')
+    setAiBuildMessage('Asking QuorlythBot to interpret your request and check the available workflow actions.')
     setAiBuildText('')
     setAiBuildSteps([
-      { id: 'context', label: 'Understand the request and permissions', status: 'running' },
+      { id: 'context', label: 'Request a workflow plan from QuorlythBot', status: 'running' },
       { id: 'identity', label: 'Fill workflow name and purpose', status: 'pending' },
       { id: 'trigger', label: 'Choose the event trigger', status: 'pending' },
       { id: 'condition', label: 'Configure the optional filter', status: 'pending' },
@@ -642,6 +642,7 @@ function AutomationWorkspace() {
         {aiBuildStatus !== 'idle' && <section className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildMessage || 'QuorlythBot is building your workflow'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
           <div className="wa-ai-build-steps">{aiBuildSteps.map(step => <div key={step.id} className={'wa-ai-build-step is-' + step.status}><i>{step.status === 'done' ? '✓' : step.status === 'failed' ? '!' : step.status === 'running' ? '·' : ''}</i><span>{step.label}</span><small>{step.status === 'done' ? 'Complete' : step.status === 'failed' ? 'Needs attention' : step.status === 'running' ? 'Working' : 'Queued'}</small></div>)}</div>
+          {aiBuildStatus === 'error' && <p className="wa-error" role="alert">{aiBuildMessage || 'QuorlythBot could not complete the workflow request. Check the AI provider configuration and try again.'}</p>}
           {aiBuildStatus === 'generating' && (aiLiveName || aiLiveDescription || aiLiveTrigger || aiLiveActionTitles.length > 0) && <div className="wa-ai-live-preview">
             <small>LIVE WORKFLOW FIELDS</small>
             {aiLiveName && <p><b>Name</b><span>{aiLiveName}</span></p>}
@@ -739,6 +740,7 @@ function AutomationWorkspace() {
           <div className="wa-ai-build-steps">
             {aiBuildSteps.map(step => <div key={step.id} className={'wa-ai-build-step is-' + step.status}><i>{step.status === 'done' ? '✓' : step.status === 'failed' ? '!' : step.status === 'running' ? '·' : ''}</i><span>{step.label}</span><small>{step.status === 'done' ? 'Complete' : step.status === 'failed' ? 'Needs attention' : step.status === 'running' ? 'Working' : 'Queued'}</small></div>)}
           </div>
+          {aiBuildStatus === 'error' && <p className="wa-error" role="alert">{aiBuildMessage || 'QuorlythBot could not complete the workflow request. Check the AI provider configuration and try again.'}</p>}
           {aiBuildStatus === 'ready' && <p className="wa-ai-ready-note">The workflow has been filled into the editable canvas below. Inspect every node and connection before saving or activating it.</p>}
         </div>}
       </section>
