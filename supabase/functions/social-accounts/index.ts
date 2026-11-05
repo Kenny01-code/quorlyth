@@ -197,7 +197,13 @@ async function publishToProvider(admin: ReturnType<typeof createClient>, userId:
     });
     const published = await publishResponse.json().catch(() => ({}));
     if (!publishResponse.ok || !published.id) throw new Error(published?.error?.message || "Instagram could not publish the media container.");
-    return { provider: "instagram", postId: published.id, postUrl: "https://www.instagram.com/p/" + published.id + "/", accountName: row.account_name };
+    const permalinkUrl = new URL("https://graph.facebook.com/v26.0/" + encodeURIComponent(published.id));
+    permalinkUrl.searchParams.set("fields", "permalink");
+    permalinkUrl.searchParams.set("access_token", row.access_token);
+    const permalinkResponse = await fetch(permalinkUrl.toString());
+    const permalinkData = await permalinkResponse.json().catch(() => ({}));
+    const postUrl = permalinkResponse.ok && typeof permalinkData.permalink === "string" ? permalinkData.permalink : undefined;
+    return { provider: "instagram", postId: published.id, ...(postUrl ? { postUrl } : {}), accountName: row.account_name };
   }
 
   if (row.provider === "pinterest") {
