@@ -1,0 +1,41 @@
+/* Live organizer progress and field selection across collaboration setup and planning. */
+.ql-ai-live-build {
+  display:grid; gap:10px; padding:13px 14px;
+  border:1px solid rgba(255,255,255,.13); border-radius:14px;
+  background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.012)),rgba(0,0,0,.28);
+}
+.ql-ai-live-build__top { display:flex; align-items:center; gap:9px; min-width:0; }
+.ql-ai-live-build__top strong { flex:1; min-width:0; color:rgba(255,255,255,.9); font-size:12px; font-weight:530; }
+.ql-ai-live-build__top > span:last-child { color:rgba(255,255,255,.38); font-size:9px; letter-spacing:.12em; }
+.ql-ai-live-dot { width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.07),0 0 16px rgba(255,255,255,.42); animation:qlAiLivePulse 1.2s ease-in-out infinite; }
+.ql-ai-live-build > p { margin:0; color:rgba(255,255,255,.45); font-size:10px; line-height:1.55; }
+.ql-ai-live-field { display:grid; gap:5px; padding:9px 10px; border:1px solid rgba(255,255,255,.075); border-radius:10px; background:rgba(255,255,255,.025); }
+.ql-ai-live-field small { color:rgba(255,255,255,.42); font-size:9px; letter-spacing:.11em; }
+.ql-ai-live-field p { margin:0; color:rgba(255,255,255,.78); font-size:11px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ql-ai-live-field ol { display:grid; gap:5px; margin:0; padding-left:18px; color:rgba(255,255,255,.78); font-size:11px; line-height:1.5; }
+.ql-ai-plan-selection { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; padding:11px 12px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(255,255,255,.025); }
+.ql-ai-plan-selection > p { flex:1 0 100%; margin:0; }
+.ql-ai-plan-selection label { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:5px 9px; border:1px solid rgba(255,255,255,.1); border-radius:9px; color:rgba(255,255,255,.76); font-size:11px; cursor:pointer; }
+.ql-ai-plan-selection input,.ql-ai-milestone-choice input { width:15px; height:15px; flex:none; accent-color:#fff; }
+.ql-ai-milestone-choice { display:grid; grid-template-columns:18px minmax(0,1fr); gap:10px; align-items:start; cursor:pointer; }
+.ql-ai-milestone-choice > input { margin-top:3px; }
+.ql-ai-milestone-choice > span { display:grid; gap:5px; min-width:0; }
+.ql-ai-milestone-choice:has(input:checked) { border-color:rgba(255,255,255,.2); background:rgba(255,255,255,.035); }
+.ql-ai-milestone-choice:has(input:disabled) { opacity:.55; cursor:default; }
+.ql-ai-apply-progress { display:grid; gap:0; padding:11px 12px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(255,255,255,.025); }
+.ql-ai-apply-progress > strong { margin-bottom:7px; color:rgba(255,255,255,.82); font-size:11px; font-weight:540; }
+.ql-ai-apply-progress > div { display:grid; grid-template-columns:19px minmax(0,1fr) auto; gap:8px; align-items:center; min-height:32px; border-top:1px solid rgba(255,255,255,.055); }
+.ql-ai-apply-progress > div > span:nth-child(2) { color:rgba(255,255,255,.64); font-size:10px; overflow-wrap:anywhere; }
+.ql-ai-apply-progress > div > small { color:rgba(255,255,255,.36); font-size:9px; }
+.ql-ai-apply-dot { display:grid; place-items:center; width:17px; height:17px; border:1px solid rgba(255,255,255,.15); border-radius:50%; color:rgba(255,255,255,.52); font-size:10px; }
+.ql-ai-apply-dot.done { color:#9fe8bb; border-color:rgba(159,232,187,.32); }
+.ql-ai-apply-dot.running { color:#fff; border-color:rgba(255,255,255,.45); }
+.ql-ai-apply-dot.failed { color:#ff9292; border-color:rgba(255,146,146,.35); }
+@keyframes qlAiLivePulse { 0%,100% { opacity:.5; transform:scale(.88); } 50% { opacity:1; transform:scale(1.08); } }
+@media(max-width:640px) {
+  .ql-ai-live-build { padding:11px; }
+  .ql-ai-plan-selection { align-items:stretch; flex-direction:column; }
+  .ql-ai-apply-progress > div { grid-template-columns:19px minmax(0,1fr); }
+  .ql-ai-apply-progress > div > small { grid-column:2; margin-top:-3px; }
+}
+@media(prefers-reduced-motion:reduce) { .ql-ai-live-dot { animation:none; } }

@@ -9,12 +9,16 @@ import { useApp, useComments } from '../data/AppProvider'
 import { askJson, streamChat } from '../ai/client'
 import { cleanTag, cn, when } from '../lib/util'
 import { useDraftState } from '../lib/useDraftState'
+import { openSocialShare } from '../lib/socialShare'
+import type { SocialPromotionPlatform } from '../lib/types'
+import type { SocialShareTarget } from '../lib/socialShare'
+import '../styles/social-sharing.css'
 
 export function Promote() {
   return <Gate owner><Inner /></Gate>
 }
 
-const LIM: Record<string, number> = { instagram: 2200, x: 280, tiktok: 2200, linkedin: 3000 }
+const LIM: Record<string, number> = { instagram: 2200, x: 280, tiktok: 2200, linkedin: 3000, facebook: 5000, threads: 500, bluesky: 300, reddit: 10000, whatsapp: 4096, telegram: 4096, youtube: 5000 }
 
 function Inner() {
   const a = useApp()
@@ -56,19 +60,63 @@ function Inner() {
     </section>
   ) : null
 
+  const sourceIdeaUrl = idea ? window.location.origin + '/idea/' + idea.id : window.location.origin + '/promote'
+  const shareTargets: { id: SocialShareTarget; label: string }[] = [
+    { id: 'x', label: 'X' }, { id: 'facebook', label: 'Facebook' }, { id: 'linkedin', label: 'LinkedIn' },
+    { id: 'threads', label: 'Threads' }, { id: 'bluesky', label: 'Bluesky' }, { id: 'reddit', label: 'Reddit' },
+    { id: 'whatsapp', label: 'WhatsApp' }, { id: 'telegram', label: 'Telegram' },
+  ]
+  const copyAndOpenCreator = (network: 'instagram' | 'tiktok' | 'youtube') => {
+    const destination = network === 'instagram' ? 'https://www.instagram.com/' : network === 'tiktok' ? 'https://www.tiktok.com/' : 'https://studio.youtube.com/'
+    window.open(destination, '_blank', 'noopener,noreferrer')
+    void navigator.clipboard.writeText((pub || '') + '\n\n' + sourceIdeaUrl).then(() => a.toast('Caption and source idea link copied. Paste them into ' + (network === 'youtube' ? 'YouTube Studio' : network === 'instagram' ? 'Instagram' : 'TikTok') + ' to finish your post.')).catch(() => a.toast('Could not copy the caption. You can still copy it from the post above.'))
+  }
+  const openShareTarget = (target: SocialShareTarget) => {
+    if (target === 'linkedin') {
+      openSocialShare('linkedin', pub || '', sourceIdeaUrl, 'A post from Quorlyth')
+      void navigator.clipboard.writeText((pub || '') + '\n\n' + sourceIdeaUrl).then(() => a.toast('Caption and source link copied. Paste them into your LinkedIn post.')).catch(() => a.toast('LinkedIn opened. Copy the caption from the post above.'))
+      return
+    }
+    openSocialShare(target, pub || '', sourceIdeaUrl, 'A post from Quorlyth')
+  }
+  const shareNative = () => {
+    if (typeof navigator.share === 'function') {
+      void navigator.share({ title: 'A post from Quorlyth', text: pub || '', url: sourceIdeaUrl }).catch(error => { if (error?.name !== 'AbortError') a.toast('Your device could not open the share sheet. Choose a network below.') })
+      return
+    }
+    void navigator.clipboard.writeText(pub || '').then(() => a.toast('Post copied. Paste it into your social app.')).catch(() => a.toast('Could not copy the post.'))
+  }
+
   if (pub !== null) {
     return (
       <>
         <Head kicker="Promote" title="Ready to share." />
         <div className="glass pad" style={{ maxWidth: 760, margin: '0 auto' }}><div className="done">
           <div className="score"><Icon name="approve" size={34} /></div><h2>Your post is ready.</h2>
-          <p className="mut" style={{ margin: '12px auto 0', maxWidth: 420 }}>Your credited post draft is saved in Quorlyth. Copy it or save it as a file to publish on your social channels.</p>
+          <p className="mut" style={{ margin: '12px auto 0', maxWidth: 420 }}>Your credited post draft is saved in Quorlyth. Choose a social network below to open its sharing surface, or copy the caption for a manual post.</p>
           <div className="post" style={{ margin: '24px 0', textAlign: 'left', whiteSpace: 'pre-wrap' }}>{pub}</div>
           <div className="acts" style={{ justifyContent: 'center' }}>
             <button className="btn p" onClick={() => navigator.clipboard.writeText(pub).then(() => a.toast('Copied'))}>Copy post</button>
             <button className="btn" onClick={() => { const u = URL.createObjectURL(new Blob([pub], { type: 'text/plain' })); const l = document.createElement('a'); l.href = u; l.download = 'quorlyth-post.txt'; l.click(); URL.revokeObjectURL(u) }}>Save as file</button>
             <button className="btn" onClick={() => { setPub(null); setDraft(''); setSp({}) }}>Done</button>
-          </div></div></div>{pubs}
+          </div></div>
+        <section className="q-social-share-block">
+          <div className="q-social-share-heading">
+            <div><p className="ql-eyebrow">PUBLISH FROM YOUR CHANNEL</p><h3>Share this post</h3><p>Open a network's own sharing surface. Quorlyth keeps your credited draft; it does not sign in to your social accounts or publish on your behalf.</p></div>
+            <button type="button" className="btn p q-social-native-share" onClick={shareNative}><Icon name="share" size={15} />Share</button>
+          </div>
+          <div className="q-social-share-grid">
+            {shareTargets.map(target => <button key={target.id} type="button" className="q-social-share-target" onClick={() => openShareTarget(target.id)}><span className="q-social-share-mark">{target.label.slice(0, 1)}</span><span>{target.label}</span><Icon name="arrow-up-right" size={13} /></button>)}
+          </div>
+          <div className="q-social-share-manual">
+            <p className="dim">For networks that require you to finish the post in their app:</p>
+            <button type="button" className="btn" onClick={() => copyAndOpenCreator('instagram')}>Copy for Instagram <Icon name="arrow-up-right" size={13} /></button>
+            <button type="button" className="btn" onClick={() => copyAndOpenCreator('tiktok')}>Copy for TikTok <Icon name="arrow-up-right" size={13} /></button>
+            <button type="button" className="btn" onClick={() => copyAndOpenCreator('youtube')}>Copy for YouTube <Icon name="arrow-up-right" size={13} /></button>
+          </div>
+          <p className="q-social-share-footnote">These are share and copy workflows, not account connections. Direct publishing, scheduled posts and channel analytics require each provider's approved OAuth integration.</p>
+        </section>
+        </div>{pubs}
       </>
     )
   }
@@ -89,7 +137,7 @@ function Inner() {
   }
 
   const credits = [...new Set([idea.authorId, ...comments.map(c => c.authorId)])]
-  const prompt = (extra = '') => `Write a social media post announcing that a creator is acting on an idea from their fan community. Platform: ${pm.plat}. Tone: ${pm.tone}. Length: ${({ short: 'under 50 words', medium: 'about 80 words', long: 'about 140 words' } as any)[pm.len]}. ${pm.tags ? 'Add 3 to 5 relevant hashtags at the end. ' : 'Use no hashtags. '}${pm.emo ? 'Use a few fitting emojis. ' : 'Use no emojis. '}Credit the community, do not name any individual. Do not invent facts, dates or numbers. ${pm.plat === 'x' ? 'Stay under 280 characters. ' : ''}${extra}\nIdea title: ${idea.title}\nIdea details: ${idea.body || '(none)'}`
+  const prompt = (extra = '') => `Write a social media post announcing that a creator is acting on an idea from their fan community. Platform: ${pm.plat}. Maximum length: ${LIM[pm.plat as SocialPromotionPlatform]} characters. Tone: ${pm.tone}. Length: ${({ short: 'under 50 words', medium: 'about 80 words', long: 'about 140 words' } as any)[pm.len]}. ${pm.tags ? 'Add 3 to 5 relevant hashtags at the end. ' : 'Use no hashtags. '}${pm.emo ? 'Use a few fitting emojis. ' : 'Use no emojis. '}Credit the community, do not name any individual. Do not invent facts, dates or numbers. ${pm.plat === 'x' ? 'Stay under 280 characters. ' : ''}${extra}\nIdea title: ${idea.title}\nIdea details: ${idea.body || '(none)'}`
 
   const syncTags = (text: string, tags: string[]) => {
     const t = text.replace(/\s*(?:#[\p{L}\p{N}_]+[ \t]*)+$/u, '')
@@ -149,7 +197,7 @@ function Inner() {
           <div className="aih"><span className={cn('aiic', busy && 'spin')}><Icon name="spark" size={20} /></span><div><h3 style={{ fontSize: 16 }}>Write with QuorlythBot</h3><p className="dim">Choose a voice, then let it draft.</p></div></div>
           <div className="csr"><span className="mut">Tone</span><div className="acts" style={{ margin: 0, gap: 6 }}>{chs('tone', [['warm', 'Warm'], ['bold', 'Bold'], ['playful', 'Playful'], ['professional', 'Professional']])}</div></div>
           <div className="csr"><span className="mut">Length</span><div className="acts" style={{ margin: 0, gap: 6 }}>{chs('len', [['short', 'Short'], ['medium', 'Medium'], ['long', 'Long']])}</div></div>
-          <div className="csr"><span className="mut">Platform</span><div className="acts" style={{ margin: 0, gap: 6 }}>{chs('plat', [['instagram', 'Instagram'], ['x', 'X'], ['tiktok', 'TikTok'], ['linkedin', 'LinkedIn']])}</div></div>
+          <div className="csr q-social-platform-row"><span className="mut">Platform</span><div className="acts q-social-platforms" style={{ margin: 0, gap: 6 }}>{chs('plat', [['instagram', 'Instagram'], ['x', 'X'], ['tiktok', 'TikTok'], ['linkedin', 'LinkedIn'], ['facebook', 'Facebook'], ['threads', 'Threads'], ['bluesky', 'Bluesky'], ['reddit', 'Reddit'], ['whatsapp', 'WhatsApp'], ['telegram', 'Telegram'], ['youtube', 'YouTube']])}</div></div>
           {tg('tags', 'Add hashtags')}{tg('emo', 'Use emojis')}
           <div className="acts" style={{ marginTop: 12 }}>
             {busy ? <><button className="btn" onClick={() => ctl.current?.abort()}><Icon name="decline" size={16} />Stop</button><span className="dim">QuorlythBot is writing...</span></> : <>
@@ -206,7 +254,7 @@ function Inner() {
           if (post.length > lim) return a.toast('This post is over the ' + lim + '-character limit for ' + pm.plat + '. Shorten it before preparing to share.')
           setPreparingPost(true)
           try {
-            if (await a.publish(idea.id, post, credits, pm.plat as 'instagram' | 'x' | 'tiktok' | 'linkedin')) {
+            if (await a.publish(idea.id, post, credits, pm.plat as SocialPromotionPlatform)) {
               clearPostDraft('')
               setPub(post)
             }

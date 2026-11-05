@@ -1,4 +1,5 @@
 import '../styles/workspace-shell.css'
+import '../styles/ai-live.css'
 import { FormEvent, useEffect, useState } from 'react'
 import type { ChatAttachment, Comment, WorkAttachment, WorkSubmission } from '../lib/types'
 import { ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
@@ -311,8 +312,15 @@ function Workspace() {
     return isAIProjectPlan(incomingPlan) ? incomingPlan : null
   })
   const [aiBusy, setAiBusy] = useState(false)
+  const [aiStreamText, setAiStreamText] = useState('')
+  const [aiProgressLabel, setAiProgressLabel] = useState('')
   const [aiPlanAccepted, setAiPlanAccepted] = useState(false)
+  const [aiIncludeSummary, setAiIncludeSummary] = useState(true)
+  const [aiIncludeMilestones, setAiIncludeMilestones] = useState(true)
+  const [aiSelectedMilestones, setAiSelectedMilestones] = useState<string[] | null>(null)
   const [applyingPlan, setApplyingPlan] = useState(false)
+  const [autoApplyPlanWhenReady, setAutoApplyPlanWhenReady] = useState(false)
+  const [aiApplyProgress, setAiApplyProgress] = useState<Array<{ label: string; status: 'pending' | 'running' | 'done' | 'failed' }>>([])
   const [createMilestoneRequest, setCreateMilestoneRequest] = useState(0)
   const [submissionReviewNotes, setSubmissionReviewNotes] = useState<Record<string, string>>({})
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState('')
@@ -354,6 +362,19 @@ function Workspace() {
     ...Object.entries(a.data.votes).filter(([, votes]) => [...communityIdeaIds].some(communityIdeaId => !!votes?.[communityIdeaId])).map(([userId]) => userId),
   ].filter((uid): uid is string => !!uid))]
   const participantKey = discussionParticipantIds.join('|')
+  useEffect(() => {
+    if (!autoApplyPlanWhenReady || !project || !aiPlan || applyingPlan) return
+    void applyAIPlan()
+  }, [autoApplyPlanWhenReady, project?.id, aiPlan, applyingPlan])
+
+  const partialAiSummary = (() => {
+    const match = aiStreamText.match(/"project_summary"\s*:\s*"((?:\\.|[^"\\])*)/s)
+    if (!match) return ''
+    try { return JSON.parse('"' + match[1] + '"') as string } catch { return match[1].replace(/\\n/g, ' ').replace(/\\"/g, '"') }
+  })()
+  const partialAiMilestoneTitles = [...aiStreamText.matchAll(/"title"\s*:\s*"((?:\\.|[^"\\])*)/g)]
+    .map(match => { try { return JSON.parse('"' + match[1] + '"') as string } catch { return match[1].replace(/\\n/g, ' ') } })
+    .filter(Boolean).slice(0, 7)
 
   async function reviewSubmission(submission: WorkSubmission, status: 'approved' | 'changes_requested') {
     if (!a.me || !canManage || reviewingSubmissionId) return
@@ -460,6 +481,12 @@ function Workspace() {
             <h4 style={{ fontSize: 17, marginTop: 8 }}>Organize this collaboration with AI</h4>
             <p className="mut" style={{ marginTop: 5 }}>Draft a project brief and milestones from the original idea, its discussion, and the available team. You review the draft before it changes the workspace.</p>
           </div>
+          {aiBusy && <div className="ql-ai-live-build" role="status" aria-live="polite">
+            <div className="ql-ai-live-build__top"><span className="ql-ai-live-dot" /><strong>{aiProgressLabel || 'Quorlyth is organizing the collaboration'}</strong><span>LIVE</span></div>
+            <p>Reading the idea and discussion, then composing the project brief and milestones as the model responds.</p>
+            {partialAiSummary && <div className="ql-ai-live-field"><small>PROJECT BRIEF · FILLING</small><p>{partialAiSummary}</p></div>}
+            {partialAiMilestoneTitles.length > 0 && <div className="ql-ai-live-field"><small>MILESTONES · BEING FORMED</small><ol>{partialAiMilestoneTitles.map((title, index) => <li key={index}>{title}</li>)}</ol></div>}
+          </div>}
           <div className="acts" style={{ margin: 0, flexWrap: 'wrap' }}>
             <button type="button" className="btn p" disabled={aiBusy || organizerRequest?.status === 'pending'} onClick={() => void organizeWithAI()}>
               <QuorlythGlyph name="idea" size={15} />
@@ -469,6 +496,11 @@ function Workspace() {
           </div>
           {!canOrganizeWithAI && <p className="dim" style={{ fontSize: 12 }}>AI planning requires community-owner access or an approved organizer request. You can still write the project brief manually.</p>}
           {aiPlan && <div style={{ display: 'grid', gap: 10, borderTop: '1px solid var(--line, rgba(255,255,255,.12))', paddingTop: 12 }}>
+            <div className="ql-ai-plan-selection">
+              <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Choose what Quorlyth should fill</p>
+              <label><input type="checkbox" checked={aiIncludeSummary} onChange={event => setAiIncludeSummary(event.target.checked)} /> Project brief</label>
+              <label><input type="checkbox" checked={aiIncludeMilestones} onChange={event => setAiIncludeMilestones(event.target.checked)} /> Milestones ({aiSelectedMilestones?.length ?? aiPlan.milestones.length} selected)</label>
+            </div>
             <div>
               <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Suggested project brief</p>
               <p className="mut" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p>
@@ -476,17 +508,21 @@ function Workspace() {
             </div>
             <div style={{ display: 'grid', gap: 8 }}>
               <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Proposed milestones · {aiPlan.milestones.length}</p>
-              {aiPlan.milestones.map((item, index) => <div key={item.title + index} className="glass pad" style={{ display: 'grid', gap: 5 }}>
-                <strong>{String(index + 1).padStart(2, '0')} · {item.title}</strong>
+              {aiPlan.milestones.map((item, index) => <label key={item.title + index} className="glass pad ql-ai-milestone-choice">
+                <input type="checkbox" checked={aiSelectedMilestones === null || aiSelectedMilestones.includes(item.title)} onChange={() => setAiSelectedMilestones(current => {
+                  const selected = current ?? aiPlan.milestones.map(milestone => milestone.title)
+                  return selected.includes(item.title) ? selected.filter(title => title !== item.title) : [...selected, item.title]
+                })} />
+                <span><strong>{String(index + 1).padStart(2, '0')} · {item.title}</strong>
                 <p className="mut">{item.description}</p>
-                <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p>
-              </div>)}
+                <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p></span>
+              </label>)}
             </div>
             <div className="acts" style={{ margin: 0, flexWrap: 'wrap' }}>
-              <button type="button" className="btn p" onClick={() => { setWorkspaceSummary(aiPlan.project_summary || workspaceSummary); setAiPlanAccepted(true); a.toast('AI draft selected. Initialize the workspace, then review the milestones in Plan & tasks.') }}><QuorlythGlyph name="check" size={14} />Use this draft</button>
+              <button type="button" className="btn p" disabled={!aiIncludeSummary && (!aiIncludeMilestones || !(aiSelectedMilestones?.length ?? aiPlan.milestones.length))} onClick={() => { if (aiIncludeSummary) setWorkspaceSummary(aiPlan.project_summary || workspaceSummary); setAiPlanAccepted(true); a.toast('Selected AI fields are ready. Initialize the workspace and Quorlyth will add the chosen milestones automatically.') }}><QuorlythGlyph name="check" size={14} />Use selected fields</button>
               <button type="button" className="btn" onClick={() => { setAiPlan(null); setAiPlanAccepted(false) }}>Discard draft</button>
             </div>
-            <p className="dim" style={{ fontSize: 11 }}>Selecting this draft only fills the project brief. Milestones will remain a proposal until you review and apply them in the new workspace.</p>
+            <p className="dim" style={{ fontSize: 11 }}>Only the fields you select will be applied. Selected milestones are added in order after the workspace is created; assignments remain unassigned until a manager confirms them.</p>
           </div>}
         </section>}
         {canManage ? <form className="reason" style={{ marginTop: 16 }} onSubmit={async event => {
@@ -496,7 +532,10 @@ function Workspace() {
           setBusy(true)
           try {
             const created = await a.createProject(id, workspaceSummary.trim(), dateEnd(projectDueDate))
-            if (created && aiPlan && aiPlanAccepted) setWorkspaceTab('plan')
+            if (created && aiPlan && aiPlanAccepted) {
+              setWorkspaceTab('plan')
+              if (aiIncludeMilestones && (aiSelectedMilestones?.length ?? aiPlan.milestones.length) > 0) setAutoApplyPlanWhenReady(true)
+            }
           } catch {
             a.toast('Could not initialize the collaboration workspace. Please try again.')
           } finally {
@@ -531,14 +570,26 @@ function Workspace() {
     }
     setAiBusy(true)
     try {
+      setAiStreamText('')
+      setAiProgressLabel('Reading the idea, comments and available team')
       const plan = await generateProjectPlan({
         idea: { id: idea.id, title: idea.title, body: idea.body, tags: idea.tags },
         community: { name: community.name, purpose: community.purpose, rules: community.rules },
         comments: comments.map(comment => ({ id: comment.id, authorId: comment.authorId, text: comment.text, at: comment.at })),
         team: workspaceTeamIds.map(memberId => ({ id: memberId, name: a.nm(memberId) })),
+        onProgress: full => {
+          setAiStreamText(full)
+          if (full.includes('"project_summary"')) setAiProgressLabel('Writing the project brief')
+          if (full.includes('"milestones"')) setAiProgressLabel('Sequencing milestones and definitions of done')
+          if (full.includes('"filtered_out"')) setAiProgressLabel('Checking filters and evidence notes')
+        },
       })
       setAiPlan(plan)
+      setAiSelectedMilestones(plan.milestones.map(item => item.title))
+      setAiIncludeSummary(true)
+      setAiIncludeMilestones(true)
       setAiPlanAccepted(false)
+      setAiProgressLabel('Plan assembled. Review the fields and choose what to apply.')
       a.toast('AI project plan is ready to review.')
     } catch (error: any) {
       a.toast(error?.message || 'Quorlyth could not organize this discussion. Please try again.')
@@ -583,17 +634,39 @@ function Workspace() {
   }
 
   async function applyAIPlan() {
-    if (!aiPlan || !idea || !canOrganizeWithAI || !project) return
+    if (!aiPlan || !idea || !canOrganizeWithAI || !project || applyingPlan) return
+    const chosenTitles = new Set(aiSelectedMilestones ?? aiPlan.milestones.map(item => item.title))
+    const chosenMilestones = aiIncludeMilestones
+      ? aiPlan.milestones.filter(item => chosenTitles.has(item.title))
+      : []
+    const shouldUpdateSummary = aiIncludeSummary && !!aiPlan.project_summary.trim() && aiPlan.project_summary !== project.summary
+    if (!shouldUpdateSummary && !chosenMilestones.length) {
+      a.toast('Select a project brief or at least one milestone to apply.')
+      return
+    }
+    const tasks = [
+      ...(shouldUpdateSummary ? [{ label: 'Update project brief' }] : []),
+      ...chosenMilestones.map(item => ({ label: 'Create milestone: ' + item.title })),
+    ]
+    setAiApplyProgress(tasks.map((task, index) => ({ label: task.label, status: index === 0 ? 'running' as const : 'pending' as const })))
     setApplyingPlan(true)
+    let created = 0
     try {
-      if (aiPlan.project_summary && aiPlan.project_summary !== project.summary) {
+      let taskIndex = 0
+      if (shouldUpdateSummary) {
         const updated = await a.updateProject(id, { summary: aiPlan.project_summary, aiOrganizerGenerated: true })
         if (!updated) throw new Error('The project brief could not be updated. Your milestone plan is still available to review.')
+        setAiApplyProgress(current => current.map((item, index) => index === taskIndex ? { ...item, status: 'done' } : item))
+        taskIndex++
       }
       const existingTitles = new Set(milestones.map(milestone => milestone.title.trim().toLowerCase()))
-      let created = 0
-      for (const item of aiPlan.milestones) {
-        if (existingTitles.has(item.title.trim().toLowerCase())) continue
+      for (const item of chosenMilestones) {
+        if (existingTitles.has(item.title.trim().toLowerCase())) {
+          setAiApplyProgress(current => current.map(progressItem => progressItem.label === 'Create milestone: ' + item.title ? { ...progressItem, status: 'done' } : progressItem))
+          taskIndex++
+          continue
+        }
+        setAiApplyProgress(current => current.map((progressItem, index) => index === taskIndex ? { ...progressItem, status: 'running' } : progressItem))
         const ok = await a.addMilestone(id, item.title, item.description, {
           priority: item.priority,
           acceptanceCriteria: item.definition_of_done,
@@ -602,13 +675,18 @@ function Workspace() {
         if (!ok) throw new Error('Some milestones could not be saved. Review the workspace before retrying; existing milestone titles will be skipped.')
         existingTitles.add(item.title.trim().toLowerCase())
         created++
+        setAiApplyProgress(current => current.map((progressItem, index) => index === taskIndex ? { ...progressItem, status: 'done' } : progressItem))
+        taskIndex++
       }
+      setAutoApplyPlanWhenReady(false)
       setAiPlan(null)
-      a.toast(`AI plan applied. Added ${created} new milestone${created === 1 ? '' : 's'}.`)
+      a.toast('AI plan applied. Added ' + created + ' new milestone' + (created === 1 ? '' : 's') + '.')
     } catch (error: any) {
+      setAiApplyProgress(current => current.map(item => item.status === 'running' ? { ...item, status: 'failed' } : item))
       a.toast(error?.message || 'The AI plan could not be applied completely.')
     } finally {
       setApplyingPlan(false)
+      setAutoApplyPlanWhenReady(false)
     }
   }
 
@@ -813,7 +891,18 @@ function Workspace() {
               {aiBusy ? (canOrganizeWithAI ? 'Organizing signals…' : 'Requesting approval…') : canOrganizeWithAI ? (aiPlan ? 'Regenerate plan' : 'Organize with AI') : organizerRequest?.status === 'pending' ? 'Approval pending' : organizerRequest?.status === 'declined' ? 'Request approval again' : 'Request AI organizer approval'}
             </button>
           </div>
+          {aiBusy && <div className="ql-ai-live-build" role="status" aria-live="polite">
+            <div className="ql-ai-live-build__top"><span className="ql-ai-live-dot" /><strong>{aiProgressLabel || 'Quorlyth is organizing this workspace'}</strong><span>LIVE</span></div>
+            <p>Live generation is filling the project brief and sequencing milestones. The final plan remains a draft until you apply it.</p>
+            {partialAiSummary && <div className="ql-ai-live-field"><small>PROJECT BRIEF · FILLING</small><p>{partialAiSummary}</p></div>}
+            {partialAiMilestoneTitles.length > 0 && <div className="ql-ai-live-field"><small>MILESTONES · BEING FORMED</small><ol>{partialAiMilestoneTitles.map((title, index) => <li key={index}>{title}</li>)}</ol></div>}
+          </div>}
           {aiPlan && <div style={{ display: 'grid', gap: 14, marginTop: 18 }}>
+            <div className="ql-ai-plan-selection">
+              <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Choose what Quorlyth should edit</p>
+              <label><input type="checkbox" checked={aiIncludeSummary} onChange={event => setAiIncludeSummary(event.target.checked)} /> Project brief</label>
+              <label><input type="checkbox" checked={aiIncludeMilestones} onChange={event => setAiIncludeMilestones(event.target.checked)} /> Selected milestones</label>
+            </div>
             <div className="grid i2" style={{ gap: 10 }}>
               <div className="glass pad"><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Estimated signal score</p><strong style={{ fontSize: 28, fontWeight: 400 }}>{aiPlan.signal_score}<span className="dim" style={{ fontSize: 14 }}>/100</span></strong><p className="mut" style={{ fontSize: 12 }}>AI estimate of clarity, relevance, and actionability</p></div>
               <div className="glass pad"><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Estimated noise reduction</p><strong style={{ fontSize: 28, fontWeight: 400 }}>{aiPlan.noise_reduction_ratio}<span className="dim" style={{ fontSize: 14 }}>%</span></strong><p className="mut" style={{ fontSize: 12 }}>AI estimate for the supplied discussion only, not a measured platform-wide metric</p></div>
@@ -824,15 +913,20 @@ function Workspace() {
             {!!aiPlan.definition_of_done.length && <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Project definition of done</p><ul style={{ marginTop: 7, paddingLeft: 20 }}>{aiPlan.definition_of_done.map((item, index) => <li key={index} className="mut" style={{ marginTop: 5 }}>{item}</li>)}</ul></div>}
             <div style={{ display: 'grid', gap: 8 }}>
               <p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Draft milestones · {aiPlan.milestones.length}</p>
-              {aiPlan.milestones.map((item, index) => <div key={item.title + index} className="glass pad" style={{ display: 'grid', gap: 5 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><span className="chip">{String(index + 1).padStart(2, '0')}</span><strong>{item.title}</strong><span className="chip">{item.priority}</span></div>
+              {aiPlan.milestones.map((item, index) => <label key={item.title + index} className="glass pad ql-ai-milestone-choice">
+                <input type="checkbox" disabled={!aiIncludeMilestones || applyingPlan} checked={aiSelectedMilestones === null || aiSelectedMilestones.includes(item.title)} onChange={() => setAiSelectedMilestones(current => {
+                  const selected = current ?? aiPlan.milestones.map(milestone => milestone.title)
+                  return selected.includes(item.title) ? selected.filter(title => title !== item.title) : [...selected, item.title]
+                })} />
+                <span><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><span className="chip">{String(index + 1).padStart(2, '0')}</span><strong>{item.title}</strong><span className="chip">{item.priority}</span></div>
                 <p className="mut">{item.description}</p>
-                <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p>
-              </div>)}
+                <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p></span>
+              </label>)}
             </div>
             {!!aiPlan.filtered_out.length && <details><summary className="mut" style={{ cursor: 'pointer' }}>View filtered items ({aiPlan.filtered_out.length})</summary><div style={{ display: 'grid', gap: 8, marginTop: 10 }}>{aiPlan.filtered_out.map((item, index) => <div key={item.item + index} className="glass pad"><strong>{item.item}</strong><p className="mut" style={{ marginTop: 4 }}>{item.reason}</p></div>)}</div></details>}
-            <div className="acts"><button className="btn p" disabled={applyingPlan || aiBusy} onClick={applyAIPlan}><QuorlythGlyph name="check" size={14} />{applyingPlan ? 'Applying plan…' : 'Apply brief and milestones'}</button><button className="btn" disabled={applyingPlan} onClick={() => setAiPlan(null)}>Discard draft</button></div>
-            <p className="dim" style={{ fontSize: 11 }}>AI-generated estimates and plans are suggestions. Check the source evidence and confirm assignments before acting.</p>
+            <div className="acts"><button className="btn p" disabled={applyingPlan || aiBusy || (!aiIncludeSummary && (!aiIncludeMilestones || !(aiSelectedMilestones?.length ?? aiPlan.milestones.length)))} onClick={applyAIPlan}><QuorlythGlyph name="check" size={14} />{applyingPlan ? 'Applying selected changes…' : 'Apply selected changes'}</button><button className="btn" disabled={applyingPlan} onClick={() => setAiPlan(null)}>Discard draft</button></div>
+            {aiApplyProgress.length > 0 && <div className="ql-ai-apply-progress" role="status" aria-live="polite"><strong>{applyingPlan ? 'Quorlyth is applying your selected fields' : 'Latest apply progress'}</strong>{aiApplyProgress.map((step, index) => <div key={step.label + index}><span className={'ql-ai-apply-dot ' + step.status}>{step.status === 'done' ? '✓' : step.status === 'failed' ? '!' : '·'}</span><span>{step.label}</span><small>{step.status === 'done' ? 'Saved' : step.status === 'failed' ? 'Needs attention' : 'In progress'}</small></div>)}</div>}
+            <p className="dim" style={{ fontSize: 11 }}>Quorlyth will only update the selected fields and add the checked milestones. Suggested lead assignments are never applied automatically.</p>
           </div>}
         </section>}
       {canAccess && project.status === 'active' && milestones.length === 0 && !aiPlan && <section className="glass pad" aria-labelledby="ql-first-project-step-title" style={{ display: 'grid', gap: 14 }}>

@@ -5,13 +5,14 @@ import { Logo } from '../lib/Logo'
 import { Gate } from '../components/Gate'
 import { ShareCard } from '../components/ShareCard'
 import { Av, Chip, Head } from '../components/ui'
-import { download } from './Analytics'
 import { useApp } from '../data/AppProvider'
 import { cn, when } from '../lib/util'
 import { useDraftState } from '../lib/useDraftState'
 import { useUserState } from '../lib/userState'
 import { useNotifs } from '../lib/notifs'
 import { BackupRestore } from '../components/BackupRestore'
+import { socialShareUrl } from '../lib/socialShare'
+import '../styles/social-sharing.css'
 
 export function Settings() {
   return <Gate><Inner /></Gate>
@@ -35,8 +36,9 @@ function Inner() {
   const [w, setW, clearWeightsDraft] = useDraftState(`q-draft:${a.me?.id}:settings:weights`, initialWeights)
   const [emails, setEmails, clearInviteDraft] = useDraftState(`q-draft:${a.me?.id}:settings:invite`, '')
   const url = location.origin
-  const text = encodeURIComponent('Join my space on Quorlyth: ' + url)
-  const tabs = a.platformAdmin ? ['Space', 'AI weights', 'Requests', 'Data', 'Invite', 'Personal', 'Backup & restore'] : ['Personal', 'Backup & restore']
+  const inviteMessage = 'Join my space on Quorlyth: ' + url
+  const text = encodeURIComponent(inviteMessage)
+  const tabs = a.platformAdmin ? ['Space', 'AI weights', 'Requests', 'Invite', 'Personal', 'Backup & restore'] : ['Personal', 'Backup & restore']
   const reqs = [...a.data.requests].sort((x, y) => y.at - x.at)
   const openReqs = reqs.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at })
   const unreadRequestKeys = notifications.filter(n => n.kind === 'settings' && n.unread).map(n => n.key)
@@ -62,8 +64,8 @@ function Inner() {
           {tabs.map((t, i) => <div key={t} className={cn('row', tab === i && 'on')} tabIndex={0} onClick={() => { setTab(i); setSearchParams(i === 2 ? { tab: 'requests' } : {}, { replace: true }) }} onKeyDown={e => { if (e.key === 'Enter') { setTab(i); setSearchParams(i === 2 ? { tab: 'requests' } : {}, { replace: true }) } }}><div className="t"><h3 style={{ fontSize: 15 }}>{t}</h3></div>{i === 2 && openReqs.length > 0 && <b className={cn('nav-count', unreadRequestKeys.length > 0 && 'pulse')}>{openReqs.length > 9 ? '9+' : openReqs.length}</b>}</div>)}
         </div>
         <div className="glass pad">
-          {(!a.platformAdmin && tab === 0 || a.platformAdmin && tab === 5) && <PersonalSettings />}
-          {(!a.platformAdmin && tab === 1 || a.platformAdmin && tab === 6) && <BackupRestore />}
+          {(!a.platformAdmin && tab === 0 || a.platformAdmin && tab === 4) && <PersonalSettings />}
+          {(!a.platformAdmin && tab === 1 || a.platformAdmin && tab === 5) && <BackupRestore />}
           {a.platformAdmin && tab === 0 && <>
             <h3>Your space</h3><p className="dim" style={{ marginTop: 4 }}>Unfinished settings are saved as a draft on this device.</p>
             <label className="field"><span>Space name</span><input value={name} maxLength={60} onChange={e => setName(e.target.value)} placeholder="Your name or brand" /></label>
@@ -90,14 +92,27 @@ function Inner() {
             }) : <p className="mut" style={{ padding: '20px 0' }}>No requests yet.</p>}
           </>}
           {a.platformAdmin && tab === 3 && <>
-            <h3>Your data</h3><p className="dim" style={{ margin: '6px 0 10px' }}>Everything in this space belongs to you.</p>
-            <div className="acts"><button className="btn" onClick={() => download('quorlyth-export.json', 'application/json', JSON.stringify({ exported: new Date().toISOString(), space: a.data.settings, communities: a.data.communities, ideas: a.data.ideas, reviews: a.data.reviews, promotions: a.data.promotions }, null, 2))}><Icon name="publish" size={16} />Export everything (JSON)</button></div>
-          </>}
-          {a.platformAdmin && tab === 4 && <>
             <h3>Let people in</h3><p className="dim" style={{ margin: '6px 0 16px' }}>People sign in with Google or their email. Share the link, or approve them yourself under Requests.</p>
             <div className="grid g3" style={{ marginBottom: 6 }}>
               <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Invite by email</h3><label className="field"><span>Their emails, separated by commas</span><input value={emails} onChange={e => setEmails(e.target.value)} placeholder="friend@email.com" /></label><div className="acts"><a className="btn p" href={`mailto:${encodeURIComponent(emails.replace(/\s+/g, ''))}?subject=${encodeURIComponent('Join me on Quorlyth')}&body=${text}`} onClick={() => clearInviteDraft('')}><Icon name="mail" size={16} />Write the email</a><button className="chip" onClick={() => clearInviteDraft('')}>Discard draft</button></div></div>
-              <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Share a link</h3><p className="lnk" style={{ marginTop: 10 }}>{url}</p><div className="acts"><button className="btn p" onClick={() => navigator.clipboard.writeText(url).then(() => { trackInviteShare(); a.toast('Link copied') }).catch(() => a.toast('Could not copy the link'))}><Icon name="link" size={16} />Copy link</button><a className="btn" href={`https://wa.me/?text=${text}`} target="_blank" rel="noopener" onClick={trackInviteShare}>WhatsApp</a><a className="btn" href={`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Join my space on Quorlyth')}`} target="_blank" rel="noopener" onClick={trackInviteShare}>Telegram</a><a className="btn" href={`https://twitter.com/intent/tweet?text=${text}`} target="_blank" rel="noopener" onClick={trackInviteShare}>X</a></div></div>
+              <div className="glass pad q-social-invite" style={{ padding: 18 }}>
+                <h3 style={{ fontSize: 15 }}>Share across social channels</h3>
+                <p className="dim" style={{ margin: '6px 0 10px' }}>Open a network's share composer. Quorlyth does not need your social password or store a social login.</p>
+                <p className="lnk" style={{ marginTop: 10 }}>{url}</p>
+                <div className="acts">
+                  <button className="btn p" onClick={() => navigator.clipboard.writeText(url).then(() => { trackInviteShare(); a.toast('Link copied') }).catch(() => a.toast('Could not copy the link'))}><Icon name="link" size={16} />Copy link</button>
+                  <a className="btn" href={socialShareUrl('x', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>X</a>
+                  <a className="btn" href={socialShareUrl('facebook', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Facebook</a>
+                  <a className="btn" href={socialShareUrl('linkedin', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={() => { trackInviteShare(); void navigator.clipboard.writeText(inviteMessage).catch(() => {}) }}>LinkedIn</a>
+                  <a className="btn" href={socialShareUrl('threads', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Threads</a>
+                  <a className="btn" href={socialShareUrl('bluesky', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Bluesky</a>
+                  <a className="btn" href={socialShareUrl('reddit', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Reddit</a>
+                  <a className="btn" href={socialShareUrl('whatsapp', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>WhatsApp</a>
+                  <a className="btn" href={socialShareUrl('telegram', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Telegram</a>
+                  <button className="btn" onClick={() => { void navigator.clipboard.writeText(inviteMessage).then(() => { trackInviteShare(); a.toast('Invite copied. Paste it into Instagram.') }).catch(() => a.toast('Could not copy the invite.')) }}>Copy for Instagram</button>
+                  <button className="btn" onClick={() => { void navigator.clipboard.writeText(inviteMessage).then(() => { trackInviteShare(); a.toast('Invite copied. Paste it into TikTok.') }).catch(() => a.toast('Could not copy the invite.')) }}>Copy for TikTok</button>
+                </div>
+              </div>
               <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Approve people yourself</h3><p className="dim" style={{ margin: '8px 0 12px' }}>Turn on approval and members send a request you can accept under Requests.</p><div className="acts" style={{ margin: 0 }}><Chip onClick={() => setTab(0)}>Space settings</Chip><Chip onClick={() => setTab(2)}>View requests</Chip></div></div>
             </div>
             <ShareCard title="Scan to join" url={url} sub="Anyone you share this with signs in first." />

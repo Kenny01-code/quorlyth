@@ -134,10 +134,10 @@ test('the top navigation uses one active-state surface, not a duplicate animated
   assert.match(css, /nav button\.on/)
 })
 
-test('QuorlythBot sidebar is narrower without removing its navigation', async () => {
+test('QuorlythBot sidebar uses a professional readable width without removing navigation', async () => {
   const css = await readSource('src/styles/bot.css')
-  assert.match(css, /grid-template-columns:\s*minmax\(176px, 186px\) minmax\(0, 1fr\)/)
-  assert.match(css, /width:\s*min\(224px, calc\(100% - 44px\)\)/)
+  assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
+  assert.match(css, /width:\s*min\(304px, calc\(100% - 36px\)\)/)
   assert.match(css, /\.bs-l/)
 })
 
@@ -227,12 +227,12 @@ test('the 3D bot animation loop pauses when its view is inactive', async () => {
   assert.match(bot, /active=\{!minimized/)
 })
 
-test('QuorlythBot uses a narrower sidebar and a lower GPU pixel ratio', async () => {
+test('QuorlythBot keeps a readable sidebar width and a lower GPU pixel ratio', async () => {
   const [css, renderer] = await Promise.all([
     readSource('src/styles/bot.css'),
     readSource('src/bot/robot3d.ts'),
   ])
-  assert.match(css, /grid-template-columns:\s*minmax\(176px, 186px\) minmax\(0, 1fr\)/)
+  assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
   assert.match(renderer, /window\.innerWidth<=760\?1\.0:1\.25/)
   assert.match(renderer, /1000\/40/)
 })

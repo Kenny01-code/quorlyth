@@ -1,0 +1,33 @@
+/* Social sharing surfaces used by Settings invites and promotion drafts. */
+.q-social-invite { min-width:0; }
+.q-social-invite .acts { display:flex; flex-wrap:wrap; gap:7px; }
+.q-social-invite .btn { min-height:36px; justify-content:center; padding:8px 12px; border-radius:11px; font-size:11px; }
+.q-social-share-block { display:grid; gap:16px; width:min(100%,760px); margin:16px auto 24px; padding:20px; border:1px solid rgba(255,255,255,.12); border-radius:20px; background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),rgba(4,4,5,.76); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+.q-social-share-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.q-social-share-heading h3 { margin:3px 0 5px; color:rgba(255,255,255,.94); font-size:18px; font-weight:520; letter-spacing:-.025em; }
+.q-social-share-heading p:not(.ql-eyebrow) { max-width:520px; margin:0; color:rgba(235,235,242,.52); font-size:11px; line-height:1.65; }
+.q-social-native-share { flex:none; min-height:38px; }
+.q-social-share-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.q-social-share-target { display:flex; align-items:center; gap:9px; min-width:0; min-height:46px; padding:8px 10px; border:1px solid rgba(255,255,255,.11); border-radius:12px; background:rgba(255,255,255,.035); color:rgba(255,255,255,.83); font:inherit; font-size:11px; text-align:left; cursor:pointer; transition:background .16s,border-color .16s,transform .16s; }
+.q-social-share-target:hover { background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.25); transform:translateY(-1px); }
+.q-social-share-target > span:nth-child(2) { min-width:0; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.q-social-share-target > svg { flex:none; color:rgba(255,255,255,.38); }
+.q-social-share-mark { display:grid; place-items:center; flex:0 0 26px; width:26px; height:26px; border:1px solid rgba(255,255,255,.14); border-radius:8px; background:rgba(255,255,255,.06); color:#fff; font-size:10px; font-weight:650; }
+.q-social-share-manual { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:13px; border-top:1px solid rgba(255,255,255,.08); }
+.q-social-share-manual p { flex:1 0 100%; margin:0; font-size:10px; }
+.q-social-share-manual .btn { min-height:35px; padding:7px 10px; border-radius:10px; font-size:10px; }
+.q-social-share-footnote { margin:0; color:rgba(235,235,242,.36); font-size:10px; line-height:1.65; }
+.q-social-platform-row { align-items:flex-start; }
+.q-social-platforms { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; }
+.q-social-platforms .chip { min-height:32px; padding:6px 10px; font-size:10px; }
+@media(max-width:640px) {
+  .q-social-share-block { padding:15px 13px; gap:13px; border-radius:17px; }
+  .q-social-share-heading { flex-direction:column; }
+  .q-social-native-share { width:100%; justify-content:center; }
+  .q-social-share-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .q-social-share-target { min-height:43px; }
+  .q-social-invite .acts { gap:6px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .q-social-share-target { transition:none; }
+}

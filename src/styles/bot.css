@@ -1360,12 +1360,23 @@
 }
 
 
-/* Slightly narrower internal QuorlythBot sidebar keeps the conversation canvas spacious. */
+/* Standardised QuorlythBot navigation width: readable labels, predictable spacing. */
 @media (min-width: 981px) {
   #ast #bot.qbot-sidebar-compact-v2:not(.narrow).side-on {
-    grid-template-columns: minmax(176px, 186px) minmax(0, 1fr) !important;
+    grid-template-columns: minmax(248px, 264px) minmax(0, 1fr) !important;
+  }
+  #ast #bot.qbot-sidebar-compact-v2:not(.narrow) > .bs:not(.qbot-sidebar-drawer) {
+    min-width: 248px !important;
+    max-width: 264px !important;
   }
 }
 #ast #bot.qbot-sidebar-compact-v2.narrow > .bs.qbot-sidebar-drawer {
-  width: min(224px, calc(100% - 44px)) !important;
+  width: min(304px, calc(100% - 36px)) !important;
+  max-width: calc(100% - 28px) !important;
+}
+@media (max-width: 620px) {
+  #ast #bot.qbot-sidebar-compact-v2.narrow > .bs.qbot-sidebar-drawer {
+    width: min(296px, calc(100% - 28px)) !important;
+    max-width: calc(100% - 20px) !important;
+  }
 }
