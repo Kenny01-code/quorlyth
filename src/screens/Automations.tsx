@@ -157,6 +157,14 @@ function AutomationWorkspace() {
   const [editing, setEditing] = useState<WorkflowDefinition | null>(null)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiTargetWorkflowId, setAiTargetWorkflowId] = useState('')
+  const [aiFields, setAiFields] = useState<AIField[]>(['identity', 'trigger', 'condition', 'actions'])
+  const [aiProjectChoice, setAiProjectChoice] = useState('')
+  const [aiBuildStatus, setAiBuildStatus] = useState<'idle' | 'generating' | 'filling' | 'ready' | 'error'>('idle')
+  const [aiBuildMessage, setAiBuildMessage] = useState('')
+  const [aiBuildSteps, setAiBuildSteps] = useState<AIBuildStep[]>([])
+  const [aiBuildText, setAiBuildText] = useState('')
 
   const manageableProjects = projects.filter(project =>
     project.status !== 'completed'
