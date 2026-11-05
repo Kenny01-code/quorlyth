@@ -277,3 +277,56 @@
 @media(prefers-reduced-motion:reduce) {
   .chat-page .chat-message-row { animation:none !important; }
 }
+
+
+/* Final small-screen pass: keep inbox actions compact and the thread usable. */
+@media (max-width: 760px) {
+  .chat-page .chat-top-actions {
+    display: flex !important;
+    flex: 1 0 100% !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 7px !important;
+    padding: 1px 0 4px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-x: contain !important;
+    scrollbar-width: none !important;
+  }
+  .chat-page .chat-top-actions::-webkit-scrollbar { display: none !important; }
+  .chat-page .chat-top-actions .btn {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    min-height: 38px !important;
+    padding-inline: 12px !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+  }
+  .chat-page .chat-thread { border-radius: 15px !important; }
+  .chat-page .chat-workspace.has-active-chat:not(.with-sidepanel) .chat-thread {
+    height: calc(100dvh - 124px - env(safe-area-inset-bottom, 0px)) !important;
+    min-height: min(390px, calc(100dvh - 124px)) !important;
+    max-height: none !important;
+  }
+  .chat-page .chat-thread-head { min-height: 60px !important; padding: 8px 9px !important; }
+  .chat-page .chat-thread-identity h3 { font-size: 13px !important; }
+  .chat-page .chat-thread-tools { flex: 0 0 auto !important; }
+  .chat-page .chat-thread-body {
+    padding: 12px 10px 16px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chat-page .chat-composer {
+    padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+@media (max-width: 380px) {
+  .chat-page .chat-topline { gap: 7px !important; }
+  .chat-page .chat-title { font-size: 21px !important; }
+  .chat-page .chat-utility-nav { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  .chat-page .chat-utility-item { gap: 3px !important; font-size: 9px !important; }
+  .chat-page .chat-utility-item > span { font-size: 9px !important; }
+  .chat-page .chat-thread-tools .chat-icon-btn { width: 30px !important; height: 30px !important; }
+  .chat-page .chat-bubble { max-width: calc(100% - 27px) !important; }
+}
