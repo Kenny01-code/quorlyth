@@ -18,7 +18,7 @@ export function Promote() {
   return <Gate owner><Inner /></Gate>
 }
 
-const LIM: Record<string, number> = { instagram: 2200, x: 280, tiktok: 2200, linkedin: 3000, facebook: 5000, threads: 500, bluesky: 300, reddit: 10000, whatsapp: 4096, telegram: 4096, youtube: 5000 }
+const LIM: Record<string, number> = { instagram: 2200, x: 280, tiktok: 2200, linkedin: 3000, facebook: 5000, threads: 500, bluesky: 300, reddit: 10000, whatsapp: 4096, telegram: 4096, youtube: 5000, pinterest: 500, mastodon: 500, tumblr: 4096 }
 
 function Inner() {
   const a = useApp()
@@ -65,6 +65,7 @@ function Inner() {
     { id: 'x', label: 'X' }, { id: 'facebook', label: 'Facebook' }, { id: 'linkedin', label: 'LinkedIn' },
     { id: 'threads', label: 'Threads' }, { id: 'bluesky', label: 'Bluesky' }, { id: 'reddit', label: 'Reddit' },
     { id: 'whatsapp', label: 'WhatsApp' }, { id: 'telegram', label: 'Telegram' },
+    { id: 'pinterest', label: 'Pinterest' }, { id: 'mastodon', label: 'Mastodon' }, { id: 'tumblr', label: 'Tumblr' },
   ]
   const copyAndOpenCreator = (network: 'instagram' | 'tiktok' | 'youtube') => {
     const destination = network === 'instagram' ? 'https://www.instagram.com/' : network === 'tiktok' ? 'https://www.tiktok.com/' : 'https://studio.youtube.com/'
@@ -197,7 +198,7 @@ function Inner() {
           <div className="aih"><span className={cn('aiic', busy && 'spin')}><Icon name="spark" size={20} /></span><div><h3 style={{ fontSize: 16 }}>Write with QuorlythBot</h3><p className="dim">Choose a voice, then let it draft.</p></div></div>
           <div className="csr"><span className="mut">Tone</span><div className="acts" style={{ margin: 0, gap: 6 }}>{chs('tone', [['warm', 'Warm'], ['bold', 'Bold'], ['playful', 'Playful'], ['professional', 'Professional']])}</div></div>
           <div className="csr"><span className="mut">Length</span><div className="acts" style={{ margin: 0, gap: 6 }}>{chs('len', [['short', 'Short'], ['medium', 'Medium'], ['long', 'Long']])}</div></div>
-          <div className="csr q-social-platform-row"><span className="mut">Platform</span><div className="acts q-social-platforms" style={{ margin: 0, gap: 6 }}>{chs('plat', [['instagram', 'Instagram'], ['x', 'X'], ['tiktok', 'TikTok'], ['linkedin', 'LinkedIn'], ['facebook', 'Facebook'], ['threads', 'Threads'], ['bluesky', 'Bluesky'], ['reddit', 'Reddit'], ['whatsapp', 'WhatsApp'], ['telegram', 'Telegram'], ['youtube', 'YouTube']])}</div></div>
+          <div className="csr q-social-platform-row"><span className="mut">Platform</span><div className="acts q-social-platforms" style={{ margin: 0, gap: 6 }}>{chs('plat', [['instagram', 'Instagram'], ['x', 'X'], ['tiktok', 'TikTok'], ['linkedin', 'LinkedIn'], ['facebook', 'Facebook'], ['threads', 'Threads'], ['bluesky', 'Bluesky'], ['reddit', 'Reddit'], ['whatsapp', 'WhatsApp'], ['telegram', 'Telegram'], ['youtube', 'YouTube'], ['pinterest', 'Pinterest'], ['mastodon', 'Mastodon'], ['tumblr', 'Tumblr']])}</div></div>
           {tg('tags', 'Add hashtags')}{tg('emo', 'Use emojis')}
           <div className="acts" style={{ marginTop: 12 }}>
             {busy ? <><button className="btn" onClick={() => ctl.current?.abort()}><Icon name="decline" size={16} />Stop</button><span className="dim">QuorlythBot is writing...</span></> : <>
