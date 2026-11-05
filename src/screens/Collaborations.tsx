@@ -1,4 +1,5 @@
 import '../styles/workspace-shell.css'
+import '../styles/ai-live.css'
 import { FormEvent, useEffect, useState } from 'react'
 import type { ChatAttachment, Comment, WorkAttachment, WorkSubmission } from '../lib/types'
 import { ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
