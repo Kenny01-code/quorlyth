@@ -54,6 +54,17 @@ const AI_FIELDS: Array<{ id: AIField; label: string }> = [
 ]
 const pause = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))
 
+function partialJsonString(source: string, key: string): string {
+  const match = source.match(new RegExp('"' + key + '"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)'))
+  return match?.[1]?.replace(/\\n/g, ' ').replace(/\\"/g, '"').replace(/\\\\/g, '\\').trim() || ''
+}
+
+function partialActionTitles(source: string): string[] {
+  return [...source.matchAll(/"title"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"/g)]
+    .map(match => match[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').trim())
+    .filter(Boolean).slice(0, 5)
+}
+
 const TEMPLATES: Template[] = [
   { key: 'idea-alert', name: 'New idea alert', description: 'Notify your team when a fresh community idea enters the system.', trigger: 'idea.created', action: 'notify', message: 'New idea submitted: {{event.title}}' },
   { key: 'task-handoff', name: 'Completed task handoff', description: 'Send a handoff notice when a contributor completes an assigned task.', trigger: 'task.completed', action: 'notify', message: 'Task completed: {{event.title}}. Review the evidence and confirm the next step.' },
@@ -183,6 +194,10 @@ function AutomationWorkspace() {
   const activeCount = workflows.filter(workflow => workflow.status === 'active').length
   const runCount = allRuns.length
   const failedCount = allRuns.filter(run => run.status === 'failed').length
+  const aiLiveName = partialJsonString(aiBuildText, 'name')
+  const aiLiveDescription = partialJsonString(aiBuildText, 'description')
+  const aiLiveTrigger = partialJsonString(aiBuildText, 'trigger')
+  const aiLiveActionTitles = partialActionTitles(aiBuildText)
 
   function beginNew(template?: Template) {
     if (!userId) return
@@ -374,7 +389,7 @@ function AutomationWorkspace() {
             'Output valid JSON only. No Markdown fences or commentary.',
           ].join(' '),
           onText: full => {
-            setAiBuildText(full.slice(-2200))
+            setAiBuildText(full.slice(0, 5000))
             setAiBuildMessage('QuorlythBot is composing the workflow definition.')
           },
         },
@@ -584,6 +599,20 @@ function AutomationWorkspace() {
         {aiBuildStatus !== 'idle' && <section className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildMessage || 'QuorlythBot is building your workflow'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
           <div className="wa-ai-build-steps">{aiBuildSteps.map(step => <div key={step.id} className={'wa-ai-build-step is-' + step.status}><i>{step.status === 'done' ? '✓' : step.status === 'failed' ? '!' : step.status === 'running' ? '·' : ''}</i><span>{step.label}</span><small>{step.status === 'done' ? 'Complete' : step.status === 'failed' ? 'Needs attention' : step.status === 'running' ? 'Working' : 'Queued'}</small></div>)}</div>
+          {aiBuildStatus === 'generating' && (aiLiveName || aiLiveDescription || aiLiveTrigger || aiLiveActionTitles.length > 0) && <div className="wa-ai-live-preview">
+            <small>LIVE WORKFLOW FIELDS</small>
+            {aiLiveName && <p><b>Name</b><span>{aiLiveName}</span></p>}
+            {aiLiveDescription && <p><b>Purpose</b><span>{aiLiveDescription}</span></p>}
+            {aiLiveTrigger && <p><b>Trigger</b><span>{TRIGGER_INFO[aiLiveTrigger as WorkflowTrigger]?.title || aiLiveTrigger}</span></p>}
+            {aiLiveActionTitles.map((title, index) => <p key={index}><b>Action {index + 1}</b><span>{title}</span></p>)}
+          </div>}
+          {aiBuildStatus === 'generating' && (aiLiveName || aiLiveDescription || aiLiveTrigger || aiLiveActionTitles.length > 0) && <div className="wa-ai-live-preview">
+            <small>LIVE WORKFLOW FIELDS</small>
+            {aiLiveName && <p><b>Name</b><span>{aiLiveName}</span></p>}
+            {aiLiveDescription && <p><b>Purpose</b><span>{aiLiveDescription}</span></p>}
+            {aiLiveTrigger && <p><b>Trigger</b><span>{TRIGGER_INFO[aiLiveTrigger as WorkflowTrigger]?.title || aiLiveTrigger}</span></p>}
+            {aiLiveActionTitles.map((title, index) => <p key={index}><b>Action {index + 1}</b><span>{title}</span></p>)}
+          </div>}
           {aiBuildStatus === 'ready' && <p className="wa-ai-ready-note">This is still a draft until you save it. “Save & activate” makes it listen for the trigger. “Run a test now” executes one manual test using the actions shown.</p>}
         </section>}
         <form id="wa-editor-form" className="wa-graph-editor-form" onSubmit={saveWorkflow}>
