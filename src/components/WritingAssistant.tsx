@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { streamChat } from '../ai/client'
+import '../styles/writing-assistant-live.css'
 
 type Point = { x: number; y: number }
 type WritingMode = { id: string; label: string; instruction: string; kind?: 'suggestions' }
@@ -357,6 +358,7 @@ export function WritingAssistant() {
             <span className="q-writing-option-number">{String(index + 1).padStart(2, '0')}</span><span className="q-writing-option-text">{option}</span><span className="q-writing-option-use">Use</span>
           </button>)}
         </div>}
+        {loading && mode.kind === 'suggestions' && <p className="q-writing-stream-hint">QuorlythBot is drafting the next option in real time…</p>}
         {preview && <div className="q-writing-preview"><p className="q-writing-preview-label">PREVIEW · {mode.label.toUpperCase()}</p><div>{preview}</div></div>}
         <footer className="q-writing-panel-footer"><span>{loading ? 'Preparing a focused suggestion' : options.length ? 'Choose one to use it' : preview ? 'Review before applying' : 'AI help adapts to this field'}</span>{preview && !loading && <><button type="button" className="q-writing-secondary" onClick={() => { setPreview(''); setError('') }}>Discard</button><button type="button" className="q-writing-apply" onClick={applyPreview}>Apply text</button></>}</footer>
       </section>,
