@@ -207,7 +207,7 @@ export function SocialAccountsSettings() {
         <p className="dim">Connect a channel once, then publish approved drafts from Quorlyth without copying captions between apps.</p>
       </div>
       <button type="button" className="btn" onClick={() => { setLoading(true); void refresh() }} disabled={loading || !!busy}>
-        <Icon name="refresh-cw" size={14} /> Refresh
+        <Icon name="rotate" size={14} /> Refresh
       </button>
     </div>
 
