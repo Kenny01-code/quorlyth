@@ -34,6 +34,7 @@ export async function generateProjectPlan(input: {
   comments: Array<{ id: string; authorId: string; text: string; at: number }>
   team: Array<{ id: string; name: string }>
   signal?: AbortSignal
+  onProgress?: (text: string) => void
 }): Promise<AIProjectPlan> {
   const prompt = JSON.stringify({
     task: 'Organize community signal into a collaboration-ready project plan.',
