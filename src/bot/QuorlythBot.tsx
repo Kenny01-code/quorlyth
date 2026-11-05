@@ -916,6 +916,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           const message = 'I prepared one coordinated plan with ' + batch.actions.length + ' validated change(s). Review the exact targets below, then apply everything with one confirmation. I will recheck permissions for every write; destructive actions, evidence decisions, publishing, workflow runs and activation are only included when explicitly requested. Nothing has changed yet.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
           setOrganizationProgress(null)
+          setOrganizationProgress(null)
           setPendingAction(batch)
           return
         } catch (failure) {
@@ -944,6 +945,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 ? 'I prepared a manual test run of this workflow. Review the actions first; confirming may create tasks, send notifications, or call the configured HTTPS webhook.'
                 : 'I designed this automation using your available Quorlyth triggers and actions. Review the exact trigger, conditions, workspace targets, and actions below. It has not been saved or run yet.'
             persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            setOrganizationProgress(null)
             setPendingAction(automationAction)
             return
           }
@@ -976,6 +978,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 ? 'I prepared the task status change. The task will not be marked complete; completion still requires reviewed evidence.'
                 : 'I prepared this workspace change using your visible project data and access level. Review the exact workspace and task details below; nothing has been saved yet.'
             persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            setOrganizationProgress(null)
             setPendingAction(workspaceAction)
             return
           }
@@ -1001,7 +1004,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             ? 'I prepared the in-app promotion for review. It will not publish to an external social network. Confirm only if the target and wording are correct.'
             : 'I prepared the changes for review below. Nothing has been saved yet. Confirm to apply them, or cancel to leave everything unchanged.'
         persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
-        setPendingAction(action)
+        setOrganizationProgress(null)
+        setOrganizationProgress(null)
+      setPendingAction(action)
         return
       }
 
