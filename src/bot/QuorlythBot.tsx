@@ -4097,7 +4097,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   {slash.length > 0 && <div className="bsl">{slash.map((s, i) => <button key={s.id} className={cn('bsi', i === slashSel && 'on')} onClick={() => { setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) }}><Icon name={s.icon} size={16} /><b>/{s.id}</b><span className="dim">{s.d}</span></button>)}</div>}
                   {view === 'chat' && !live && !busy && !pendingAction && <div className="qbot-quick-prompts" aria-label="Suggested prompts">
                     {quickPrompts.map(item => <button key={item.label} type="button" className="chip" onClick={() => send(item.prompt)}>{item.label}</button>)}
-                    <button type="button" className="chip on" onClick={() => send('One-click organize my Quorlyth site, prioritizing the current page and its linked records')}><Icon name="sparkles" size={13} />Organize with AI</button>
+                    <button type="button" className="chip on" onClick={() => send(loc.pathname.startsWith('/automations')
+                      ? 'Create and recommend a complete automation workflow for my current Quorlyth setup. Use safe defaults, save it as a draft, and open the workflow map in Automation Studio.'
+                      : 'One-click organize my Quorlyth site, prioritizing the current page and its linked records')}><Icon name="sparkles" size={13} />Organize with AI</button>
                   </div>}
                   <div className="ast-q">
                     {tour >= 0 && <><button className="chip on" onClick={() => { const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; setTour(tour + 1); step(steps, tour + 1) }}>Next</button><button className="chip" onClick={() => { setTour(-1); robot.current?.set('rest') }}>End tour</button></>}
