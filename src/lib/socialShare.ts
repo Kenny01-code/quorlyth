@@ -7,6 +7,9 @@ export type SocialShareTarget =
   | 'reddit'
   | 'whatsapp'
   | 'telegram'
+  | 'pinterest'
+  | 'mastodon'
+  | 'tumblr'
 
 export function socialShareUrl(
   target: SocialShareTarget,
@@ -37,6 +40,12 @@ export function socialShareUrl(
       return 'https://wa.me/?text=' + messageWithLink
     case 'telegram':
       return 'https://t.me/share/url?url=' + url + '&text=' + message
+    case 'pinterest':
+      return 'https://www.pinterest.com/pin/create/button/?url=' + url + '&description=' + message
+    case 'mastodon':
+      return 'https://mastodon.social/share?text=' + messageWithLink
+    case 'tumblr':
+      return 'https://www.tumblr.com/widgets/share/tool?canonicalUrl=' + url + '&title=' + heading + '&caption=' + message
   }
 }
 
