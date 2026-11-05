@@ -454,34 +454,76 @@ function AutomationWorkspace() {
         actions = previousActions.map(node => ({ ...node.action }))
       }
 
-      const triggerId = !aiFields.includes('trigger') && previousTrigger ? previousTrigger.id : newWorkflowId()
-      const triggerNode: WorkflowNode = { id: triggerId, type: 'trigger', trigger: chosenTrigger, position: { x: 60, y: 220 } }
-      const conditionId = conditionData
-        ? (!aiFields.includes('condition') && previousCondition ? previousCondition.id : newWorkflowId())
-        : ''
-      const conditionNode: WorkflowNode | null = conditionData
-        ? { id: conditionId, type: 'condition', ...conditionData, position: { x: 390, y: 220 } }
-        : null
-      const actionNodes: Array<Extract<WorkflowNode, { type: 'action' }>> = actions.map((action, index) => ({
-        id: action.id,
-        type: 'action',
-        action: { ...action },
-        position: { x: conditionNode ? 760 : 430, y: 90 + index * 145 },
-      }))
-      const nodes: WorkflowNode[] = [triggerNode, ...(conditionNode ? [conditionNode] : []), ...actionNodes]
-      const edges: WorkflowEdge[] = []
-      if (conditionNode) edges.push({ id: newWorkflowId(), source: triggerNode.id, target: conditionNode.id, sourceHandle: 'next' })
-      let previousId = conditionNode?.id || triggerNode.id
-      actionNodes.forEach((node, index) => {
-        edges.push({
-          id: newWorkflowId(),
-          source: previousId,
-          target: node.id,
-          sourceHandle: conditionNode && index === 0 ? 'true' : 'next',
-          ...(conditionNode && index === 0 ? { label: 'true' } : {}),
+      let triggerNode: Extract<WorkflowNode, { type: 'trigger' }>
+      let conditionNode: Extract<WorkflowNode, { type: 'condition' }> | null
+      let actionNodes: Array<Extract<WorkflowNode, { type: 'action' }>>
+      let nodes: WorkflowNode[]
+      let edges: WorkflowEdge[]
+
+      if (existing && !aiFields.includes('actions')) {
+        // Preserve the executable graph when the user edits identity, trigger or
+        // filter fields only. In particular, do not flatten existing true/false
+        // branches merely because the user did not ask to touch actions.
+        const preservedTrigger = previousTrigger
+        if (!preservedTrigger) throw new Error('This workflow has no valid trigger node. Open the canvas and repair it before using AI edit.')
+        triggerNode = aiFields.includes('trigger')
+          ? { ...preservedTrigger, trigger: chosenTrigger }
+          : { ...preservedTrigger }
+        nodes = baseGraph.nodes.map(node => node.id === triggerNode.id ? triggerNode : { ...node })
+        edges = baseGraph.edges.map(edge => ({ ...edge }))
+        conditionNode = previousCondition ? { ...previousCondition } : null
+
+        if (aiFields.includes('condition')) {
+          if (previousCondition && !conditionData) {
+            throw new Error('Quorlyth could not produce a valid replacement filter. Your existing filter is unchanged; regenerate or edit the filter manually.')
+          }
+          if (previousCondition && conditionData) {
+            conditionNode = { ...previousCondition, ...conditionData }
+            nodes = nodes.map(node => node.id === conditionNode!.id ? conditionNode! : node)
+          } else if (!previousCondition && conditionData) {
+            const firstActionEdge = edges.find(edge => edge.source === triggerNode.id && edge.sourceHandle === 'next')
+            if (!firstActionEdge) throw new Error('Connect the trigger to an action before adding an AI filter.')
+            conditionNode = { id: newWorkflowId(), type: 'condition', ...conditionData, position: { x: 390, y: 220 } }
+            nodes = [...nodes, conditionNode]
+            edges = [
+              ...edges.filter(edge => edge.id !== firstActionEdge.id),
+              { id: newWorkflowId(), source: triggerNode.id, target: conditionNode.id, sourceHandle: 'next' },
+              { id: newWorkflowId(), source: conditionNode.id, target: firstActionEdge.target, sourceHandle: 'true', label: 'true' },
+            ]
+          }
+        }
+        actionNodes = nodes.filter((node): node is Extract<WorkflowNode, { type: 'action' }> => node.type === 'action')
+        actions = actionNodes.map(node => ({ ...node.action }))
+      } else {
+        const triggerId = !aiFields.includes('trigger') && previousTrigger ? previousTrigger.id : newWorkflowId()
+        triggerNode = { id: triggerId, type: 'trigger', trigger: chosenTrigger, position: { x: 60, y: 220 } }
+        const conditionId = conditionData
+          ? (!aiFields.includes('condition') && previousCondition ? previousCondition.id : newWorkflowId())
+          : ''
+        conditionNode = conditionData
+          ? { id: conditionId, type: 'condition', ...conditionData, position: { x: 390, y: 220 } }
+          : null
+        actionNodes = actions.map((action, index) => ({
+          id: action.id,
+          type: 'action',
+          action: { ...action },
+          position: { x: conditionNode ? 760 : 430, y: 90 + index * 145 },
+        }))
+        nodes = [triggerNode, ...(conditionNode ? [conditionNode] : []), ...actionNodes]
+        edges = []
+        if (conditionNode) edges.push({ id: newWorkflowId(), source: triggerNode.id, target: conditionNode.id, sourceHandle: 'next' })
+        let previousId = conditionNode?.id || triggerNode.id
+        actionNodes.forEach((node, index) => {
+          edges.push({
+            id: newWorkflowId(),
+            source: previousId,
+            target: node.id,
+            sourceHandle: conditionNode && index === 0 ? 'true' : 'next',
+            ...(conditionNode && index === 0 ? { label: 'true' } : {}),
+          })
+          previousId = node.id
         })
-        previousId = node.id
-      })
+      }
 
       const name = aiFields.includes('identity') ? String(spec.name || base.name || 'AI-built workflow').trim().slice(0, 100) : base.name
       const description = aiFields.includes('identity') ? String(spec.description || base.description || '').trim().slice(0, 500) : base.description
@@ -526,7 +568,8 @@ function AutomationWorkspace() {
       await pause(180)
       if (conditionNode) {
         visibleNodes.push(conditionNode)
-        visibleEdges.push({ id: edges[0].id, source: triggerNode.id, target: conditionNode.id, sourceHandle: 'next' })
+        const conditionEdge = edges.find(edge => edge.target === conditionNode.id)
+        if (conditionEdge) visibleEdges.push(conditionEdge)
         reveal([...visibleNodes], [...visibleEdges])
       }
       setAiBuildSteps(current => current.map(step => step.id === 'condition' ? { ...step, status: 'done' } : step.id === 'action-0' ? { ...step, status: 'running' } : step))
