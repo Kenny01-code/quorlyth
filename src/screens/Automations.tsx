@@ -1,7 +1,6 @@
 import '../styles/automations.css'
 import '../styles/automation-ai.css'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
@@ -144,7 +143,6 @@ function usePrivateWorkflowCollection<T extends { id?: string }>(collection: str
 
 function AutomationWorkspace() {
   const app = useApp()
-  const nav = useNavigate()
   const userId = app.me?.id || ''
   const collectionPath = userId ? 'data/users/' + userId + '/automations' : ''
   const workflows = usePrivateWorkflowCollection<WorkflowDefinition>(collectionPath)
@@ -231,7 +229,6 @@ function AutomationWorkspace() {
       app.toast(next.status === 'active' ? 'Workflow saved and activated. It is now listening for its trigger.' : 'Workflow saved as a draft.')
       setEditing(null)
       setTab('workflows')
-      if (!current) nav('/architecture?automationCreated=' + encodeURIComponent(next.id) + '#arch-system-title')
     } catch (failure) {
       setError(userFacingMutationError(failure, 'save this workflow'))
     } finally {
