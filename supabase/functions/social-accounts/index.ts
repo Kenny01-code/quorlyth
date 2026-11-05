@@ -53,9 +53,9 @@ async function readConnection(admin: ReturnType<typeof createClient>, userId: st
   if (!row) throw new Error("This social account is no longer connected. Refresh and try again.");
   return row as Json;
 }
-async function saveTokens(admin: ReturnType<typeof createClient>, row: Json, accessToken: string, refreshToken: string | null, expiresAt: string | null, refreshExpiresAt: string | null) {
+async function saveTokens(admin: ReturnType<typeof createClient>, userId: string, row: Json, accessToken: string, refreshToken: string | null, expiresAt: string | null, refreshExpiresAt: string | null) {
   const { error } = await admin.rpc("upsert_social_connection", {
-    p_user_id: row.user_id,
+    p_user_id: userId,
     p_provider: row.provider,
     p_provider_account_id: row.provider_account_id,
     p_account_name: row.account_name,
@@ -118,7 +118,7 @@ async function refreshIfNeeded(admin: ReturnType<typeof createClient>, userId: s
     token_expires_at: tokenExpiry(payload.expires_in),
     refresh_token_expires_at: tokenExpiry(payload.refresh_token_expires_in) || row.refresh_token_expires_at,
   };
-  await saveTokens(admin, updated, updated.access_token, updated.refresh_token, updated.token_expires_at, updated.refresh_token_expires_at);
+  await saveTokens(admin, userId, updated, updated.access_token, updated.refresh_token, updated.token_expires_at, updated.refresh_token_expires_at);
   return updated;
 }
 async function publishToProvider(admin: ReturnType<typeof createClient>, userId: string, connectionId: string, body: Json) {
