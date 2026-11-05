@@ -18,7 +18,7 @@ export function Promote() {
   return <Gate owner><Inner /></Gate>
 }
 
-const LIM: Record<SocialPromotionPlatform, number> = { instagram: 2200, x: 280, tiktok: 2200, linkedin: 3000, facebook: 5000, threads: 500, bluesky: 300, reddit: 10000, whatsapp: 4096, telegram: 4096, youtube: 5000 }
+const LIM: Record<string, number> = { instagram: 2200, x: 280, tiktok: 2200, linkedin: 3000, facebook: 5000, threads: 500, bluesky: 300, reddit: 10000, whatsapp: 4096, telegram: 4096, youtube: 5000 }
 
 function Inner() {
   const a = useApp()
