@@ -12,6 +12,7 @@ import { useUserState } from '../lib/userState'
 import { useNotifs } from '../lib/notifs'
 import { BackupRestore } from '../components/BackupRestore'
 import { socialShareUrl } from '../lib/socialShare'
+import '../styles/social-sharing.css'
 
 export function Settings() {
   return <Gate><Inner /></Gate>
