@@ -156,12 +156,12 @@ function Inner() {
   const copyAndOpenCreator = (network: 'instagram' | 'tiktok' | 'youtube') => {
     const destination = network === 'instagram' ? 'https://www.instagram.com/' : network === 'tiktok' ? 'https://www.tiktok.com/' : 'https://studio.youtube.com/'
     window.open(destination, '_blank', 'noopener,noreferrer')
-    void navigator.clipboard.writeText((pub || '') + '\\n\\n' + sourceIdeaUrl).then(() => a.toast('Caption and source idea link copied. Paste them into ' + (network === 'youtube' ? 'YouTube Studio' : network === 'instagram' ? 'Instagram' : 'TikTok') + ' to finish your post.')).catch(() => a.toast('Could not copy the caption. You can still copy it from the post above.'))
+    void navigator.clipboard.writeText((pub || '') + '\n\n' + sourceIdeaUrl).then(() => a.toast('Caption and source idea link copied. Paste them into ' + (network === 'youtube' ? 'YouTube Studio' : network === 'instagram' ? 'Instagram' : 'TikTok') + ' to finish your post.')).catch(() => a.toast('Could not copy the caption. You can still copy it from the post above.'))
   }
   const openShareTarget = (target: SocialShareTarget) => {
     if (target === 'linkedin') {
       openSocialShare('linkedin', pub || '', sourceIdeaUrl, 'A post from Quorlyth')
-      void navigator.clipboard.writeText((pub || '') + '\\n\\n' + sourceIdeaUrl).then(() => a.toast('Caption and source link copied. Paste them into your LinkedIn post.')).catch(() => a.toast('LinkedIn opened. Copy the caption from the post above.'))
+      void navigator.clipboard.writeText((pub || '') + '\n\n' + sourceIdeaUrl).then(() => a.toast('Caption and source link copied. Paste them into your LinkedIn post.')).catch(() => a.toast('LinkedIn opened. Copy the caption from the post above.'))
       return
     }
     openSocialShare(target, pub || '', sourceIdeaUrl, 'A post from Quorlyth')
