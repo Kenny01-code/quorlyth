@@ -45,7 +45,9 @@ export function AutomationRuntime() {
   useEffect(() => {
     const store = app.backend?.store
     const userId = app.me?.id
-    if (!store || !userId) return
+    // Supabase-backed workflows run in the persistent server worker.
+    // Keep this browser runtime for local/demo only to prevent duplicate executions.
+    if (app.backend?.auth.mode === 'supabase' || !store || !userId) return
 
     let alive = true
     const unsubscribes: Array<() => void> = []
