@@ -593,10 +593,15 @@ function AutomationWorkspace() {
       const finalError = validateWorkflowGraph(next)
       if (finalError) throw new Error(finalError)
       await pause(160)
+      if (!existing) {
+        const draftPath = collectionPath + '/' + next.id
+        const alreadySaved = await app.backend.store.get(draftPath)
+        if (!alreadySaved) await app.backend.store.create(draftPath, next)
+      }
       setEditing(next)
       setAiBuildSteps(current => current.map(step => step.id === 'validation' ? { ...step, status: 'done' } : step))
       setAiBuildStatus('ready')
-      setAiBuildMessage(existing ? 'Your selected workflow has been updated in the builder. Review it, then save or activate it.' : 'Your recommended workflow is ready. Review the map, then save it as a draft or activate it.')
+      setAiBuildMessage(existing ? 'Your selected workflow is updated in the builder. Review it, then save your changes.' : 'Your recommended workflow has been saved as a draft automatically. Review the live map, then activate it when you are ready.')
       setError('')
     } catch (failure) {
       const message = failure instanceof Error ? failure.message : 'QuorlythBot could not build this workflow. Try again.'
@@ -642,13 +647,6 @@ function AutomationWorkspace() {
         {aiBuildStatus !== 'idle' && <section className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildMessage || 'QuorlythBot is building your workflow'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
           <div className="wa-ai-build-steps">{aiBuildSteps.map(step => <div key={step.id} className={'wa-ai-build-step is-' + step.status}><i>{step.status === 'done' ? '✓' : step.status === 'failed' ? '!' : step.status === 'running' ? '·' : ''}</i><span>{step.label}</span><small>{step.status === 'done' ? 'Complete' : step.status === 'failed' ? 'Needs attention' : step.status === 'running' ? 'Working' : 'Queued'}</small></div>)}</div>
-          {aiBuildStatus === 'generating' && (aiLiveName || aiLiveDescription || aiLiveTrigger || aiLiveActionTitles.length > 0) && <div className="wa-ai-live-preview">
-            <small>LIVE WORKFLOW FIELDS</small>
-            {aiLiveName && <p><b>Name</b><span>{aiLiveName}</span></p>}
-            {aiLiveDescription && <p><b>Purpose</b><span>{aiLiveDescription}</span></p>}
-            {aiLiveTrigger && <p><b>Trigger</b><span>{TRIGGER_INFO[aiLiveTrigger as WorkflowTrigger]?.title || aiLiveTrigger}</span></p>}
-            {aiLiveActionTitles.map((title, index) => <p key={index}><b>Action {index + 1}</b><span>{title}</span></p>)}
-          </div>}
           {aiBuildStatus === 'generating' && (aiLiveName || aiLiveDescription || aiLiveTrigger || aiLiveActionTitles.length > 0) && <div className="wa-ai-live-preview">
             <small>LIVE WORKFLOW FIELDS</small>
             {aiLiveName && <p><b>Name</b><span>{aiLiveName}</span></p>}
@@ -707,6 +705,14 @@ function AutomationWorkspace() {
           <span>What should happen automatically?</span>
           <textarea value={aiPrompt} onChange={event => setAiPrompt(event.target.value)} rows={3} maxLength={1800} placeholder="Example: When someone submits a new idea, notify me. If the idea mentions a launch, create a follow-up task in my product workspace." />
         </label>
+        <div className="wa-ai-suggestions" aria-label="Suggested automations">
+          <span>Need an idea? Try one of these</span>
+          <div>
+            <button type="button" onClick={() => { setAiTargetWorkflowId(''); setAiPrompt('When a new idea is submitted, notify me with its title and community so I can review it quickly.') }}>New idea alerts</button>
+            <button type="button" onClick={() => { setAiTargetWorkflowId(''); setAiPrompt('When a contributor submits work evidence, notify the workspace reviewer with the task and submission details.') }}>Evidence review</button>
+            <button type="button" onClick={() => { setAiTargetWorkflowId(''); setAiPrompt('When a collaboration milestone starts, notify the project team and include the milestone name.') }}>Milestone updates</button>
+          </div>
+        </div>
         <div className="wa-ai-controls">
           <label><span>Workflow to edit</span>
             <select value={aiTargetWorkflowId} onChange={event => setAiTargetWorkflowId(event.target.value)}>
