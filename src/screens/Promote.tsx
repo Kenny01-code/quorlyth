@@ -11,6 +11,7 @@ import { cleanTag, cn, when } from '../lib/util'
 import { useDraftState } from '../lib/useDraftState'
 import { openSocialShare } from '../lib/socialShare'
 import type { SocialPromotionPlatform, SocialShareTarget } from '../lib/socialShare'
+import '../styles/social-sharing.css'
 
 export function Promote() {
   return <Gate owner><Inner /></Gate>
