@@ -142,6 +142,7 @@ async function publishToProvider(admin: ReturnType<typeof createClient>, userId:
   }
 
   if (row.provider === "linkedin") {
+    if ([...text].length > 3000) throw new Error("This LinkedIn post exceeds 3,000 characters. Shorten it before publishing.");
     const author = clean(row.metadata?.authorUrn, 240);
     if (!author) throw new Error("The LinkedIn account identity is missing. Disconnect and reconnect LinkedIn.");
     const response = await fetch("https://api.linkedin.com/rest/posts", {
@@ -180,6 +181,7 @@ async function publishToProvider(admin: ReturnType<typeof createClient>, userId:
   }
 
   if (row.provider === "instagram") {
+    if ([...caption].length > 2200) throw new Error("Instagram captions can contain up to 2,200 characters. Shorten the caption before publishing.");
     const mediaUrl = clean(body.mediaUrl, 1800);
     if (!mediaUrl) throw new Error("Instagram requires a publicly reachable image URL. Add an image URL before publishing.");
     let parsed: URL;
@@ -207,6 +209,8 @@ async function publishToProvider(admin: ReturnType<typeof createClient>, userId:
   }
 
   if (row.provider === "pinterest") {
+    if ([...caption].length > 800) throw new Error("Pinterest Pin descriptions can contain up to 800 characters. Shorten the description before publishing.");
+    if ([...link].length > 2048) throw new Error("Pinterest destination links can contain up to 2,048 characters.");
     const mediaUrl = clean(body.mediaUrl, 1800);
     const boardId = clean(body.boardId || row.metadata?.defaultBoardId, 120);
     if (!mediaUrl) throw new Error("Pinterest Pins need a public image URL. Add one before publishing.");
