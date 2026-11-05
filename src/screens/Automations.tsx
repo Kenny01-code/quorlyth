@@ -1,6 +1,7 @@
 import '../styles/automations.css'
 import '../styles/automation-ai.css'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
@@ -154,6 +155,8 @@ function usePrivateWorkflowCollection<T extends { id?: string }>(collection: str
 
 function AutomationWorkspace() {
   const app = useApp()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const createdWorkflowId = searchParams.get('automationCreated') || ''
   const userId = app.me?.id || ''
   const collectionPath = userId ? 'data/users/' + userId + '/automations' : ''
   const workflows = usePrivateWorkflowCollection<WorkflowDefinition>(collectionPath)
@@ -221,6 +224,18 @@ function AutomationWorkspace() {
     setError('')
     setBusy('')
   }
+
+  useEffect(() => {
+    if (!createdWorkflowId) return
+    const workflow = workflows.find(item => item.id === createdWorkflowId)
+    if (!workflow) return
+    beginEdit(workflow)
+    setTab('workflows')
+    const next = new URLSearchParams(searchParams)
+    next.delete('automationCreated')
+    setSearchParams(next, { replace: true })
+    app.toast('Opened your new workflow in Automation Studio. Review its map before activating it.')
+  }, [createdWorkflowId, workflows, searchParams, setSearchParams])
 
   async function saveWorkflow(event?: FormEvent, activate = false) {
     event?.preventDefault()
