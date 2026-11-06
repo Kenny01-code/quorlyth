@@ -67,6 +67,7 @@ async function rpcBoolean(base, anonKey, token, name) {
 const SOCIAL_PROVIDER_LABELS = Object.freeze({
   x: 'X',
   linkedin: 'LinkedIn',
+  meta: 'Meta (Facebook + Instagram)',
   facebook: 'Facebook Page',
   instagram: 'Instagram',
   pinterest: 'Pinterest',
