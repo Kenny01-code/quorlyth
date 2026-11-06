@@ -4,7 +4,6 @@ import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
 import { Logo } from './lib/Logo'
-import { QuorlythLoader } from './components/QuorlythLoader'
 const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.Landing })))
 const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
 const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
@@ -50,16 +49,6 @@ function DemoRedirect({ onBeforeRedirect }: { onBeforeRedirect: () => void }) {
   // The callback only writes to a stable ref; it intentionally doesn't trigger another redirect on parent rerenders.
   }, [a.demo, a.enterDemo, nav])
   return null
-}
-
-function DelayedRouteLoader() {
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    // Keep fast route changes visually quiet; only show the Quorlyth mark if a lazy page is genuinely slow.
-    const timer = window.setTimeout(() => setVisible(true), 140)
-    return () => window.clearTimeout(timer)
-  }, [])
-  return visible ? <QuorlythLoader variant="route" label="Opening page" /> : null
 }
 
 function MissingRoute() {
@@ -339,7 +328,8 @@ export default function App() {
     }
   }
 
-  if (!a.ready) return <main aria-label="Preparing Quorlyth"><QuorlythLoader variant="route" label="Preparing Quorlyth" /></main>
+  // Hold the app shell until auth is known, but do not block the screen with a branded loader.
+  if (!a.ready) return <main className="app-startup" aria-busy="true"><span className="sr" role="status">Connecting to Quorlyth…</span></main>
   if (a.startupError) return (
     <main className="app-error">
       <section className="glass pad" role="alert">
@@ -363,11 +353,11 @@ export default function App() {
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main" tabIndex={-1} aria-busy={!!a.me && (!a.dataReady || !a.platformRolesReady)}>
         {a.me && (!a.dataReady || !a.platformRolesReady) ? (
-          <div className="qth-data-loading" role="status" aria-live="polite">
-            <QuorlythLoader variant="route" label="Loading your latest Quorlyth data" />
-          </div>
+          // Keep the account-isolation gate: never reveal a previous or incomplete account snapshot.
+          // The status is screen-reader only; normal users are not interrupted by a full-screen loader.
+          <span className="sr" role="status" aria-live="polite">Syncing your workspace…</span>
         ) : <section className="on">
-          <Suspense fallback={<DelayedRouteLoader />}>
+          <Suspense fallback={null}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/architecture" element={<Architecture />} />
