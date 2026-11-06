@@ -902,7 +902,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     const labelledCaption = requestText.match(/(?:caption|post text|exact text|copy)\s*[:=]\s*["“']?([\s\S]+?)["”']?\s*$/i)
     const quotedCaption = requestText.match(/["“']([\s\S]{3,5000}?)["”']/)
     let postText = String(labelledCaption?.[1] || quotedCaption?.[1] || '').trim()
-    let link = requestText.match(/https:\/\/[^\s<>"']+/i)?.[0] || ''
+    let link = (requestText.match(/https:\/\/[^\s<>"']+/i)?.[0] || '').slice(0, 1500)
 
     const activeIdeaId = loc.pathname.match(/^\/(?:idea|collaboration)\/([^/]+)/)?.[1]
       || (['/projects', '/queue'].includes(loc.pathname) ? new URLSearchParams(loc.search).get('idea') || '' : '')
@@ -996,7 +996,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       }
       const automationCommand = /\b(?:automation|automations|workflow|workflows|automate)\b/i.test(t)
         && /\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute)\b/i.test(t)
-      const socialPublishCommand = isSocialPublishIntent(request)
       const universalOrganizeCommand = /\b(one[- ]click organize|organize this page|auto[- ]organize(?: this page| the current page)?|organize the current page|organize my (?:whole|entire) (?:site|quorlyth)|organize everything (?:on|in) (?:my )?quorlyth)\b/i.test(t)
       if (universalOrganizeCommand) {
         stopVoice()
@@ -1453,6 +1452,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     if (!request) return { ok: false, message: 'I did not catch the task clearly. Please say what you want me to prepare.' }
     if (!a.me) return { ok: false, message: 'Sign in first. I can answer questions as a visitor, but private workspace actions need your account.' }
 
+    const socialPublishCommand = isSocialPublishIntent(request)
     const universalOrganizeCommand = /\b(one[- ]click organize|organize this page|auto[- ]organize(?: this page| the current page)?|organize the current page|organize my (?:whole|entire) (?:site|quorlyth)|organize everything (?:on|in) (?:my )?quorlyth)\b/i.test(request)
     const automationCommand = /\b(?:automation|automations|workflow|workflows|automate)\b/i.test(request)
       && /\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute)\b/i.test(request)
