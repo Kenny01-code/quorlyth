@@ -3855,6 +3855,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           community: 'Community created successfully.',
           idea: 'Idea submitted successfully.',
           promote: 'Idea marked as promoted in Quorlyth. It has not been posted to an external platform.',
+          publishSocial: 'Social post published successfully.',
           cover: 'Community cover updated successfully.',
           deleteCommunity: 'Community and its linked ideas deleted successfully.',
           updateIdea: 'Idea updated successfully.',
@@ -4132,6 +4133,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   community: 'Create community',
                   idea: 'Submit idea',
                   promote: 'Prepare idea promotion',
+                  publishSocial: 'Publish a social post',
                   cover: 'Change cover style',
                   deleteCommunity: 'Delete community',
                   updateIdea: 'Edit idea',
@@ -4169,7 +4171,41 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                    decideAIOrganizerRequest: 'Review AI organizer request',
                    decideAccessRequest: 'Review platform access request',
                    updateSpaceSettings: 'Update platform space settings',
-                } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3><p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'batchActions'
+                } as Record<PendingAction['type'], string>)[pendingAction.type]}</h3>
+                 {pendingAction.type === 'publishSocial' && <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+                   <label className="field">
+                     <span>Publish to account</span>
+                     <select value={pendingAction.connectionId} disabled={busy} onChange={event => {
+                       const target = pendingAction.targets.find(item => item.connectionId === event.target.value)
+                       if (target) setPendingAction({ ...pendingAction, connectionId: target.connectionId, provider: target.provider, accountName: target.accountName, boardId: target.defaultBoardId })
+                     }}>
+                       {pendingAction.targets.map(target => <option key={target.connectionId} value={target.connectionId}>{socialProviderLabel(target.provider)} · {target.accountName}</option>)}
+                     </select>
+                   </label>
+                   <label className="field">
+                     <span>Post caption</span>
+                     <textarea rows={6} value={pendingAction.text} disabled={busy} onChange={event => setPendingAction({ ...pendingAction, text: event.target.value, title: event.target.value.split('\n')[0].slice(0, 100) })} style={{ width: '100%', resize: 'vertical' }} />
+                   </label>
+                   <label className="field">
+                     <span>Link (optional)</span>
+                     <input value={pendingAction.link} disabled={busy} onChange={event => setPendingAction({ ...pendingAction, link: event.target.value })} placeholder="https://example.com" inputMode="url" />
+                   </label>
+                   {(pendingAction.provider === 'instagram' || pendingAction.provider === 'pinterest') && <label className="field">
+                     <span>Public HTTPS image URL</span>
+                     <input value={pendingAction.mediaUrl} disabled={busy} onChange={event => setPendingAction({ ...pendingAction, mediaUrl: event.target.value })} placeholder="https://your-site.com/image.jpg" inputMode="url" />
+                     <small className="dim">The image must be publicly reachable by the social network. A private Quorlyth attachment is not a public media URL.</small>
+                   </label>}
+                   {pendingAction.provider === 'pinterest' && <label className="field">
+                     <span>Pinterest board</span>
+                     <select value={pendingAction.boardId} disabled={busy} onChange={event => setPendingAction({ ...pendingAction, boardId: event.target.value })}>
+                       <option value="">Choose a board</option>
+                       {pendingAction.targets.find(target => target.connectionId === pendingAction.connectionId)?.boards.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}
+                     </select>
+                   </label>}
+                 </div>}
+                 <p className="mut">{pendingActionDetail(pendingAction, a.data.communities, a.data.ideas)}</p><p className="dim">{pendingAction.type === 'publishSocial'
+                   ? 'Confirming sends this post to the selected external social account immediately. Check the caption and destination carefully; Quorlyth cannot retract a post after the platform publishes it.'
+                   : pendingAction.type === 'batchActions'
                   ? 'Review the coordinated plan above. One confirmation applies the selected actions in sequence. Every action rechecks current permissions and record state; independent actions continue if another action fails. Requested destructive actions and external effects are included only when explicitly requested.'
                   : pendingAction.type === 'deleteCommunity'
                   ? 'This is permanent. Confirming deletes the community, its linked ideas, and related collaboration records.'
@@ -4195,7 +4231,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                                     ? 'This changes whether the workspace is active or completed. This does not mark unfinished tasks as complete; task completion still depends on the evidence review flow.'
                                     : pendingAction.type === 'startStandaloneTask'
                                       ? 'This starts the task but does not mark it complete. A completed status requires evidence approval through the existing workflow.'
-                                      : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={() => { void confirmPendingAction() }}>{pendingAction.type === 'batchActions' ? 'Apply all ' + pendingAction.actions.length + ' changes' : 'Confirm action'}</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+                                      : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={() => { void confirmPendingAction() }}>{pendingAction.type === 'batchActions' ? 'Apply all ' + pendingAction.actions.length + ' changes' : pendingAction.type === 'publishSocial' ? 'Publish now' : 'Confirm action'}</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
               </div>
               {view === 'chat' && !live && (
                 <div className="bc">
