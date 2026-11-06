@@ -870,6 +870,17 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     return complexTask ? 'smart' : 'quick'
   }
 
+  function taskPreview(text: string) {
+    if (/\b(delete|remove|destroy)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Preparing a deletion confirmation'
+    if (/\b(create|make|start|set up)\b/i.test(text) && /\bcommunity\b/i.test(text)) return 'Creating your community'
+    if (/\b(add|create|write|submit|post)\b/i.test(text) && /\bidea\b/i.test(text)) return 'Preparing your idea'
+    if (/\b(open|show|take me to|go to|view|enter)\b/i.test(text)) return 'Opening the right place'
+    if (/\b(weather|forecast|temperature|latest|current|today|right now|live|news|search|look up|source)\b/i.test(text)) return 'Checking current information'
+    if (/\b(review|score|rank|analy[sz]e|analytics|summari[sz]e|compare)\b/i.test(text)) return 'Reviewing the available information'
+    if (/\b(write|draft|rewrite|improve|generate|design|plan)\b/i.test(text)) return 'Working on your request'
+    return 'Finding the most useful answer'
+  }
+
   async function planSocialPublishAction(requestText: string): Promise<Extract<PendingAction, { type: 'publishSocial' }>> {
     if (!a.me) throw new Error('Sign in to Quorlyth before publishing to a social account.')
     if (!a.backend) throw new Error('Your Quorlyth account is not connected to the secure social publishing service.')
@@ -3266,6 +3277,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         case 'community': return 'new-community:' + action.name.toLowerCase()
         case 'idea': return 'new-idea:' + action.cid + ':' + action.title.toLowerCase()
         case 'promote': return 'idea:' + action.ideaId
+        case 'publishSocial': return 'social-post:' + action.connectionId
         case 'cover':
         case 'updateCommunity':
         case 'deleteCommunity': return 'community:' + action.cid
