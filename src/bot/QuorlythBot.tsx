@@ -3479,6 +3479,45 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         const idea = a.data.ideas.find(x => x.id === action.ideaId)
         if (!idea || a.statusOf(idea.id) === 'declined') throw new Error('That idea is no longer available to promote.')
         ok = await a.publish(action.ideaId, action.text, action.credits)
+      } else if (action.type === 'publishSocial') {
+        if (!a.me || !a.backend) throw new Error('Sign in to Quorlyth before publishing to a social account.')
+        const latest = await loadSocialAccounts(a.backend)
+        const connection = latest.connections.find(item => item.connection_id === action.connectionId)
+        if (!connection || connection.provider !== action.provider) throw new Error('That connected social account is no longer available on your profile. Refresh the preview and choose another account.')
+        let caption = action.text.trim()
+        if (!caption) throw new Error('Write a caption before publishing.')
+        if (action.provider === 'instagram' && action.link && !caption.includes(action.link)) caption += '\n\n' + action.link
+        const finalText = action.link && !caption.includes(action.link) ? caption + '\n\n' + action.link : caption
+        if (action.provider === 'x' && [...finalText].length > 280) throw new Error('This X post exceeds 280 characters after including its link. Shorten the caption before publishing.')
+        if (action.provider === 'linkedin' && [...finalText].length > 3000) throw new Error('This LinkedIn post exceeds 3,000 characters after including its link. Shorten the caption before publishing.')
+        if (action.provider === 'instagram' && [...caption].length > 2200) throw new Error('Instagram captions can contain up to 2,200 characters. Shorten the caption before publishing.')
+        if (action.provider === 'pinterest' && [...caption].length > 800) throw new Error('Pinterest Pin descriptions can contain up to 800 characters. Shorten the description before publishing.')
+        if (action.link) {
+          let destination: URL
+          try { destination = new URL(action.link) } catch { throw new Error('Enter a valid HTTPS or HTTP destination link before publishing.') }
+          if (destination.protocol !== 'https:' && destination.protocol !== 'http:') throw new Error('The destination link must use HTTPS or HTTP.')
+        }
+        if (action.provider === 'instagram' || action.provider === 'pinterest') {
+          let media: URL
+          try { media = new URL(action.mediaUrl.trim()) } catch { throw new Error('Add a valid public HTTPS image URL before publishing to ' + socialProviderLabel(action.provider) + '.') }
+          if (media.protocol !== 'https:') throw new Error('The image URL must use HTTPS so ' + socialProviderLabel(action.provider) + ' can access it.')
+        }
+        if (action.provider === 'pinterest') {
+          const boardExists = Array.isArray(connection.metadata?.boards) && connection.metadata.boards.some(board => String(board.id) === action.boardId)
+          if (!action.boardId || !boardExists) throw new Error('Choose a Pinterest board that belongs to the selected connected account.')
+        }
+        const published = await socialAccountsRequest<{ ok: true; provider: string; postId: string; postUrl?: string; accountName?: string }>(a.backend, {
+          action: 'publish',
+          connectionId: action.connectionId,
+          text: caption,
+          link: action.provider === 'instagram' ? '' : action.link,
+          mediaUrl: action.mediaUrl.trim(),
+          boardId: action.boardId,
+          title: (caption.split('\n')[0] || action.title).slice(0, 100),
+        })
+        if (!published?.ok || !published.postId) throw new Error('The social platform did not confirm that the post was published.')
+        ok = true
+        successOverride = 'Published successfully to ' + (published.accountName || connection.account_name || socialProviderLabel(action.provider)) + '.' + (published.postUrl ? ' View post: ' + published.postUrl : '')
       } else if (action.type === 'cover') {
         if (!a.canManageCommunity(action.cid)) throw new Error('Only this community’s owner or a platform administrator can change its cover.')
         ok = await a.saveCommunity(action.cid, { cover: action.cover as any })
