@@ -281,7 +281,7 @@ function AutomationWorkspace() {
     const effects = workflow.actions.map(action => ACTION_INFO[action.type]?.title || action.type)
     const actionList = [...new Set(effects)].join(', ')
     const confirmed = window.confirm(
-      'Run a real test of "' + workflow.name + '"?\\n\\nThis is not a dry run. Quorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured.\n\nNo social post will be published. Continue?'
+      'Run a real test of "' + workflow.name + '"?\n\nThis is not a dry run. Quorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured.\n\nNo social post will be published. Continue?'
     )
     if (!confirmed) return
     setBusy('run-' + workflow.id)
@@ -375,7 +375,7 @@ function AutomationWorkspace() {
           'Return one JSON object with name, description, trigger, condition, and actions.',
           'condition may be null or {field,operator,value}. Allowed fields: text,title,body,summary,event.type. Allowed operators: contains,equals,not_contains,starts_with.',
           'actions must contain between one and six objects. Each action type must be notify or create_task.',
-          'For create_task, projectId must be one exact id from available_workspaces. If no workspace is available, use notify instead.',
+          'For create_task, projectId must be an exact id from available_workspaces and the user must have explicitly chosen it, unless exactly one managed workspace exists. If no exact workspace choice is available, use notify instead.',
           'Use only the supplied triggers and actions. Never invent ids, projects, permissions, URLs, webhook endpoints, recipients, or facts.',
           'Use event placeholders only where supported: {{event.title}}, {{event.body}}, {{event.summary}}, {{workflow.name}}.',
           'Keep task titles, messages and acceptance criteria concise, practical and grounded in the request.',
