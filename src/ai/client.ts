@@ -242,10 +242,14 @@ export async function startRealtime(opts: {
         userText += String(m.delta || '')
         if (userText) opts.onEvent({ type: 'user_preview', text: userText })
         break
-      case 'conversation.item.input_audio_transcription.completed':
-        if (m.transcript?.trim()) opts.onEvent({ type: 'user', text: m.transcript.trim() })
+      case 'conversation.item.input_audio_transcription.completed': {
+        // Some providers send the final transcript separately; keep the live deltas
+        // as a recovery source so a completed turn is never dropped when it is absent.
+        const transcript = String(m.transcript || userText || '').trim()
+        if (transcript) opts.onEvent({ type: 'user', text: transcript })
         userText = ''
         break
+      }
       case 'response.audio_transcript.delta':
         botText += m.delta || ''
         opts.onEvent({ type: 'state', state: 'speaking' })
@@ -473,7 +477,7 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
 export async function prefetchElevenLabsSpeech(
   text: string,
   voice: string,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; liveTalk?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; liveTalk?: boolean; elevenLabsOnly?: boolean } = {},
 ): Promise<Blob> {
   const source = text.trim().slice(0, 1500)
   if (!source) throw new Error('There is no text to speak.')
@@ -484,17 +488,21 @@ export async function prefetchElevenLabsSpeech(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: source, voice, accent: detectAccent(options.accent || 'auto'), liveTalk: options.liveTalk === true }),
   })
+  // Live Talk opts into the ElevenLabs-only endpoints. It must not silently change
+  // voice identity when a provider is slow or unavailable.
+  const streamPath = options.elevenLabsOnly ? '/api/speak-eleven-stream' : '/api/speak-stream'
+  const bufferedPath = options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak'
 
   let response: Response
   try {
-    response = await request('/api/speak-stream')
+    response = await request(streamPath)
   } catch (error) {
     if (options.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
-    response = await request('/api/speak')
+    response = await request(bufferedPath)
   }
   if ((response.status === 502 || response.status === 504) && !options.signal?.aborted) {
     try { await response.body?.cancel() } catch {}
-    response = await request('/api/speak')
+    response = await request(bufferedPath)
   }
   if (!response.ok) throw new Error(await readError(response))
   const audio = await response.blob()
