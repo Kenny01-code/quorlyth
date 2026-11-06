@@ -228,8 +228,8 @@ function socialProviderLabel(provider: SocialPublishProvider): string {
 }
 
 function isSocialPublishIntent(request: string): boolean {
-  return /\b(?:publish|post|share|send)\b/i.test(request)
-    && /\b(?:linkedin|linked[\s-]?in|twitter|facebook|instagram|pinterest|social media|my socials?|connected social account|my connected account)\b/i.test(request)
+  return /\b(?:publish|post|share)\b/i.test(request)
+    && /\b(?:linkedin|linked[\s-]?in|twitter|facebook|instagram|pinterest|x(?:\.com)?|social media|my socials?|connected social account|my connected account)\b/i.test(request)
 }
 
 function socialProviderFromRequest(request: string): SocialPublishProvider | null {
@@ -237,7 +237,7 @@ function socialProviderFromRequest(request: string): SocialPublishProvider | nul
   if (/\binstagram\b/i.test(request)) return 'instagram'
   if (/\b(?:facebook|fb page|facebook page)\b/i.test(request)) return 'facebook'
   if (/\bpinterest\b/i.test(request)) return 'pinterest'
-  if (/\b(?:twitter|to x|on x|x account)\b/i.test(request)) return 'x'
+  if (/\b(?:twitter|x|x\.com)\b/i.test(request)) return 'x'
   return null
 }
 
@@ -1442,7 +1442,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
 
   function isExplicitVoiceTaskRequest(text: string): boolean {
     const source = text.trim()
-    const imperative = /^(?:(?:hey|okay)[,\s]+)?(?:(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?|i want you to\s+|i need you to\s+|help me\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|reassign|unassign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore|automate|configure|manage|sync|generate|plan|optimize|optimise|reorganize|reorganise|audit|debug|fix)\b/i
+    const imperative = /^(?:(?:hey|okay)[,\s]+)?(?:(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?|i want you to\s+|i need you to\s+|help me\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|reassign|unassign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore|automate|configure|manage|sync|generate|plan|optimize|optimise|reorganize|reorganise|audit|debug|fix|post)\b/i
     const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?|settings|analytics|dashboard|notifications?|collaborations?|members?|teammates?|evidence|announcements?|site|website|quorlyth|social(?: media)?|linkedin|twitter|facebook|instagram|pinterest)\b/i
     return imperative.test(source) && target.test(source)
   }
