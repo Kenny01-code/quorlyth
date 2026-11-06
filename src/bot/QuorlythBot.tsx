@@ -1228,10 +1228,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               {
                 accent: bs.accent || 'auto',
                 signal: replySpeechController.signal,
-                elevenLabsOnly: true,
+                elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
-                allowBrowserFallback: false,
-                browserFallbackTimeoutMs: 9000,
+                allowBrowserFallback: true,
+                browserFallbackTimeoutMs: 9500,
                 liveTalk: true,
               },
             )
@@ -1607,10 +1607,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               {
                 accent: bs.accent || 'auto',
                 signal: controller.signal,
-                elevenLabsOnly: false,
+                elevenLabsOnly: true,
                 preferElevenLabsVoice: true,
-                allowBrowserFallback: true,
-                browserFallbackTimeoutMs: 9500,
+                allowBrowserFallback: false,
+                browserFallbackTimeoutMs: 9000,
                 liveTalk: true,
               },
             )
