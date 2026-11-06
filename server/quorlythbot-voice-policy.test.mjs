@@ -11,6 +11,9 @@ test('Live Talk keeps spoken replies on the selected ElevenLabs voice', async ()
     readSource('src/ai/client.ts'),
   ])
 
+  const liveVoiceQueue = bot.slice(bot.indexOf('const enqueueSpeech ='), bot.indexOf('const queueSpeechFromDelta ='))
+  assert.match(liveVoiceQueue, /elevenLabsOnly: true/)
+  assert.match(liveVoiceQueue, /allowBrowserFallback:\s*false/)
   assert.match(bot, /elevenLabsOnly: true/)
   assert.match(bot, /preferElevenLabsVoice: true/)
   assert.match(bot, /allowBrowserFallback:\s*false/)
