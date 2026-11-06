@@ -4,21 +4,23 @@ import { readFile } from 'node:fs/promises'
 
 const readSource = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('QuorlythBot prioritizes ElevenLabs and recovers through cloud or device speech', async () => {
+test('Live Talk keeps spoken replies on the selected ElevenLabs voice', async () => {
   const [bot, views, client] = await Promise.all([
     readSource('src/bot/QuorlythBot.tsx'),
     readSource('src/bot/views.tsx'),
     readSource('src/ai/client.ts'),
   ])
 
-  assert.match(bot, /elevenLabsOnly: false/)
+  assert.match(bot, /elevenLabsOnly: true/)
   assert.match(bot, /preferElevenLabsVoice: true/)
-  assert.match(bot, /allowBrowserFallback:\s*true/)
+  assert.match(bot, /allowBrowserFallback:\s*false/)
   assert.match(bot, /textOnly: true/)
+  assert.match(bot, /elevenLabsOnly: true/)
   assert.match(views, /preferElevenLabsVoice:\s*true/)
   assert.match(views, /allowBrowserFallback:\s*true/)
-  assert.match(client, /request\('\/api\/speak-stream'\)/)
-  assert.match(client, /request\('\/api\/speak'\)/)
+  assert.match(client, /options\.elevenLabsOnly \? '\/api\/speak-eleven-stream'/)
+  assert.match(client, /options\.elevenLabsOnly \? '\/api\/speak-eleven'/)
+  assert.match(client, /const transcript = String\(m\.transcript \|\| userText \|\| ''\)/)
 })
 
 test('ElevenLabs-only mode cannot be overridden by a browser fallback option', async () => {
@@ -58,9 +60,10 @@ test('LiveTalk tolerates natural pauses and starts speech from shorter response 
   assert.match(bot, /recognition\.continuous = true/)
   assert.match(bot, /prefetchElevenLabsSpeech\(chunk, v\.ai/)
   assert.match(bot, /liveSilenceTimer\.current = window\.setTimeout/)
-  assert.match(bot, /const threshold = firstChunk \? 30 : 58/)
+  assert.match(bot, /const threshold = firstChunk \? 24 : 54/)
   assert.match(bot, /}, 650\)/)
   assert.match(bot, /tier: 'quick'/)
+  assert.match(server, /readTtsStreamChunk\(reader, controller, 4200\)/)
 })
 
 test('Normal chat starts ElevenLabs speech while the answer is still streaming', async () => {
@@ -126,4 +129,11 @@ test('Sending a normal message commits its visible state before network awaits',
   assert.match(bot, /Commit the user's bubble and active state immediately/)
   assert.match(bot, /slice\(-8\)/)
   assert.match(bot, /recentTurns\.length - 1 \? 4200 : 900/)
+})
+
+
+test('Local development exposes the strict ElevenLabs streaming endpoint used by Live Talk', async () => {
+  const dev = await readSource('server/dev-server.mjs')
+  assert.match(dev, /speakElevenLabsStream/)
+  assert.match(dev, /'\/api\/speak-eleven-stream': speakElevenLabsStream/)
 })
