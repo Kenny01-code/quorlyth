@@ -208,6 +208,8 @@ test('authenticated chat ignores a browser-built system prompt and uses RLS-scop
   assert.ok(providerMessages && providerMessages[0]?.role === 'system')
   assert.match(providerMessages[0].content, /verified platform owner/)
   assert.match(providerMessages[0].content, /A fan-led live show/)
+  assert.match(providerMessages[0].content, /Dee LinkedIn/)
+  assert.match(providerMessages[0].content, /Social accounts connected by the current signed-in user: LinkedIn/)
   assert.doesNotMatch(providerMessages[0].content, /ATTACKER_SYSTEM_SENTINEL/)
   assert.doesNotMatch(providerMessages[0].content, /secret@example\.com/)
   assert.doesNotMatch(res.output, /test-provider-secret|secret@example\.com|user-private-uuid/)
