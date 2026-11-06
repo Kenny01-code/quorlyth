@@ -304,13 +304,16 @@ test('dashboard chart code is not forced into the initial shared entry chunk', a
 })
 
 
-test('the branded animated loader is removed from startup, data hydration, and lazy routes', async () => {
-  const [app, main] = await Promise.all([
+test('the branded animated loader is removed from startup, data hydration, lazy routes, and dashboard setup', async () => {
+  const [app, main, dashboard] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/main.tsx'),
+    readSource('src/screens/Dashboard.tsx'),
   ])
   assert.doesNotMatch(app, /QuorlythLoader|DelayedRouteLoader|q-loader/)
+  assert.doesNotMatch(dashboard, /QuorlythLoader|q-loader/)
   assert.match(app, /if \(!a\.ready\)[\s\S]{0,220}className="app-startup"/)
   assert.match(app, /<Suspense fallback=\{null\}>/)
+  assert.match(dashboard, /Verifying your dashboard access/)
   assert.doesNotMatch(main, /styles\/loader\.css/)
 })
