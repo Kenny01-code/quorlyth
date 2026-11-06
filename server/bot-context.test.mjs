@@ -169,6 +169,11 @@ test('authenticated chat ignores a browser-built system prompt and uses RLS-scop
     }
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_owner') return json(true)
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_admin') return json(false)
+    if (parsed.pathname === '/functions/v1/social-accounts') return json({
+      ok: true,
+      connections: [{ provider: 'linkedin', account_name: 'Dee LinkedIn', username: 'dee-profile' }],
+      providerConfigured: { x: true, linkedin: true, meta: false, pinterest: false },
+    })
     if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('or') && !(parsed.searchParams.get('or') || '').includes('data/users/user-private-uuid/botset')) {
       assert.equal(options.headers.Authorization, 'Bearer user-session-token')
       return json([
