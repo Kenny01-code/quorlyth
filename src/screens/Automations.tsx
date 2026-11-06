@@ -281,7 +281,7 @@ function AutomationWorkspace() {
     const effects = workflow.actions.map(action => ACTION_INFO[action.type]?.title || action.type)
     const actionList = [...new Set(effects)].join(', ')
     const confirmed = window.confirm(
-      'Run a real test of "' + workflow.name + '"?\n\nThis is not a dry run. Quorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured.\n\nNo social post will be published. Continue?'
+      'Run a real test of "' + workflow.name + '"?\n\nThis is not a dry run. Quorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured. The receiving service may perform its own actions. Continue only if those effects are intended.'
     )
     if (!confirmed) return
     setBusy('run-' + workflow.id)
