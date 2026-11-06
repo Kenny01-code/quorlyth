@@ -962,6 +962,32 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     if (!raw) {
       const direct = handleDirectNavigation(t)
       if (direct) return
+      if (isSocialPublishIntent(t)) {
+        stopVoice()
+        setView('chat')
+        setBusy(true)
+        setStatus('Preparing social post')
+        setThinkingTask('Checking your connected accounts and preparing the post preview')
+        robot.current?.think(true)
+        try {
+          const action = await planSocialPublishAction(t)
+          const draft = add(cur, { r: 'u', t })
+          const prompt = 'I prepared this social post for review. Check the exact account, caption, link and any media requirements below. Nothing will be sent until you confirm.'
+          persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+          setPendingAction(action)
+          return
+        } catch (failure) {
+          const draft = add(cur, { r: 'u', t })
+          const message = userFacingMutationError(failure, 'prepare that social post')
+          persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          return
+        } finally {
+          setBusy(false)
+          setStatus('Online')
+          setThinkingTask('')
+          robot.current?.think(false)
+        }
+      }
       if (/\b(create|make|start|set up)\b/i.test(t) && /\bcommunity\b/i.test(t) && !a.owner) {
         const draft = add(cur, { r: 'u', t })
         const msg = !a.me ? 'Sign in first. Creating a community requires the space owner account.' : 'Your current account is not recognized as the space owner, so I cannot create a community from this session. Sign in with the owner account, then ask me again. I can still open communities and help draft ideas where you have permission.'
@@ -970,6 +996,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       }
       const automationCommand = /\b(?:automation|automations|workflow|workflows|automate)\b/i.test(t)
         && /\b(create|build|design|set up|make|automate|organize|reorganize|optimi[sz]e|edit|update|rename|delete|remove|activate|enable|turn on|pause|deactivate|disable|turn off|run|test|execute)\b/i.test(t)
+      const socialPublishCommand = isSocialPublishIntent(request)
       const universalOrganizeCommand = /\b(one[- ]click organize|organize this page|auto[- ]organize(?: this page| the current page)?|organize the current page|organize my (?:whole|entire) (?:site|quorlyth)|organize everything (?:on|in) (?:my )?quorlyth)\b/i.test(t)
       if (universalOrganizeCommand) {
         stopVoice()
@@ -1417,7 +1444,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   function isExplicitVoiceTaskRequest(text: string): boolean {
     const source = text.trim()
     const imperative = /^(?:(?:hey|okay)[,\s]+)?(?:(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?|i want you to\s+|i need you to\s+|help me\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|reassign|unassign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore|automate|configure|manage|sync|generate|plan|optimize|optimise|reorganize|reorganise|audit|debug|fix)\b/i
-    const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?|settings|analytics|dashboard|notifications?|collaborations?|members?|teammates?|evidence|announcements?|site|website|quorlyth)\b/i
+    const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?|settings|analytics|dashboard|notifications?|collaborations?|members?|teammates?|evidence|announcements?|site|website|quorlyth|social(?: media)?|linkedin|twitter|facebook|instagram|pinterest)\b/i
     return imperative.test(source) && target.test(source)
   }
 
@@ -1440,7 +1467,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     robot.current?.think(true)
     try {
       let action: PendingAction | null = null
-      if (universalOrganizeCommand) action = await planUniversalActionBatch(request)
+      if (socialPublishCommand) action = await planSocialPublishAction(request)
+      else if (universalOrganizeCommand) action = await planUniversalActionBatch(request)
       else if (automationCommand) action = await planAutomationAction(request)
       else if (workspaceCommand) action = await planStandaloneWorkspaceAction(request)
       else action = planAction(request)
