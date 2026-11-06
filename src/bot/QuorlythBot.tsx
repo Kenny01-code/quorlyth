@@ -1228,10 +1228,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               {
                 accent: bs.accent || 'auto',
                 signal: replySpeechController.signal,
-                elevenLabsOnly: false,
+                elevenLabsOnly: true,
                 preferElevenLabsVoice: true,
-                allowBrowserFallback: true,
-                browserFallbackTimeoutMs: 9500,
+                allowBrowserFallback: false,
+                browserFallbackTimeoutMs: 9000,
                 liveTalk: true,
               },
             )
@@ -1576,6 +1576,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         accent: bs.accent || 'auto',
         signal: controller.signal,
         liveTalk: true,
+        elevenLabsOnly: true,
       }).then(blob => ({ ok: true as const, blob }), error => ({ ok: false as const, error }))
 
       speechQueue = speechQueue.then(async () => {
@@ -1624,9 +1625,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 {
                   accent: bs.accent || 'auto',
                   signal: controller.signal,
+                  elevenLabsOnly: true,
                   preferElevenLabsVoice: true,
-                  allowBrowserFallback: true,
-                  browserFallbackTimeoutMs: 4200,
+                  allowBrowserFallback: false,
+                  browserFallbackTimeoutMs: 9000,
                   liveTalk: true,
                 },
               )
@@ -1669,9 +1671,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       // Later chunks can be a little longer because they are prefetched while the
       // previous phrase is playing.
       const firstChunk = speechChunkCount === 0
-      const threshold = firstChunk ? 30 : 58
-      const cutLimit = firstChunk ? 38 : 48
-      const minCut = firstChunk ? 22 : 32
+      const threshold = firstChunk ? 24 : 54
+      const cutLimit = firstChunk ? 46 : 58
+      const minCut = firstChunk ? 20 : 32
       if (speechTail.length >= threshold) {
         const commaCut = speechTail.lastIndexOf(',', cutLimit)
         const wordCut = speechTail.lastIndexOf(' ', cutLimit)
@@ -2005,10 +2007,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 role: (message.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant',
                 content: message.t.slice(-(index === recentTurns.length - 1 ? 4200 : 1400)),
               }))
-              const liveContext = await requestLiveContext(spoken)
-              if (!liveFallback.current || turnNumber !== browserTurnNumber || controller.signal.aborted) return
               const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
-              const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
+              // Location context and session lookup are independent. Resolve them in
+              // parallel so the fallback voice path does not serialize two network waits.
+              const [liveContext, accessToken] = await Promise.all([
+                requestLiveContext(spoken),
+                useServerContext ? a.backend?.auth.accessToken?.() : Promise.resolve(null),
+              ])
+              if (!liveFallback.current || turnNumber !== browserTurnNumber || controller.signal.aborted) return
               if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
               const botContext = {
                 route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len,
