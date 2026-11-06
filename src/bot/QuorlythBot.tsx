@@ -22,6 +22,8 @@ import { buildContext } from './context'
 import { createBotGreeting } from './greetings'
 import { useBotData } from './useBotData'
 import { reviewIdeas } from '../ai/review'
+import { loadSocialAccounts, socialAccountsRequest } from '../lib/socialAccounts'
+import type { SocialProvider } from '../lib/socialAccounts'
 
 const PHRASES = {
   owner: ['Ask QuorlythBot anything', 'Summarize what my community is saying', 'Draft a post for my best idea', 'Which ideas should I pick this week?', 'Explain my analytics', 'Plan my week', 'Type / for skills'],
@@ -153,10 +155,13 @@ function playPreparedSpeechBlob(
 
 type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
 type Live = null | { state: string; user: string; bot: string }
+type SocialPublishProvider = Exclude<SocialProvider, 'meta'>
+type SocialTargetOption = { connectionId: string; provider: SocialPublishProvider; accountName: string; username: string; boards: Array<{ id: string; name: string }>; defaultBoardId: string }
 type PendingAction =
   | { type: 'community'; name: string; purpose: string; cover: string; vis: 'listed' | 'unlisted'; post: 'anyone' | 'members' | 'owner' }
   | { type: 'idea'; title: string; body: string; cid: string; tags: string[] }
   | { type: 'promote'; ideaId: string; text: string; credits: string[] }
+  | { type: 'publishSocial'; connectionId: string; provider: SocialPublishProvider; accountName: string; targets: SocialTargetOption[]; text: string; link: string; mediaUrl: string; boardId: string; title: string }
   | { type: 'cover'; cid: string; cover: string }
   | { type: 'deleteCommunity'; cid: string; name: string; ideaCount: number }
   | { type: 'updateIdea'; ideaId: string; cid: string; oldTitle: string; patch: Partial<Pick<Idea, 'title' | 'body' | 'tags'>> }
@@ -218,11 +223,30 @@ function actionDecisionDescription(action: Extract<PendingAction, { type: 'revie
     : 'Confirming records “changes requested” with the reviewer note shown above. The contributor will need to revise and resubmit their work.'
 }
 
+function socialProviderLabel(provider: SocialPublishProvider): string {
+  return provider === 'x' ? 'X' : provider === 'linkedin' ? 'LinkedIn' : provider === 'facebook' ? 'Facebook Page' : provider === 'instagram' ? 'Instagram' : 'Pinterest'
+}
+
+function isSocialPublishIntent(request: string): boolean {
+  return /\b(?:publish|post|share|send)\b/i.test(request)
+    && /\b(?:linkedin|linked[\s-]?in|twitter|facebook|instagram|pinterest|social media|my socials?|connected social account|my connected account)\b/i.test(request)
+}
+
+function socialProviderFromRequest(request: string): SocialPublishProvider | null {
+  if (/\b(?:linkedin|linked[\s-]?in)\b/i.test(request)) return 'linkedin'
+  if (/\binstagram\b/i.test(request)) return 'instagram'
+  if (/\b(?:facebook|fb page|facebook page)\b/i.test(request)) return 'facebook'
+  if (/\bpinterest\b/i.test(request)) return 'pinterest'
+  if (/\b(?:twitter|to x|on x|x account)\b/i.test(request)) return 'x'
+  return null
+}
+
 function pendingActionDetail(action: PendingAction, communities: { id: string; name: string }[], ideas: { id: string; title: string }[]): string {
   switch (action.type) {
     case 'community': return action.name + (action.purpose ? ' · ' + action.purpose : '') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
     case 'idea': return action.title + ' · ' + (communities.find(x => x.id === action.cid)?.name || 'Community')
     case 'promote': return ideas.find(x => x.id === action.ideaId)?.title || 'Selected idea'
+    case 'publishSocial': return socialProviderLabel(action.provider) + ' · ' + action.accountName + ' · ' + action.text.trim().slice(0, 180)
     case 'cover': return (communities.find(x => x.id === action.cid)?.name || 'Community') + ' · ' + (({ a: 'Aurora', b: 'Halo', c: 'Grid', d: 'Dusk' } as any)[action.cover] || 'Aurora')
     case 'deleteCommunity': return action.name + ' · ' + action.ideaCount + ' linked idea' + (action.ideaCount === 1 ? '' : 's')
     case 'updateIdea': return 'Idea: ' + JSON.stringify(action.oldTitle) + (action.patch.title ? ' → ' + JSON.stringify(action.patch.title) : '') + (action.patch.body !== undefined ? ' · Description: ' + JSON.stringify(action.patch.body.slice(0, 180)) : '')
