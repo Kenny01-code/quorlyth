@@ -693,10 +693,10 @@ function AutomationWorkspace() {
 
   return (
     <div className="wa-screen">
-      <Head kicker="WORKFLOW AUTOMATION" title="Make work move on its own." right={<button className="btn p" type="button" onClick={() => beginNew()}><QuorlythGlyph name="add" size={15} />Build workflow</button>} />
+      <Head kicker="WORKFLOW AUTOMATION" title="Make work move on its own." right={<button className="btn p" type="button" onClick={() => document.getElementById('wa-ai-prompt')?.focus()}><QuorlythGlyph name="idea" size={15} />Build with QuorlythBot</button>} />
 
       <section className="wa-hero glass pad">
-        <div className="wa-hero-copy"><span className="wa-hero-kicker"><QuorlythGlyph name="brand" size={14} />A little less busywork</span><h3>Connect the steps.<br /><span>Automate the handoff.</span></h3><p>Choose a live event, narrow it with a condition, then connect ordered actions. Quorlyth records each step, keeps a run ledger and prevents duplicate tabs from claiming the same event twice.</p><div className="wa-hero-actions"><button className="btn p" type="button" onClick={() => beginNew()}><QuorlythGlyph name="add" size={15} />Create your first flow</button><button className="btn" type="button" onClick={() => setTab('runs')}><QuorlythGlyph name="progress" size={15} />View run history</button></div></div>
+        <div className="wa-hero-copy"><span className="wa-hero-kicker"><QuorlythGlyph name="brand" size={14} />A little less busywork</span><h3>Tell Quorlyth what to do.<br /><span>Let it handle the repeatable work.</span></h3><p>Turn everyday events into useful notifications and follow-up tasks. Describe the result you want, review the automation QuorlythBot prepares, and choose when it should start.</p><div className="wa-hero-actions"><button className="btn p" type="button" onClick={() => document.getElementById('wa-ai-prompt')?.focus()}><QuorlythGlyph name="idea" size={15} />Describe an automation</button><button className="btn" type="button" onClick={() => setTab('runs')}><QuorlythGlyph name="progress" size={15} />View run history</button></div></div>
         <div className="wa-hero-visual" aria-label="Example workflow: idea submitted, filter, create review task">
           <div className="wa-float-label wa-label-trigger">TRIGGER</div>
           <div className="wa-preview-node"><span className="wa-preview-node-icon"><QuorlythGlyph name="idea" size={17} /></span><div><small>WHEN THIS HAPPENS</small><strong>New idea submitted</strong></div><QuorlythGlyph name="check" size={14} /></div>
@@ -729,7 +729,7 @@ function AutomationWorkspace() {
         </div>
         <label className="wa-ai-prompt-label">
           <span>What should happen automatically?</span>
-          <textarea value={aiPrompt} onChange={event => setAiPrompt(event.target.value)} rows={4} maxLength={1800} placeholder="Example: When a member shares an idea, let me know. If a teammate starts a task, notify the project lead. Keep me informed when evidence is approved." />
+          <textarea id="wa-ai-prompt" value={aiPrompt} onChange={event => setAiPrompt(event.target.value)} rows={4} maxLength={1800} placeholder="Example: When a member shares an idea, let me know. If a teammate starts a task, notify the project lead. Keep me informed when evidence is approved." />
         </label>
         <details className="wa-ai-advanced">
           <summary>Advanced options <span>Optional · for more control</span></summary>
