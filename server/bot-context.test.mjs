@@ -41,6 +41,15 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
     }
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_owner') return json(true)
     if (parsed.pathname === '/rest/v1/rpc/current_user_is_platform_admin') return json(false)
+    if (parsed.pathname === '/functions/v1/social-accounts') {
+      assert.equal(options.method, 'POST')
+      assert.deepEqual(JSON.parse(options.body), { action: 'list' })
+      return json({
+        ok: true,
+        connections: [{ provider: 'linkedin', account_name: 'Dee LinkedIn', username: 'dee-profile' }],
+        providerConfigured: { x: true, linkedin: true, meta: false, pinterest: false },
+      })
+    }
     if (parsed.pathname === '/rest/v1/docs' && parsed.searchParams.has('or') && !(parsed.searchParams.get('or') || '').includes('data/users/user-private-uuid/botset')) {
       assert.equal(parsed.searchParams.get('select'), 'path,data')
       assert.match(parsed.searchParams.get('or') || '', /communities/)
@@ -99,11 +108,16 @@ test('authenticated bot context uses the caller JWT, RLS query, trusted role RPC
   assert.match(system, /New idea triage/)
   assert.match(system, /idea.created/)
   assert.match(system, /Private automations in the current user-scoped context/)
+  assert.match(system, /Social app credentials configured for the Quorlyth platform: X, LinkedIn/)
+  assert.match(system, /Social accounts connected by the current signed-in user: LinkedIn/)
+  assert.match(system, /Dee LinkedIn/)
+  assert.match(system, /platform owner may use owner-only operations/i)
+  assert.match(system, /platform administrator may use administrator-scoped operations/i)
   assert.match(system, /caller.s Supabase session|authenticated user/i)
   assert.doesNotMatch(system, /secret@example\.com/)
   assert.doesNotMatch(system, /user-private-uuid/)
   assert.doesNotMatch(system, /public-test-anon-key/)
-  assert.equal(requests.length, 5)
+  assert.equal(requests.length, 6)
   assert.ok(requests.every(item => item.options.headers.Authorization === 'Bearer user-session-token'))
 })
 
