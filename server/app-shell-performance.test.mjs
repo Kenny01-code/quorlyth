@@ -198,7 +198,8 @@ test('the first account snapshot is published only after every collection has lo
   assert.match(provider, /requiredKeys\.every\(required => received\.has\(required\)\)/)
   assert.match(provider, /startTransition\(\(\) => \{\s*setData\(\{ \.\.\.EMPTY, \.\.\.staged \}\)\s*setInitialDataSnapshot\(\{ backend, userId, ready: true \}\)/)
   assert.match(app, /a.me && (!a.dataReady || !a.platformRolesReady)/)
-  assert.match(app, /Loading your latest Quorlyth data/)
+  assert.match(app, /Syncing your workspace/)
+  assert.doesNotMatch(app, /QuorlythLoader|DelayedRouteLoader|q-loader/)
 })
 
 test('idle activity tracking throttles synchronous browser-storage writes', async () => {
@@ -300,4 +301,16 @@ test('dashboard chart code is not forced into the initial shared entry chunk', a
   assert.match(dashboard, /from ['"]\.\.\/components\/Charts['"]/)
   assert.match(app, /const Dashboard = lazy\(\(\) => import\('\.\/screens\/Dashboard'\)/)
   assert.match(analytics, /await import\('jspdf'\)/)
+})
+
+
+test('the branded animated loader is removed from startup, data hydration, and lazy routes', async () => {
+  const [app, main] = await Promise.all([
+    readSource('src/App.tsx'),
+    readSource('src/main.tsx'),
+  ])
+  assert.doesNotMatch(app, /QuorlythLoader|DelayedRouteLoader|q-loader/)
+  assert.match(app, /if \(!a\.ready\)[\s\S]{0,220}className="app-startup"/)
+  assert.match(app, /<Suspense fallback=\{null\}>/)
+  assert.doesNotMatch(main, /styles\/loader\.css/)
 })
