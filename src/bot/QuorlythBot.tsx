@@ -1443,7 +1443,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   function isExplicitVoiceTaskRequest(text: string): boolean {
     const source = text.trim()
     const imperative = /^(?:(?:hey|okay)[,\s]+)?(?:(?:please\s+)?(?:(?:can|could|would)\s+you\s+(?:please\s+)?|i want you to\s+|i need you to\s+|help me\s+))?(?:create|make|set up|build|add|edit|update|change|rename|delete|remove|organize|run|start|activate|pause|complete|mark|assign|reassign|unassign|promote|publish|select|hold|decline|approve|review|score|draft|invite|archive|restore|automate|configure|manage|sync|generate|plan|optimize|optimise|reorganize|reorganise|audit|debug|fix|post)\b/i
-    const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?|settings|analytics|dashboard|notifications?|collaborations?|members?|teammates?|evidence|announcements?|site|website|quorlyth|social(?: media)?|linkedin|twitter|facebook|instagram|pinterest)\b/i
+    const target = /\b(communities?|ideas?|workspaces?|projects?|tasks?|milestones?|automations?|workflows?|profiles?|promotions?|posts?|queues?|submissions?|access requests?|settings|analytics|dashboard|notifications?|collaborations?|members?|teammates?|evidence|announcements?|site|website|quorlyth|social(?: media)?|linkedin|twitter|x(?:\.com)?|facebook|instagram|pinterest)\b/i
     return imperative.test(source) && target.test(source)
   }
 
