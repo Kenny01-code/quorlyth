@@ -11,7 +11,6 @@ import { ShareCard } from '../components/ShareCard'
 import { askJson } from '../ai/client'
 import { useDraftState } from '../lib/useDraftState'
 import { PromotionPreview } from '../components/PromotionPreview'
-import { QuorlythLoader } from '../components/QuorlythLoader'
 
 export function Dashboard() {
   return <Gate><Inner /></Gate>
@@ -53,7 +52,9 @@ function Inner() {
   // Wait for the account's initial settings snapshot and verified platform role before
   // deciding whether this is an existing space or a genuinely new-space setup.
   if (!settingsLoaded || !platformRolesReady) {
-    return <QuorlythLoader variant="screen" label="Preparing your dashboard" />
+    // Wait for account settings and verified roles before showing dashboard actions.
+    // Keep the gate, but avoid replacing the view with an animated loader.
+    return <span className="sr" role="status" aria-live="polite">Verifying your dashboard access…</span>
   }
 
   if (platformOwner && !s) {
