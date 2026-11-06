@@ -1249,7 +1249,8 @@ async function streamElevenLabsToClient(text, voiceId, res, liveTalk = false, vo
   try {
     let firstChunk
     while (!firstChunk) {
-      const next = await readTtsStreamChunk(reader, controller, 1800)
+      // Allow a healthy ElevenLabs stream enough time to deliver its first audio frame.
+      const next = await readTtsStreamChunk(reader, controller, 4200)
       if (next.done) return { ok: false, response, code: 'empty_audio_stream', controller }
       if (next.value?.byteLength) firstChunk = next.value
     }
