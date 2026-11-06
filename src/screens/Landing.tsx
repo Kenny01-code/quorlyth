@@ -22,8 +22,8 @@ function EditorialReveal({ text, pace = 'headline' }: { text: string; pace?: 'he
     <span className="qth-editorial">
       <span className="qth-editorial-sr">{text}</span>
       <span className="qth-editorial-visual" aria-hidden="true">
-        {text.split(' ').map((word, index) => (
-          <span className="qth-editorial-word" key={index} style={{ animationDelay: `${index * interval}ms` }}>{word}</span>
+        {text.split(' ').map((word, index, words) => (
+          <span key={index}><span className="qth-editorial-word" style={{ animationDelay: `${index * interval}ms` }}>{word}</span>{index < words.length - 1 ? ' ' : ''}</span>
         ))}
       </span>
     </span>
