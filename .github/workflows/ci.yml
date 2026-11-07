@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -25,6 +27,29 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Report dependency audit findings
+        run: |
+          npm audit --json > /tmp/quorlyth-audit.json || true
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+          const report = JSON.parse(readFileSync('/tmp/quorlyth-audit.json', 'utf8'))
+          const summary = report.metadata?.vulnerabilities ?? {}
+          console.log('Dependency audit summary:', JSON.stringify(summary))
+          for (const [name, item] of Object.entries(report.vulnerabilities ?? {})) {
+            const advisories = item.via.map(entry => typeof entry === 'string'
+              ? entry
+              : { title: entry.title, url: entry.url, range: entry.range, source: entry.source })
+            console.log(JSON.stringify({
+              package: name,
+              severity: item.severity,
+              direct: item.isDirect,
+              range: item.range,
+              fixAvailable: item.fixAvailable,
+              advisories,
+            }))
+          }
+          if ((summary.total ?? 0) > 0) process.exitCode = 1
+          NODE
       - name: Validate the versioned AI corpus
         run: npm run ai:data:validate
       - name: Type-check
