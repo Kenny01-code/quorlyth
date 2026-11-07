@@ -16,19 +16,41 @@ test('QuorlythBot is not downloaded automatically during startup', async () => {
   assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
   assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
   assert.match(app, /id="astl"[\s\S]{0,320}onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /id="astl"[\s\S]{0,650}onClick=\{\(\) => \{[\s\S]{0,180}openQuorlythBot\(\)/)
+  assert.match(app, /onClick=\{\(\) => \{ void openQuorlythBot\(\) \}\}/)
 })
 
-test('the QuorlythBot launcher stays visible until its lazy-loaded module is ready', async () => {
-  const app = await readSource('src/App.tsx')
+test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
+  const [app, css] = await Promise.all([
+    readSource('src/App.tsx'),
+    readSource('src/styles/app.css'),
+  ])
   const openStart = app.indexOf('const openQuorlythBot = useCallback')
   assert.ok(openStart >= 0, 'the shared launcher opener exists')
   const helper = app.slice(openStart, app.indexOf('// Load the AI writing helper', openStart))
   assert.ok(helper.indexOf('await loadQuorlythBot()') < helper.indexOf('setBotMounted(true)'), 'the bot mounts only after its module resolves')
-  assert.match(app, /className=\{botLoading \? 'astl qbot-deferred-loading' : 'astl'\}/)
-  assert.match(app, /disabled=\{botLoading\}/)
-  assert.match(app, /botLoadError && !deferredLauncherHidden/)
-  assert.match(app, /onClick=\{\(\) => void openQuorlythBot\(\)\}/)
+  assert.match(app, /createPortal\(/)
+  assert.match(app, /document\.body/)
+  assert.match(app, /data-quorlyth-launcher/)
+  assert.match(app, /botLoadError && <div className="qbot-launcher-load-error"/)
+  assert.doesNotMatch(app, /deferredLauncherHidden|deferredHoldTimer|onContextMenu=|onPointerDown=/)
+  assert.match(css, /#astl\.astl\s*\{[\s\S]{0,300}position: fixed !important/)
+  assert.match(css, /#astl\.astl::before/)
+  assert.match(css, /z-index: 110 !important/)
+})
+
+
+test('the landing page rotates both approved support lines with the editorial reveal', async () => {
+  const [landing, styles] = await Promise.all([
+    readSource('src/screens/Landing.tsx'),
+    readSource('src/styles/extra.css'),
+  ])
+  assert.match(landing, /ROTATING_SUPPORT_COPY = \[HERO_COPY\.support, PREVIEW_COPY\.support\]/)
+  assert.match(landing, /function RotatingEditorialCopy/)
+  assert.match(landing, /window\.setInterval/)
+  assert.match(landing, /<RotatingEditorialCopy initialIndex=\{0\} \/>/)
+  assert.match(landing, /<RotatingEditorialCopy initialIndex=\{1\} \/>/)
+  assert.match(styles, /qth-copy-rotator/)
+  assert.match(styles, /qthEditorialWordReveal/)
 })
 
 test('the Live Talk hotkey uses the same safe launcher handoff', async () => {
@@ -334,4 +356,20 @@ test('the branded animated loader is removed from startup, data hydration, lazy 
   assert.match(app, /<Suspense fallback=\{null\}>/)
   assert.match(dashboard, /Verifying your dashboard access/)
   assert.doesNotMatch(main, /styles\/loader\.css/)
+})
+
+test('deadline-reached automation is a one-time persistent worker event', async () => {
+  const [automation, screen, migration] = await Promise.all([
+    readSource('src/lib/automation.ts'),
+    readSource('src/screens/Automations.tsx'),
+    readSource('supabase/migrations/20261107133000_deadline_reached_automation.sql'),
+  ])
+  assert.match(automation, /'deadline\.reached'/)
+  assert.match(automation, /event\.entityType/)
+  assert.match(screen, /trigger: 'deadline\.reached'/)
+  assert.match(screen, /does not wait for or simulate a real project deadline/)
+  assert.match(migration, /enqueue_due_automation_events/)
+  assert.match(migration, /automation_deadline_dispatches/)
+  assert.match(migration, /'deadline\.reached'/)
+  assert.match(migration, /deadline_at_ms/)
 })

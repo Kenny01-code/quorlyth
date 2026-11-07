@@ -1,5 +1,6 @@
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
@@ -87,13 +88,7 @@ export default function App() {
   const botMountedRef = useRef(false)
   const botLoadingRef = useRef(false)
   const pendingVoiceOpenRef = useRef(false)
-  const [deferredLauncherHidden, setDeferredLauncherHidden] = useState(false)
   const [writingAssistantMounted, setWritingAssistantMounted] = useState(false)
-  const [showDeferredLauncherRestore, setShowDeferredLauncherRestore] = useState(false)
-  const deferredRestoreTimer = useRef<number | null>(null)
-  const deferredHoldTimer = useRef<number | null>(null)
-  const deferredHoldOrigin = useRef<{ x: number; y: number } | null>(null)
-  const deferredLongPressTriggered = useRef(false)
   const [desktopPermission, setDesktopPermission] = useState<NotificationPermission | 'unsupported'>(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
@@ -114,10 +109,6 @@ export default function App() {
     botLoadingRef.current = true
     setBotLoading(true)
     setBotLoadError('')
-    setDeferredLauncherHidden(false)
-    setShowDeferredLauncherRestore(false)
-    if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
-    deferredRestoreTimer.current = null
 
     try {
       // Resolve the same dynamic import used by React.lazy BEFORE replacing the
@@ -177,45 +168,6 @@ export default function App() {
   const knownMessages = useRef<Set<string> | null>(null)
   const g = useRef(0)
 
-  useEffect(() => {
-    const restoreLauncher = (event: KeyboardEvent) => {
-      if (event.altKey && event.shiftKey && event.code === 'KeyB') {
-        event.preventDefault()
-        setDeferredLauncherHidden(false)
-        setShowDeferredLauncherRestore(false)
-        if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
-        deferredRestoreTimer.current = null
-      }
-    }
-    window.addEventListener('keydown', restoreLauncher)
-    return () => window.removeEventListener('keydown', restoreLauncher)
-  }, [])
-
-  useEffect(() => () => {
-    if (deferredHoldTimer.current !== null) window.clearTimeout(deferredHoldTimer.current)
-    if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
-  }, [])
-
-  const clearDeferredLauncherHold = () => {
-    if (deferredHoldTimer.current !== null) window.clearTimeout(deferredHoldTimer.current)
-    deferredHoldTimer.current = null
-    deferredHoldOrigin.current = null
-  }
-  const hideDeferredLauncher = () => {
-    setDeferredLauncherHidden(true)
-    setShowDeferredLauncherRestore(true)
-    if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
-    deferredRestoreTimer.current = window.setTimeout(() => {
-      setShowDeferredLauncherRestore(false)
-      deferredRestoreTimer.current = null
-    }, 10000)
-  }
-  const restoreDeferredLauncher = () => {
-    setDeferredLauncherHidden(false)
-    setShowDeferredLauncherRestore(false)
-    if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
-    deferredRestoreTimer.current = null
-  }
 
   useEffect(() => {
     // Keep route changes instant while ordinary document scrolling remains smooth.
@@ -437,50 +389,33 @@ export default function App() {
       {bell && <Suspense fallback={null}><NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} /></Suspense>}
       {palette && <Suspense fallback={null}><Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} /></Suspense>}
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
-      {!botMounted ? <>
-        {!deferredLauncherHidden && <button
-          id="astl"
-          className={botLoading ? 'astl qbot-deferred-loading' : 'astl'}
-          disabled={botLoading}
-          aria-busy={botLoading}
-          onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
-          aria-label={botLoading ? 'Loading QuorlythBot' : botLoadError ? 'Retry loading QuorlythBot' : 'Open QuorlythBot for help with communities, ideas, analytics, workspaces, and collaborations'}
-          title={botLoading ? 'Loading QuorlythBot…' : botLoadError || 'Ask QuorlythBot for help · Right-click to hide on desktop or press and hold on mobile'}
-          onClick={() => {
-            if (deferredLongPressTriggered.current) { deferredLongPressTriggered.current = false; return }
-            void openQuorlythBot()
-          }}
-          onContextMenu={event => { event.preventDefault(); hideDeferredLauncher() }}
-          onPointerDown={event => {
-            if (event.pointerType !== 'touch') return
-            clearDeferredLauncherHold()
-            deferredLongPressTriggered.current = false
-            deferredHoldOrigin.current = { x: event.clientX, y: event.clientY }
-            deferredHoldTimer.current = window.setTimeout(() => {
-              deferredLongPressTriggered.current = true
-              deferredHoldTimer.current = null
-              hideDeferredLauncher()
-              window.setTimeout(() => { deferredLongPressTriggered.current = false }, 900)
-            }, 650)
-          }}
-          onPointerMove={event => {
-            const origin = deferredHoldOrigin.current
-            if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 12) clearDeferredLauncherHold()
-          }}
-          onPointerUp={clearDeferredLauncherHold}
-          onPointerCancel={clearDeferredLauncherHold}
-          onPointerLeave={clearDeferredLauncherHold}
-        ><span className="astm"><Logo size={30} /></span></button>}
-        {botLoadError && !deferredLauncherHidden && <div className="qbot-launcher-load-error" role="status">
-          <span>{botLoadError}</span>
-          <button type="button" onClick={() => void openQuorlythBot()}>Retry</button>
-        </div>}
-        {deferredLauncherHidden && showDeferredLauncherRestore && <div className="qbot-launcher-hidden-notice" role="status">
-          <span>QuorlythBot hidden</span>
-          <button type="button" onClick={restoreDeferredLauncher}>Undo</button>
-          <span className="qbot-launcher-shortcut">Alt + Shift + B</span>
-        </div>}
-      </> : <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
+      {!botMounted && createPortal(
+        <div className="qbot-launcher-portal" data-quorlyth-launcher>
+          <button
+            id="astl"
+            type="button"
+            className={botLoading ? 'astl qbot-deferred-loading' : 'astl'}
+            disabled={botLoading}
+            aria-busy={botLoading}
+            aria-expanded={false}
+            aria-controls="ast"
+            onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
+            aria-label={botLoading ? 'Loading QuorlythBot' : botLoadError ? 'Retry loading QuorlythBot' : 'Open QuorlythBot. Ask about your ideas, communities, analytics, projects, or next steps.'}
+            title={botLoading ? 'Opening QuorlythBot…' : botLoadError || 'Ask QuorlythBot about your communities, ideas, projects, or next steps.'}
+            onClick={() => { void openQuorlythBot() }}
+          >
+            <span className="astm"><Logo size={30} /></span>
+            <span className="astl-hint" aria-hidden="true">Ask Quorlyth</span>
+          </button>
+          {botLoading && <span className="qbot-launcher-status" role="status">Opening QuorlythBot…</span>}
+          {botLoadError && <div className="qbot-launcher-load-error" role="alert">
+            <span>{botLoadError}</span>
+            <button type="button" onClick={() => void openQuorlythBot()}>Retry</button>
+          </div>}
+        </div>,
+        document.body,
+      )}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
       <Toast />
       {writingAssistantMounted && <Suspense fallback={null}><WritingAssistant /></Suspense>}
     </>

@@ -71,6 +71,7 @@ const TEMPLATES: Template[] = [
   { key: 'idea-review', name: 'Idea → delivery task', description: 'Turn a new idea into a real task inside a workspace you manage.', trigger: 'idea.created', action: 'create_task' },
   { key: 'evidence-review', name: 'Evidence review alert', description: 'Notify a reviewer whenever a contributor submits work for inspection.', trigger: 'evidence.submitted', action: 'notify', message: 'Evidence submitted for {{event.title}}. Check Quorlyth’s alignment notes and inspect the deliverable.' },
   { key: 'milestone-start', name: 'Milestone progress update', description: 'Keep the team informed when an assigned collaboration outcome moves into progress.', trigger: 'milestone.started', action: 'notify', message: 'Work has started on {{event.title}}. Keep the definition of done visible.' },
+  { key: 'deadline-alert', name: 'Deadline reached alert', description: 'Notify your team once an active project, unfinished task, or unfinished milestone reaches its due date.', trigger: 'deadline.reached', action: 'notify', message: 'A deadline has arrived for {{event.title}}. Review the work, update its status, and agree the next step.' },
 ]
 
 function freshAction(type: WorkflowActionType): WorkflowAction {
@@ -281,7 +282,7 @@ function AutomationWorkspace() {
     const effects = workflow.actions.map(action => ACTION_INFO[action.type]?.title || action.type)
     const actionList = [...new Set(effects)].join(', ')
     const confirmed = window.confirm(
-      'Run a real test of "' + workflow.name + '"?\n\nThis is not a dry run. Quorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured. The receiving service may perform its own actions. Continue only if those effects are intended.'
+      'Run an immediate sample test of "' + workflow.name + '"?\n\nQuorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured. This tests the action path now; it does not wait for or simulate a real project deadline. The receiving service may perform its own actions. Continue only if those effects are intended.'
     )
     if (!confirmed) return
     setBusy('run-' + workflow.id)
@@ -652,7 +653,7 @@ function AutomationWorkspace() {
           <button className="wa-back" type="button" onClick={() => { setEditing(null); setError('') }}><QuorlythGlyph name="back" size={15} />Back to workflows</button>
           <div className="wa-editor-actions">
             <button className="btn" type="button" onClick={() => void runWorkflow(editing, true)} disabled={busy === 'run-' + editing.id}>
-              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Running…' : 'Run real test'}
+              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Running…' : 'Run sample test'}
             </button>
             <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Turn on automation</button>
             <button className="btn p" type="submit" form="wa-editor-form" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
@@ -670,7 +671,7 @@ function AutomationWorkspace() {
             {aiLiveTrigger && <p><b>Trigger</b><span>{TRIGGER_INFO[aiLiveTrigger as WorkflowTrigger]?.title || aiLiveTrigger}</span></p>}
             {aiLiveActionTitles.map((title, index) => <p key={index}><b>Action {index + 1}</b><span>{title}</span></p>)}
           </div>}
-          {aiBuildStatus === 'ready' && <p className="wa-ai-ready-note">Review the plan before saving. “Save workflow” keeps the workflow in its current state; “Turn on automation” saves and activates it. “Run a real test” executes the configured actions with a sample event, so it may create a task, save a notice or call your webhook.</p>}
+          {aiBuildStatus === 'ready' && <p className="wa-ai-ready-note">Review the plan before saving. “Save workflow” keeps the workflow in its current state; “Turn on automation” saves and activates it. “Run sample test” executes the configured actions immediately with sample event data. It does not simulate a deadline, and it may create a task, save a notice or call your webhook.</p>}
         </section>}
         <form id="wa-editor-form" className="wa-graph-editor-form" onSubmit={saveWorkflow}>
           <WorkflowCanvas
@@ -713,7 +714,7 @@ function AutomationWorkspace() {
         <div>
           <strong>{isPersistentRuntime ? 'Server-side automations are available' : 'Session-based automation mode'}</strong>
           <p>{isPersistentRuntime
-            ? 'Once you turn a workflow on, eligible Quorlyth events are queued and processed on the server. It keeps running when you close this page, and each execution is written to your run history.'
+            ? 'Once you turn a workflow on, eligible Quorlyth events are queued and processed on the server, including one-time deadline events for active projects and unfinished tasks or milestones. It keeps running when you close this page, and each execution is written to your run history.'
             : 'In this demo or local session, automated events are handled while the session is open. Sign in to use persistent background automations.'}</p>
         </div>
         <span className="wa-runtime-label">{isPersistentRuntime ? 'BACKGROUND' : 'SESSION'}</span>
@@ -820,7 +821,7 @@ function AutomationWorkspace() {
         <section className="glass pad wa-runs-panel">
           <div className="wa-section-title"><div><p className="wa-eyebrow">ACTIVITY</p><h3>What your workflows have done.</h3><p>Live and completed runs appear here. Expand each run to inspect the action results, failure detail and execution sequence.</p></div></div>
           {notices.length > 0 && <div className="wa-notice-inbox"><div className="wa-section-title"><div><p className="wa-eyebrow">NOTICES</p><h3>Recent automation notifications</h3><p>Messages produced by your workflows when an event matches.</p></div><span className="wa-template-count">{notices.length} saved</span></div><div className="wa-notice-list">{notices.slice().sort((a,b)=>b.at-a.at).slice(0,8).map(notice => <article className="wa-notice-row" key={notice.id}><span className="wa-notice-icon"><QuorlythGlyph name="bell" size={15} /></span><div><strong>{notice.title || notice.workflowName || 'Automation notice'}</strong><p>{notice.message}</p><small>{displayDate(notice.at)}{notice.eventType ? ' · ' + notice.eventType : ''}</small></div></article>)}</div></div>}
-          {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run real test” to execute a sample event with real actions, or turn a workflow on to run it automatically when its event happens.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
+          {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run sample test” to execute the configured action path immediately. It does not simulate a deadline; activate the workflow to receive a one-time event when a real due date arrives.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
             {allRuns.map(run => <article className="wa-run-row" key={run.workflowId + ':' + run.id}>
               <span className={'wa-run-status ' + run.status}>{run.status === 'success' ? <QuorlythGlyph name="check" size={15} /> : run.status === 'running' ? <QuorlythGlyph name="progress" size={15} /> : <QuorlythGlyph name="alert" size={15} />}</span>
               <div className="wa-run-summary"><strong>{run.workflowName}</strong><p>{run.eventTitle || (run.trigger === 'manual' ? 'Manual test run' : TRIGGER_INFO[run.trigger as WorkflowTrigger]?.title || run.trigger)}</p><small>{displayDate(run.status === 'running' ? run.startedAt : run.finishedAt)} · {run.steps.length} of the configured step{run.steps.length === 1 ? '' : 's'} recorded</small>{run.steps.map(step => <div className="wa-run-step" key={step.id}><span className={'wa-run-dot ' + step.status} /><span>{step.title}</span><small>{step.status === 'success' || step.status === 'running' ? step.detail : userFacingMutationError(step.detail, 'complete this workflow step')}</small></div>)}{run.error && <p className="wa-run-error">{userFacingMutationError(run.error, 'run this workflow')}</p>}</div>

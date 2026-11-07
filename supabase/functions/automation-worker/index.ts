@@ -102,6 +102,10 @@ function interpolate(template: unknown, workflow: AnyRecord, event: AnyRecord) {
     "event.body": String(payload.body || payload.summary || ""),
     "event.communityId": String(payload.communityId ?? ""),
     "event.projectId": String(payload.projectId ?? ""),
+    "event.taskId": String(payload.taskId ?? ""),
+    "event.entityType": String(payload.entityType ?? ""),
+    "event.deadline": payload.deadlineAt ? new Date(Number(payload.deadlineAt)).toLocaleString() : "",
+    "event.deadlineAt": String(payload.deadlineAt ?? ""),
     "workflow.name": String(workflow.name ?? "Automation"),
   };
   return String(template ?? "").replace(/\{\{\s*([a-zA-Z.]+)\s*\}\}/g, (_whole, key: string) => values[key] ?? _whole).trim();
@@ -114,6 +118,7 @@ function conditionMatches(node: AnyRecord, event: AnyRecord) {
   else if (node.field === "body") actual = String(payload.body ?? "");
   else if (node.field === "summary") actual = String(payload.summary ?? "");
   else if (node.field === "event.type") actual = String(event.trigger_type ?? "");
+  else if (node.field === "event.entityType") actual = String(payload.entityType ?? "");
   else actual = [payload.title, payload.summary, payload.body, event.trigger_type].filter(Boolean).join(" ");
 
   actual = actual.trim().toLocaleLowerCase();
@@ -377,9 +382,19 @@ async function executeWorkflow(workflow: AnyRecord, ownerId: string, event: AnyR
 }
 
 async function processEvents() {
+  // Time-based deadlines are discovered by the worker, not by a browser timer.
+  // The database dispatcher deduplicates each source record + dueAt timestamp.
+  const { data: deadlinesEnqueued, error: deadlineError } = await db.rpc(
+    "enqueue_due_automation_events",
+    { p_limit: 5 },
+  );
+  if (deadlineError) throw deadlineError;
+
   const { data: events, error: claimError } = await db.rpc("claim_automation_events", { p_limit: 5 });
   if (claimError) throw claimError;
-  if (!Array.isArray(events) || events.length === 0) return { processed: 0, succeeded: 0, retried: 0 };
+  if (!Array.isArray(events) || events.length === 0) {
+    return { processed: 0, succeeded: 0, retried: 0, deadlinesEnqueued: Number(deadlinesEnqueued || 0) };
+  }
 
   const { data: workflowRows, error: workflowsError } = await db
     .from("docs")
@@ -439,7 +454,7 @@ async function processEvents() {
     else succeeded += 1;
   }
 
-  return { processed: events.length, succeeded, retried };
+  return { processed: events.length, succeeded, retried, deadlinesEnqueued: Number(deadlinesEnqueued || 0) };
 }
 
 Deno.serve(async (request: Request) => {

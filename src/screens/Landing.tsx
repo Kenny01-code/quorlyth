@@ -17,7 +17,7 @@ const PREVIEW_COPY = {
 }
 
 function EditorialReveal({ text, pace = 'headline' }: { text: string; pace?: 'headline' | 'body' }) {
-  const interval = pace === 'headline' ? 48 : 23
+  const interval = pace === 'headline' ? 48 : 31
   return (
     <span className="qth-editorial">
       <span className="qth-editorial-sr">{text}</span>
@@ -26,6 +26,25 @@ function EditorialReveal({ text, pace = 'headline' }: { text: string; pace?: 'he
           <span key={index}><span className="qth-editorial-word" style={{ animationDelay: `${index * interval}ms` }}>{word}</span>{index < words.length - 1 ? ' ' : ''}</span>
         ))}
       </span>
+    </span>
+  )
+}
+
+const ROTATING_SUPPORT_COPY = [HERO_COPY.support, PREVIEW_COPY.support] as const
+
+function RotatingEditorialCopy({ initialIndex = 0 }: { initialIndex?: number }) {
+  const [activeIndex, setActiveIndex] = useState(initialIndex)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const timer = window.setInterval(() => {
+      setActiveIndex(current => (current + 1) % ROTATING_SUPPORT_COPY.length)
+    }, 8600)
+    return () => window.clearInterval(timer)
+  }, [])
+  const text = ROTATING_SUPPORT_COPY[activeIndex % ROTATING_SUPPORT_COPY.length]
+  return (
+    <span className="qth-copy-rotator" aria-live="off">
+      <EditorialReveal key={activeIndex} text={text} pace="body" />
     </span>
   )
 }
@@ -79,7 +98,7 @@ export function Landing() {
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
         <h1 className="hero-title"><EditorialReveal text={HERO_COPY.headline} /></h1>
-        <p className="hero-copy"><EditorialReveal text={HERO_COPY.support} pace="body" /></p>
+        <p className="hero-copy"><RotatingEditorialCopy initialIndex={0} /></p>
         <div className="hero-actions">
           <button className="btn p" onClick={() => {
             window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'demo_start', page_path: '/' } }))
@@ -105,7 +124,7 @@ export function Landing() {
         <div className="preview-copy">
           <p className="eyebrow">INSIDE QUORLYTH</p>
           <h2 id="preview-heading"><EditorialReveal text={PREVIEW_COPY.headline} /></h2>
-          <p className="mut"><EditorialReveal text={PREVIEW_COPY.support} pace="body" /></p>
+          <p className="mut qth-preview-rotator"><RotatingEditorialCopy initialIndex={1} /></p>
         </div>
         <div className="glass preview-card">
           <div className="preview-topline">
