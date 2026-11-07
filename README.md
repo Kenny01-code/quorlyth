@@ -58,25 +58,29 @@ Implemented code paths also cover community creation and membership, idea submis
 
 ## Run locally
 
-Use Node.js 20.6 or newer. In Windows PowerShell, from the repository root:
+Use Node.js 22.x. From the repository root in Windows PowerShell:
 
 ```powershell
 npm install
+Copy-Item .env.example .env
 ```
 
-For the web app:
+Add the values for the services you use to `.env`. Then start the complete local app with one command:
 
 ```powershell
 npm run dev
 ```
 
-For local AI routes, open a second terminal and run:
+This starts both the Vite web app (http://localhost:5173) and the local AI API (http://localhost:8787). Vite proxies `/api` requests to the AI server, so QuorlythBot's text and voice routes use the local handlers without a second terminal. The command also stops both processes together when you press Ctrl+C.
 
-```powershell
-npm run dev:ai
-```
+For a frontend-only session without local AI routes, use `npm run dev:vite`. Do not start `npm run dev:ai` separately while `npm run dev` is already running; the combined command has already started it.
 
-Vite runs at http://localhost:5173. The development AI server reads server-side environment variables from `.env`.
+### Match the deployed app locally
+
+- Use the same Git commit as the production deployment when you want the same screens and code.
+- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in local `.env` to the intended Supabase project if you want the same sign-in and shared data. Add `http://localhost:5173` to the Supabase Auth redirect allow-list. Use only the public/anon key in browser variables; never put the service-role key in a `VITE_*` variable.
+- Configure the same server-side AI provider keys in local `.env` (for example `GEMINI_API_KEY`, `XAI_API_KEY`, `OPENAI_API_KEY`, and `ELEVENLABS_API_KEY`) to reproduce the deployed bot features. Keep these secrets server-side.
+- Local code and environment settings do not start a second copy of the production automation worker. When local changes are written to the same Supabase project, its deployed database triggers and worker can still process them. Use a separate development Supabase project for isolated automation testing.
 
 ## Environment variables
 
