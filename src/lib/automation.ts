@@ -1,6 +1,6 @@
 import type { DocStore } from '../data/docstore'
 
-export type WorkflowTrigger = 'manual' | 'idea.created' | 'task.started' | 'task.completed' | 'workspace.created' | 'milestone.started' | 'evidence.submitted' | 'evidence.reviewed'
+export type WorkflowTrigger = 'manual' | 'idea.created' | 'task.started' | 'task.completed' | 'workspace.created' | 'milestone.started' | 'evidence.submitted' | 'evidence.reviewed' | 'deadline.reached'
 export type WorkflowActionType = 'notify' | 'create_task' | 'webhook'
 export type WorkflowConditionField = 'text' | 'title' | 'body' | 'summary' | 'event.type'
 export type WorkflowConditionOperator = 'contains' | 'equals' | 'not_contains' | 'starts_with'
@@ -98,6 +98,7 @@ export const TRIGGER_INFO: Record<WorkflowTrigger, { title: string; description:
   'milestone.started': { title: 'A collaboration milestone starts', description: 'Runs when an assigned collaborator starts a planned outcome.' },
   'evidence.submitted': { title: 'Work evidence is submitted', description: 'Runs when a contributor submits a deliverable for review.' },
   'evidence.reviewed': { title: 'Evidence is reviewed', description: 'Runs when a workspace reviewer approves evidence or requests changes.' },
+  'deadline.reached': { title: 'A project, task, or milestone deadline arrives', description: 'Runs once when an active project, unfinished task, or unfinished milestone reaches its due date.' },
 }
 
 export const ACTION_INFO: Record<WorkflowActionType, { title: string; description: string }> = {
@@ -294,6 +295,9 @@ function interpolate(template: string | undefined, workflow: WorkflowDefinition,
     'event.body': String(event.payload.body || event.payload.summary || ''),
     'event.communityId': String(event.payload.communityId || ''),
     'event.projectId': String(event.payload.projectId || ''),
+    'event.taskId': String(event.payload.taskId || ''),
+    'event.entityType': String(event.payload.entityType || ''),
+    'event.deadline': event.payload.deadlineAt ? new Date(Number(event.payload.deadlineAt)).toLocaleString() : '',
     'workflow.name': workflow.name,
   }
   return String(template || '').replace(/\{\{\s*([a-zA-Z.]+)\s*\}\}/g, (whole, key: string) => values[key] ?? whole).trim()
