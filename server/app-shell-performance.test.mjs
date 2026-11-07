@@ -359,10 +359,11 @@ test('the branded animated loader is removed from startup, data hydration, lazy 
 })
 
 test('deadline-reached automation is a one-time persistent worker event', async () => {
-  const [automation, screen, migration] = await Promise.all([
+  const [automation, screen, migration, worker] = await Promise.all([
     readSource('src/lib/automation.ts'),
     readSource('src/screens/Automations.tsx'),
     readSource('supabase/migrations/20261107133000_deadline_reached_automation.sql'),
+    readSource('supabase/functions/automation-worker/index.ts'),
   ])
   assert.match(automation, /'deadline\.reached'/)
   assert.match(automation, /event\.entityType/)
@@ -372,4 +373,7 @@ test('deadline-reached automation is a one-time persistent worker event', async 
   assert.match(migration, /automation_deadline_dispatches/)
   assert.match(migration, /'deadline\.reached'/)
   assert.match(migration, /deadline_at_ms/)
+  assert.match(automation, /deadlineAt/)
+  assert.match(worker, /deadlineAt: event\.payload\?\.deadlineAt/)
+  assert.match(worker, /entityType: event\.payload\?\.entityType/)
 })
