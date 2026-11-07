@@ -86,7 +86,7 @@ test('Automatic page-guide popups are removed and QuorlythBot loads only on expl
   assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
   assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
   assert.match(app, /onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /onClick=\{\(\) => \{[\s\S]{0,180}loadQuorlythBot\(\)/)
+  assert.match(app, /onClick=\{\(\) => \{[\s\S]{0,180}openQuorlythBot\(\)/)
   assert.match(app, /const QuorlythBot = lazy\(loadQuorlythBot\)/)
   assert.doesNotMatch(app, /qbot-open-fallback/)
 })
