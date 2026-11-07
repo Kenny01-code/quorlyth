@@ -194,6 +194,7 @@ function AutomationWorkspace() {
   const activeCount = workflows.filter(workflow => workflow.status === 'active').length
   const runCount = allRuns.length
   const failedCount = allRuns.filter(run => run.status === 'failed').length
+  const isPersistentRuntime = app.backend?.auth.mode === 'supabase' && !app.demo
   const aiLiveName = partialJsonString(aiBuildText, 'name')
   const aiLiveDescription = partialJsonString(aiBuildText, 'description')
   const aiLiveTrigger = partialJsonString(aiBuildText, 'trigger')
@@ -241,7 +242,7 @@ function AutomationWorkspace() {
       const current = await app.backend.store.get(path)
       if (current) await app.backend.store.set(path, next)
       else await app.backend.store.create(path, next)
-      app.toast(next.status === 'active' ? 'Workflow saved and activated. It is now listening for its trigger.' : 'Workflow saved as a draft.')
+      app.toast(next.status === 'active' ? (isPersistentRuntime ? 'Automation is on and will continue when you leave this page.' : 'Automation is on for this session.') : 'Workflow saved as a draft.')
       setEditing(null)
       setTab('workflows')
     } catch (failure) {
@@ -277,6 +278,12 @@ function AutomationWorkspace() {
 
   async function runWorkflow(workflow: WorkflowDefinition, keepEditorOpen = false) {
     if (!app.backend || !userId) return
+    const effects = workflow.actions.map(action => ACTION_INFO[action.type]?.title || action.type)
+    const actionList = [...new Set(effects)].join(', ')
+    const confirmed = window.confirm(
+      'Run a real test of "' + workflow.name + '"?\n\nThis is not a dry run. Quorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured. The receiving service may perform its own actions. Continue only if those effects are intended.'
+    )
+    if (!confirmed) return
     setBusy('run-' + workflow.id)
     setError('')
     const startedAt = Date.now()
@@ -368,7 +375,7 @@ function AutomationWorkspace() {
           'Return one JSON object with name, description, trigger, condition, and actions.',
           'condition may be null or {field,operator,value}. Allowed fields: text,title,body,summary,event.type. Allowed operators: contains,equals,not_contains,starts_with.',
           'actions must contain between one and six objects. Each action type must be notify or create_task.',
-          'For create_task, projectId must be one exact id from available_workspaces. If no workspace is available, use notify instead.',
+          'For create_task, projectId must be an exact id from available_workspaces and the user must have explicitly chosen it, unless exactly one managed workspace exists. If no exact workspace choice is available, use notify instead.',
           'Use only the supplied triggers and actions. Never invent ids, projects, permissions, URLs, webhook endpoints, recipients, or facts.',
           'Use event placeholders only where supported: {{event.title}}, {{event.body}}, {{event.summary}}, {{workflow.name}}.',
           'Keep task titles, messages and acceptance criteria concise, practical and grounded in the request.',
@@ -427,15 +434,24 @@ function AutomationWorkspace() {
       }
 
       let actions: WorkflowAction[]
+      let usedSafeNotificationFallback = false
       if (aiFields.includes('actions')) {
         const rawActions = Array.isArray(spec.actions) ? spec.actions.slice(0, 6) : []
         actions = rawActions.map(raw => {
           const type = raw.type === 'create_task' ? 'create_task' : 'notify'
           const id = newWorkflowId()
           if (type === 'create_task') {
-            const requestedProject = String(aiProjectChoice || raw.projectId || (projectOptions.length === 1 ? projectOptions[0].id : '')).trim()
+            const requestedProject = String(aiProjectChoice || (projectOptions.length === 1 ? projectOptions[0].id : '')).trim()
             const projectId = projectOptions.find(project => project.id === requestedProject)?.id
-            if (!projectId) throw new Error('QuorlythBot suggested a workspace task. Choose a workspace you own or manage, then run the AI builder again.')
+            if (!projectId) {
+              usedSafeNotificationFallback = true
+              return {
+                id,
+                type: 'notify',
+                title: 'Workspace follow-up suggested',
+                message: 'QuorlythBot recommends a workspace follow-up for {{event.title}}. Choose a workspace in Automation advanced options to create the task automatically.',
+              }
+            }
             return {
               id, type, title: String(raw.title || ACTION_INFO.create_task.title).trim().slice(0, 100),
               projectId,
@@ -596,7 +612,11 @@ function AutomationWorkspace() {
       setEditing(next)
       setAiBuildSteps(current => current.map(step => step.id === 'validation' ? { ...step, status: 'done' } : step))
       setAiBuildStatus('ready')
-      setAiBuildMessage(existing ? 'Your selected workflow has been updated in the builder. Review it, then save or activate it.' : 'Your recommended workflow is ready. Review the map, then save it as a draft or activate it.')
+      setAiBuildMessage(usedSafeNotificationFallback
+        ? 'Your workflow is ready. Quorlyth chose a safe notification instead of creating a task because no managed workspace was selected. Choose a workspace in Advanced options and rebuild to create tasks automatically.'
+        : existing
+          ? 'Your selected workflow has been updated in the builder. Review it, then save or activate it.'
+          : 'Your recommended workflow is ready. Review the map, then save it as a draft or turn it on.')
       setError('')
     } catch (failure) {
       const message = failure instanceof Error ? failure.message : 'QuorlythBot could not build this workflow. Try again.'
@@ -632,9 +652,9 @@ function AutomationWorkspace() {
           <button className="wa-back" type="button" onClick={() => { setEditing(null); setError('') }}><QuorlythGlyph name="back" size={15} />Back to workflows</button>
           <div className="wa-editor-actions">
             <button className="btn" type="button" onClick={() => void runWorkflow(editing, true)} disabled={busy === 'run-' + editing.id}>
-              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Testing…' : 'Run a test now'}
+              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Running…' : 'Run real test'}
             </button>
-            <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Save & activate</button>
+            <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Turn on automation</button>
             <button className="btn p" type="submit" form="wa-editor-form" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
           </div>
         </div>
@@ -650,14 +670,7 @@ function AutomationWorkspace() {
             {aiLiveTrigger && <p><b>Trigger</b><span>{TRIGGER_INFO[aiLiveTrigger as WorkflowTrigger]?.title || aiLiveTrigger}</span></p>}
             {aiLiveActionTitles.map((title, index) => <p key={index}><b>Action {index + 1}</b><span>{title}</span></p>)}
           </div>}
-          {aiBuildStatus === 'generating' && (aiLiveName || aiLiveDescription || aiLiveTrigger || aiLiveActionTitles.length > 0) && <div className="wa-ai-live-preview">
-            <small>LIVE WORKFLOW FIELDS</small>
-            {aiLiveName && <p><b>Name</b><span>{aiLiveName}</span></p>}
-            {aiLiveDescription && <p><b>Purpose</b><span>{aiLiveDescription}</span></p>}
-            {aiLiveTrigger && <p><b>Trigger</b><span>{TRIGGER_INFO[aiLiveTrigger as WorkflowTrigger]?.title || aiLiveTrigger}</span></p>}
-            {aiLiveActionTitles.map((title, index) => <p key={index}><b>Action {index + 1}</b><span>{title}</span></p>)}
-          </div>}
-          {aiBuildStatus === 'ready' && <p className="wa-ai-ready-note">This is still a draft until you save it. “Save & activate” makes it listen for the trigger. “Run a test now” executes one manual test using the actions shown.</p>}
+          {aiBuildStatus === 'ready' && <p className="wa-ai-ready-note">Review the plan before saving. “Save workflow” keeps the workflow in its current state; “Turn on automation” saves and activates it. “Run a real test” executes the configured actions with a sample event, so it may create a task, save a notice or call your webhook.</p>}
         </section>}
         <form id="wa-editor-form" className="wa-graph-editor-form" onSubmit={saveWorkflow}>
           <WorkflowCanvas
@@ -670,7 +683,7 @@ function AutomationWorkspace() {
           {error && <p className="wa-error" role="alert">{error}</p>}
           <div className="wa-bottom-actions">
             <button className="btn" type="button" onClick={() => { setEditing(null); setError('') }}>Cancel</button>
-            <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Save & activate</button>
+            <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Turn on automation</button>
             <button className="btn p" type="submit" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
           </div>
         </form>
@@ -680,10 +693,10 @@ function AutomationWorkspace() {
 
   return (
     <div className="wa-screen">
-      <Head kicker="WORKFLOW AUTOMATION" title="Make work move on its own." right={<button className="btn p" type="button" onClick={() => beginNew()}><QuorlythGlyph name="add" size={15} />Build workflow</button>} />
+      <Head kicker="WORKFLOW AUTOMATION" title="Make work move on its own." right={<button className="btn p" type="button" onClick={() => document.getElementById('wa-ai-prompt')?.focus()}><QuorlythGlyph name="idea" size={15} />Build with QuorlythBot</button>} />
 
       <section className="wa-hero glass pad">
-        <div className="wa-hero-copy"><span className="wa-hero-kicker"><QuorlythGlyph name="brand" size={14} />A little less busywork</span><h3>Connect the steps.<br /><span>Automate the handoff.</span></h3><p>Choose a live event, narrow it with a condition, then connect ordered actions. Quorlyth records each step, keeps a run ledger and prevents duplicate tabs from claiming the same event twice.</p><div className="wa-hero-actions"><button className="btn p" type="button" onClick={() => beginNew()}><QuorlythGlyph name="add" size={15} />Create your first flow</button><button className="btn" type="button" onClick={() => setTab('runs')}><QuorlythGlyph name="progress" size={15} />View run history</button></div></div>
+        <div className="wa-hero-copy"><span className="wa-hero-kicker"><QuorlythGlyph name="brand" size={14} />A little less busywork</span><h3>Tell Quorlyth what to do.<br /><span>Let it handle the repeatable work.</span></h3><p>Turn everyday events into useful notifications and follow-up tasks. Describe the result you want, review the automation QuorlythBot prepares, and choose when it should start.</p><div className="wa-hero-actions"><button className="btn p" type="button" onClick={() => document.getElementById('wa-ai-prompt')?.focus()}><QuorlythGlyph name="idea" size={15} />Describe an automation</button><button className="btn" type="button" onClick={() => setTab('runs')}><QuorlythGlyph name="progress" size={15} />View run history</button></div></div>
         <div className="wa-hero-visual" aria-label="Example workflow: idea submitted, filter, create review task">
           <div className="wa-float-label wa-label-trigger">TRIGGER</div>
           <div className="wa-preview-node"><span className="wa-preview-node-icon"><QuorlythGlyph name="idea" size={17} /></span><div><small>WHEN THIS HAPPENS</small><strong>New idea submitted</strong></div><QuorlythGlyph name="check" size={14} /></div>
@@ -695,45 +708,58 @@ function AutomationWorkspace() {
         </div>
       </section>
 
+      <section className={'wa-runtime-status ' + (isPersistentRuntime ? 'is-server' : 'is-session')} role="status">
+        <span className="wa-runtime-dot" />
+        <div>
+          <strong>{isPersistentRuntime ? 'Server-side automations are available' : 'Session-based automation mode'}</strong>
+          <p>{isPersistentRuntime
+            ? 'Once you turn a workflow on, eligible Quorlyth events are queued and processed on the server. It keeps running when you close this page, and each execution is written to your run history.'
+            : 'In this demo or local session, automated events are handled while the session is open. Sign in to use persistent background automations.'}</p>
+        </div>
+        <span className="wa-runtime-label">{isPersistentRuntime ? 'BACKGROUND' : 'SESSION'}</span>
+      </section>
       <section className="wa-ai-architect glass pad" aria-labelledby="wa-ai-architect-title">
         <div className="wa-ai-architect-head">
           <span className="wa-ai-architect-mark"><QuorlythGlyph name="brand" size={20} /></span>
           <div>
-            <p className="wa-eyebrow">QUORLYTHBOT · WORKFLOW ARCHITECT</p>
-            <h3 id="wa-ai-architect-title">Tell me what you want automated.</h3>
-            <p>Choose the fields you want changed or let Quorlyth recommend the complete setup. Watch it fill the workflow and draw the map before you save.</p>
+            <p className="wa-eyebrow">QUORLYTHBOT · AUTOMATION ARCHITECT</p>
+            <h3 id="wa-ai-architect-title">Describe the work. I’ll build the automation.</h3>
+            <p>No trigger menus or canvas knowledge needed. Tell Quorlyth what should happen, review the plan it creates, then decide when to turn it on.</p>
           </div>
         </div>
         <label className="wa-ai-prompt-label">
           <span>What should happen automatically?</span>
-          <textarea value={aiPrompt} onChange={event => setAiPrompt(event.target.value)} rows={3} maxLength={1800} placeholder="Example: When someone submits a new idea, notify me. If the idea mentions a launch, create a follow-up task in my product workspace." />
+          <textarea id="wa-ai-prompt" value={aiPrompt} onChange={event => setAiPrompt(event.target.value)} rows={4} maxLength={1800} placeholder="Example: When a member shares an idea, let me know. If a teammate starts a task, notify the project lead. Keep me informed when evidence is approved." />
         </label>
-        <div className="wa-ai-controls">
-          <label><span>Workflow to edit</span>
-            <select value={aiTargetWorkflowId} onChange={event => setAiTargetWorkflowId(event.target.value)}>
-              <option value="">Build a new recommended workflow</option>
-              {orderedWorkflows.map(workflow => <option key={workflow.id} value={workflow.id}>{workflow.name}</option>)}
-            </select>
-          </label>
-          <label><span>Task workspace (only used for task actions)</span>
-            <select value={aiProjectChoice} onChange={event => setAiProjectChoice(event.target.value)}>
-              <option value="">Let Quorlyth recommend / notify instead</option>
-              {manageableProjects.map(project => <option key={project.id} value={project.id}>{project.title}</option>)}
-            </select>
-          </label>
-        </div>
-        <div className="wa-ai-field-choices">
-          <div><span>Choose what Quorlyth should fill</span><small>Leave the fields you want to keep unchanged unchecked.</small></div>
-          {AI_FIELDS.map(field => <label key={field.id}>
-            <input type="checkbox" checked={aiFields.includes(field.id)} onChange={event => setAiFields(current => event.target.checked ? [...current, field.id] : current.filter(value => value !== field.id))} />
-            <span>{field.label}</span>
-          </label>)}
-        </div>
+        <details className="wa-ai-advanced">
+          <summary>Advanced options <span>Optional · for more control</span></summary>
+          <div className="wa-ai-controls">
+            <label><span>Update an existing workflow</span>
+              <select value={aiTargetWorkflowId} onChange={event => setAiTargetWorkflowId(event.target.value)}>
+                <option value="">Create a new automation</option>
+                {orderedWorkflows.map(workflow => <option key={workflow.id} value={workflow.id}>{workflow.name}</option>)}
+              </select>
+            </label>
+            <label><span>Workspace for any tasks Quorlyth creates</span>
+              <select value={aiProjectChoice} onChange={event => setAiProjectChoice(event.target.value)}>
+                <option value="">No workspace selected · use a notification instead</option>
+                {manageableProjects.map(project => <option key={project.id} value={project.id}>{project.title}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="wa-ai-field-choices">
+            <div><span>Fields Quorlyth may change</span><small>Uncheck anything you want preserved when editing an existing workflow.</small></div>
+            {AI_FIELDS.map(field => <label key={field.id}>
+              <input type="checkbox" checked={aiFields.includes(field.id)} onChange={event => setAiFields(current => event.target.checked ? [...current, field.id] : current.filter(value => value !== field.id))} />
+              <span>{field.label}</span>
+            </label>)}
+          </div>
+        </details>
         <div className="wa-ai-architect-actions">
           <button type="button" className="btn p" onClick={() => void buildWorkflowWithAI()} disabled={aiBuildStatus === 'generating' || aiBuildStatus === 'filling' || !aiFields.length}>
-            <QuorlythGlyph name="idea" size={15} />{aiBuildStatus === 'generating' || aiBuildStatus === 'filling' ? 'Building workflow…' : aiTargetWorkflowId ? 'Build selected changes' : 'Build recommended workflow'}
+            <QuorlythGlyph name="idea" size={15} />{aiBuildStatus === 'generating' || aiBuildStatus === 'filling' ? 'Building your automation…' : aiTargetWorkflowId ? 'Build my changes' : 'Build my automation'}
           </button>
-          <span>New workflows stay drafts until you activate them. Existing flows keep their current status when saved.</span>
+          <span>Quorlyth creates a draft first. Nothing starts running until you turn it on.</span>
         </div>
         {aiBuildStatus !== 'idle' && <div className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildStatus === 'ready' ? 'Workflow ready for review' : aiBuildStatus === 'error' ? 'Workflow build needs attention' : aiBuildMessage || 'Quorlyth is working'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
@@ -747,7 +773,7 @@ function AutomationWorkspace() {
 
       <div className="wa-stats">
         <div className="glass pad wa-stat"><span className="wa-stat-icon"><QuorlythGlyph name="timeline" size={18} /></span><p>Saved workflows</p><strong>{workflows.length}</strong><small>Flows you can edit anytime</small></div>
-        <div className="glass pad wa-stat"><span className="wa-stat-icon is-live"><QuorlythGlyph name="start" size={18} /></span><p>Active automations</p><strong>{activeCount}</strong><small>Listening for their triggers</small></div>
+        <div className="glass pad wa-stat"><span className="wa-stat-icon is-live"><QuorlythGlyph name="start" size={18} /></span><p>Active automations</p><strong>{activeCount}</strong><small>{isPersistentRuntime ? 'Run in the background' : 'Run while this session is open'}</small></div>
         <div className="glass pad wa-stat"><span className="wa-stat-icon is-run"><QuorlythGlyph name="progress" size={18} /></span><p>Recorded runs</p><strong>{runCount}</strong><small>{failedCount ? failedCount + ' need attention' : 'Execution history is saved'}</small></div>
       </div>
 
@@ -770,9 +796,9 @@ function AutomationWorkspace() {
               <article className="glass pad wa-workflow-card" key={workflow.id}>
                 <div className="wa-workflow-main">
                   <div className="wa-workflow-symbol"><TriggerGlyph trigger={workflow.trigger} /></div>
-                  <div className="wa-workflow-info"><div className="wa-workflow-title"><h3>{workflow.name}</h3><span className={workflow.status === 'active' ? 'wa-badge is-active' : 'wa-badge'}><i />{workflow.status === 'active' ? 'Active' : 'Draft'}</span></div><p>{workflow.description || TRIGGER_INFO[workflow.trigger].description}</p><div className="wa-workflow-meta"><span><TriggerGlyph trigger={workflow.trigger} />{TRIGGER_INFO[workflow.trigger].title}</span><span><QuorlythGlyph name="timeline" size={13} />{workflow.actions.length} action{workflow.actions.length === 1 ? '' : 's'}</span><span><QuorlythGlyph name="progress" size={13} />Last run {displayDate(workflow.lastRunAt)}</span></div></div>
+                  <div className="wa-workflow-info"><div className="wa-workflow-title"><h3>{workflow.name}</h3><span className={workflow.status === 'active' ? 'wa-badge is-active' : 'wa-badge'}><i />{workflow.status === 'active' ? (isPersistentRuntime ? 'Active · background' : 'Active · session') : 'Draft'}</span></div><p>{workflow.description || TRIGGER_INFO[workflow.trigger].description}</p><div className="wa-workflow-meta"><span><TriggerGlyph trigger={workflow.trigger} />{TRIGGER_INFO[workflow.trigger].title}</span><span><QuorlythGlyph name="timeline" size={13} />{workflow.actions.length} action{workflow.actions.length === 1 ? '' : 's'}</span><span><QuorlythGlyph name="progress" size={13} />Last run {displayDate(workflow.lastRunAt)}</span></div></div>
                 </div>
-                <div className="wa-workflow-actions"><button type="button" className="btn p" onClick={() => void runWorkflow(workflow)} disabled={busy === 'run-' + workflow.id}><QuorlythGlyph name="start" size={14} />{busy === 'run-' + workflow.id ? 'Running…' : 'Run now'}</button><button type="button" className="btn" onClick={() => beginEdit(workflow)}><QuorlythGlyph name="edit" size={14} />Edit</button><label className="wa-list-toggle" title={workflow.status === 'active' ? 'Pause workflow' : 'Activate workflow'}><input type="checkbox" checked={workflow.status === 'active'} onChange={() => void toggleWorkflow(workflow)} disabled={busy === workflow.id} /><i /></label><button className="wa-icon-btn" type="button" onClick={() => void removeWorkflow(workflow)} disabled={busy === 'delete-' + workflow.id} aria-label={'Delete ' + workflow.name} title="Delete workflow"><QuorlythGlyph name="trash" size={15} /></button></div>
+                <div className="wa-workflow-actions"><button type="button" className="btn p" onClick={() => void runWorkflow(workflow)} disabled={busy === 'run-' + workflow.id}><QuorlythGlyph name="start" size={14} />{busy === 'run-' + workflow.id ? 'Running…' : 'Run real test'}</button><button type="button" className="btn" onClick={() => beginEdit(workflow)}><QuorlythGlyph name="edit" size={14} />Edit</button><label className="wa-list-toggle" title={workflow.status === 'active' ? 'Pause workflow' : 'Activate workflow'}><input type="checkbox" checked={workflow.status === 'active'} onChange={() => void toggleWorkflow(workflow)} disabled={busy === workflow.id} /><i /></label><button className="wa-icon-btn" type="button" onClick={() => void removeWorkflow(workflow)} disabled={busy === 'delete-' + workflow.id} aria-label={'Delete ' + workflow.name} title="Delete workflow"><QuorlythGlyph name="trash" size={15} /></button></div>
                 {(workflow.runHistory || []).length > 0 && <div className="wa-last-run"><span className={(workflow.runHistory[0].status === 'success' ? 'wa-run-dot success' : 'wa-run-dot failed')} />Last result: <strong>{runLabel(workflow.runHistory[0].status)}</strong><span>·</span>{displayDate(workflow.runHistory[0].finishedAt)}{workflow.runHistory[0].error ? <small>{workflow.runHistory[0].error}</small> : null}</div>}
               </article>
             ))}
@@ -794,7 +820,7 @@ function AutomationWorkspace() {
         <section className="glass pad wa-runs-panel">
           <div className="wa-section-title"><div><p className="wa-eyebrow">ACTIVITY</p><h3>What your workflows have done.</h3><p>Live and completed runs appear here. Expand each run to inspect the action results, failure detail and execution sequence.</p></div></div>
           {notices.length > 0 && <div className="wa-notice-inbox"><div className="wa-section-title"><div><p className="wa-eyebrow">NOTICES</p><h3>Recent automation notifications</h3><p>Messages produced by your workflows when an event matches.</p></div><span className="wa-template-count">{notices.length} saved</span></div><div className="wa-notice-list">{notices.slice().sort((a,b)=>b.at-a.at).slice(0,8).map(notice => <article className="wa-notice-row" key={notice.id}><span className="wa-notice-icon"><QuorlythGlyph name="bell" size={15} /></span><div><strong>{notice.title || notice.workflowName || 'Automation notice'}</strong><p>{notice.message}</p><small>{displayDate(notice.at)}{notice.eventType ? ' · ' + notice.eventType : ''}</small></div></article>)}</div></div>}
-          {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run now” on a workflow to test its actions, or activate a flow to run it automatically when the selected event happens.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
+          {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run real test” to execute a sample event with real actions, or turn a workflow on to run it automatically when its event happens.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
             {allRuns.map(run => <article className="wa-run-row" key={run.workflowId + ':' + run.id}>
               <span className={'wa-run-status ' + run.status}>{run.status === 'success' ? <QuorlythGlyph name="check" size={15} /> : run.status === 'running' ? <QuorlythGlyph name="progress" size={15} /> : <QuorlythGlyph name="alert" size={15} />}</span>
               <div className="wa-run-summary"><strong>{run.workflowName}</strong><p>{run.eventTitle || (run.trigger === 'manual' ? 'Manual test run' : TRIGGER_INFO[run.trigger as WorkflowTrigger]?.title || run.trigger)}</p><small>{displayDate(run.status === 'running' ? run.startedAt : run.finishedAt)} · {run.steps.length} of the configured step{run.steps.length === 1 ? '' : 's'} recorded</small>{run.steps.map(step => <div className="wa-run-step" key={step.id}><span className={'wa-run-dot ' + step.status} /><span>{step.title}</span><small>{step.status === 'success' || step.status === 'running' ? step.detail : userFacingMutationError(step.detail, 'complete this workflow step')}</small></div>)}{run.error && <p className="wa-run-error">{userFacingMutationError(run.error, 'run this workflow')}</p>}</div>

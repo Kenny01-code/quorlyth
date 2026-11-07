@@ -7,51 +7,28 @@ import { useApp } from '../data/AppProvider'
 import { useReveal } from '../lib/hooks'
 import { useEffect, useState } from 'react'
 
-const HERO_COPIES = [
-  {
-    headline: 'From followers to ideas worth sharing.',
-    support: 'Give your audience a place to build together, see why ideas stand out, and choose which contributions move forward with credit intact.',
-  },
-  {
-    headline: 'Turn your fanbase into a source of ideas.',
-    support: 'Bring your audience together, surface the ideas that matter with AI, and choose what gets promoted. Every selected contribution stays credited.',
-  },
-  {
-    headline: 'Bring your community’s best ideas forward.',
-    support: 'Gather fans around shared interests, let explainable AI surface promising contributions, and decide what deserves to be promoted.',
-  },
-  {
-    headline: 'Your audience has more to offer.',
-    support: 'Turn scattered reactions into thoughtful communities, collaborative ideas, and creator-led decisions that keep contributors credited.',
-  },
-  {
-    headline: 'Let your fans help shape what comes next.',
-    support: 'Organise the people who care, review ideas with clear AI reasoning, and promote the ones you choose while preserving contributor credit.',
-  },
-]
+const HERO_COPY = {
+  headline: 'Let your fans help shape what comes next.',
+  support: 'Organise the people who care, review ideas with clear AI reasoning, and promote the ones you choose while preserving contributor credit.',
+}
+const PREVIEW_COPY = {
+  headline: 'From community suggestions to meaningful action.',
+  support: 'Quorlyth surfaces ideas with clear reasons, leaves the final decision to the creator, and keeps contributor credit intact.',
+}
 
-const PREVIEW_COPIES = [
-  {
-    headline: 'Every great decision starts with an idea.',
-    support: 'See promising contributions reviewed with transparent reasoning, selected by the creator, and prepared for promotion.',
-  },
-  {
-    headline: "From a fan's idea to a creator's decision.",
-    support: 'See how an idea is reviewed with clear reasons, selected by a creator, and prepared for promotion with contributor credit intact.',
-  },
-  {
-    headline: "From a fan's thought to an idea worth sharing.",
-    support: 'Watch ideas move through thoughtful AI review, creator selection, and promotion preparation, with every contribution credited.',
-  },
-  {
-    headline: 'From community suggestions to meaningful action.',
-    support: 'Quorlyth surfaces ideas with clear reasons, leaves the final decision to the creator, and keeps contributor credit intact.',
-  },
-  {
-    headline: 'Good ideas deserve a clear path forward.',
-    support: 'Follow an idea from community submission through explainable AI review and creator approval to a promotion-ready post.',
-  },
-]
+function EditorialReveal({ text, pace = 'headline' }: { text: string; pace?: 'headline' | 'body' }) {
+  const interval = pace === 'headline' ? 48 : 23
+  return (
+    <span className="qth-editorial">
+      <span className="qth-editorial-sr">{text}</span>
+      <span className="qth-editorial-visual" aria-hidden="true">
+        {text.split(' ').map((word, index, words) => (
+          <span key={index}><span className="qth-editorial-word" style={{ animationDelay: `${index * interval}ms` }}>{word}</span>{index < words.length - 1 ? ' ' : ''}</span>
+        ))}
+      </span>
+    </span>
+  )
+}
 
 const WORDS = ['Communities', 'Ideas', 'Collaboration', 'Surfacing', 'Selection', 'Promotion', 'Credit', 'Reach']
 const STAGES = [['audience', 'Followers', 'Everyone who shows up'], ['community', 'Communities', 'Grouped by interest'], ['idea', 'Ideas', 'Shared and built on'], ['surface', 'Surfacing', 'Ranked with reasons'], ['promote', 'Promotion', 'You choose, then publish']]
@@ -67,27 +44,6 @@ const FEATURES = [['rank', 'Ranked with reasons', 'Every score comes with a plai
 export function Landing() {
   const nav = useNavigate()
   const { me, data, enterDemo } = useApp()
-  const [copyIndex, setCopyIndex] = useState(0)
-  const rotatingCopy = HERO_COPIES[copyIndex]
-  const [previewCopyIndex, setPreviewCopyIndex] = useState(0)
-  const previewCopy = PREVIEW_COPIES[previewCopyIndex]
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const timer = window.setInterval(() => {
-      setCopyIndex(index => (index + 1) % HERO_COPIES.length)
-    }, 5800)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const timer = window.setInterval(() => {
-      setPreviewCopyIndex(index => (index + 1) % PREVIEW_COPIES.length)
-    }, 5800)
-    return () => window.clearInterval(timer)
-  }, [])
-
   useEffect(() => {
     const detail = { page_path: window.location.pathname }
     window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'landing_view', ...detail } }))
@@ -122,8 +78,8 @@ export function Landing() {
         <Orbit />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
-        <h1 key={rotatingCopy.headline} className="hero-title hero-copy-enter">{rotatingCopy.headline}</h1>
-        <p key={rotatingCopy.support} className="hero-copy hero-copy-enter">{rotatingCopy.support}</p>
+        <h1 className="hero-title"><EditorialReveal text={HERO_COPY.headline} /></h1>
+        <p className="hero-copy"><EditorialReveal text={HERO_COPY.support} pace="body" /></p>
         <div className="hero-actions">
           <button className="btn p" onClick={() => {
             window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'demo_start', page_path: '/' } }))
@@ -148,8 +104,8 @@ export function Landing() {
       <section className="product-preview rv" aria-labelledby="preview-heading">
         <div className="preview-copy">
           <p className="eyebrow">INSIDE QUORLYTH</p>
-          <h2 key={previewCopy.headline} id="preview-heading" className="hero-copy-enter">{previewCopy.headline}</h2>
-          <p key={previewCopy.support} className="mut hero-copy-enter">{previewCopy.support}</p>
+          <h2 id="preview-heading"><EditorialReveal text={PREVIEW_COPY.headline} /></h2>
+          <p className="mut"><EditorialReveal text={PREVIEW_COPY.support} pace="body" /></p>
         </div>
         <div className="glass preview-card">
           <div className="preview-topline">

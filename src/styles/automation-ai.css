@@ -89,3 +89,37 @@
 .wa-ai-live-preview > p { display:grid; grid-template-columns:76px minmax(0,1fr); gap:9px; margin:0; align-items:start; }
 .wa-ai-live-preview > p b { color:rgba(255,255,255,.48); font-size:10px; font-weight:500; }
 .wa-ai-live-preview > p span { color:rgba(255,255,255,.82); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+
+
+/* A plain-language runtime indicator, visible before users configure a flow. */
+.wa-runtime-status {
+  display:grid; grid-template-columns:8px minmax(0,1fr) auto; align-items:start;
+  gap:12px; margin:18px 0 20px; padding:14px 16px;
+  border:1px solid rgba(255,255,255,.12); border-radius:14px;
+  background:linear-gradient(110deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+}
+.wa-runtime-status.is-server { border-color:rgba(145,225,174,.22); }
+.wa-runtime-dot { width:7px; height:7px; margin-top:5px; border-radius:50%; background:#9de4bd; box-shadow:0 0 10px rgba(157,228,189,.36); }
+.wa-runtime-status.is-session .wa-runtime-dot { background:rgba(255,255,255,.45); box-shadow:none; }
+.wa-runtime-status strong { display:block; color:rgba(255,255,255,.88); font-size:12px; font-weight:550; }
+.wa-runtime-status p { margin-top:4px; max-width:780px; color:rgba(255,255,255,.48); font-size:10px; line-height:1.65; }
+.wa-runtime-label { padding:4px 7px; border:1px solid rgba(255,255,255,.1); border-radius:7px; color:rgba(255,255,255,.48); font-size:8px; letter-spacing:.12em; white-space:nowrap; }
+.wa-runtime-status.is-server .wa-runtime-label { border-color:rgba(145,225,174,.2); color:#a8e7c1; }
+
+/* Hide technical controls until a user chooses to customise the AI plan. */
+.wa-ai-advanced { padding-top:12px; border-top:1px solid rgba(255,255,255,.075); }
+.wa-ai-advanced > summary {
+  display:flex; align-items:center; gap:9px; width:max-content; max-width:100%;
+  color:rgba(255,255,255,.78); font-size:11px; cursor:pointer; list-style:none;
+}
+.wa-ai-advanced > summary::-webkit-details-marker { display:none; }
+.wa-ai-advanced > summary:before { content:"+"; display:grid; place-items:center; width:19px; height:19px; border:1px solid rgba(255,255,255,.16); border-radius:6px; color:rgba(255,255,255,.68); font-size:14px; line-height:1; }
+.wa-ai-advanced[open] > summary:before { content:"−"; }
+.wa-ai-advanced > summary span { color:rgba(255,255,255,.36); font-size:9px; }
+.wa-ai-advanced > .wa-ai-controls { margin-top:13px; }
+.wa-ai-advanced > .wa-ai-field-choices { margin-top:12px; }
+.wa-ai-advanced[open] { padding-bottom:2px; }
+@media(max-width:760px) {
+  .wa-runtime-status { grid-template-columns:8px minmax(0,1fr); }
+  .wa-runtime-label { grid-column:2; justify-self:start; }
+}
