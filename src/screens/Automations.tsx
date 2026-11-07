@@ -71,6 +71,7 @@ const TEMPLATES: Template[] = [
   { key: 'idea-review', name: 'Idea → delivery task', description: 'Turn a new idea into a real task inside a workspace you manage.', trigger: 'idea.created', action: 'create_task' },
   { key: 'evidence-review', name: 'Evidence review alert', description: 'Notify a reviewer whenever a contributor submits work for inspection.', trigger: 'evidence.submitted', action: 'notify', message: 'Evidence submitted for {{event.title}}. Check Quorlyth’s alignment notes and inspect the deliverable.' },
   { key: 'milestone-start', name: 'Milestone progress update', description: 'Keep the team informed when an assigned collaboration outcome moves into progress.', trigger: 'milestone.started', action: 'notify', message: 'Work has started on {{event.title}}. Keep the definition of done visible.' },
+  { key: 'deadline-alert', name: 'Deadline reached alert', description: 'Notify your team once an active project, unfinished task, or unfinished milestone reaches its due date.', trigger: 'deadline.reached', action: 'notify', message: 'A deadline has arrived for {{event.title}}. Review the work, update its status, and agree the next step.' },
 ]
 
 function freshAction(type: WorkflowActionType): WorkflowAction {
@@ -281,7 +282,7 @@ function AutomationWorkspace() {
     const effects = workflow.actions.map(action => ACTION_INFO[action.type]?.title || action.type)
     const actionList = [...new Set(effects)].join(', ')
     const confirmed = window.confirm(
-      'Run a real test of "' + workflow.name + '"?\n\nThis is not a dry run. Quorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured. The receiving service may perform its own actions. Continue only if those effects are intended.'
+      'Run an immediate sample test of "' + workflow.name + '"?\n\nQuorlyth will execute the configured actions (' + (actionList || 'no actions') + ') using a sample event. It may save notifications, create workspace tasks, or send a webhook to the URL you configured. This tests the action path now; it does not wait for or simulate a real project deadline. The receiving service may perform its own actions. Continue only if those effects are intended.'
     )
     if (!confirmed) return
     setBusy('run-' + workflow.id)
@@ -652,7 +653,7 @@ function AutomationWorkspace() {
           <button className="wa-back" type="button" onClick={() => { setEditing(null); setError('') }}><QuorlythGlyph name="back" size={15} />Back to workflows</button>
           <div className="wa-editor-actions">
             <button className="btn" type="button" onClick={() => void runWorkflow(editing, true)} disabled={busy === 'run-' + editing.id}>
-              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Running…' : 'Run real test'}
+              <QuorlythGlyph name="start" size={14} />{busy === 'run-' + editing.id ? 'Running…' : 'Run sample test'}
             </button>
             <button className="btn" type="button" onClick={() => void saveWorkflow(undefined, true)} disabled={busy === 'save' || !editing.actions.length}><QuorlythGlyph name="start" size={14} />Turn on automation</button>
             <button className="btn p" type="submit" form="wa-editor-form" disabled={busy === 'save'}><QuorlythGlyph name="save" size={15} />{busy === 'save' ? 'Saving…' : 'Save workflow'}</button>
@@ -713,7 +714,7 @@ function AutomationWorkspace() {
         <div>
           <strong>{isPersistentRuntime ? 'Server-side automations are available' : 'Session-based automation mode'}</strong>
           <p>{isPersistentRuntime
-            ? 'Once you turn a workflow on, eligible Quorlyth events are queued and processed on the server. It keeps running when you close this page, and each execution is written to your run history.'
+            ? 'Once you turn a workflow on, eligible Quorlyth events are queued and processed on the server, including one-time deadline events for active projects and unfinished tasks or milestones. It keeps running when you close this page, and each execution is written to your run history.'
             : 'In this demo or local session, automated events are handled while the session is open. Sign in to use persistent background automations.'}</p>
         </div>
         <span className="wa-runtime-label">{isPersistentRuntime ? 'BACKGROUND' : 'SESSION'}</span>
