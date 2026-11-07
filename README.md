@@ -108,6 +108,10 @@ Provider keys and `YOUTUBE_API_KEY` must remain server-side. Never prefix these 
 
 **Production safety:** the base schema is a setup reference, not a substitute for reviewing the current production policies. Apply migrations deliberately and do not blindly re-run broad policy definitions against an existing production database.
 
+## Workflow automation and deadlines
+
+Production automation runs on the server after a workflow is activated. Supported product events are placed on a durable queue and processed by the authenticated automation worker. The worker also checks project, task and milestone due dates, emitting a single `deadline.reached` event per record/deadline pair while the work item remains active or unfinished. Configure a workflow with the `Deadline reached alert` template and an in-app notification action to receive the safest first deadline alert. The builder's `Run sample test` button executes actions immediately with sample data; it does not simulate waiting for a real due date. A deadline event never auto-completes or deletes the underlying work item.
+
 ## Tests and build
 
 ```powershell
