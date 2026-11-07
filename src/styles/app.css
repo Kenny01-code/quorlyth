@@ -2583,3 +2583,39 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   #tst { transition: none; }
 }
+
+
+/* A failed lazy-loaded bot chunk leaves the launcher usable and exposes a retry. */
+.qbot-launcher-load-error {
+  position: fixed;
+  z-index: 84;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(360px, calc(100vw - 24px));
+  padding: 11px 12px 11px 14px;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+  color: rgba(255,255,255,.9);
+  background: rgba(8,8,8,.94);
+  box-shadow: 0 14px 36px rgba(0,0,0,.5);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.qbot-launcher-load-error span { flex: 1; min-width: 0; }
+.qbot-launcher-load-error button {
+  all: unset;
+  flex: none;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: #fff;
+  color: #050505;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.qbot-launcher-load-error button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
