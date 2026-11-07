@@ -45,7 +45,7 @@ test('the automation builder is natural-language first and keeps advanced contro
   assert.match(worker, /verify_automation_worker_token/)
   assert.match(worker, /claim_automation_events/)
   assert.match(migration, /private\.automation_event_queue/)
-  assert.match(migration, /cron\.schedule\('quorlyth-automation-worker'/)
+  assert.match(migration, /cron\.schedule\(\s*'quorlyth-automation-worker'/)
 })
 
 test('privileged pages have direct route-level gates, not just hidden navigation links', async () => {
