@@ -366,7 +366,7 @@ test('deadline-reached automation is a one-time persistent worker event', async 
   assert.match(automation, /'deadline\.reached'/)
   assert.match(automation, /event\.entityType/)
   assert.match(screen, /trigger: 'deadline\.reached'/)
-  assert.match(screen, /does not simulate a deadline/)
+  assert.match(screen, /does not wait for or simulate a real project deadline/)
   assert.match(migration, /enqueue_due_automation_events/)
   assert.match(migration, /automation_deadline_dispatches/)
   assert.match(migration, /'deadline\.reached'/)
