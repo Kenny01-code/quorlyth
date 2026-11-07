@@ -79,9 +79,14 @@ export default function App() {
   const [replay, setReplay] = useState(0)
   const skipNextPageTransition = useRef(false)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
-  // Download the full bot experience only after the user opens its lightweight launcher.
+  // Keep the lightweight launcher visible until the lazy-loaded bot is ready.
   const [botMounted, setBotMounted] = useState(false)
+  const [botLoading, setBotLoading] = useState(false)
+  const [botLoadError, setBotLoadError] = useState('')
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
+  const botMountedRef = useRef(false)
+  const botLoadingRef = useRef(false)
+  const pendingVoiceOpenRef = useRef(false)
   const [deferredLauncherHidden, setDeferredLauncherHidden] = useState(false)
   const [writingAssistantMounted, setWritingAssistantMounted] = useState(false)
   const [showDeferredLauncherRestore, setShowDeferredLauncherRestore] = useState(false)
@@ -93,6 +98,46 @@ export default function App() {
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
+
+  const openQuorlythBot = useCallback(async (startVoice = false) => {
+    if (startVoice) pendingVoiceOpenRef.current = true
+
+    if (botMountedRef.current) {
+      if (pendingVoiceOpenRef.current) {
+        pendingVoiceOpenRef.current = false
+        setBotVoiceRequest(value => value + 1)
+      }
+      return
+    }
+    if (botLoadingRef.current) return
+
+    botLoadingRef.current = true
+    setBotLoading(true)
+    setBotLoadError('')
+    setDeferredLauncherHidden(false)
+    setShowDeferredLauncherRestore(false)
+    if (deferredRestoreTimer.current !== null) window.clearTimeout(deferredRestoreTimer.current)
+    deferredRestoreTimer.current = null
+
+    try {
+      // Resolve the same dynamic import used by React.lazy BEFORE replacing the
+      // visible launcher. A failed or slow chunk must never leave an empty corner.
+      await loadQuorlythBot()
+      const shouldStartVoice = pendingVoiceOpenRef.current
+      pendingVoiceOpenRef.current = false
+      if (shouldStartVoice) setBotVoiceRequest(value => value + 1)
+      botMountedRef.current = true
+      setBotMounted(true)
+    } catch (error) {
+      pendingVoiceOpenRef.current = false
+      console.error('QuorlythBot failed to load:', error)
+      setBotLoadError('QuorlythBot could not load. Check your connection, then retry.')
+    } finally {
+      botLoadingRef.current = false
+      setBotLoading(false)
+    }
+  }, [])
+
   // Load the AI writing helper only when someone actually focuses a textarea.
   // This keeps its AI/streaming client out of the initial application bundle.
   useEffect(() => {
@@ -113,15 +158,11 @@ export default function App() {
       const tag = target?.tagName?.toUpperCase() || ''
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
       event.preventDefault()
-      setDeferredLauncherHidden(false)
-      setShowDeferredLauncherRestore(false)
-      setBotMounted(true)
-      setBotVoiceRequest(value => value + 1)
-      void loadQuorlythBot().catch(() => {})
+      void openQuorlythBot(true)
     }
     window.addEventListener('keydown', summonLiveTalk)
     return () => window.removeEventListener('keydown', summonLiveTalk)
-  }, [])
+  }, [openQuorlythBot])
   useEffect(() => {
     if (us.st.preferences?.sound !== undefined) setSound(us.st.preferences.sound)
   }, [a.me?.id, us.st.preferences?.sound])
@@ -399,14 +440,15 @@ export default function App() {
       {!botMounted ? <>
         {!deferredLauncherHidden && <button
           id="astl"
-          className="astl"
+          className={botLoading ? 'astl qbot-deferred-loading' : 'astl'}
+          disabled={botLoading}
+          aria-busy={botLoading}
           onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
-          aria-label="Open QuorlythBot for help with communities, ideas, analytics, workspaces, and collaborations"
-          title="Ask QuorlythBot for help · Right-click to hide on desktop or press and hold on mobile"
+          aria-label={botLoading ? 'Loading QuorlythBot' : botLoadError ? 'Retry loading QuorlythBot' : 'Open QuorlythBot for help with communities, ideas, analytics, workspaces, and collaborations'}
+          title={botLoading ? 'Loading QuorlythBot…' : botLoadError || 'Ask QuorlythBot for help · Right-click to hide on desktop or press and hold on mobile'}
           onClick={() => {
             if (deferredLongPressTriggered.current) { deferredLongPressTriggered.current = false; return }
-            void loadQuorlythBot().catch(() => {})
-            setBotMounted(true)
+            void openQuorlythBot()
           }}
           onContextMenu={event => { event.preventDefault(); hideDeferredLauncher() }}
           onPointerDown={event => {
@@ -429,6 +471,10 @@ export default function App() {
           onPointerCancel={clearDeferredLauncherHold}
           onPointerLeave={clearDeferredLauncherHold}
         ><span className="astm"><Logo size={30} /></span></button>}
+        {botLoadError && !deferredLauncherHidden && <div className="qbot-launcher-load-error" role="status">
+          <span>{botLoadError}</span>
+          <button type="button" onClick={() => void openQuorlythBot()}>Retry</button>
+        </div>}
         {deferredLauncherHidden && showDeferredLauncherRestore && <div className="qbot-launcher-hidden-notice" role="status">
           <span>QuorlythBot hidden</span>
           <button type="button" onClick={restoreDeferredLauncher}>Undo</button>

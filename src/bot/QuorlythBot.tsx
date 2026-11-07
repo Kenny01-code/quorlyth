@@ -1322,9 +1322,13 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         role: (m.r === 'u' ? 'user' : 'assistant') as 'user' | 'assistant',
         content: m.t.slice(-(index === recentTurns.length - 1 ? 4200 : 900)),
       }))
-      const liveContext = await requestLiveContext(t)
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
-      const accessToken = useServerContext ? await a.backend?.auth.accessToken?.() : null
+      // Context discovery and session-token retrieval are independent network tasks.
+      // Run them together so location-aware context does not delay authentication.
+      const [liveContext, accessToken] = await Promise.all([
+        requestLiveContext(t),
+        useServerContext ? (a.backend?.auth.accessToken?.() ?? Promise.resolve(null)) : Promise.resolve(null),
+      ])
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
       const botContext = { route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveContext }
       let first = true

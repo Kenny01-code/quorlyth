@@ -16,7 +16,25 @@ test('QuorlythBot is not downloaded automatically during startup', async () => {
   assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
   assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
   assert.match(app, /id="astl"[\s\S]{0,320}onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /id="astl"[\s\S]{0,500}onClick=\{\(\) => \{[\s\S]{0,180}loadQuorlythBot\(\)/)
+  assert.match(app, /id="astl"[\s\S]{0,650}onClick=\{\(\) => \{[\s\S]{0,180}openQuorlythBot\(\)/)
+})
+
+test('the QuorlythBot launcher stays visible until its lazy-loaded module is ready', async () => {
+  const app = await readSource('src/App.tsx')
+  const openStart = app.indexOf('const openQuorlythBot = useCallback')
+  assert.ok(openStart >= 0, 'the shared launcher opener exists')
+  const helper = app.slice(openStart, app.indexOf('// Load the AI writing helper', openStart))
+  assert.ok(helper.indexOf('await loadQuorlythBot()') < helper.indexOf('setBotMounted(true)'), 'the bot mounts only after its module resolves')
+  assert.match(app, /className=\{botLoading \? 'astl qbot-deferred-loading' : 'astl'\}/)
+  assert.match(app, /disabled=\{botLoading\}/)
+  assert.match(app, /botLoadError && !deferredLauncherHidden/)
+  assert.match(app, /onClick=\{\(\) => void openQuorlythBot\(\)\}/)
+})
+
+test('the Live Talk hotkey uses the same safe launcher handoff', async () => {
+  const app = await readSource('src/App.tsx')
+  assert.match(app, /void openQuorlythBot\(true\)/)
+  assert.doesNotMatch(app, /setBotMounted\(true\)[\s\S]{0,120}loadQuorlythBot\(\)\.catch/)
 })
 
 test('AI writing tools are downloaded only after a textarea is focused', async () => {
