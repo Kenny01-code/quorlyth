@@ -18,14 +18,14 @@
     "ai:data:validate": "node scripts/validate-ai-training-data.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
     "jspdf": "^4.2.1",
     "ogl": "^1.0.11",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.4",
-    "three": "0.128.0",
-    "@supabase/supabase-js": "^2.45.0"
+    "three": "0.128.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9",
@@ -35,9 +35,12 @@
     "@types/three": "0.128.0",
     "@vitejs/plugin-react": "^4.3.3",
     "typescript": "^5.6.3",
-    "vite": "^6.4.4"
+    "vite": "^6.4.5"
   },
   "engines": {
     "node": "22.x"
+  },
+  "overrides": {
+    "dompurify": "^3.4.17"
   }
 }
