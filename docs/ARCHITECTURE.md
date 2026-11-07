@@ -97,7 +97,7 @@ sequenceDiagram
   Auto-->>App: Show run result and history
 ```
 
-Automations currently support manual, idea-created, task-completed and workspace-created triggers; notification, task-creation and HTTPS-webhook actions; and a per-step run history. A live browser/session is currently required for event-driven runs. An always-on queue/worker, scheduled triggers, retries and delivery monitoring are a next architecture step—not a current capability.
+Automations support manual, idea-created, task-started/completed, workspace-created, milestone-started, evidence-submitted/reviewed and deadline-reached triggers; notification, task-creation and HTTPS-webhook actions; conditional branches; and per-step run history. In production, supported database events enter a persistent queue and are processed by an authenticated Supabase Edge Function worker. A 30-second scheduled worker poll also scans active projects and unfinished tasks/milestones for dueAt deadlines. Each source record plus dueAt timestamp is dispatched once, and the existing queue retry/dead-letter policy handles processing failures. A deadline event is a signal for a configured workflow; it does not itself mark work complete, delete a project, or close a workspace.
 
 ## 4. Security and reliability rules
 
