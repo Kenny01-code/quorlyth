@@ -51,6 +51,14 @@ test('the automation builder is natural-language first and keeps advanced contro
   assert.match(migration, /cron\.schedule\(\s*'quorlyth-automation-worker'/)
 })
 
+test('automation test labels distinguish immediate sample actions from future deadline events', async () => {
+  const automations = await source('src/screens/Automations.tsx')
+  assert.match(automations, /Run sample test/)
+  assert.doesNotMatch(automations, /Run real test/)
+  assert.match(automations, /Notify the workflow owner once an active project/)
+  assert.match(automations, /\{\{event\.deadline\}\}/)
+})
+
 test('privileged pages have direct route-level gates, not just hidden navigation links', async () => {
   const [gate, queue, promote, growth, database, settings, app, nav] = await Promise.all([
     source('src/components/Gate.tsx'),
