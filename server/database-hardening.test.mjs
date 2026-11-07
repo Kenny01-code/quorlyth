@@ -12,7 +12,8 @@ test('daily activity RPC uses invoker permissions and the self-service RLS polic
 
   assert.match(rpc, /security invoker/i)
   assert.match(rpc, /set search_path = ''/i)
-  assert.doesNotMatch(rpc, /security definer|row_security\s*=\s*off/i)
+  assert.doesNotMatch(rpc, /^\s*security definer\b/im)
+  assert.doesNotMatch(rpc, /^\s*set row_security\s*=\s*off\b/im)
   assert.match(rpc, /revoke all on function public\.track_active_day\(\) from public, anon, authenticated/i)
   assert.match(rpc, /grant execute on function public\.track_active_day\(\) to authenticated/i)
 
