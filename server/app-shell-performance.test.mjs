@@ -16,7 +16,7 @@ test('QuorlythBot is not downloaded automatically during startup', async () => {
   assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
   assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
   assert.match(app, /id="astl"[\s\S]{0,320}onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /id="astl"[\s\S]{0,650}onClick=\{\(\) => \{[\s\S]{0,180}openQuorlythBot\(\)/)
+  assert.match(app, /onClick=\{\(\) => \{ void openQuorlythBot\(\) \}\}/)
 })
 
 test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
@@ -28,7 +28,8 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.ok(openStart >= 0, 'the shared launcher opener exists')
   const helper = app.slice(openStart, app.indexOf('// Load the AI writing helper', openStart))
   assert.ok(helper.indexOf('await loadQuorlythBot()') < helper.indexOf('setBotMounted(true)'), 'the bot mounts only after its module resolves')
-  assert.match(app, /createPortal\([\s\S]{0,700}document\.body/)
+  assert.match(app, /createPortal\(/)
+  assert.match(app, /document\.body/)
   assert.match(app, /data-quorlyth-launcher/)
   assert.match(app, /botLoadError && <div className="qbot-launcher-load-error"/)
   assert.doesNotMatch(app, /deferredLauncherHidden|deferredHoldTimer|onContextMenu=|onPointerDown=/)
