@@ -9,6 +9,18 @@ test('automatic Quorlyth page-guide popups are completely removed from the app s
   assert.doesNotMatch(app, /PageAssist|pageBotPrompt|openBotWithPrompt|page-assist|quorlyth:page-assist/)
 })
 
+test('lazy route navigation shows a reduced-motion-aware loading surface instead of a blank section', async () => {
+  const [app, styles] = await Promise.all([
+    readSource('src/App.tsx'),
+    readSource('src/styles/app.css'),
+  ])
+  assert.match(app, /function RouteLoadingFallback\(\)/)
+  assert.match(app, /<Suspense fallback=\{<RouteLoadingFallback \/>\}>[\s\S]{0,80}<Routes>/)
+  assert.match(app, /className="qth-route-loading" role="status"/)
+  assert.match(styles, /\.qth-route-loading-grid/)
+  assert.match(styles, /@media\(prefers-reduced-motion:reduce\)[\s\S]*qth-route-loading/)
+})
+
 test('QuorlythBot is not downloaded automatically during startup', async () => {
   const app = await readSource('src/App.tsx')
   assert.match(app, /const QuorlythBot = lazy\(loadQuorlythBot\)/)
