@@ -301,6 +301,21 @@ function AutomationWorkspace() {
 
   async function toggleWorkflow(workflow: WorkflowDefinition) {
     const status = workflow.status === 'active' ? 'draft' : 'active'
+    if (status === 'active') {
+      const graphError = validateWorkflowGraph(workflow)
+      if (graphError) {
+        setError(graphError)
+        app.toast(graphError)
+        return
+      }
+      const webhookCount = workflow.actions.filter(action => action.type === 'webhook').length
+      if (webhookCount > MAX_WORKFLOW_WEBHOOKS) {
+        const message = 'This workflow can use up to ' + MAX_WORKFLOW_WEBHOOKS + ' webhook steps.'
+        setError(message)
+        app.toast(message)
+        return
+      }
+    }
     await updateWorkflow(workflow, { status }, status === 'active' ? 'Workflow activated.' : 'Workflow paused.')
   }
 
@@ -779,6 +794,21 @@ function AutomationWorkspace() {
         </div>
         <span className="wa-runtime-label">{isPersistentRuntime ? 'BACKGROUND' : 'SESSION'}</span>
       </section>
+      <section className="wa-connected-services glass pad" aria-labelledby="wa-connected-services-title">
+        <div className="wa-connected-services-head">
+          <div><p className="wa-eyebrow">YOUR INTEGRATION CONTEXT</p><h3 id="wa-connected-services-title">Quorlyth knows what is connected.</h3>
+            <p>QuorlythBot uses these connection states when planning a workflow. It will not claim a service is connected unless Quorlyth verifies it.</p></div>
+          <span className={'wa-connection-state ' + (socialConnectionsReady ? 'is-ready' : 'is-loading')}>{socialConnectionsReady ? 'ACCOUNT CHECK COMPLETE' : 'CHECKING ACCOUNTS…'}</span>
+        </div>
+        <div className="wa-connected-services-list">
+          {socialConnections.length ? socialConnections.map(connection => <div className="wa-connected-service" key={connection.connection_id}>
+            <span className="wa-connected-service-dot" />
+            <span><b>{connection.provider === 'x' ? 'X' : connection.provider === 'linkedin' ? 'LinkedIn' : connection.provider === 'facebook' ? 'Facebook Page' : connection.provider === 'instagram' ? 'Instagram' : connection.provider === 'pinterest' ? 'Pinterest' : connection.provider}</b><small>{connection.account_name || connection.username || 'Connected account'}</small></span>
+            <em>Connected</em>
+          </div>) : <div className="wa-connected-empty">{socialConnectionsReady ? 'No social publishing accounts are connected yet.' : 'Checking your connected accounts…'}</div>}
+        </div>
+        <p className="wa-connected-services-note"><b>Capability boundary:</b> connected social accounts are currently used for direct, user-approved publishing. Workflow actions currently support Quorlyth notifications, workspace tasks and secure HTTPS webhooks. Connect other services through their webhook endpoint; native background social publishing is not enabled yet.</p>
+      </section>
       <section className="wa-ai-architect glass pad" aria-labelledby="wa-ai-architect-title">
         <div className="wa-ai-architect-head">
           <span className="wa-ai-architect-mark"><QuorlythGlyph name="brand" size={20} /></span>
@@ -820,7 +850,7 @@ function AutomationWorkspace() {
           <button type="button" className="btn p" onClick={() => void buildWorkflowWithAI()} disabled={aiBuildStatus === 'generating' || aiBuildStatus === 'filling' || !aiFields.length}>
             <QuorlythGlyph name="idea" size={15} />{aiBuildStatus === 'generating' || aiBuildStatus === 'filling' ? 'Building your automation…' : aiTargetWorkflowId ? 'Build my changes' : 'Build my automation'}
           </button>
-          <span>Quorlyth creates a draft first. Nothing starts running until you turn it on.</span>
+          <span>Quorlyth plans, connects and validates up to 100 action steps. You review the draft before it can run.</span>
         </div>
         {aiBuildStatus !== 'idle' && <div className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildStatus === 'ready' ? 'Workflow ready for review' : aiBuildStatus === 'error' ? 'Workflow build needs attention' : aiBuildMessage || 'Quorlyth is working'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
