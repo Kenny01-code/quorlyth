@@ -52,6 +52,19 @@ function DemoRedirect({ onBeforeRedirect }: { onBeforeRedirect: () => void }) {
   return null
 }
 
+function RouteLoadingFallback() {
+  return <div className="qth-route-loading" role="status">
+    <span className="sr">Loading page content</span>
+    <span className="qth-route-loading-kicker" aria-hidden="true" />
+    <span className="qth-route-loading-title" aria-hidden="true" />
+    <span className="qth-route-loading-description" aria-hidden="true" />
+    <div className="qth-route-loading-grid" aria-hidden="true">
+      <span /><span /><span />
+    </div>
+    <span className="qth-route-loading-panel" aria-hidden="true" />
+  </div>
+}
+
 function MissingRoute() {
   const nav = useNavigate()
   return <div className="glass pad" style={{ maxWidth: 560, margin: '48px auto' }}>
@@ -350,7 +363,7 @@ export default function App() {
           // The status is screen-reader only; normal users are not interrupted by a full-screen loader.
           <span className="sr" role="status" aria-live="polite">Syncing your workspace…</span>
         ) : <section className="on">
-          <Suspense fallback={null}>
+          <Suspense fallback={<RouteLoadingFallback />}>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/architecture" element={<Architecture />} />
