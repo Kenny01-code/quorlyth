@@ -347,14 +347,14 @@ export function WorkflowCanvas({
           </div>
 
           <div className="wfc-node-palette">
-            <div><p>ADD TO CANVAS</p><small>Connect real Quorlyth steps to your flow.</small></div>
-            {!condition && <button type="button" onClick={addDecision}><QuorlythGlyph name="sliders" size={15} />Decision</button>}
-            <button type="button" onClick={() => addAction(condition ? 'true' : 'next', 'notify')}><QuorlythGlyph name="bell" size={15} />Notify</button>
-            <button type="button" onClick={() => addAction(condition ? 'true' : 'next', 'create_task')}><QuorlythGlyph name="workspace" size={15} />Create task</button>
-            <button type="button" onClick={() => addAction(condition ? 'true' : 'next', 'webhook')}><QuorlythGlyph name="send" size={15} />Webhook</button>
-            {condition && <><span className="wfc-palette-divider" /><button type="button" className="wfc-false-add" onClick={() => addAction('false', 'notify')}>+ False route</button></>}
+            <div><p>ADD TO CANVAS</p><small>{actionCount}/{MAX_WORKFLOW_ACTIONS} steps · {webhookCount}/{MAX_WORKFLOW_WEBHOOKS} webhook connections</small></div>
+            {!condition && <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={addDecision}><QuorlythGlyph name="sliders" size={15} />Decision</button>}
+            <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={() => addAction(condition ? 'true' : 'next', 'notify')}><QuorlythGlyph name="bell" size={15} />Notify</button>
+            <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={() => addAction(condition ? 'true' : 'next', 'create_task')}><QuorlythGlyph name="workspace" size={15} />Create task</button>
+            <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS || webhookCount >= MAX_WORKFLOW_WEBHOOKS} onClick={() => addAction(condition ? 'true' : 'next', 'webhook')}><QuorlythGlyph name="send" size={15} />Webhook</button>
+            {condition && <><span className="wfc-palette-divider" /><button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} className="wfc-false-add" onClick={() => addAction('false', 'notify')}>+ False route</button></>}
           </div>
-          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Live execution states appear on the same nodes.</p>
+          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Up to 100 action steps are supported; webhook steps are capped at 3 to protect run reliability.</p>
         </section>
 
         <aside className="wfc-inspector">
