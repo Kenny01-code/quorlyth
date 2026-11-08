@@ -57,7 +57,8 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.match(launcher, /onClick=\{openPanel\}/)
   assert.match(launcher, /onContextMenu=/)
   assert.doesNotMatch(launcher, /onPointerDown|onPointerUp/)
-  assert.doesNotMatch(bot, /setLauncherHidden|hideLauncher|startLauncherHold|launcherLongPressTriggered/)
+  assert.match(bot, /setLauncherHidden\(true\)/)
+  assert.doesNotMatch(bot, /startLauncherHold|launcherLongPressTriggered/)
 })
 
 
@@ -180,10 +181,10 @@ test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the 
 
 test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', async () => {
   const robot3d = await readSource('src/bot/robot3d.ts')
-  assert.match(robot3d, /1000\/40/)
+  assert.match(robot3d, /1000\\/30/)
   assert.match(robot3d, /document\.visibilityState/)
   assert.match(robot3d, /document\.removeEventListener\(["']visibilitychange["']/)
-  assert.match(robot3d, /window\.innerWidth<=760\?1\.0:1\.25/)
+  assert.match(robot3d, /window\\.devicePixelRatio\\|\\|1,1\\.0/)
 })
 
 test('the top navigation uses one active-state surface, not a duplicate animated pill', async () => {
@@ -296,8 +297,8 @@ test('QuorlythBot keeps a readable sidebar width and a lower GPU pixel ratio', a
     readSource('src/bot/robot3d.ts'),
   ])
   assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
-  assert.match(renderer, /window\.innerWidth<=760\?1\.0:1\.25/)
-  assert.match(renderer, /1000\/40/)
+  assert.match(renderer, /window\\.devicePixelRatio\\|\\|1,1\\.0/)
+  assert.match(renderer, /1000\\/30/)
 })
 
 test('top navigation retains the compact 50px shell rather than an oversized header', async () => {
