@@ -2734,3 +2734,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   #astl.astl .astl-hint { display: none; }
   .qbot-launcher-status { max-width: calc(100vw - 36px); }
 }
+
+/* The in-app bot entry point cannot be hidden by a context menu or touch hold. */
+#astl.astl:not(.hide) { position:fixed!important; visibility:visible!important; display:grid!important; opacity:1!important; pointer-events:auto!important; z-index:110!important; }
+#astl.astl:not(.hide):focus-visible { outline:2px solid rgba(255,255,255,.96)!important; outline-offset:6px; }
