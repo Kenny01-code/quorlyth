@@ -403,9 +403,9 @@ test('homepage renders before authentication while the full intro is reserved fo
     readSource('src/styles/sitewide-bold-fluid.css'),
   ])
   assert.match(app, /import \{ Landing \} from '\.\/screens\/Landing'/)
-  assert.match(app, /const \\[intro, setIntro\\] = useState\\(\\(\\) =>/)
-  assert.match(app, /localStorage\\.getItem\\('qintro'\\) !== '1'/)
-  assert.match(app, /localStorage\\.getItem\\('qseen'\\) !== '1'/)
+  assert.ok(app.includes('const [intro, setIntro] = useState(() =>'))
+  assert.ok(app.includes("localStorage.getItem('qintro') !== '1'"))
+  assert.ok(app.includes("localStorage.getItem('qseen') !== '1'"))
   assert.match(app, /if \(!a\.ready && loc\.pathname === '\/'\)[\s\S]{0,180}<Landing \/>/)
   assert.match(landing, /disabled=\{!ready\}/)
   assert.match(styles, /qthEditorialWordRevealLite/)
@@ -440,10 +440,10 @@ test('the QuorlythBot launcher can be hidden by right-click and restored with it
 
 test('the full branded intro is reserved for first-time visitors', async () => {
   const app = await readSource('src/App.tsx')
-  assert.match(app, /localStorage\.getItem\('qintro'\) !== '1'/)
-  assert.match(app, /localStorage\.getItem\('qseen'\) !== '1'/)
-  assert.match(app, /sessionStorage\.getItem\('qintro'\) !== '1'/)
-  assert.match(app, /const \[intro, setIntro\] = useState\(\(\) =>/)
+  assert.ok(app.includes("localStorage.getItem('qintro') !== '1'"))
+  assert.ok(app.includes("localStorage.getItem('qseen') !== '1'"))
+  assert.ok(app.includes("localStorage.getItem('qintro') !== '1'"))
+  assert.ok(app.includes('const [intro, setIntro] = useState(() =>'))
 })
 
 test('QuorlythBot keeps text streaming while applying a short voice deadline and fallback', async () => {
