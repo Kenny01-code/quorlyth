@@ -354,7 +354,7 @@ export function WorkflowCanvas({
             <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS || webhookCount >= MAX_WORKFLOW_WEBHOOKS} onClick={() => addAction(condition ? 'true' : 'next', 'webhook')}><QuorlythGlyph name="send" size={15} />Webhook</button>
             {condition && <><span className="wfc-palette-divider" /><button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} className="wfc-false-add" onClick={() => addAction('false', 'notify')}>+ False route</button></>}
           </div>
-          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Up to 100 action steps are supported; webhook steps are capped at 3 to protect run reliability.</p>
+          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Up to 128 action steps are supported; webhook steps are capped at 3 to protect run reliability.</p>
         </section>
 
         <aside className="wfc-inspector">
