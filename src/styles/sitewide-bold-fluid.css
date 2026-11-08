@@ -384,3 +384,57 @@ body {
 @media (prefers-reduced-motion: reduce) {
   #main .glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+
+/* Performance pass: keep the glass look, but reduce expensive compositing work. */
+#root :is(.glass, .lift, .card, .panel, .modal, .dialog, .popover, .dropdown, .menu, .sheet) {
+  -webkit-backdrop-filter: blur(8px) saturate(116%);
+  backdrop-filter: blur(8px) saturate(116%);
+}
+
+/* The route content is already rendered immediately; avoid a second artificial entrance wait. */
+main > * { animation: none !important; }
+
+/* Reveal text with opacity and a small transform instead of per-word blur and clipping. */
+.qth-editorial-word {
+  animation-name: qthEditorialWordRevealLite !important;
+  animation-duration: 220ms !important;
+  animation-delay: 0ms !important;
+  filter: none !important;
+  clip-path: none !important;
+  will-change: auto !important;
+}
+@keyframes qthEditorialWordRevealLite {
+  from { opacity: 0; transform: translate3d(0, .12em, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Decorative motion is static by default; controls, state changes and feedback remain animated. */
+.sw-progress-track > i,
+.ql-project-progress__track > i,
+.q-work-panel__mark,
+.sw-verified,
+.promotion-preview::before,
+.aibox::after,
+.aiic,
+.sw-tabs button[aria-selected="true"]::after {
+  animation: none !important;
+  filter: none !important;
+}
+
+@media (max-width: 860px) {
+  /* Repeated backdrop blurs are costly on phones while scrolling long dashboards. */
+  #root :is(.glass, .lift, .card, .panel, .modal, .dialog, .popover, .dropdown, .menu, .sheet),
+  #nav,
+  .demo-banner {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  #root :is(.glass, .lift, .card, .panel, .modal, .dialog, .popover, .dropdown, .menu, .sheet) {
+    background-color: rgba(9, 9, 11, .92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qth-editorial-word { animation: none !important; }
+}
