@@ -784,6 +784,16 @@ function AutomationWorkspace() {
         </div>
       </section>
 
+      <section className="wa-plain-guide" aria-label="How to create an automation">
+        <div className="wa-plain-guide-heading"><span className="wa-eyebrow">HOW IT WORKS</span><h3>Three steps. No canvas knowledge needed.</h3><p>Start with the result you want. QuorlythBot translates it into a workflow you can understand and control.</p></div>
+        <div className="wa-plain-guide-steps">
+          <article><i>01</i><div><strong>Describe</strong><p>Explain what should happen, when it should happen, and which workspace or service is involved.</p></div></article>
+          <article><i>02</i><div><strong>Review</strong><p>Quorlyth creates the trigger, filters, action steps and connections. Check every step and fix anything missing.</p></div></article>
+          <article><i>03</i><div><strong>Activate</strong><p>Save a draft or turn it on. Quorlyth records runs so you can see what worked and what needs attention.</p></div></article>
+        </div>
+        <p className="wa-plain-guide-foot">Nothing runs in the background until you activate it. External apps need a real, authorised connection or a webhook URL you provide.</p>
+      </section>
+
       <section className={'wa-runtime-status ' + (isPersistentRuntime ? 'is-server' : 'is-session')} role="status">
         <span className="wa-runtime-dot" />
         <div>
@@ -822,6 +832,12 @@ function AutomationWorkspace() {
           <span>What should happen automatically?</span>
           <textarea id="wa-ai-prompt" value={aiPrompt} onChange={event => setAiPrompt(event.target.value)} rows={4} maxLength={1800} placeholder="Example: When a member shares an idea, let me know. If a teammate starts a task, notify the project lead. Keep me informed when evidence is approved." />
         </label>
+        <div className="wa-ai-example-prompts" aria-label="Example automation requests">
+          <span>START WITH AN EXAMPLE</span>
+          <button type="button" onClick={() => setAiPrompt('When a project, unfinished task or milestone reaches its deadline, send me a notification with the item title and due date.')}>Deadline alerts</button>
+          <button type="button" onClick={() => setAiPrompt('When a new community idea is submitted, send me a notification, then create a review task in my selected workspace.')}>Idea review handoff</button>
+          <button type="button" onClick={() => setAiPrompt('When a workspace task is completed, notify me and create a follow-up task in my selected workspace.')}>Task follow-up</button>
+        </div>
         <details className="wa-ai-advanced">
           <summary>Advanced options <span>Optional · for more control</span></summary>
           <div className="wa-ai-controls">
