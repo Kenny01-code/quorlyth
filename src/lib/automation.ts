@@ -115,7 +115,7 @@ export function isSafeWorkflowWebhookUrl(raw: string): boolean {
   try {
     const target = new URL(String(raw || '').trim())
     const host = target.hostname.toLowerCase()
-    const ipv4 = /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host)
+    const ipv4 = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)
     return target.protocol === 'https:'
       && !target.username && !target.password
       && host.includes('.')
