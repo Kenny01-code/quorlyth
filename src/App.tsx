@@ -4,8 +4,8 @@ import { createPortal } from 'react-dom'
 import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
+import { Landing } from './screens/Landing'
 import { Logo } from './lib/Logo'
-const Landing = lazy(() => import('./screens/Landing').then(m => ({ default: m.Landing })))
 const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
 const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
@@ -83,13 +83,8 @@ export default function App() {
   const [bell, setBell] = useState(false)
   // Play the branded welcome animation once per browser, then remember it across sessions.
   // Existing returning visitors who already heard the sign-in hello also skip the intro.
-  const [intro, setIntro] = useState(() => {
-    try {
-      return localStorage.getItem('qintro') !== '1'
-        && localStorage.getItem('qseen') !== '1'
-        && sessionStorage.getItem('qintro') !== '1'
-    } catch { return false }
-  })
+  // Never block a first visit with a full-screen intro. The animation remains available on demand.
+  const [intro, setIntro] = useState(false)
   const [replay, setReplay] = useState(0)
   const skipNextPageTransition = useRef(false)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
@@ -334,7 +329,11 @@ export default function App() {
     }
   }
 
-  // Hold the app shell until auth is known, but do not block the screen with a branded loader.
+  // The public homepage does not need an authenticated session. Render it immediately
+  // while the auth client resolves in the background; demo actions stay disabled until ready.
+  if (!a.ready && loc.pathname === '/') return <main id="main" tabIndex={-1}><Landing /></main>
+
+  // Private routes remain gated until identity is known.
   if (!a.ready) return <main className="app-startup" aria-busy="true"><span className="sr" role="status">Connecting to Quorlyth…</span></main>
   if (a.startupError) return (
     <main className="app-error">

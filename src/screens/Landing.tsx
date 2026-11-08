@@ -62,7 +62,7 @@ const FEATURES = [['rank', 'Ranked with reasons', 'Every score comes with a plai
 
 export function Landing() {
   const nav = useNavigate()
-  const { me, data, enterDemo } = useApp()
+  const { me, data, enterDemo, ready } = useApp()
   useEffect(() => {
     const detail = { page_path: window.location.pathname }
     window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'landing_view', ...detail } }))
@@ -100,7 +100,8 @@ export function Landing() {
         <h1 className="hero-title"><EditorialReveal text={HERO_COPY.headline} /></h1>
         <p className="hero-copy"><RotatingEditorialCopy initialIndex={0} /></p>
         <div className="hero-actions">
-          <button className="btn p" onClick={() => {
+          <button className="btn p" disabled={!ready} onClick={() => {
+            if (!ready) return
             window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'demo_start', page_path: '/' } }))
             const analyticsWindow = window as Window & { gtag?: (command: string, eventName: string, parameters?: Record<string, unknown>) => void }
             analyticsWindow.gtag?.('event', 'demo_start', { page_path: '/' })
@@ -191,7 +192,7 @@ export function Landing() {
               analyticsWindow.gtag?.('event', me ? 'dashboard_open' : 'signup_start', { page_path: '/' })
               nav(me ? '/dashboard' : '/signin')
             }}>{me ? 'Open your dashboard' : 'Get started'}</button>
-            {!me && <button className="btn" onClick={() => { enterDemo(); nav('/dashboard') }}>Explore the demo</button>}
+            {!me && <button className="btn" disabled={!ready} onClick={() => { if (!ready) return; enterDemo(); nav('/dashboard') }}>Explore the demo</button>}
           </div>
         </div>
         <footer className="ft" aria-label="Site footer">
