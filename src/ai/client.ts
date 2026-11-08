@@ -344,7 +344,7 @@ type StreamSpeechOwnership = {
 }
 
 /** Play streamed MP3 chunks through MediaSource; resolves as soon as the first audio begins. */
-function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner: StreamSpeechOwnership): Promise<SpeechPlayback> {
+function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner: StreamSpeechOwnership, firstAudioTimeoutMs = 900): Promise<SpeechPlayback> {
   if (!response.body || typeof MediaSource === 'undefined' || !MediaSource.isTypeSupported('audio/mpeg')) {
     return Promise.reject(new Error('Streaming playback is not supported by this browser.'))
   }
@@ -359,12 +359,14 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
   let started = false
   let finished = false
   let openTimer = 0
+  let startTimer = 0
   let resolveStart: (playback: SpeechPlayback) => void = () => {}
   let rejectStart: (error: unknown) => void = () => {}
   const startedPromise = new Promise<SpeechPlayback>((resolve, reject) => { resolveStart = resolve; rejectStart = reject })
 
   const clearUrl = () => {
     if (openTimer) window.clearTimeout(openTimer)
+    if (startTimer) window.clearTimeout(startTimer)
     URL.revokeObjectURL(objectUrl)
   }
   const finish = (notify = true) => {
@@ -396,6 +398,11 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
   }
   owner.register(playback)
   signal.addEventListener('abort', abortAudio, { once: true })
+  startTimer = window.setTimeout(() => {
+    if (started || finished) return
+    rejectStart(new Error('The first voice audio did not arrive within the fast-start window.'))
+    finish(false)
+  }, Math.max(250, Math.min(5000, firstAudioTimeoutMs)))
 
   const waitForOpen = () => new Promise<void>((resolve, reject) => {
     if (mediaSource.readyState === 'open') { resolve(); return }
@@ -477,38 +484,50 @@ function streamMediaSourceSpeech(response: Response, signal: AbortSignal, owner:
 export async function prefetchElevenLabsSpeech(
   text: string,
   voice: string,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; liveTalk?: boolean; elevenLabsOnly?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; liveTalk?: boolean; elevenLabsOnly?: boolean; timeoutMs?: number } = {},
 ): Promise<Blob> {
   const source = text.trim().slice(0, 1500)
   if (!source) throw new Error('There is no text to speak.')
   if (options.signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+
+  const controller = new AbortController()
+  const abortFromCaller = () => controller.abort()
+  options.signal?.addEventListener('abort', abortFromCaller, { once: true })
+  const timeoutMs = typeof options.timeoutMs === 'number' && Number.isFinite(options.timeoutMs)
+    ? Math.max(200, Math.min(5000, options.timeoutMs))
+    : 5000
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
   const request = (path: string) => fetch(aiApiUrl(path), {
     method: 'POST',
-    signal: options.signal,
+    signal: controller.signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: source, voice, accent: detectAccent(options.accent || 'auto'), liveTalk: options.liveTalk === true }),
   })
-  // Live Talk opts into the ElevenLabs-only endpoints. It must not silently change
-  // voice identity when a provider is slow or unavailable.
   const streamPath = options.elevenLabsOnly ? '/api/speak-eleven-stream' : '/api/speak-stream'
   const bufferedPath = options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak'
-
-  let response: Response
   try {
-    response = await request(streamPath)
-  } catch (error) {
-    if (options.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) throw error
-    response = await request(bufferedPath)
+    let response: Response
+    try {
+      response = await request(streamPath)
+    } catch (error) {
+      if (options.signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+      if (controller.signal.aborted) throw new DOMException('Voice prefetch timed out.', 'AbortError')
+      response = await request(bufferedPath)
+    }
+    if ((response.status === 502 || response.status === 504) && !controller.signal.aborted) {
+      try { await response.body?.cancel() } catch {}
+      response = await request(bufferedPath)
+    }
+    if (!response.ok) throw new Error(await readError(response))
+    const audio = await response.blob()
+    if (!audio.size) throw new Error('ElevenLabs returned an empty speech segment.')
+    if (options.signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
+    if (controller.signal.aborted) throw new DOMException('Voice prefetch timed out.', 'AbortError')
+    return audio
+  } finally {
+    window.clearTimeout(timeout)
+    options.signal?.removeEventListener('abort', abortFromCaller)
   }
-  if ((response.status === 502 || response.status === 504) && !options.signal?.aborted) {
-    try { await response.body?.cancel() } catch {}
-    response = await request(bufferedPath)
-  }
-  if (!response.ok) throw new Error(await readError(response))
-  const audio = await response.blob()
-  if (!audio.size) throw new Error('ElevenLabs returned an empty speech segment.')
-  if (options.signal?.aborted) throw new DOMException('Speech cancelled', 'AbortError')
-  return audio
 }
 
 /** Uses the selected Studio persona through the server-side ElevenLabs endpoint. Device speech is opt-in only; one speech run can play at a time. */
@@ -517,7 +536,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; browserFallbackTimeoutMs?: number; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; liveTalk?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; browserFallbackTimeoutMs?: number; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; browserFallbackOnly?: boolean; liveTalk?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const source = text.trim().slice(0, 1500)
@@ -564,7 +583,8 @@ export async function speakText(
     // ElevenLabs is the primary voice. Browser speech is reserved for a quick fallback.
     let response: Response | null = null
     let retryBufferedSpeech = false
-    let forceBrowserFallback = false
+    let forceBrowserFallback = options.browserFallbackOnly === true
+    if (forceBrowserFallback && !allowBrowserFallback) throw new Error('A quick voice fallback is not enabled.')
     const providerRequest = new AbortController()
     const abortProviderRequest = () => providerRequest.abort()
     signal.addEventListener('abort', abortProviderRequest, { once: true })
@@ -580,26 +600,22 @@ export async function speakText(
     if (preferElevenLabsVoice) {
       providerRequestTimer = window.setTimeout(() => providerRequest.abort(), providerTimeout)
     }
-    try {
-      response = await fetch(aiApiUrl(options.elevenLabsOnly ? '/api/speak-eleven-stream' : '/api/speak-stream'), {
-        method: 'POST',
-        signal: providerRequest.signal,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: source, voice, accent, liveTalk: options.liveTalk === true }),
-      })
-    } catch (error) {
-      if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
-      if (preferElevenLabsVoice && allowBrowserFallback) {
-        forceBrowserFallback = true
-      } else {
-        // If streaming is temporarily unreachable, retry the buffered ElevenLabs
-        // endpoint. Strict mode still never uses a different provider or browser TTS.
-        retryBufferedSpeech = true
+    if (!forceBrowserFallback) {
+      try {
+        response = await fetch(aiApiUrl(options.elevenLabsOnly ? '/api/speak-eleven-stream' : '/api/speak-stream'), {
+          method: 'POST',
+          signal: providerRequest.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: source, voice, accent, liveTalk: options.liveTalk === true }),
+        })
+      } catch (error) {
+        if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
+        if (preferElevenLabsVoice && allowBrowserFallback) forceBrowserFallback = true
+        else retryBufferedSpeech = true
       }
-    } finally {
-      if (providerRequestTimer !== null) window.clearTimeout(providerRequestTimer)
-      signal.removeEventListener('abort', abortProviderRequest)
     }
+    if (providerRequestTimer !== null) window.clearTimeout(providerRequestTimer)
+    signal.removeEventListener('abort', abortProviderRequest)
 
     assertCurrent()
 
@@ -611,7 +627,7 @@ export async function speakText(
           onEnd,
           register: next => { ownedPlayback = next; activeSpeechPlayback = next },
           release: releaseOwner,
-        })
+        }, allowBrowserFallback && preferElevenLabsVoice ? (options.browserFallbackTimeoutMs ?? 900) : 8000)
         assertCurrent()
         handedOff = true
         return playback
