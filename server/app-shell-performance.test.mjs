@@ -372,6 +372,7 @@ test('the branded animated loader is removed from startup, data hydration, lazy 
   ])
   assert.doesNotMatch(app, /QuorlythLoader|DelayedRouteLoader|q-loader/)
   assert.doesNotMatch(dashboard, /QuorlythLoader|q-loader/)
+  assert.match(app, /if \(!a\.ready && loc\.pathname === '\/'\)[\s\S]{0,180}<Landing \/>/)
   assert.match(app, /if \(!a\.ready\)[\s\S]{0,220}className="app-startup"/)
   assert.match(app, /<Suspense fallback=\{null\}>/)
   assert.match(dashboard, /Verifying your dashboard access/)
@@ -392,4 +393,19 @@ test('deadline-reached automation is a one-time persistent worker event', async 
   assert.match(migration, /automation_deadline_dispatches/)
   assert.match(migration, /'deadline\.reached'/)
   assert.match(migration, /deadline_at_ms/)
+})
+
+
+test('homepage renders before authentication and never forces the full-screen intro', async () => {
+  const [app, landing, styles] = await Promise.all([
+    readSource('src/App.tsx'),
+    readSource('src/screens/Landing.tsx'),
+    readSource('src/styles/sitewide-bold-fluid.css'),
+  ])
+  assert.match(app, /import \{ Landing \} from '\.\/screens\/Landing'/)
+  assert.match(app, /const \[intro, setIntro\] = useState\(false\)/)
+  assert.match(app, /if \(!a\.ready && loc\.pathname === '\/'\)[\s\S]{0,180}<Landing \/>/)
+  assert.match(landing, /disabled=\{!ready\}/)
+  assert.match(styles, /qthEditorialWordRevealLite/)
+  assert.match(styles, /@media \(max-width: 860px\)[\s\S]{0,260}backdrop-filter: none !important/)
 })
