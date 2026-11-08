@@ -89,7 +89,7 @@ export interface WorkflowEventDetail {
 
 export const WORKFLOW_EVENT_NAME = 'quorlyth:workflow-event'
 
-export const MAX_WORKFLOW_ACTIONS = 100
+export const MAX_WORKFLOW_ACTIONS = 128
 export const MAX_WORKFLOW_WEBHOOKS = 3
 
 export const TRIGGER_INFO: Record<WorkflowTrigger, { title: string; description: string }> = {
