@@ -3,6 +3,9 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 type AnyRecord = Record<string, any>;
 type WorkflowRunStatus = "running" | "success" | "failed" | "skipped";
 
+const MAX_WORKFLOW_ACTIONS = 128;
+const MAX_WORKFLOW_WEBHOOKS = 3;
+
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const db = createClient(supabaseUrl, serviceRoleKey, {
@@ -269,6 +272,15 @@ async function runAction(
 
 async function executeWorkflow(workflow: AnyRecord, ownerId: string, event: AnyRecord) {
   const workflowId = String(workflow.id || "");
+  const { nodes, edges } = graphFor(workflow);
+  const actionNodes = nodes.filter((node: AnyRecord) => node?.type === "action");
+  const webhookNodes = actionNodes.filter((node: AnyRecord) => node?.action?.type === "webhook");
+  if (actionNodes.length > MAX_WORKFLOW_ACTIONS || nodes.length > MAX_WORKFLOW_ACTIONS + 2 || edges.length > MAX_WORKFLOW_ACTIONS + 1) {
+    throw new Error("This workflow exceeds the server action-step limit. Reduce it to 128 action steps or fewer.");
+  }
+  if (webhookNodes.length > MAX_WORKFLOW_WEBHOOKS) {
+    throw new Error("This workflow exceeds the server webhook limit. Use no more than 3 webhook actions per workflow.");
+  }
   const runDocId = [workflowId, event.trigger_type, event.id].map(safeSegment).filter(Boolean).join("--").slice(0, 180);
   const runPath = "data/users/" + ownerId + "/automation-runs/" + runDocId;
   const workflowPath = "data/users/" + ownerId + "/automations/" + workflowId;
@@ -321,7 +333,6 @@ async function executeWorkflow(workflow: AnyRecord, ownerId: string, event: AnyR
     await saveRun("running");
   };
 
-  const { nodes, edges } = graphFor(workflow);
   const byId = new Map<string, AnyRecord>(nodes.map((node: AnyRecord) => [String(node.id), node]));
   const trigger = nodes.find((node: AnyRecord) => node.type === "trigger");
   if (!trigger) throw new Error("This workflow has no trigger node.");
