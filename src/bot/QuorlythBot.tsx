@@ -1320,8 +1320,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     initialPromptHandled.current = promptRequest
     setOpen(true)
     setMinimized(false)
-    setLauncherHidden(false)
-    setShowLauncherRestore(false)
     setView('chat')
     void send(initialPrompt)
   }, [initialPrompt, promptRequest, busy])
