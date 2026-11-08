@@ -850,7 +850,7 @@ function AutomationWorkspace() {
           <button type="button" className="btn p" onClick={() => void buildWorkflowWithAI()} disabled={aiBuildStatus === 'generating' || aiBuildStatus === 'filling' || !aiFields.length}>
             <QuorlythGlyph name="idea" size={15} />{aiBuildStatus === 'generating' || aiBuildStatus === 'filling' ? 'Building your automation…' : aiTargetWorkflowId ? 'Build my changes' : 'Build my automation'}
           </button>
-          <span>Quorlyth plans, connects and validates up to 100 action steps. You review the draft before it can run.</span>
+          <span>Quorlyth plans, connects and validates up to 128 action steps. You review the draft before it can run.</span>
         </div>
         {aiBuildStatus !== 'idle' && <div className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildStatus === 'ready' ? 'Workflow ready for review' : aiBuildStatus === 'error' ? 'Workflow build needs attention' : aiBuildMessage || 'Quorlyth is working'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
