@@ -13,6 +13,8 @@ import {
   WorkflowNode,
   WorkflowRun,
   WorkflowTrigger,
+  MAX_WORKFLOW_ACTIONS,
+  MAX_WORKFLOW_WEBHOOKS,
   newWorkflowId,
   workflowGraphFor,
   workflowWithGraph,
@@ -140,6 +142,8 @@ export function WorkflowCanvas({
   const trueActions = branchActions(nodes, graph.edges, condition ? 'true' : 'next')
   const falseActions = condition ? branchActions(nodes, graph.edges, 'false') : []
   const latestSteps = new Map((latestRun?.steps || []).map(step => [step.nodeId || step.id, step]))
+  const actionCount = nodes.filter(node => node.type === 'action').length
+  const webhookCount = nodes.filter(node => node.type === 'action' && node.action.type === 'webhook').length
   const hasCondition = Boolean(condition)
   const canvasHeight = Math.max(720, (Math.max(trueActions.length, falseActions.length) * 175) + 560)
   const canvasWidth = hasCondition ? 1220 : 1040
@@ -187,7 +191,7 @@ export function WorkflowCanvas({
 
   function addAction(branch: 'true' | 'false' | 'next', type: WorkflowActionType) {
     const startNode = condition || trigger
-    if (!startNode) return
+    if (!startNode || actionCount >= MAX_WORKFLOW_ACTIONS || (type === 'webhook' && webhookCount >= MAX_WORKFLOW_WEBHOOKS)) return
     const chain = branchActions(nodes, graph.edges, branch)
     const action = newAction(type)
     const node: WorkflowNode = { id: action.id, type: 'action', action, position: { x: hasCondition ? 790 : 570, y: hasCondition ? (branch === 'false' ? 430 : 65) + (chain.length * 175) : 220 + (chain.length * 175) } }
@@ -343,14 +347,14 @@ export function WorkflowCanvas({
           </div>
 
           <div className="wfc-node-palette">
-            <div><p>ADD TO CANVAS</p><small>Connect real Quorlyth steps to your flow.</small></div>
-            {!condition && <button type="button" onClick={addDecision}><QuorlythGlyph name="sliders" size={15} />Decision</button>}
-            <button type="button" onClick={() => addAction(condition ? 'true' : 'next', 'notify')}><QuorlythGlyph name="bell" size={15} />Notify</button>
-            <button type="button" onClick={() => addAction(condition ? 'true' : 'next', 'create_task')}><QuorlythGlyph name="workspace" size={15} />Create task</button>
-            <button type="button" onClick={() => addAction(condition ? 'true' : 'next', 'webhook')}><QuorlythGlyph name="send" size={15} />Webhook</button>
-            {condition && <><span className="wfc-palette-divider" /><button type="button" className="wfc-false-add" onClick={() => addAction('false', 'notify')}>+ False route</button></>}
+            <div><p>ADD TO CANVAS</p><small>{actionCount}/{MAX_WORKFLOW_ACTIONS} steps · {webhookCount}/{MAX_WORKFLOW_WEBHOOKS} webhook connections</small></div>
+            {!condition && <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={addDecision}><QuorlythGlyph name="sliders" size={15} />Decision</button>}
+            <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={() => addAction(condition ? 'true' : 'next', 'notify')}><QuorlythGlyph name="bell" size={15} />Notify</button>
+            <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={() => addAction(condition ? 'true' : 'next', 'create_task')}><QuorlythGlyph name="workspace" size={15} />Create task</button>
+            <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS || webhookCount >= MAX_WORKFLOW_WEBHOOKS} onClick={() => addAction(condition ? 'true' : 'next', 'webhook')}><QuorlythGlyph name="send" size={15} />Webhook</button>
+            {condition && <><span className="wfc-palette-divider" /><button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} className="wfc-false-add" onClick={() => addAction('false', 'notify')}>+ False route</button></>}
           </div>
-          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Live execution states appear on the same nodes.</p>
+          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Up to 128 action steps are supported; webhook steps are capped at 3 to protect run reliability.</p>
         </section>
 
         <aside className="wfc-inspector">

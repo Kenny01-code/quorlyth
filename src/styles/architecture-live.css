@@ -6,3 +6,21 @@
 @media(max-width:980px){.arch-live-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.arch-brain-flow{grid-template-columns:1fr}.arch-brain-link{height:22px;width:1px;justify-self:center}.arch-brain-node{padding:15px 18px}.arch-brain-index{margin-bottom:8px}.arch-brain-glyph{float:right}.arch-brain-node h3{margin-top:2px}}
 @media(max-width:520px){.arch-live-section{padding:15px}.arch-live-grid{gap:8px}.arch-live-card{padding:11px}.arch-live-card-top{align-items:flex-start;flex-direction:column}.arch-live-card p{font-size:11px;min-height:74px}.arch-live-meta{flex-direction:column}.arch-live-heading .arch-refresh{width:100%;justify-content:center}.arch-brain-foot{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.arch-hero:before,.arch-live-dot,.arch-live-state.is-good i,.arch-system-link span:after,.arch-brain-link span,.arch-page [data-arch-reveal]{animation:none!important}.arch-live-card,.arch-system-module,.arch-principles>div{transition:none!important}}
+
+.arch-connected-integrations { display:grid; gap:13px; padding:18px; border-top:1px solid rgba(255,255,255,.08); background:linear-gradient(120deg,rgba(255,255,255,.025),transparent); }
+.arch-connected-integrations-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.arch-connected-integrations-head h3 { margin:5px 0 5px; font-size:16px; font-weight:500; letter-spacing:-.025em; }
+.arch-connected-integrations-head p { color:#969696; font-size:10px; line-height:1.6; }
+.arch-integration-count { flex:none; padding:6px 9px; border:1px solid rgba(255,255,255,.13); border-radius:8px; color:#a8e7c1; font-size:8px; letter-spacing:.08em; }
+.arch-connected-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:8px; }
+.arch-connected-card { display:flex; align-items:center; gap:9px; min-width:0; padding:11px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(0,0,0,.22); }
+.arch-connected-card>div { display:grid; gap:2px; min-width:0; flex:1; }
+.arch-connected-card strong { color:rgba(255,255,255,.86); font-size:10px; font-weight:550; }
+.arch-connected-card small { color:#878787; font-size:9px; overflow-wrap:anywhere; }
+.arch-connected-dot { width:7px; height:7px; flex:none; border-radius:50%; background:#a7e5bd; box-shadow:0 0 9px #a7e54e33; }
+.arch-connected-mode { flex:none; color:#a8e7c1; font-size:8px; }
+.arch-connected-card.is-empty { min-height:55px; }
+.arch-webhook-card .arch-connected-dot { background:#b5c9ef; box-shadow:0 0 9px #b5c9ef44; }
+.arch-webhook-card .arch-connected-mode { color:#b5c9ef; }
+.arch-integration-disclaimer { color:#858585; font-size:9px; line-height:1.65; }
+@media(max-width:620px) { .arch-connected-integrations { padding:13px; } .arch-connected-integrations-head { flex-direction:column; } .arch-connected-grid { grid-template-columns:1fr; } }

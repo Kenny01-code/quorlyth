@@ -123,3 +123,38 @@
   .wa-runtime-status { grid-template-columns:8px minmax(0,1fr); }
   .wa-runtime-label { grid-column:2; justify-self:start; }
 }
+
+/* Connected accounts are surfaced as verified context, not implied automation actions. */
+.wa-connected-services { display:grid; gap:14px; margin:0 0 20px; border:1px solid rgba(255,255,255,.1); background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012)),rgba(3,3,4,.72); }
+.wa-connected-services-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.wa-connected-services-head h3 { margin:4px 0 5px; font-size:16px; font-weight:500; letter-spacing:-.025em; }
+.wa-connected-services-head p:not(.wa-eyebrow) { max-width:660px; color:rgba(255,255,255,.48); font-size:10px; line-height:1.6; }
+.wa-connection-state { flex:none; padding:6px 8px; border:1px solid rgba(255,255,255,.12); border-radius:8px; color:rgba(255,255,255,.46); font-size:8px; letter-spacing:.1em; }
+.wa-connection-state.is-ready { border-color:rgba(159,232,187,.2); color:#a9e6c0; }
+.wa-connected-services-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; }
+.wa-connected-service { display:flex; align-items:center; gap:9px; min-width:0; padding:10px 11px; border:1px solid rgba(255,255,255,.09); border-radius:11px; background:rgba(255,255,255,.025); }
+.wa-connected-service-dot { width:7px; height:7px; flex:0 0 7px; border-radius:50%; background:#9fe8bb; box-shadow:0 0 10px rgba(159,232,187,.3); }
+.wa-connected-service > span:nth-child(2) { display:grid; gap:2px; min-width:0; flex:1; }
+.wa-connected-service b { color:rgba(255,255,255,.84); font-size:10px; font-weight:550; }
+.wa-connected-service small { overflow:hidden; color:rgba(255,255,255,.42); font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+.wa-connected-service em { color:#a9e6c0; font-size:8px; font-style:normal; }
+.wa-connected-empty { padding:13px; border:1px dashed rgba(255,255,255,.13); border-radius:11px; color:rgba(255,255,255,.43); font-size:10px; }
+.wa-connected-services-note { margin:0; color:rgba(255,255,255,.42); font-size:9px; line-height:1.65; }
+.wa-connected-services-note b { color:rgba(255,255,255,.73); font-weight:550; }
+@media(max-width:760px) { .wa-connected-services-head { flex-direction:column; } .wa-connection-state { align-self:flex-start; } .wa-connected-services-list { grid-template-columns:1fr; } }
+
+/* Plain-language setup guide: the workflow model is introduced before the editor. */
+.wa-plain-guide { display:grid; gap:14px; margin:0 0 18px; padding:17px; border:1px solid rgba(255,255,255,.1); border-radius:17px; background:linear-gradient(125deg,rgba(255,255,255,.045),rgba(255,255,255,.012)); }
+.wa-plain-guide-heading h3 { margin:4px 0 5px; font-size:17px; font-weight:500; letter-spacing:-.025em; }
+.wa-plain-guide-heading p,.wa-plain-guide-foot { color:rgba(255,255,255,.45); font-size:10px; line-height:1.6; }
+.wa-plain-guide-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.wa-plain-guide-steps article { display:flex; gap:10px; align-items:flex-start; min-width:0; padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(0,0,0,.18); }
+.wa-plain-guide-steps article>i { display:grid; place-items:center; width:25px; height:25px; flex:0 0 25px; border:1px solid rgba(255,255,255,.16); border-radius:8px; color:rgba(255,255,255,.68); font-size:8px; font-style:normal; }
+.wa-plain-guide-steps strong { color:rgba(255,255,255,.87); font-size:11px; font-weight:550; }
+.wa-plain-guide-steps p { margin-top:4px; color:rgba(255,255,255,.43); font-size:9px; line-height:1.55; }
+.wa-plain-guide-foot { padding-top:11px; border-top:1px solid rgba(255,255,255,.07); }
+.wa-ai-example-prompts { display:flex; align-items:center; flex-wrap:wrap; gap:7px; }
+.wa-ai-example-prompts>span { color:rgba(255,255,255,.33); font-size:8px; letter-spacing:.12em; margin-right:3px; }
+.wa-ai-example-prompts>button { border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:7px 10px; color:rgba(255,255,255,.7); background:rgba(255,255,255,.035); font:inherit; font-size:9px; cursor:pointer; transition:background .18s,border-color .18s; }
+.wa-ai-example-prompts>button:hover { border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.08); color:#fff; }
+@media(max-width:760px) { .wa-plain-guide { padding:13px; } .wa-plain-guide-steps { grid-template-columns:1fr; } .wa-ai-example-prompts { align-items:flex-start; } .wa-ai-example-prompts>span { width:100%; } }

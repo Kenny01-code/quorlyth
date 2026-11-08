@@ -20,9 +20,10 @@ test('QuorlythBot is not downloaded automatically during startup', async () => {
 })
 
 test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
-  const [app, css] = await Promise.all([
+  const [app, css, bot] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/styles/app.css'),
+    readSource('src/bot/QuorlythBot.tsx'),
   ])
   const openStart = app.indexOf('const openQuorlythBot = useCallback')
   assert.ok(openStart >= 0, 'the shared launcher opener exists')
@@ -36,6 +37,13 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.match(css, /#astl\.astl\s*\{[\s\S]{0,300}position: fixed !important/)
   assert.match(css, /#astl\.astl::before/)
   assert.match(css, /z-index: 110 !important/)
+  const launcherStart = bot.indexOf('id="astl"')
+  const launcherEnd = bot.indexOf('</button>', launcherStart)
+  assert.ok(launcherStart >= 0 && launcherEnd > launcherStart, 'the mounted bot renders its own persistent launcher')
+  const launcher = bot.slice(launcherStart, launcherEnd)
+  assert.match(launcher, /onClick=\{openPanel\}/)
+  assert.doesNotMatch(launcher, /onContextMenu|onPointerDown|onPointerUp|launcherHidden/)
+  assert.doesNotMatch(bot, /setLauncherHidden|hideLauncher|startLauncherHold|launcherLongPressTriggered/)
 })
 
 

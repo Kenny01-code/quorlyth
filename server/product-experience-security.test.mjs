@@ -24,12 +24,14 @@ test('landing copy is fixed and the editorial reveal respects reduced motion', a
 })
 
 test('the automation builder is natural-language first and keeps advanced controls optional', async () => {
-  const [automations, canvas, runtime, worker, migration] = await Promise.all([
+  const [automations, canvas, runtime, worker, migration, automationCore, architecture] = await Promise.all([
     source('src/screens/Automations.tsx'),
     source('src/components/WorkflowCanvas.tsx'),
     source('src/components/AutomationRuntime.tsx'),
     source('supabase/functions/automation-worker/index.ts'),
     source('supabase/migrations/20261105111008_persistent_automation_worker.sql'),
+    source('src/lib/automation.ts'),
+    source('src/screens/Architecture.tsx'),
   ])
 
   assert.match(automations, /Describe the work\. I’ll build the automation\./)
@@ -43,12 +45,39 @@ test('the automation builder is natural-language first and keeps advanced contro
   assert.match(automations, /does not wait for or simulate a real project deadline/)
   assert.match(automations, /window\.confirm\(/)
   assert.match(automations, /isPersistentRuntime = app\.backend\?\.auth\.mode === 'supabase'/)
+  assert.match(automations, /id: 'webhook'/)
+  assert.match(automations, /Object\.keys\(TRIGGER_INFO\) as WorkflowTrigger\[\]/)
+  assert.match(automations, /isSafeWorkflowWebhookUrl\(url\)/)
+  assert.match(automations, /connected_services: connectedServiceContext/)
+  assert.match(automations, /MAX_WORKFLOW_ACTIONS/)
+  assert.match(automationCore, /MAX_WORKFLOW_ACTIONS = 128/)
+  assert.match(automationCore, /MAX_WORKFLOW_WEBHOOKS = 3/)
+  assert.match(worker, /MAX_WORKFLOW_ACTIONS = 128/)
+  assert.match(worker, /MAX_WORKFLOW_WEBHOOKS = 3/)
+  assert.match(canvas, /Up to 128 action steps are supported/)
+  assert.match(architecture, /loadSocialAccounts/)
+  assert.match(architecture, /The architecture follows your connections/)
+  assert.doesNotMatch(architecture, /event-triggered workflows currently run while a Quorlyth session is active/)
   assert.match(canvas, /For signed-in accounts, active workflows run through Quorlyth’s server automation worker/)
   assert.match(runtime, /app\.backend\?\.auth\.mode === 'supabase' \|\| !store \|\| !userId/)
   assert.match(worker, /verify_automation_worker_token/)
   assert.match(worker, /claim_automation_events/)
   assert.match(migration, /private\.automation_event_queue/)
   assert.match(migration, /cron\.schedule\(\s*'quorlyth-automation-worker'/)
+})
+
+test('automation setup explains the describe-review-activate journey before the technical canvas', async () => {
+  const [automations, styles] = await Promise.all([
+    source('src/screens/Automations.tsx'),
+    source('src/styles/automation-ai.css'),
+  ])
+  assert.match(automations, /Three steps\. No canvas knowledge needed\./)
+  assert.match(automations, /Describe/)
+  assert.match(automations, /Review/)
+  assert.match(automations, /Activate/)
+  assert.match(automations, /Deadline alerts/)
+  assert.match(styles, /\.wa-plain-guide-steps/)
+  assert.match(styles, /\.wa-connected-services-list/)
 })
 
 test('automation test labels distinguish immediate sample actions from future deadline events', async () => {

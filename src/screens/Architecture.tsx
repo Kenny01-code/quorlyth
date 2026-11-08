@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../data/AppProvider'
 import type { WorkflowDefinition } from '../lib/automation'
+import { loadSocialAccounts } from '../lib/socialAccounts'
+import type { SocialConnection } from '../lib/socialAccounts'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
 import '../styles/public-architecture.css'
@@ -38,7 +40,7 @@ const LAYERS = [
   { number: '01', title: 'Experience layer', detail: 'The website, dashboards, communities, idea pages, creator review queue, collaboration workspaces and QuorlythBot.' },
   { number: '02', title: 'Identity and shared data', detail: 'Supabase authentication and database records keep community activity connected to the right people and spaces.' },
   { number: '03', title: 'AI and voice services', detail: 'Server-side AI endpoints help review and summarize activity. QuorlythBot can answer in text or use generated speech when the provider is available.' },
-  { number: '04', title: 'Workflow automation', detail: 'Triggers can run conditions and actions such as creating an in-app notification, creating a task or calling an HTTPS webhook.' },
+  { number: '04', title: 'Workflow automation', detail: 'A persistent Supabase queue and scheduled worker process eligible product events and one-time deadline events, then run authorised notification, workspace-task or HTTPS webhook actions.' },
 ]
 
 
@@ -71,9 +73,10 @@ function DiagramNode({ x, y, w, h, title, detail, kind = 'app', shape = 'box' }:
   )
 }
 
-function SystemArchitectureMap({ workflows, workflowDataReady, onOpenAutomations }: { workflows: WorkflowDefinition[]; workflowDataReady: boolean; onOpenAutomations: () => void }) {
+function SystemArchitectureMap({ workflows, workflowDataReady, connections, connectionsReady, onOpenAutomations }: { workflows: WorkflowDefinition[]; workflowDataReady: boolean; connections: SocialConnection[]; connectionsReady: boolean; onOpenAutomations: () => void }) {
   const activeWorkflows = workflows.filter(workflow => workflow.status === 'active').length
   const latestWorkflow = [...workflows].sort((first, second) => (second.updatedAt || 0) - (first.updatedAt || 0))[0]
+  const activeWebhookWorkflows = workflows.filter(workflow => workflow.status === 'active' && workflow.actions?.some(action => action.type === 'webhook')).length
   const automationDetails = workflowDataReady
     ? [workflows.length + ' saved · ' + activeWorkflows + ' active', latestWorkflow ? 'Latest: ' + latestWorkflow.name.slice(0, 26) : 'Create your first workflow']
     : ['Sign in to view private workflows']
@@ -82,7 +85,7 @@ function SystemArchitectureMap({ workflows, workflowDataReady, onOpenAutomations
       <div className="arch-section-heading">
         <span className="arch-overline">02 / THE GITHUB SYSTEM MAP</span>
         <h2 id="arch-system-title">The actual system architecture.</h2>
-        <p>This is the repository architecture map recreated as a real, responsive diagram on the site: the web client, Supabase identity and data, server-side AI boundary, provider services, Railway option, and the in-session automation path.</p>
+        <p>This is the live architecture view of Quorlyth’s web app, Supabase data layer, server-side AI boundary, scheduled automation worker and the integrations connected to this account.</p>
       </div>
       <div className="arch-map-shell">
         <div className="arch-map-toolbar">
@@ -108,7 +111,7 @@ function SystemArchitectureMap({ workflows, workflowDataReady, onOpenAutomations
 
             <rect className="arch-map-group arch-map-group--automation" x="38" y="525" width="590" height="625" rx="20" />
             <text className="arch-map-group-title" x="62" y="558">AUTOMATION RUNTIME</text>
-            <text className="arch-map-group-subtitle" x="62" y="577">Session-driven product events and follow-up actions</text>
+            <text className="arch-map-group-subtitle" x="62" y="577">Queued product events, deadline scanning and background follow-up actions</text>
 
             <rect className="arch-map-group arch-map-group--api" x="640" y="392" width="440" height="285" rx="20" />
             <text className="arch-map-group-title" x="664" y="425">SERVER-SIDE API BOUNDARY</text>
@@ -163,9 +166,9 @@ function SystemArchitectureMap({ workflows, workflowDataReady, onOpenAutomations
             <DiagramNode x={1120} y={530} w={260} h={75} title="Speech pipeline" detail={['ElevenLabs-first · fallbacks']} kind="api" />
             <DiagramNode x={1120} y={640} w={260} h={75} title="YouTube Data API" detail={['Optional review evidence']} kind="optional" />
 
-            <DiagramNode x={90} y={610} w={470} h={78} title="Product events" detail={['Idea created · task completed · workspace created']} kind="automation" />
-            <DiagramNode x={90} y={780} w={470} h={75} title="Trigger → condition → action" detail={['Runs while a Quorlyth session is active']} kind="automation" />
-            <DiagramNode x={90} y={935} w={470} h={90} title="Automation actions" detail={['In-app notification · create task · HTTPS webhook']} kind="automation" />
+            <DiagramNode x={90} y={610} w={470} h={78} title="Product events" detail={['Idea · task · workspace · evidence · deadline']} kind="automation" />
+            <DiagramNode x={90} y={780} w={470} h={75} title="Queue + scheduled worker" detail={['30-second poll · bounded batches · deduplicated deadlines']} kind="automation" />
+            <DiagramNode x={90} y={935} w={470} h={90} title="Authorised workflow actions" detail={['Notification · workspace task · public HTTPS webhook']} kind="automation" />
             <DiagramNode x={720} y={795} w={560} h={90} title="Railway Node AI service" detail={['Optional direct API path when VITE_AI_API_BASE_URL is configured']} kind="optional" />
           </svg>
         </div>
@@ -175,6 +178,16 @@ function SystemArchitectureMap({ workflows, workflowDataReady, onOpenAutomations
           <span><i className="arch-map-legend-dot arch-map-legend-dot--optional" /> Optional integration path</span>
           <span><i className="arch-map-legend-line" /> Product event flow</span>
         </div>
+        <section className="arch-connected-integrations" aria-labelledby="arch-connected-integrations-title">
+          <div className="arch-connected-integrations-head"><div><span className="arch-overline">LIVE ACCOUNT CONNECTIONS</span><h3 id="arch-connected-integrations-title">The architecture follows your connections.</h3><p>Only accounts verified for this signed-in Quorlyth user appear here. Provider tokens and credentials are never shown.</p></div><span className="arch-integration-count">{connectionsReady ? connections.length + ' connected' : 'Checking…'}</span></div>
+          <div className="arch-connected-grid">
+            {connectionsReady && connections.length ? connections.map(connection => <article className="arch-connected-card" key={connection.connection_id}>
+              <span className="arch-connected-dot" /><div><strong>{connection.provider === 'x' ? 'X' : connection.provider === 'linkedin' ? 'LinkedIn' : connection.provider === 'facebook' ? 'Facebook Page' : connection.provider === 'instagram' ? 'Instagram' : connection.provider === 'pinterest' ? 'Pinterest' : connection.provider}</strong><small>{connection.account_name || connection.username || 'Connected account'}</small></div><span className="arch-connected-mode">Direct publishing</span>
+            </article>) : <article className="arch-connected-card is-empty"><div><strong>{connectionsReady ? 'No social accounts connected' : 'Checking connected accounts'}</strong><small>{connectionsReady ? 'Connect a channel in Settings to add it to your account architecture.' : 'Quorlyth is checking the verified account connections.'}</small></div></article>}
+            <article className="arch-connected-card arch-webhook-card"><span className="arch-connected-dot" /><div><strong>HTTPS webhook bridge</strong><small>{activeWebhookWorkflows + ' active workflow' + (activeWebhookWorkflows === 1 ? '' : 's') + ' using an external endpoint'}</small></div><span className="arch-connected-mode">Workflow integration</span></article>
+          </div>
+          <p className="arch-integration-disclaimer">Social accounts shown here are connected for direct, user-approved publishing. They are not yet background automation actions. External services can be linked to workflows through user-supplied, validated HTTPS webhook endpoints.</p>
+        </section>
         <div className="arch-my-automations" aria-live="polite">
           <div>
             <span className="arch-overline">YOUR AUTOMATION LAYER</span>
@@ -186,7 +199,7 @@ function SystemArchitectureMap({ workflows, workflowDataReady, onOpenAutomations
           <button type="button" className="btn" onClick={onOpenAutomations}>Manage automations <Icon name="arrow-up-right" size={15} /></button>
         </div>
       </div>
-      <p className="arch-caption">Map reproduced from the repository’s technical architecture diagram. Your saved workflow count is specific to the signed-in account; it is not a platform-wide total. Event-triggered automations currently run while a Quorlyth session is active; the map does not promise an always-on worker or healthy external services.</p>
+      <p className="arch-caption">The map combines Quorlyth’s shared production architecture with this account’s verified connections and saved workflow state. Signed-in production workflows use a persistent queue and scheduled worker; arbitrary calendar-style schedules and automatic social publishing are not currently workflow actions.</p>
     </section>
   )
 }
@@ -197,6 +210,8 @@ export function Architecture() {
   const app = useApp()
   const [workflows, setWorkflows] = useState<WorkflowDefinition[]>([])
   const [workflowDataReady, setWorkflowDataReady] = useState(false)
+  const [socialConnections, setSocialConnections] = useState<SocialConnection[]>([])
+  const [socialConnectionsReady, setSocialConnectionsReady] = useState(false)
   const automationCreatedId = new URLSearchParams(location.search).get('automationCreated') || ''
   const createdWorkflow = workflows.find(workflow => workflow.id === automationCreatedId)
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
@@ -216,6 +231,26 @@ export function Architecture() {
       setWorkflowDataReady(true)
     })
   }, [app.backend?.store, app.me?.id, app.demo])
+
+  useEffect(() => {
+    let current = true
+    if (app.backend?.auth.mode !== 'supabase' || !app.me?.id) {
+      setSocialConnections([])
+      setSocialConnectionsReady(true)
+      return () => { current = false }
+    }
+    setSocialConnectionsReady(false)
+    loadSocialAccounts(app.backend).then(result => {
+      if (!current) return
+      setSocialConnections(Array.isArray(result.connections) ? result.connections : [])
+      setSocialConnectionsReady(true)
+    }).catch(() => {
+      if (!current) return
+      setSocialConnections([])
+      setSocialConnectionsReady(true)
+    })
+    return () => { current = false }
+  }, [app.backend, app.me?.id])
 
   useEffect(() => {
     if (!automationCreatedId) return
@@ -336,7 +371,7 @@ export function Architecture() {
         <div><span className="arch-overline">AUTOMATION SAVED</span><strong>{createdWorkflow ? createdWorkflow.name : 'Your new workflow'}</strong><p>{createdWorkflow ? 'This saved workflow is now reflected in the QUORLYTH / SYSTEM ARCHITECTURE map below.' : workflowDataReady ? 'The architecture map is open, but the saved workflow is not visible in the refreshed account list yet. Check Automation Studio for the saved status.' : 'Checking your saved workflow and updating the architecture view…'}</p></div>
         <button className="btn p" type="button" onClick={() => nav('/automations')}>Open Automation Studio <Icon name="arrow-up-right" size={15} /></button>
       </div>}
-      <SystemArchitectureMap workflows={workflows} workflowDataReady={workflowDataReady} onOpenAutomations={() => nav('/automations')} />
+      <SystemArchitectureMap workflows={workflows} workflowDataReady={workflowDataReady} connections={socialConnections} connectionsReady={socialConnectionsReady} onOpenAutomations={() => nav('/automations')} />
 
       <section className="arch-section arch-brain-section" aria-labelledby="arch-brain-title" data-arch-reveal>
         <div className="arch-section-heading">
@@ -372,7 +407,7 @@ export function Architecture() {
         </div>
         <div className="arch-status-note">
           <Icon name="info" size={19} />
-          <p><b>Current MVP scope:</b> event-triggered workflows run while a Quorlyth session is active. An always-on worker, scheduled runs and retry/delivery monitoring are planned hardening work, not something this version claims to guarantee.</p>
+          <p><b>Production workflow runtime:</b> signed-in Supabase accounts use the persistent event queue and scheduled worker. The worker scans for due project, task and milestone deadlines and records workflow execution history. The demo/local runtime remains session-based. Arbitrary user-defined calendar schedules and automatic social publishing are not yet supported actions.</p>
         </div>
       </section>
 
