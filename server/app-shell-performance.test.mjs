@@ -396,14 +396,16 @@ test('deadline-reached automation is a one-time persistent worker event', async 
 })
 
 
-test('homepage renders before authentication and never forces the full-screen intro', async () => {
+test('homepage renders before authentication while the full intro is reserved for new visitors', async () => {
   const [app, landing, styles] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/screens/Landing.tsx'),
     readSource('src/styles/sitewide-bold-fluid.css'),
   ])
   assert.match(app, /import \{ Landing \} from '\.\/screens\/Landing'/)
-  assert.match(app, /const \[intro, setIntro\] = useState\(false\)/)
+  assert.match(app, /const \\[intro, setIntro\\] = useState\\(\\(\\) =>/)
+  assert.match(app, /localStorage\\.getItem\\('qintro'\\) !== '1'/)
+  assert.match(app, /localStorage\\.getItem\\('qseen'\\) !== '1'/)
   assert.match(app, /if \(!a\.ready && loc\.pathname === '\/'\)[\s\S]{0,180}<Landing \/>/)
   assert.match(landing, /disabled=\{!ready\}/)
   assert.match(styles, /qthEditorialWordRevealLite/)
