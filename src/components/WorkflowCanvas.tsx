@@ -13,6 +13,8 @@ import {
   WorkflowNode,
   WorkflowRun,
   WorkflowTrigger,
+  MAX_WORKFLOW_ACTIONS,
+  MAX_WORKFLOW_WEBHOOKS,
   newWorkflowId,
   workflowGraphFor,
   workflowWithGraph,
@@ -140,6 +142,8 @@ export function WorkflowCanvas({
   const trueActions = branchActions(nodes, graph.edges, condition ? 'true' : 'next')
   const falseActions = condition ? branchActions(nodes, graph.edges, 'false') : []
   const latestSteps = new Map((latestRun?.steps || []).map(step => [step.nodeId || step.id, step]))
+  const actionCount = nodes.filter(node => node.type === 'action').length
+  const webhookCount = nodes.filter(node => node.type === 'action' && node.action.type === 'webhook').length
   const hasCondition = Boolean(condition)
   const canvasHeight = Math.max(720, (Math.max(trueActions.length, falseActions.length) * 175) + 560)
   const canvasWidth = hasCondition ? 1220 : 1040
@@ -187,7 +191,7 @@ export function WorkflowCanvas({
 
   function addAction(branch: 'true' | 'false' | 'next', type: WorkflowActionType) {
     const startNode = condition || trigger
-    if (!startNode) return
+    if (!startNode || actionCount >= MAX_WORKFLOW_ACTIONS || (type === 'webhook' && webhookCount >= MAX_WORKFLOW_WEBHOOKS)) return
     const chain = branchActions(nodes, graph.edges, branch)
     const action = newAction(type)
     const node: WorkflowNode = { id: action.id, type: 'action', action, position: { x: hasCondition ? 790 : 570, y: hasCondition ? (branch === 'false' ? 430 : 65) + (chain.length * 175) : 220 + (chain.length * 175) } }
