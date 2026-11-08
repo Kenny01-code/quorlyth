@@ -636,8 +636,11 @@ export async function speakText(
         if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
         if (preferElevenLabsVoice && allowBrowserFallback) {
           // Don't wait through a second network request after the primary voice stalls.
+          // Restore caller cancellation after MediaSource releases its stream ownership.
           forceBrowserFallback = true
           response = null
+          externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
+          activeSpeechController = controller
         } else {
           // Re-attempt with the same selected persona using the original buffered endpoint.
           retryBufferedSpeech = true
