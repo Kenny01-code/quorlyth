@@ -2738,3 +2738,16 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 /* The in-app bot entry point cannot be hidden by a context menu or touch hold. */
 #astl.astl:not(.hide) { position:fixed!important; visibility:visible!important; display:grid!important; opacity:1!important; pointer-events:auto!important; z-index:110!important; }
 #astl.astl:not(.hide):focus-visible { outline:2px solid rgba(255,255,255,.96)!important; outline-offset:6px; }
+
+/* A calm, branded fallback keeps lazy route transitions from looking like a blank screen. */
+.qth-route-loading { display:grid; gap:13px; width:min(100%,1180px); min-height:min(66vh,720px); margin:0 auto; padding:clamp(22px,3vw,36px) 0; align-content:start; }
+.qth-route-loading-kicker,.qth-route-loading-title,.qth-route-loading-description,.qth-route-loading-grid span,.qth-route-loading-panel { display:block; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,.055); border-radius:12px; background:linear-gradient(110deg,rgba(255,255,255,.035) 8%,rgba(255,255,255,.075) 18%,rgba(255,255,255,.035) 33%); background-size:220% 100%; animation:qthRouteSkeleton 1.55s ease-in-out infinite; }
+.qth-route-loading-kicker { width:104px; height:9px; margin-bottom:5px; border-radius:99px; }
+.qth-route-loading-title { width:min(410px,72%); height:35px; border-radius:9px; }
+.qth-route-loading-description { width:min(560px,88%); height:12px; margin-bottom:14px; border-radius:99px; opacity:.78; }
+.qth-route-loading-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.qth-route-loading-grid span { min-height:120px; }
+.qth-route-loading-panel { min-height:235px; margin-top:3px; }
+@keyframes qthRouteSkeleton { to { background-position-x:-220%; } }
+@media(max-width:680px) { .qth-route-loading { min-height:58vh; padding:19px 0; } .qth-route-loading-grid { grid-template-columns:1fr; gap:9px; } .qth-route-loading-grid span { min-height:70px; } .qth-route-loading-panel { min-height:170px; } .qth-route-loading-title { height:29px; } }
+@media(prefers-reduced-motion:reduce) { .qth-route-loading-kicker,.qth-route-loading-title,.qth-route-loading-description,.qth-route-loading-grid span,.qth-route-loading-panel { animation:none!important; background:rgba(255,255,255,.045); } }
