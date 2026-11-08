@@ -45,7 +45,8 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.match(app, /document\.body/)
   assert.match(app, /data-quorlyth-launcher/)
   assert.match(app, /botLoadError && <div className="qbot-launcher-load-error"/)
-  assert.doesNotMatch(app, /deferredLauncherHidden|deferredHoldTimer|onContextMenu=|onPointerDown=/)
+  assert.doesNotMatch(app, /deferredLauncherHidden|deferredHoldTimer|onPointerDown=/)
+  assert.match(app, /onContextMenu=\{event => \{[\s\S]{0,220}qbot-launcher-hidden-v1/)
   assert.match(css, /#astl\.astl\s*\{[\s\S]{0,300}position: fixed !important/)
   assert.match(css, /#astl\.astl::before/)
   assert.match(css, /z-index: 110 !important/)
@@ -54,8 +55,10 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.ok(launcherStart >= 0 && launcherEnd > launcherStart, 'the mounted bot renders its own persistent launcher')
   const launcher = bot.slice(launcherStart, launcherEnd)
   assert.match(launcher, /onClick=\{openPanel\}/)
-  assert.doesNotMatch(launcher, /onContextMenu|onPointerDown|onPointerUp|launcherHidden/)
-  assert.doesNotMatch(bot, /setLauncherHidden|hideLauncher|startLauncherHold|launcherLongPressTriggered/)
+  assert.match(launcher, /onContextMenu=/)
+  assert.doesNotMatch(launcher, /onPointerDown|onPointerUp/)
+  assert.match(bot, /setLauncherHidden\(true\)/)
+  assert.doesNotMatch(bot, /startLauncherHold|launcherLongPressTriggered/)
 })
 
 
@@ -178,10 +181,10 @@ test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the 
 
 test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', async () => {
   const robot3d = await readSource('src/bot/robot3d.ts')
-  assert.match(robot3d, /1000\/40/)
+  assert.ok(robot3d.includes('1000/30'))
   assert.match(robot3d, /document\.visibilityState/)
   assert.match(robot3d, /document\.removeEventListener\(["']visibilitychange["']/)
-  assert.match(robot3d, /window\.innerWidth<=760\?1\.0:1\.25/)
+  assert.ok(robot3d.includes('window.devicePixelRatio||1,1.0'))
 })
 
 test('the top navigation uses one active-state surface, not a duplicate animated pill', async () => {
@@ -294,8 +297,8 @@ test('QuorlythBot keeps a readable sidebar width and a lower GPU pixel ratio', a
     readSource('src/bot/robot3d.ts'),
   ])
   assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
-  assert.match(renderer, /window\.innerWidth<=760\?1\.0:1\.25/)
-  assert.match(renderer, /1000\/40/)
+  assert.ok(renderer.includes('window.devicePixelRatio||1,1.0'))
+  assert.ok(renderer.includes('1000/30'))
 })
 
 test('top navigation retains the compact 50px shell rather than an oversized header', async () => {
@@ -396,16 +399,77 @@ test('deadline-reached automation is a one-time persistent worker event', async 
 })
 
 
-test('homepage renders before authentication and never forces the full-screen intro', async () => {
+test('homepage renders before authentication while the full intro is reserved for new visitors', async () => {
   const [app, landing, styles] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/screens/Landing.tsx'),
     readSource('src/styles/sitewide-bold-fluid.css'),
   ])
   assert.match(app, /import \{ Landing \} from '\.\/screens\/Landing'/)
-  assert.match(app, /const \[intro, setIntro\] = useState\(false\)/)
+  assert.ok(app.includes('const [intro, setIntro] = useState(() =>'))
+  assert.ok(app.includes("localStorage.getItem('qintro') !== '1'"))
+  assert.ok(app.includes("localStorage.getItem('qseen') !== '1'"))
   assert.match(app, /if \(!a\.ready && loc\.pathname === '\/'\)[\s\S]{0,180}<Landing \/>/)
   assert.match(landing, /disabled=\{!ready\}/)
   assert.match(styles, /qthEditorialWordRevealLite/)
   assert.match(styles, /@media \(max-width: 860px\)[\s\S]{0,260}backdrop-filter: none !important/)
+})
+
+
+test('automation run history can be cleared without deleting workflows or notifications', async () => {
+  const automations = await readSource('src/screens/Automations.tsx')
+  assert.match(automations, /async function clearAutomationHistory/)
+  assert.match(automations, /store\.delete\('data\/users\/' \+ userId \+ '\/automation-runs'\)/)
+  assert.match(automations, /runHistory: \[\]/)
+  assert.match(automations, /lastRunAt: null/)
+  assert.match(automations, /Clear all history/)
+  assert.match(automations, /Your workflows, active\/draft status, and automation notifications will remain/)
+})
+
+test('the QuorlythBot launcher can be hidden by right-click and restored with its keyboard shortcut', async () => {
+  const [app, bot] = await Promise.all([
+    readSource('src/App.tsx'),
+    readSource('src/bot/QuorlythBot.tsx'),
+  ])
+  assert.match(app, /const \[botLauncherHidden, setBotLauncherHidden\]/)
+  assert.match(app, /onContextMenu=\{event => \{[\s\S]{0,220}qbot-launcher-hidden-v1/)
+  assert.match(app, /!botMounted && !botLauncherHidden && createPortal/)
+  assert.match(app, /launcherWasHidden \|\| botLauncherHidden/)
+  assert.match(app, /quorlyth:launcher-restore/)
+  assert.match(bot, /const \[launcherHidden, setLauncherHidden\]/)
+  assert.match(bot, /!launcherHidden && <button[\s\S]{0,460}onContextMenu=/)
+  assert.match(bot, /qbot-launcher-hidden-v1/)
+})
+
+test('the full branded intro is reserved for first-time visitors', async () => {
+  const app = await readSource('src/App.tsx')
+  assert.ok(app.includes("localStorage.getItem('qintro') !== '1'"))
+  assert.ok(app.includes("localStorage.getItem('qseen') !== '1'"))
+  assert.ok(app.includes("localStorage.getItem('qintro') !== '1'"))
+  assert.ok(app.includes('const [intro, setIntro] = useState(() =>'))
+})
+
+test('QuorlythBot keeps text streaming while applying a short voice deadline and fallback', async () => {
+  const [bot, client] = await Promise.all([
+    readSource('src/bot/QuorlythBot.tsx'),
+    readSource('src/ai/client.ts'),
+  ])
+  assert.match(bot, /timeoutMs: 550/)
+  assert.match(bot, /browserFallbackTimeoutMs: 900/)
+  assert.match(bot, /browserFallbackOnly: true/)
+  assert.match(client, /timeoutMs\?: number/)
+  assert.match(client, /firstAudioTimeoutMs = 900/)
+  assert.match(client, /browserFallbackOnly\?: boolean/)
+  assert.match(client, /The first voice audio did not arrive within the fast-start window/)
+})
+
+test('QuorlythBot chat frame reduces expensive blur and offscreen transcript rendering', async () => {
+  const [styles, robot] = await Promise.all([
+    readSource('src/styles/bot.css'),
+    readSource('src/bot/robot3d.ts'),
+  ])
+  assert.match(styles, /\.bot \.ast-log > \.am[\s\S]{0,180}content-visibility: auto/)
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]{0,240}backdrop-filter: none !important/)
+  assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,1\.0\)\)/)
+  assert.match(robot, /if\(now-lastRender<1000\/30\)/)
 })

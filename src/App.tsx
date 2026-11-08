@@ -81,10 +81,14 @@ export default function App() {
   const [palette, setPalette] = useState(false)
   const [keys, setKeys] = useState(false)
   const [bell, setBell] = useState(false)
-  // Play the branded welcome animation once per browser, then remember it across sessions.
-  // Existing returning visitors who already heard the sign-in hello also skip the intro.
-  // Never block a first visit with a full-screen intro. The animation remains available on demand.
-  const [intro, setIntro] = useState(false)
+  // Show the branded opening only to first-time visitors. Returning visitors skip it.
+  const [intro, setIntro] = useState(() => {
+    try {
+      return localStorage.getItem('qintro') !== '1'
+        && localStorage.getItem('qseen') !== '1'
+        && sessionStorage.getItem('qintro') !== '1'
+    } catch { return false }
+  })
   const [replay, setReplay] = useState(0)
   const skipNextPageTransition = useRef(false)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
@@ -92,6 +96,9 @@ export default function App() {
   const [botMounted, setBotMounted] = useState(false)
   const [botLoading, setBotLoading] = useState(false)
   const [botLoadError, setBotLoadError] = useState('')
+  const [botLauncherHidden, setBotLauncherHidden] = useState(() => {
+    try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
+  })
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
   const botMountedRef = useRef(false)
   const botLoadingRef = useRef(false)
@@ -157,11 +164,19 @@ export default function App() {
       const tag = target?.tagName?.toUpperCase() || ''
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
       event.preventDefault()
+      let launcherWasHidden = false
+      try { launcherWasHidden = sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch {}
+      if (launcherWasHidden || botLauncherHidden) {
+        try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
+        setBotLauncherHidden(false)
+        window.dispatchEvent(new CustomEvent('quorlyth:launcher-restore'))
+        return
+      }
       void openQuorlythBot(true)
     }
     window.addEventListener('keydown', summonLiveTalk)
     return () => window.removeEventListener('keydown', summonLiveTalk)
-  }, [openQuorlythBot])
+  }, [openQuorlythBot, botLauncherHidden])
   useEffect(() => {
     if (us.st.preferences?.sound !== undefined) setSound(us.st.preferences.sound)
   }, [a.me?.id, us.st.preferences?.sound])
@@ -401,7 +416,7 @@ export default function App() {
       {bell && <Suspense fallback={null}><NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} /></Suspense>}
       {palette && <Suspense fallback={null}><Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} /></Suspense>}
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
-      {!botMounted && createPortal(
+      {!botMounted && !botLauncherHidden && createPortal(
         <div className="qbot-launcher-portal" data-quorlyth-launcher>
           <button
             id="astl"
@@ -415,6 +430,11 @@ export default function App() {
             aria-label={botLoading ? 'Loading QuorlythBot' : botLoadError ? 'Retry loading QuorlythBot' : 'Open QuorlythBot. Ask about your ideas, communities, analytics, projects, or next steps.'}
             title={botLoading ? 'Opening QuorlythBot…' : botLoadError || 'Ask QuorlythBot about your communities, ideas, projects, or next steps.'}
             onClick={() => { void openQuorlythBot() }}
+            onContextMenu={event => {
+              event.preventDefault()
+              try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
+              setBotLauncherHidden(true)
+            }}
           >
             <span className="astm"><Logo size={30} /></span>
             <span className="astl-hint" aria-hidden="true">Ask Quorlyth</span>

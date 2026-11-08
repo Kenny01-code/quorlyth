@@ -720,6 +720,34 @@ function AutomationWorkspace() {
     }
   }
 
+  async function clearAutomationHistory() {
+    if (!app.backend || !userId || !allRuns.length) return
+    const confirmed = window.confirm(
+      'Permanently delete all automation run history for this account? This removes saved execution records and each workflow’s recent run-history copy. Your workflows, active/draft status, and automation notifications will remain.'
+    )
+    if (!confirmed) return
+
+    setBusy('clear-history')
+    setError('')
+    try {
+      const workflowsWithHistory = workflows.filter(workflow => Array.isArray(workflow.runHistory) && workflow.runHistory.length > 0)
+      await Promise.all(workflowsWithHistory.map(workflow =>
+        app.backend!.store.update(collectionPath + '/' + workflow.id, {
+          runHistory: [],
+          lastRunAt: null,
+        })
+      ))
+      await app.backend.store.delete('data/users/' + userId + '/automation-runs')
+      app.toast('All saved automation run history has been deleted.')
+    } catch (failure) {
+      const message = userFacingMutationError(failure, 'clear all automation run history')
+      setError(message)
+      app.toast(message)
+    } finally {
+      setBusy('')
+    }
+  }
+
   if (editing) {
     const latestRun = allRuns.find(run => run.workflowId === editing.id) || editing.runHistory?.[0] || null
     return (
@@ -925,7 +953,7 @@ function AutomationWorkspace() {
         </>
       ) : (
         <section className="glass pad wa-runs-panel">
-          <div className="wa-section-title"><div><p className="wa-eyebrow">ACTIVITY</p><h3>What your workflows have done.</h3><p>Live and completed runs appear here. Expand each run to inspect the action results, failure detail and execution sequence.</p></div></div>
+          <div className="wa-section-title wa-history-heading"><div><p className="wa-eyebrow">ACTIVITY</p><h3>What your workflows have done.</h3><p>Live and completed runs appear here. Expand each run to inspect the action results, failure detail and execution sequence.</p></div><button type="button" className="btn wa-clear-history" onClick={() => void clearAutomationHistory()} disabled={!runCount || busy === 'clear-history'}><QuorlythGlyph name="trash" size={14} />{busy === 'clear-history' ? 'Clearing history…' : 'Clear all history'}</button></div>
           {notices.length > 0 && <div className="wa-notice-inbox"><div className="wa-section-title"><div><p className="wa-eyebrow">NOTICES</p><h3>Recent automation notifications</h3><p>Messages produced by your workflows when an event matches.</p></div><span className="wa-template-count">{notices.length} saved</span></div><div className="wa-notice-list">{notices.slice().sort((a,b)=>b.at-a.at).slice(0,8).map(notice => <article className="wa-notice-row" key={notice.id}><span className="wa-notice-icon"><QuorlythGlyph name="bell" size={15} /></span><div><strong>{notice.title || notice.workflowName || 'Automation notice'}</strong><p>{notice.message}</p><small>{displayDate(notice.at)}{notice.eventType ? ' · ' + notice.eventType : ''}</small></div></article>)}</div></div>}
           {!allRuns.length ? <div className="wa-empty wa-empty-compact"><span className="wa-empty-symbol"><QuorlythGlyph name="progress" size={24} /></span><h3>No runs recorded yet</h3><p>Use “Run sample test” to execute the configured action path immediately. It does not simulate a deadline; activate the workflow to receive a one-time event when a real due date arrives.</p><button type="button" className="btn p" onClick={() => { setTab('workflows'); if (!workflows.length) beginNew() }}>Build a workflow <QuorlythGlyph name="arrow" size={14} /></button></div> : <div className="wa-run-list">
             {allRuns.map(run => <article className="wa-run-row" key={run.workflowId + ':' + run.id}>

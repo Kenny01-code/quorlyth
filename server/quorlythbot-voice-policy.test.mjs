@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 
 const readSource = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('Live Talk keeps spoken replies on the selected ElevenLabs voice', async () => {
+test('Live Talk prefers ElevenLabs and falls back quickly if first audio is delayed', async () => {
   const [bot, views, client] = await Promise.all([
     readSource('src/bot/QuorlythBot.tsx'),
     readSource('src/bot/views.tsx'),
@@ -12,13 +12,13 @@ test('Live Talk keeps spoken replies on the selected ElevenLabs voice', async ()
   ])
 
   const liveVoiceQueue = bot.slice(bot.indexOf('const enqueueSpeech ='), bot.indexOf('const queueSpeechFromDelta ='))
-  assert.match(liveVoiceQueue, /elevenLabsOnly: true/)
-  assert.match(liveVoiceQueue, /allowBrowserFallback:\s*false/)
-  assert.match(bot, /elevenLabsOnly: true/)
-  assert.match(bot, /preferElevenLabsVoice: true/)
-  assert.match(bot, /allowBrowserFallback:\s*false/)
+  assert.match(liveVoiceQueue, /preferElevenLabsVoice: true/)
+  assert.match(liveVoiceQueue, /allowBrowserFallback: true/)
+  assert.match(liveVoiceQueue, /browserFallbackTimeoutMs: 900/)
+  assert.match(liveVoiceQueue, /timeoutMs: 550/)
+  assert.match(liveVoiceQueue, /browserFallbackOnly: true/)
+  assert.match(bot, /ElevenLabs is the primary voice/)
   assert.match(bot, /textOnly: true/)
-  assert.match(bot, /elevenLabsOnly: true/)
   assert.match(views, /preferElevenLabsVoice:\s*true/)
   assert.match(views, /allowBrowserFallback:\s*true/)
   assert.match(client, /options\.elevenLabsOnly \? '\/api\/speak-eleven-stream'/)

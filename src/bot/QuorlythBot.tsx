@@ -314,8 +314,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const thinkingExitTimer = useRef<number | null>(null)
   const [open, setOpen] = useState(initialOpen)
   const [minimized, setMinimized] = useState(false)
-  // The floating entry point is intentionally not user-hideable. Closing the panel
-  // always returns this launcher, so help remains discoverable across pointer types.
+  const [launcherHidden, setLauncherHidden] = useState(() => {
+    try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
+  })
+  useEffect(() => {
+    const restoreLauncher = () => setLauncherHidden(false)
+    window.addEventListener('quorlyth:launcher-restore', restoreLauncher)
+    return () => window.removeEventListener('quorlyth:launcher-restore', restoreLauncher)
+  }, [])
   const [mode, setMode] = useState<'compact' | 'large' | 'full' | 'custom'>('full')
   const [viewportNarrow, setViewportNarrow] = useState(() => window.innerWidth <= 980)
   const [side, setSide] = useState(() => window.innerWidth > 980)
@@ -1122,6 +1128,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         accent: bs.accent || 'auto',
         signal: replySpeechController.signal,
         liveTalk: true,
+        timeoutMs: 550,
       }).then(blob => ({ ok: true as const, blob }), error => ({ ok: false as const, error }))
 
       if (!replySpeechStarted) {
@@ -1164,7 +1171,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
                 allowBrowserFallback: true,
-                browserFallbackTimeoutMs: 9500,
+                browserFallbackTimeoutMs: 900,
                 liveTalk: true,
               },
             )
@@ -1181,7 +1188,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   signal: replySpeechController.signal,
                   preferElevenLabsVoice: true,
                   allowBrowserFallback: true,
-                  browserFallbackTimeoutMs: 9500,
+                  browserFallbackOnly: true,
                   liveTalk: true,
                 },
               )
@@ -1511,7 +1518,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         accent: bs.accent || 'auto',
         signal: controller.signal,
         liveTalk: true,
-        elevenLabsOnly: true,
+        timeoutMs: 550,
       }).then(blob => ({ ok: true as const, blob }), error => ({ ok: false as const, error }))
 
       speechQueue = speechQueue.then(async () => {
@@ -1542,10 +1549,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               {
                 accent: bs.accent || 'auto',
                 signal: controller.signal,
-                elevenLabsOnly: true,
+                elevenLabsOnly: false,
                 preferElevenLabsVoice: true,
-                allowBrowserFallback: false,
-                browserFallbackTimeoutMs: 9000,
+                allowBrowserFallback: true,
+                browserFallbackTimeoutMs: 900,
                 liveTalk: true,
               },
             )
@@ -1560,10 +1567,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 {
                   accent: bs.accent || 'auto',
                   signal: controller.signal,
-                  elevenLabsOnly: true,
                   preferElevenLabsVoice: true,
-                  allowBrowserFallback: false,
-                  browserFallbackTimeoutMs: 9000,
+                  allowBrowserFallback: true,
+                  browserFallbackOnly: true,
                   liveTalk: true,
                 },
               )
@@ -1633,7 +1639,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         instructions: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext()
           + '\nBrowser/device context: ' + browserContext()
           + '\nFor explicit in-app requests such as creating, editing, organizing, deleting, promoting, or managing a community, idea, workspace, project, task, milestone, or automation, call prepare_quorlyth_task with the exact request. Do not call it for questions about how something works. The tool only prepares a permission-checked preview; never claim a change was applied. Tell the user to review and confirm the preview in Quorlyth. If the user asks a question, answer it directly without forcing a tool call.'
-          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The Realtime session returns text only. Every spoken reply is synthesized by the selected ElevenLabs voice; never use the Realtime model audio output or browser speech synthesis. If Realtime cannot start, the app falls back to browser recognition and ElevenLabs-only text-to-speech.\n' + LIVE_TALK_SPEECH_STYLE,
+          + '\nYou are speaking with the user live. Understand the language they actually speak, answer in the same language unless they ask you to switch, and keep answers natural, useful, and concise. Do not use markdown in spoken answers. The Realtime session returns text only. ElevenLabs is the primary voice. If its first audio is not ready within a short startup window, use browser speech fallback so the conversation does not stall. Never use Realtime model audio output.\n' + LIVE_TALK_SPEECH_STYLE,
         voice: v.ai,
         accent: bs.accent || 'auto',
         textOnly: true,
@@ -3901,7 +3907,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
 
   return (
     <>
-      <button
+      {!launcherHidden && <button
         id="astl"
         type="button"
         className={cn('astl', open && 'hide')}
@@ -3910,9 +3916,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         aria-controls="ast"
         title="Ask QuorlythBot"
         onClick={openPanel}
+        onContextMenu={event => {
+          event.preventDefault()
+          try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
+          setLauncherHidden(true)
+        }}
       >
         <span className="astm"><Logo size={30} /></span>{greet && <span className="astb">{greet}</span>}
-      </button>
+      </button>}
       {open && (
         <div id="ast">
           <div id="bot" className={cn('astp glass bot qbot-sidebar-compact-v2', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
