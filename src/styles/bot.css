@@ -1380,3 +1380,31 @@
     max-width: calc(100% - 20px) !important;
   }
 }
+
+
+/* QuorlythBot interaction polish: lighter compositing and independently painted chat rows. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+  -webkit-backdrop-filter: blur(12px) saturate(122%) !important;
+  backdrop-filter: blur(12px) saturate(122%) !important;
+}
+.bot .bh, .bot .ast-in, .bot .bc {
+  -webkit-backdrop-filter: blur(8px) saturate(118%) !important;
+  backdrop-filter: blur(8px) saturate(118%) !important;
+}
+.bot .ast-log > .am {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 92px;
+}
+.bot .bstage::before, .bot .ast-stage::before {
+  animation: none !important;
+}
+@media (max-width: 760px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot),
+  .bot .bh, .bot .ast-in, .bot .bc {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+    background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.01)), #030303 !important;
+  }
+}
