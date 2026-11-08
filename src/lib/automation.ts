@@ -89,6 +89,9 @@ export interface WorkflowEventDetail {
 
 export const WORKFLOW_EVENT_NAME = 'quorlyth:workflow-event'
 
+export const MAX_WORKFLOW_ACTIONS = 100
+export const MAX_WORKFLOW_WEBHOOKS = 3
+
 export const TRIGGER_INFO: Record<WorkflowTrigger, { title: string; description: string }> = {
   manual: { title: 'Run manually', description: 'Start this workflow whenever you choose.' },
   'idea.created': { title: 'A new idea is submitted', description: 'Runs when someone shares an idea in a Quorlyth community.' },
@@ -104,7 +107,25 @@ export const TRIGGER_INFO: Record<WorkflowTrigger, { title: string; description:
 export const ACTION_INFO: Record<WorkflowActionType, { title: string; description: string }> = {
   notify: { title: 'Send me a Quorlyth notification', description: 'Save an in-app automation notice and show a toast when Quorlyth is open.' },
   create_task: { title: 'Create a workspace task', description: 'Add a real task to one of your independent project workspaces.' },
-  webhook: { title: 'Send a webhook', description: 'POST a small JSON event payload to an HTTPS endpoint you configure.' },
+  webhook: { title: 'Send a webhook', description: 'POST an event payload to a public HTTPS endpoint you configure. Webhook delivery is restricted and retried by the server worker.' },
+}
+
+/** Client-side guard; the server worker independently validates every webhook before delivery. */
+export function isSafeWorkflowWebhookUrl(raw: string): boolean {
+  try {
+    const target = new URL(String(raw || '').trim())
+    const host = target.hostname.toLowerCase()
+    const ipv4 = /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host)
+    return target.protocol === 'https:'
+      && !target.username && !target.password
+      && host.includes('.')
+      && host !== 'localhost' && !host.endsWith('.localhost')
+      && !host.endsWith('.local') && !host.endsWith('.internal')
+      && host !== 'metadata.google.internal'
+      && !host.includes(':') && !ipv4
+  } catch {
+    return false
+  }
 }
 
 export const CONDITION_FIELD_INFO: Record<WorkflowConditionField, string> = {
@@ -218,15 +239,16 @@ export function workflowWithGraph(
 export function validateWorkflowGraph(workflow: WorkflowDefinition): string | null {
   const { nodes, edges } = workflowGraphFor(workflow)
   if (!nodes.length) return 'Add a trigger to start this workflow.'
-  if (nodes.length > 20) return 'A workflow can contain up to 20 nodes.'
-  if (edges.length > 24) return 'A workflow can contain up to 24 connections.'
+  if (nodes.length > MAX_WORKFLOW_ACTIONS + 2) return 'A workflow can contain up to ' + (MAX_WORKFLOW_ACTIONS + 2) + ' nodes.'
+  if (edges.length > MAX_WORKFLOW_ACTIONS + 1) return 'A workflow can contain up to ' + (MAX_WORKFLOW_ACTIONS + 1) + ' connections.'
   const triggers = nodes.filter(node => node.type === 'trigger')
   const conditions = nodes.filter(node => node.type === 'condition')
   const actions = nodes.filter(node => node.type === 'action')
   if (triggers.length !== 1) return 'Each workflow must have exactly one trigger node.'
   if (conditions.length > 1) return 'Each workflow can currently have one decision node with true and false routes.'
   if (!actions.length) return 'Connect at least one action node to the trigger or a decision branch.'
-  if (actions.length > 12) return 'A workflow can contain up to 12 action nodes.'
+  if (actions.length > MAX_WORKFLOW_ACTIONS) return 'A workflow can contain up to ' + MAX_WORKFLOW_ACTIONS + ' action steps.'
+  if (actions.filter(node => node.action.type === 'webhook').length > MAX_WORKFLOW_WEBHOOKS) return 'A workflow can contain up to ' + MAX_WORKFLOW_WEBHOOKS + ' webhook steps. Use native Quorlyth actions for the remaining steps.'
   if (conditions.length && !conditions[0].value.trim()) return 'Give the decision node a condition to evaluate.'
 
   const byId = new Map(nodes.map(node => [node.id, node]))
@@ -463,9 +485,8 @@ export async function executeWorkflowActions(
         await mark(node, 'success', 'Created "' + title + '" in the selected workspace.')
       } else if (action.type === 'webhook') {
         const target = String(action.url || '').trim()
-        let parsed: URL
-        try { parsed = new URL(target) } catch { throw new Error('Enter a valid HTTPS webhook URL.') }
-        if (parsed.protocol !== 'https:') throw new Error('Webhook URLs must use HTTPS.')
+        if (!isSafeWorkflowWebhookUrl(target)) throw new Error('Use a public HTTPS webhook URL. Local, private, IP-address and credential-bearing URLs are not allowed.')
+        const parsed = new URL(target)
         const response = await fetch(parsed.toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/plain, */*' },
