@@ -347,6 +347,7 @@ export default function App() {
   // Keep the shared navigation mounted from the first app frame. It renders a
   // lightweight skeleton until auth resolves, then upgrades in place to the
   // correct guest or account navigation without delaying the page shell.
+  const navigationLoading = !a.ready || (!!a.me && (!a.dataReady || !a.platformRolesReady))
   const appNavigation = (
     <Nav
       onSearch={() => setPalette(true)}
@@ -358,7 +359,7 @@ export default function App() {
       demo={a.demo}
       onDemo={() => { a.enterDemo(); nav('/dashboard') }}
       onReplay={() => { setIntro(true); setReplay(r => r + 1) }}
-      loading={!a.ready}
+      loading={navigationLoading}
     />
   )
 
