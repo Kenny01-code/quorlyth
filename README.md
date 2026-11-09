@@ -65,20 +65,26 @@ npm install
 Copy-Item .env.example .env
 ```
 
-Add the values for the services you use to `.env`. Then start the complete local app with one command:
+Set `VITE_SUPABASE_ANON_KEY` in `.env` to the public anon/publishable key from this project's Vercel **Production** environment. The URL in `.env.example` is already pinned to the canonical Quorlyth Supabase project (`tujvptxjmkihwrqbqmyk`). Never use a service-role key in a `VITE_*` variable.
+
+Then start the complete local app with one command:
 
 ```powershell
 npm run dev
 ```
 
-This starts both the Vite web app (http://localhost:5173) and the local AI API (http://localhost:8787). Vite proxies `/api` requests to the AI server, so QuorlythBot's text and voice routes use the local handlers without a second terminal. The command also stops both processes together when you press Ctrl+C.
+This starts the Vite web app at exactly http://localhost:5173 and the local AI API at http://localhost:8787. Vite proxies `/api` requests to the AI server, so QuorlythBot's text and voice routes use the local handlers without a second terminal. The command also stops both processes together when you press Ctrl+C.
 
-For a frontend-only session without local AI routes, use `npm run dev:vite`. Do not start `npm run dev:ai` separately while `npm run dev` is already running; the combined command has already started it.
+The startup script validates that both Supabase variables exist and that the URL targets the same Supabase project as production. It refuses to start in local-storage-only mode, which can otherwise show a different account and unrelated data. Vite uses a strict port: when port 5173 is occupied, startup fails instead of silently moving to 5174 and leaving an older app answering at the URL you normally open. Stop the existing Vite process before starting another one.
+
+For a frontend-only session without local AI routes, use `npm run dev:vite`; it applies the same backend and port checks. Do not start `npm run dev:ai` separately while `npm run dev` is already running; the combined command has already started it.
+
+**Important:** Local preview intentionally uses the same production accounts and shared data as the live site. Do not run destructive actions or create test records from localhost. Use a separate Supabase project for isolated testing.
 
 ### Match the deployed app locally
 
-- Use the same Git commit as the production deployment when you want the same screens and code.
-- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in local `.env` to the intended Supabase project if you want the same sign-in and shared data. Add `http://localhost:5173` to the Supabase Auth redirect allow-list. Use only the public/anon key in browser variables; never put the service-role key in a `VITE_*` variable.
+- Use the same Git commit as the production deployment when you want the same screens and code. The current production deployment is sourced from `Kenny01-code/quorlyth` on `main`.
+- The normal local dev commands are pinned to the production Supabase project so the same active account and shared data are used. Add `http://localhost:5173` to the Supabase Auth redirect allow-list. Use only the public anon/publishable key in browser variables; never put the service-role key in a `VITE_*` variable.
 - Configure the same server-side AI provider keys in local `.env` (for example `GEMINI_API_KEY`, `XAI_API_KEY`, `OPENAI_API_KEY`, and `ELEVENLABS_API_KEY`) to reproduce the deployed bot features. Keep these secrets server-side.
 - Local code and environment settings do not start a second copy of the production automation worker. When local changes are written to the same Supabase project, its deployed database triggers and worker can still process them. Use a separate development Supabase project for isolated automation testing.
 
