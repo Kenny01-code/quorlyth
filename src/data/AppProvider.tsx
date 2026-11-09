@@ -147,7 +147,7 @@ const asList = <T,>(docs: { id: string; data: any }[]): T[] => docs.map(d => ({ 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [backend, setBackend] = useState<Backend | null>(null)
   const [me, setMe] = useState<Me | null>(null)
-  const [demo, setDemo] = useState(() => sessionStorage.getItem('quorlyth:demo') === '1')
+  const [demo, setDemo] = useState(false)
   const [ready, setReady] = useState(false)
   const [startupError, setStartupError] = useState<string | null>(null)
   const [dataState, setData] = useState<Data>(EMPTY)
@@ -224,30 +224,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let off = () => {}
     let cancelled = false
-    const demoActive = sessionStorage.getItem('quorlyth:demo') === '1'
+    let authEventVersion = 0
+    let latestAuthUser: Me | null = null
+    let demoRequested = false
+    try { demoRequested = sessionStorage.getItem('quorlyth:demo') === '1' } catch { /* Storage can be disabled in hardened browsers. */ }
 
-    if (demoActive) {
-      setBackend(createDemoBackend())
-      setMe(DEMO_ME)
-      setReady(true)
-    } else {
-      createBackend().then(async real => {
-        if (cancelled) return
-        realBackend.current = real
-        setBackend(real)
-        const current = await real.auth.current()
-        if (cancelled) return
-        setMe(current)
-        off = real.auth.onChange(setMe)
-        authOff.current = off
-        setReady(true)
-      }).catch(error => {
-        console.error('Quorlyth backend initialization failed:', error)
-        if (cancelled) return
-        setStartupError('Quorlyth could not initialize its backend. Check your connection and Supabase environment settings, then reload.')
-        setReady(true)
+    // Always resolve the real backend/session first. A demo flag left behind in a
+    // tab must never mask an authenticated Supabase account on the next visit.
+    createBackend().then(async real => {
+      if (cancelled) return
+      realBackend.current = real
+      setBackend(real)
+
+      // Subscribe before reading the stored session so a sign-in/account switch
+      // during startup cannot be lost between getSession() and subscription.
+      off = real.auth.onChange(user => {
+        authEventVersion += 1
+        latestAuthUser = user
+        if (!cancelled) setMe(user)
       })
-    }
+      authOff.current = off
+      const versionBeforeCurrent = authEventVersion
+      const current = await real.auth.current()
+      if (cancelled) return
+      const activeUser = authEventVersion > versionBeforeCurrent ? latestAuthUser : current
+
+      if (activeUser) {
+        try { sessionStorage.removeItem('quorlyth:demo') } catch { /* Ignore unavailable storage. */ }
+        setDemo(false)
+        setBackend(real)
+        setMe(activeUser)
+      } else if (demoRequested) {
+        off()
+        authOff.current = () => {}
+        setDemo(true)
+        setBackend(createDemoBackend())
+        setMe(DEMO_ME)
+      } else {
+        try { sessionStorage.removeItem('quorlyth:demo') } catch { /* Ignore unavailable storage. */ }
+        setDemo(false)
+        setBackend(real)
+        setMe(null)
+      }
+      setReady(true)
+    }).catch(error => {
+      off()
+      authOff.current = () => {}
+      console.error('Quorlyth backend initialization failed:', error)
+      if (cancelled) return
+      setStartupError('Quorlyth could not initialize its backend. Check your connection and Supabase environment settings, then reload.')
+      setReady(true)
+    })
 
     return () => {
       cancelled = true
