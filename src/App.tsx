@@ -344,12 +344,47 @@ export default function App() {
     }
   }
 
-  // The public homepage does not need an authenticated session. Render it immediately
-  // while the auth client resolves in the background; demo actions stay disabled until ready.
-  if (!a.ready && loc.pathname === '/') return <main id="main" tabIndex={-1}><Landing /></main>
+  // Keep the shared navigation mounted from the first app frame. It renders a
+  // lightweight skeleton until auth resolves, then upgrades in place to the
+  // correct guest or account navigation without delaying the page shell.
+  const appNavigation = (
+    <Nav
+      onSearch={() => setPalette(true)}
+      onBell={() => setBell(b => !b)}
+      unread={unread}
+      pendingRequests={pendingRequests}
+      unreadRequests={unreadRequests}
+      accessSent={accessSent}
+      demo={a.demo}
+      onDemo={() => { a.enterDemo(); nav('/dashboard') }}
+      onReplay={() => { setIntro(true); setReplay(r => r + 1) }}
+      loading={!a.ready}
+    />
+  )
 
-  // Private routes remain gated until identity is known.
-  if (!a.ready) return <main className="app-startup" aria-busy="true"><span className="sr" role="status">Connecting to Quorlyth…</span></main>
+  // The public homepage is useful before auth is ready, and now shares the same
+  // instantly-mounted navigation shell as every private route.
+  if (!a.ready && loc.pathname === '/') return (
+    <>
+      <a className="skip-link" href="#main">Skip to main content</a>
+      <div id="sp" />
+      {appNavigation}
+      <main id="main" tabIndex={-1}><Landing /></main>
+    </>
+  )
+
+  // Private route content remains gated until identity is known; the navigation
+  // stays visible and responsive while that check completes.
+  if (!a.ready) return (
+    <>
+      <a className="skip-link" href="#main">Skip to main content</a>
+      <div id="sp" />
+      {appNavigation}
+      <main className="app-startup" aria-busy="true">
+        <span className="sr" role="status">Connecting to Quorlyth…</span>
+      </main>
+    </>
+  )
   if (a.startupError) return (
     <main className="app-error">
       <section className="glass pad" role="alert">
@@ -369,7 +404,7 @@ export default function App() {
         try { sessionStorage.setItem('qintro', '1') } catch {}
       }} />}
       {(a.me || a.demo) && (!a.me || a.demo || (a.dataReady && a.platformRolesReady)) && <Suspense fallback={null}><AutomationRuntime /></Suspense>}
-      <Nav onSearch={() => setPalette(true)} onBell={() => setBell(b => !b)} unread={unread} pendingRequests={pendingRequests} unreadRequests={unreadRequests} accessSent={accessSent} demo={a.demo} onDemo={() => { a.enterDemo(); nav('/dashboard') }} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} />
+      {appNavigation}
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
       <main id="main" tabIndex={-1} aria-busy={!!a.me && (!a.dataReady || !a.platformRolesReady)}>
         {a.me && (!a.dataReady || !a.platformRolesReady) ? (
