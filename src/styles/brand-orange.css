@@ -1,0 +1,229 @@
+/* Quorlyth brand refresh - warm orange #F97316 on the existing dark glass system. */
+:root {
+  --q-brand: #F97316;
+  --q-brand-bright: #FB923C;
+  --q-brand-deep: #C2410C;
+  --q-brand-ink: #1A0B03;
+  --q-brand-rgb: 249, 115, 22;
+  --q-brand-wash: rgba(249, 115, 22, 0.10);
+  --q-brand-wash-strong: rgba(249, 115, 22, 0.16);
+  --q-brand-edge: rgba(249, 115, 22, 0.38);
+  --q-brand-glow: 0 0 30px rgba(249, 115, 22, 0.18);
+  accent-color: var(--q-brand);
+}
+
+::selection {
+  color: #fff7ed;
+  background: rgba(249, 115, 22, 0.72);
+}
+
+body:before {
+  background:
+    radial-gradient(ellipse 58% 42% at 82% -6%, rgba(249, 115, 22, 0.105), transparent 72%),
+    radial-gradient(ellipse 48% 38% at 6% 105%, rgba(249, 115, 22, 0.065), transparent 72%),
+    radial-gradient(ellipse 30% 24% at 52% 52%, rgba(255, 255, 255, 0.025), transparent 72%);
+}
+
+/* Main navigation: active location is the clearest recurring brand marker. */
+#nav .navmain .nav-item.on {
+  color: var(--q-brand-ink) !important;
+  border-color: rgba(251, 146, 60, 0.88) !important;
+  background: linear-gradient(135deg, #FB923C 0%, #F97316 56%, #EA580C 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 7px 24px -12px rgba(249, 115, 22, 0.72),
+    0 0 26px -16px rgba(249, 115, 22, 0.86) !important;
+}
+
+#nav .navmain .nav-item.on .ic,
+#nav .navmain .nav-item.on svg {
+  color: var(--q-brand-ink) !important;
+  stroke: currentColor;
+}
+
+#nav .navmain .nav-item:not(.on):is(:hover, :focus-visible) {
+  color: #FDBA74 !important;
+  background: rgba(249, 115, 22, 0.085) !important;
+  border-color: rgba(249, 115, 22, 0.24) !important;
+}
+
+#nav .nsl i {
+  background: linear-gradient(90deg, #C2410C, #F97316, #FDBA74) !important;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.55) !important;
+}
+
+#nav .nav-count,
+#nav .bdg {
+  color: #1A0B03 !important;
+  background: #F97316 !important;
+  border-color: rgba(255, 185, 130, 0.65) !important;
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.25) !important;
+}
+
+#nav .nav-count.sent {
+  color: #FDBA74 !important;
+  background: rgba(249, 115, 22, 0.12) !important;
+  border-color: rgba(249, 115, 22, 0.3) !important;
+}
+
+/* Primary calls to action. Secondary and destructive controls keep their existing meaning. */
+#root :is(.btn.p, button[type="submit"], .chat-send, .q-primary-action, .wa-primary-action, .sw-primary-action) {
+  color: var(--q-brand-ink) !important;
+  border-color: #F97316 !important;
+  background: linear-gradient(135deg, #FDBA74 0%, #F97316 50%, #EA580C 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 9px 26px -16px rgba(249, 115, 22, 0.76) !important;
+}
+
+#root :is(.btn.p, button[type="submit"], .chat-send, .q-primary-action, .wa-primary-action, .sw-primary-action):hover:not(:disabled) {
+  color: #160902 !important;
+  border-color: #FDBA74 !important;
+  background: linear-gradient(135deg, #FED7AA 0%, #FB923C 48%, #F97316 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 13px 32px -15px rgba(249, 115, 22, 0.78),
+    0 0 24px -14px rgba(249, 115, 22, 0.75) !important;
+}
+
+#root .chat-page .chat-top-actions .btn.p:hover:not(:disabled) {
+  color: #160902 !important;
+  border-color: #FDBA74 !important;
+  background: linear-gradient(135deg, #FED7AA, #F97316 68%, #EA580C) !important;
+  box-shadow: 0 13px 32px -15px rgba(249, 115, 22, 0.8) !important;
+}
+
+#root :is(.btn.p, button[type="submit"], .chat-send):disabled {
+  filter: saturate(0.35);
+  opacity: 0.58;
+}
+
+/* Selected tabs, filters and chips use a quiet orange tint rather than a white fill. */
+#root :is(
+  .chip.on,
+  button.chip.on,
+  .chat-utility-item.on,
+  .chat-filter-tabs button.on,
+  .wa-tabs button.is-selected,
+  .wa-filter-tabs button.is-selected,
+  .ql-workspace-tabs button.is-active,
+  .sw-tabs button.is-active,
+  .growth-ranges button.is-active,
+  [role="tab"][aria-selected="true"]
+) {
+  color: #FDBA74 !important;
+  border-color: var(--q-brand-edge) !important;
+  background: linear-gradient(145deg, rgba(249, 115, 22, 0.16), rgba(194, 65, 12, 0.075)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 190, 135, 0.08), 0 0 22px -18px rgba(249, 115, 22, 0.8) !important;
+}
+
+#root :is(
+  .chat-filter-tabs button:hover,
+  .wa-tabs button:hover,
+  .wa-filter-tabs button:hover,
+  .ql-workspace-tabs button:hover,
+  .sw-tabs button:hover
+):not(.is-active):not(.is-selected):not(.on) {
+  color: #FDBA74 !important;
+  border-color: rgba(249, 115, 22, 0.24) !important;
+  background: rgba(249, 115, 22, 0.065) !important;
+}
+
+/* Progress and controls share the same hue. */
+#root :is(.bar i, .sw-progress-track i, .nsl i) {
+  background: linear-gradient(90deg, #C2410C, #F97316, #FDBA74) !important;
+  box-shadow: 0 0 14px rgba(249, 115, 22, 0.28) !important;
+}
+
+#root .tg.on {
+  background: rgba(249, 115, 22, 0.34) !important;
+  border-color: rgba(249, 115, 22, 0.62) !important;
+  box-shadow: 0 0 20px -10px rgba(249, 115, 22, 0.68) !important;
+}
+#root .tg.on i {
+  background: #FDBA74 !important;
+}
+#root :is(.wa-list-toggle input:checked + i, .wa-activate-toggle input:checked + i) {
+  background: rgba(249, 115, 22, 0.36) !important;
+  border-color: rgba(249, 115, 22, 0.64) !important;
+}
+#root :is(.wa-list-toggle input:checked + i, .wa-activate-toggle input:checked + i):after {
+  background: #FDBA74 !important;
+}
+#root input[type="range"]::-webkit-slider-thumb {
+  background: #F97316 !important;
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.46) !important;
+}
+#root input[type="range"]::-moz-range-thumb {
+  background: #F97316 !important;
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.46) !important;
+}
+
+/* Focus and editing states. */
+#root :is(input, textarea, select, button, a, [role="button"]):focus-visible {
+  outline-color: #F97316 !important;
+}
+#root :is(input, textarea, select):is(:focus, :focus-visible) {
+  border-color: rgba(249, 115, 22, 0.62) !important;
+  box-shadow:
+    0 0 0 3px rgba(249, 115, 22, 0.10),
+    inset 0 1px 8px rgba(0, 0, 0, 0.48) !important;
+}
+#root .chat-page :is(button, a, input, textarea):focus-visible {
+  outline: 2px solid rgba(249, 115, 22, 0.85) !important;
+  outline-offset: 3px;
+}
+#root :is(.chat-filter:focus-within, .chat-search:focus-within, .chat-compose-glass:focus-within) {
+  border-color: rgba(249, 115, 22, 0.38) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 190, 135, 0.08), 0 0 0 3px rgba(249, 115, 22, 0.055) !important;
+}
+#root :is(.wa-field input:focus, .wa-field textarea:focus, .wa-field select:focus, .sw-field input:focus, .sw-field textarea:focus, .sw-field select:focus) {
+  border-color: rgba(249, 115, 22, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.09) !important;
+}
+
+/* Small identity details: links, status markers and the QuorlythBot launcher. */
+#root :is(.lk, .text-link, .resource-access-link) {
+  color: #FDBA74 !important;
+  border-bottom-color: rgba(249, 115, 22, 0.38) !important;
+}
+#root :is(.lk, .text-link, .resource-access-link):hover {
+  color: #FED7AA !important;
+}
+#root .chat-page .chat-send {
+  border-color: #F97316 !important;
+}
+#root .astl {
+  border-color: rgba(249, 115, 22, 0.6) !important;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(251, 146, 60, 0.32), transparent 58%),
+    linear-gradient(145deg, rgba(249, 115, 22, 0.2), rgba(20, 9, 3, 0.96)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 190, 0.28), 0 18px 40px -10px rgba(0, 0, 0, 0.9), 0 0 38px -12px rgba(249, 115, 22, 0.7) !important;
+}
+#root .astl .astm svg {
+  color: #FDBA74 !important;
+}
+#root .astr {
+  border-color: rgba(249, 115, 22, 0.58) !important;
+}
+#root .ast-stage.speaking {
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.42), 0 0 54px -10px rgba(249, 115, 22, 0.35) !important;
+}
+#root .ast-cap.on {
+  border-color: rgba(249, 115, 22, 0.4) !important;
+}
+#root .qbot-action {
+  border-color: rgba(249, 115, 22, 0.32) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 190, 135, 0.07), 0 18px 46px -32px rgba(249, 115, 22, 0.25) !important;
+}
+
+/* Preserve clear error/success semantics and the black glass surfaces. */
+#root :is(.sw-danger-button, .sw-task__actions .sw-danger-button, [data-tone="danger"]) {
+  color: inherit;
+}
+@media (prefers-reduced-motion: reduce) {
+  #nav .navmain .nav-item.on,
+  #root .astl {
+    transition: none !important;
+  }
+}
