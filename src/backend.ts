@@ -21,6 +21,7 @@ export interface Backend {
   isPlatformAdmin(): Promise<boolean>
   isPlatformOwner?(): Promise<boolean>
   reviewCommunityJoinRequest(cid: string, userId: string, status: 'approved' | 'declined'): Promise<void>
+  requestResourceAccess(type: 'community' | 'workspace', resourceId: string, message: string): Promise<void>
   reviewResourceAccessRequest(type: 'community' | 'workspace', resourceId: string, userId: string, status: 'approved' | 'declined'): Promise<void>
   uploadWorkFile?(ideaId: string, milestoneId: string, file: File): Promise<string>
   getWorkFileUrl?(path: string): Promise<string>
@@ -249,6 +250,12 @@ export async function createBackend(): Promise<Backend> {
         const { data, error } = await sb.rpc('current_user_is_platform_owner')
         if (error) throw error
         return data === true
+      },
+      async requestResourceAccess(type, resourceId, message) {
+        const { error } = await sb.rpc('submit_resource_access_request', {
+          p_resource_type: type, p_resource_id: resourceId, p_message: message,
+        })
+        if (error) throw error
       },
       async reviewCommunityJoinRequest(cid, userId, status) {
         const { error } = await sb.rpc('review_community_join_request', { p_cid: cid, p_user_id: userId, p_status: status })
