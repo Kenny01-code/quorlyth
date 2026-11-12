@@ -259,11 +259,14 @@ function Detail({ cid }: { cid: string }) {
   useEffect(() => {
     const requestedTab = new URLSearchParams(loc.search).get('tab')
     const canReviewCommunityRequests = a.canManageCommunity(cid)
+    const canReviewResourceRequests = a.ownsCommunity(cid) && !preview
     if (requestedTab === 'join-requests' && canReviewCommunityRequests) setTab(3)
-    else if (requestedTab === 'access-requests' && canReviewCommunityRequests) setTab(4)
-    else if (requestedTab === 'ai-organizer-requests' && canReviewCommunityRequests) setTab(5)
-    else if (!['join-requests', 'access-requests', 'ai-organizer-requests'].includes(requestedTab || '') || !canReviewCommunityRequests) setTab(0)
-  }, [loc.search, cid, a.me?.id, a.platformAdmin, a.data.communities])
+    else if (requestedTab === 'access-requests' && canReviewResourceRequests) setTab(4)
+    else if (requestedTab === 'ai-organizer-requests' && canReviewCommunityRequests) setTab(canReviewResourceRequests ? 5 : 4)
+    else if (!['join-requests', 'access-requests', 'ai-organizer-requests'].includes(requestedTab || '')
+      || !canReviewCommunityRequests
+      || (requestedTab === 'access-requests' && !canReviewResourceRequests)) setTab(0)
+  }, [loc.search, cid, a.me?.id, a.platformAdmin, a.data.communities, preview])
   if (!c) return <ResourceAccessRequestPage type="community" resourceId={cid} />
 
   const own = a.canManageCommunity(cid) && !preview
@@ -281,7 +284,13 @@ function Detail({ cid }: { cid: string }) {
   list = [...list].sort(sort === 1 ? (x, y) => a.votesOf(y.id) - a.votesOf(x.id) : sort === 2 ? (x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1) : (x, y) => y.at - x.at)
   const pin = c.pinned ? data.ideas.find(i => i.id === c.pinned) : null
   const tags = Object.entries(list.reduce((o: Record<string, number>, i) => { (i.tags || []).forEach(t => (o[t] = (o[t] || 0) + 1)); return o }, {})).sort((x, y) => y[1] - x[1]).slice(0, 10).map(x => x[0])
-  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'Access requests', 'AI organizer requests', 'Insights', 'Settings'] : [])]
+  // Platform administrators retain their existing community-management tools,
+  // but resource requests stay visible only to the actual owner/creator.
+  const showResourceAccessTab = a.ownsCommunity(cid) && !preview
+  const aiOrganizerTab = showResourceAccessTab ? 5 : 4
+  const insightsTab = aiOrganizerTab + 1
+  const settingsTab = insightsTab + 1
+  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests'] : []), ...(showResourceAccessTab ? ['Access requests'] : []), ...(own ? ['AI organizer requests', 'Insights', 'Settings'] : [])]
 
   async function organizeIdeaWithAI() {
     if (!c) return a.toast('Community not found. Refresh and try again.')
@@ -527,10 +536,10 @@ function Detail({ cid }: { cid: string }) {
         </div>
       )}
       {tab === 3 && own && <JoinRequests cid={cid} />}
-      {tab === 4 && own && <ResourceAccessRequestsPanel type="community" resourceId={cid} />}
-      {tab === 5 && own && <AIOrganizerRequests cid={cid} />}
-      {tab === 6 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
-      {tab === 7 && own && <CommunitySettings c={c} memberIds={mem.filter(userId => userId !== communityCreatorId)} />}
+      {tab === 4 && showResourceAccessTab && <ResourceAccessRequestsPanel type="community" resourceId={cid} />}
+      {tab === aiOrganizerTab && own && <AIOrganizerRequests cid={cid} />}
+      {tab === insightsTab && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
+      {tab === settingsTab && own && <CommunitySettings c={c} memberIds={mem.filter(userId => userId !== communityCreatorId)} />}
     </>
   )
 }
