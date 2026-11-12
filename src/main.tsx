@@ -10,6 +10,7 @@ import './styles/overlay-contrast.css'
 import './styles/motion-system.css'
 
 import './styles/hidden-scrollbars.css'
+import './styles/brand-orange.css'
 import { AppProvider } from './data/AppProvider'
 import App from './App'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
