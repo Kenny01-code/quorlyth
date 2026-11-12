@@ -6,7 +6,6 @@ import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
 import { Landing } from './screens/Landing'
 import { Logo } from './lib/Logo'
-import { ResourceAccessRoute } from './components/ResourceAccess'
 const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
 const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
@@ -29,6 +28,7 @@ const Growth = lazy(() => import('./screens/Growth').then(m => ({ default: m.Gro
 const Settings = lazy(() => import('./screens/Settings').then(m => ({ default: m.Settings })))
 const Database = lazy(() => import('./screens/Database').then(m => ({ default: m.Database })))
 const Access = lazy(() => import('./screens/Access').then(m => ({ default: m.Access })))
+const ResourceAccessRoute = lazy(() => import('./components/ResourceAccess').then(m => ({ default: m.ResourceAccessRoute })))
 const Onboarding = lazy(() => import('./screens/Onboarding').then(m => ({ default: m.Onboarding })))
 const loadQuorlythBot = () => import('./bot/QuorlythBot').then(m => ({ default: m.QuorlythBot }))
 const QuorlythBot = lazy(loadQuorlythBot)
