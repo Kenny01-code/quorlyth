@@ -3136,7 +3136,7 @@ $function$
             'resource-access-request:' || new.path || ':' || txid_current() || ':' || v_recipient,
             'resource-access', 'invite',
             v_actor_name || ' requested access to ' || v_title,
-            v_project_id, '/workspaces/' || v_project_id, v_at
+            v_project_id, '/workspaces/' || v_project_id || '?tab=team', v_at
           );
         end loop;
       end if;
