@@ -5,6 +5,7 @@ import { Gate } from './Gate'
 import { useApp } from '../data/AppProvider'
 import { when } from '../lib/util'
 import { ResourceAccessRequest } from '../lib/types'
+import '../styles/resource-access.css'
 
 export type ResourceAccessType = 'community' | 'workspace'
 
