@@ -398,11 +398,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
 
   useEffect(() => {
     if (!a.me || !bd.doc('botset')) return
-    const themeKey = 'qbot-onyx-default-v1:' + a.me.id
+    const themeKey = 'qbot-orange-default-v1:' + a.me.id
     const modelKey = 'qbot-smart-default-v1:' + a.me.id
     const updates: any = {}
     if (!localStorage.getItem(themeKey)) {
-      if (bs.theme === 'pearl') updates.theme = 'onyx'
+      updates.theme = 'champagne'
       localStorage.setItem(themeKey, '1')
     }
     if (!localStorage.getItem(modelKey)) {
