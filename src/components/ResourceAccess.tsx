@@ -92,7 +92,7 @@ export function ResourceAccessRequestPage({ type, resourceId }: { type: Resource
         <div className="score" style={{ margin: '0 auto 18px' }}><Icon name="lock" size={28} /></div>
         <p className="dim">RESOURCE ACCESS</p>
         <h2 style={{ fontSize: 32, marginTop: 8 }}>This {noun} is private.</h2>
-        <p className="mut" style={{ maxWidth: 470, margin: '12px auto 0' }}>You need the resource owner’s approval before this page can be opened. Your request goes directly to the person who manages this {noun}.</p>
+        <p className="mut" style={{ maxWidth: 470, margin: '12px auto 0' }}>{type === 'idea' ? 'This idea belongs to a private community. Your request goes to that community’s owner, and approval will open the idea and its associated community content.' : `You need the resource owner’s approval before this page can be opened. Your request goes directly to the person who manages this ${noun}.`}</p>
       </div>
     </div>
     <div className="glass fm">
@@ -159,6 +159,7 @@ export function ResourceAccessRequestsPanel({ type, resourceId }: { type: Resour
       {pending.map(request => <article className="q-resource-access__request" key={request.userId}>
         <div className="q-resource-access__request-copy">
           <strong>{a.nm(request.userId)}</strong>
+          {request.resourceType === 'idea' && <small>Idea access · {a.data.ideas.find(idea => idea.id === request.resourceId)?.title || 'Private idea'}</small>}
           <small>Requested {when(request.requestedAt)}</small>
           <p>{request.message?.trim() || 'No message was included.'}</p>
         </div>
