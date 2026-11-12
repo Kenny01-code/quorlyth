@@ -64,7 +64,8 @@
   background: linear-gradient(132deg,rgba(255,255,255,.095),transparent 25%,transparent 70%,rgba(255,255,255,.03));
 }
 .bot .ast-stage canvas, .bot .bstage canvas {
-  filter: contrast(1.06) brightness(.94) saturate(.65);
+  /* Preserve the Quorlyth Orange shell; the old .65 saturation made it look muted. */
+  filter: contrast(1.04) brightness(1.02) saturate(1.25);
 }
 .bot .ast-in textarea, .bot textarea {
   color: #fff !important;
