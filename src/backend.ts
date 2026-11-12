@@ -298,6 +298,87 @@ export async function createBackend(): Promise<Backend> {
         await store.set(memberPath, { ...current, c: { ...(current.c || {}), [cid]: true } })
       }
     },
+    async requestResourceAccess(type, resourceId, message) {
+      const requester = await auth.current()
+      if (!requester) throw new Error('Sign in before requesting resource access.')
+      const idea = type === 'idea' ? await store.get('ideas/' + resourceId) : null
+      const communityId = type === 'idea' ? idea?.cid : resourceId
+      const resource = type === 'workspace'
+        ? await store.get('standaloneProjects/' + resourceId)
+        : await store.get('communities/' + communityId)
+      if (!resource || (type === 'idea' && !idea)) throw new Error('This resource is no longer available.')
+      if (type === 'workspace') {
+        if (resource.status !== 'active' || resource.linkedIdeaId || resource.createdBy === requester.id) {
+          throw new Error('This workspace is not accepting a resource access request.')
+        }
+        const membership = await store.get('standaloneProjectMembers/' + resourceId + '__' + requester.id)
+        if (membership?.status === 'active' || membership?.status === 'invited') throw new Error('You already have access or an invitation to this workspace.')
+      } else {
+        if (resource.vis !== 'unlisted' || resource.arch || resource.ownerId === requester.id || resource.createdBy === requester.id) {
+          throw new Error('This community or idea is not accepting a resource access request.')
+        }
+        const memberships = await store.get('members/' + requester.id)
+        if (memberships?.c?.[communityId]) throw new Error('You already have access to this community.')
+      }
+      const requestPath = 'resourceAccessRequests/' + type + '__' + resourceId + '__' + requester.id
+      const previous = await store.get(requestPath)
+      if (previous?.status === 'pending') throw new Error('Your request is already waiting for review.')
+      if (previous?.status === 'approved') throw new Error('Your access has already been approved.')
+      const now = Date.now()
+      const payload = {
+        resourceType: type, resourceId, userId: requester.id,
+        message: String(message || '').trim().slice(0, 500),
+        status: 'pending', requestedAt: now,
+      }
+      if (previous) await store.set(requestPath, { ...previous, ...payload })
+      else await store.create(requestPath, payload)
+    },
+    async reviewResourceAccessRequest(type, resourceId, userId, status) {
+      const reviewer = await auth.current()
+      if (!reviewer) throw new Error('Sign in before reviewing access requests.')
+      if (status !== 'approved' && status !== 'declined') throw new Error('Choose approve or decline.')
+      const idea = type === 'idea' ? await store.get('ideas/' + resourceId) : null
+      const communityId = type === 'idea' ? idea?.cid : resourceId
+      const resource = type === 'workspace'
+        ? await store.get('standaloneProjects/' + resourceId)
+        : await store.get('communities/' + communityId)
+      if (!resource || (type === 'idea' && !idea)) throw new Error('This resource is no longer available.')
+      if (type === 'workspace') {
+        const membership = await store.get('standaloneProjectMembers/' + resourceId + '__' + reviewer.id)
+        const isManager = resource.createdBy === reviewer.id || (membership?.status === 'active' && ['owner', 'manager'].includes(membership?.role))
+        if (!isManager || resource.linkedIdeaId) throw new Error('Only this standalone workspace’s owner or active manager can review its requests.')
+      } else if (resource.ownerId !== reviewer.id && resource.createdBy !== reviewer.id) {
+        throw new Error('Only the community owner or creator can review this request.')
+      }
+      const requestPath = 'resourceAccessRequests/' + type + '__' + resourceId + '__' + userId
+      const request = await store.get(requestPath)
+      if (!request || request.status !== 'pending' || request.userId !== userId || request.resourceId !== resourceId || request.resourceType !== type) {
+        throw new Error('This access request is no longer pending.')
+      }
+      const now = Date.now()
+      await store.set(requestPath, { ...request, status, reviewedAt: now, reviewedBy: reviewer.id })
+      if (status !== 'approved') return
+      if (type === 'community' || type === 'idea') {
+        const memberPath = 'members/' + userId
+        const current = await store.get(memberPath) || {}
+        await store.set(memberPath, { ...current, c: { ...(current.c || {}), [communityId]: true } })
+      } else {
+        const memberPath = 'standaloneProjectMembers/' + resourceId + '__' + userId
+        const existing = await store.get(memberPath) || {}
+        const role = ['owner', 'manager', 'contributor'].includes(existing.role) ? existing.role : 'viewer'
+        await store.set(memberPath, {
+          ...existing,
+          id: existing.id || resourceId + '__' + userId,
+          projectId: resourceId,
+          userId,
+          role,
+          status: 'active',
+          invitedBy: existing.invitedBy || reviewer.id,
+          at: existing.at || now,
+          updatedAt: now,
+        })
+      }
+    },
     async uploadWorkFile(ideaId, milestoneId, file) {
       const current = await auth.current()
       if (!current) throw new Error('Sign in before attaching files to a submission.')
