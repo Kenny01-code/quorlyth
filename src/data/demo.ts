@@ -132,6 +132,12 @@ export function createDemoBackend(): Backend {
         await store.set(memberPath, { ...current, c: { ...(current.c || {}), [cid]: true } })
       }
     },
+    async requestResourceAccess() {
+      throw new Error('Resource access requests are disabled in the interactive demo. Sign in with a real account to request access.')
+    },
+    async reviewResourceAccessRequest() {
+      throw new Error('Resource access reviews are disabled in the interactive demo.')
+    },
     auth: {
       mode: 'local', async current() { return DEMO_ME }, onChange() { return () => {} },
       async signInGoogle() {}, async signInEmail() {}, async signUpEmail() { return {} },
