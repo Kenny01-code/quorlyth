@@ -160,12 +160,10 @@ export function ChatMediaComposer({ files, onFilesChange, voiceNote, onVoiceNote
               type="button"
               className="chat-media-symbol"
               disabled={disabled || mediaLimitReached}
-              onClick={() => setMenuOpen(open => !open)}
-              aria-label="Add an attachment or voice note"
-              title="Add an attachment or voice note"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-            ><Icon name="paperclip" size={17} />{pendingCount > 0 && <span className="chat-media-symbol-count">{pendingCount}</span>}</button>}
+              onClick={() => { setMenuOpen(false); void startRecording() }}
+              aria-label="Record a voice note"
+              title="Record a voice note"
+            ><Icon name="mic" size={17} /></button>}
         {menuOpen && !recording && <div className="chat-media-menu" role="menu" aria-label="Add to message">
           <button type="button" role="menuitem" disabled={disabled || mediaLimitReached} onClick={() => { setMenuOpen(false); fileInput.current?.click() }}>
             <Icon name="upload" size={15} /><span><b>Upload files</b><small>Images, documents, audio and more</small></span>
