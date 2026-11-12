@@ -25,6 +25,17 @@ as $function$
             or resource.data->>'createdBy' = (select auth.uid())::text
           )
       )
+      when p_resource_type = 'idea' then exists (
+        select 1
+        from public.docs idea
+        join public.docs community
+          on community.path = 'communities/' || (idea.data->>'cid')
+        where idea.path = 'ideas/' || p_resource_id
+          and (
+            community.data->>'ownerId' = (select auth.uid())::text
+            or community.data->>'createdBy' = (select auth.uid())::text
+          )
+      )
       when p_resource_type = 'workspace' then exists (
         select 1
         from public.docs resource
@@ -64,12 +75,14 @@ declare
   v_resource_id text := p_data->>'resourceId';
   v_user_id text := p_data->>'userId';
   v_resource jsonb;
+  v_community_id text;
 begin
   if v_uid is null
     or p_path is null
     or p_data is null
     or jsonb_typeof(p_data) <> 'object'
-    or v_type not in ('community', 'workspace')
+    or v_type is null
+    or v_type not in ('community', 'workspace', 'idea')
     or v_resource_id is null
     or v_resource_id !~ '^[A-Za-z0-9_-]{1,120}$'
     or v_user_id is distinct from v_uid
@@ -102,6 +115,25 @@ begin
       and v_resource->>'ownerId' is distinct from v_uid
       and v_resource->>'createdBy' is distinct from v_uid
       and not private.is_member_of_community(v_resource_id);
+  end if;
+
+  if v_type = 'idea' then
+    select idea.data->>'cid' into v_community_id
+    from public.docs idea
+    where idea.path = 'ideas/' || v_resource_id;
+
+    if v_community_id is null then return false; end if;
+
+    select community.data into v_resource
+    from public.docs community
+    where community.path = 'communities/' || v_community_id;
+
+    return v_resource is not null
+      and coalesce(v_resource->>'vis', 'listed') = 'unlisted'
+      and coalesce(v_resource->>'arch', 'false') <> 'true'
+      and v_resource->>'ownerId' is distinct from v_uid
+      and v_resource->>'createdBy' is distinct from v_uid
+      and not private.is_member_of_community(v_community_id);
   end if;
 
   select resource.data into v_resource
@@ -138,7 +170,7 @@ as $function$
   select p_path is not null
     and p_data is not null
     and jsonb_typeof(p_data) = 'object'
-    and p_data->>'resourceType' in ('community', 'workspace')
+    and p_data->>'resourceType' in ('community', 'workspace', 'idea')
     and p_path = 'resourceAccessRequests/' ||
       (p_data->>'resourceType') || '__' ||
       coalesce(p_data->>'resourceId', '') || '__' ||
@@ -213,7 +245,7 @@ drop policy if exists docs_resource_access_read on public.docs;
 create policy docs_resource_access_read
   on public.docs for select to authenticated
   using (
-    path ~ '^resourceAccessRequests/(community|workspace)__[A-Za-z0-9_-]{1,120}__[0-9a-fA-F-]{36}$'
+    path ~ '^resourceAccessRequests/(community|workspace|idea)__[A-Za-z0-9_-]{1,120}__[0-9a-fA-F-]{36}$'
     and private.can_read_resource_access_request(path, data)
   );
 
@@ -221,21 +253,11 @@ drop policy if exists docs_resource_access_insert on public.docs;
 create policy docs_resource_access_insert
   on public.docs for insert to authenticated
   with check (
-    path ~ '^resourceAccessRequests/(community|workspace)__[A-Za-z0-9_-]{1,120}__[0-9a-fA-F-]{36}$'
+    path ~ '^resourceAccessRequests/(community|workspace|idea)__[A-Za-z0-9_-]{1,120}__[0-9a-fA-F-]{36}$'
     and private.can_request_resource_access(path, data)
   );
 
 drop policy if exists docs_resource_access_update on public.docs;
-create policy docs_resource_access_update
-  on public.docs for update to authenticated
-  using (
-    path ~ '^resourceAccessRequests/(community|workspace)__[A-Za-z0-9_-]{1,120}__[0-9a-fA-F-]{36}$'
-    and private.can_update_resource_access_request(path, data)
-  )
-  with check (
-    path ~ '^resourceAccessRequests/(community|workspace)__[A-Za-z0-9_-]{1,120}__[0-9a-fA-F-]{36}$'
-    and private.can_update_resource_access_request(path, data)
-  );
 
 create or replace function public.review_resource_access_request(
   p_resource_type text,
@@ -256,12 +278,13 @@ declare
   v_resource jsonb;
   v_membership jsonb;
   v_role text;
+  v_community_id text;
   v_now_ms bigint := (extract(epoch from now()) * 1000)::bigint;
 begin
   if v_actor is null then
     raise exception 'Authentication required' using errcode = '42501';
   end if;
-  if p_resource_type not in ('community', 'workspace')
+  if p_resource_type is null or p_resource_type not in ('community', 'workspace', 'idea')
     or p_resource_id is null
     or p_resource_id !~ '^[A-Za-z0-9_-]{1,120}$'
     or p_user_id is null
@@ -305,10 +328,18 @@ begin
     return;
   end if;
 
-  if p_resource_type = 'community' then
-    select resource.data into v_resource
-    from public.docs resource
-    where resource.path = 'communities/' || p_resource_id;
+  if p_resource_type in ('community', 'idea') then
+    if p_resource_type = 'community' then
+      v_community_id := p_resource_id;
+    else
+      select idea.data->>'cid' into v_community_id
+      from public.docs idea
+      where idea.path = 'ideas/' || p_resource_id;
+    end if;
+
+    select community.data into v_resource
+    from public.docs community
+    where community.path = 'communities/' || v_community_id;
 
     if v_resource is null or coalesce(v_resource->>'arch', 'false') = 'true' then
       raise exception 'This community is no longer available for access approval' using errcode = 'P0002';
@@ -317,13 +348,13 @@ begin
     insert into public.docs as existing(path, data)
     values (
       'members/' || p_user_id::text,
-      jsonb_build_object('c', jsonb_build_object(p_resource_id, true))
+      jsonb_build_object('c', jsonb_build_object(v_community_id, true))
     )
     on conflict(path) do update
     set data = jsonb_set(
       coalesce(existing.data, '{}'::jsonb),
       '{c}',
-      coalesce(existing.data->'c', '{}'::jsonb) || jsonb_build_object(p_resource_id, true),
+      coalesce(existing.data->'c', '{}'::jsonb) || jsonb_build_object(v_community_id, true),
       true
     ),
     updated_at = now();
@@ -397,6 +428,7 @@ declare
   v_path text;
   v_resource jsonb;
   v_previous jsonb;
+  v_community_id text;
   v_now_ms bigint := (extract(epoch from now()) * 1000)::bigint;
   v_message text := left(btrim(coalesce(p_message, '')), 500);
   v_payload jsonb;
@@ -404,25 +436,33 @@ begin
   if v_uid is null then
     raise exception 'Authentication required' using errcode = '42501';
   end if;
-  if p_resource_type not in ('community', 'workspace')
+  if p_resource_type is null or p_resource_type not in ('community', 'workspace', 'idea')
     or p_resource_id is null
     or p_resource_id !~ '^[A-Za-z0-9_-]{1,120}$'
     or length(coalesce(p_message, '')) > 500 then
     raise exception 'Invalid resource access request' using errcode = '22023';
   end if;
 
-  if p_resource_type = 'community' then
-    select resource.data into v_resource
-    from public.docs resource
-    where resource.path = 'communities/' || p_resource_id;
+  if p_resource_type in ('community', 'idea') then
+    if p_resource_type = 'community' then
+      v_community_id := p_resource_id;
+    else
+      select idea.data->>'cid' into v_community_id
+      from public.docs idea
+      where idea.path = 'ideas/' || p_resource_id;
+    end if;
+
+    select community.data into v_resource
+    from public.docs community
+    where community.path = 'communities/' || v_community_id;
 
     if v_resource is null
       or coalesce(v_resource->>'vis', 'listed') <> 'unlisted'
       or coalesce(v_resource->>'arch', 'false') = 'true'
       or v_resource->>'ownerId' = v_uid::text
       or v_resource->>'createdBy' = v_uid::text
-      or private.is_member_of_community(p_resource_id) then
-      raise exception 'This community is not accepting a resource access request' using errcode = '42501';
+      or private.is_member_of_community(v_community_id) then
+      raise exception 'This community or idea is not accepting a resource access request' using errcode = '42501';
     end if;
   else
     select resource.data into v_resource
