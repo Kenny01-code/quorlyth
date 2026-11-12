@@ -41,7 +41,7 @@ function useResourceAccessRequests(type: ResourceAccessType, resourceId: string)
 
 export function ResourceAccessRoute() {
   const { type = '', id = '' } = useParams()
-  const validType = type === 'community' || type === 'workspace' ? type : null
+  const validType = type === 'community' || type === 'workspace' || type === 'idea' ? type : null
   return <Gate>
     {validType && id
       ? <ResourceAccessRequestPage type={validType} resourceId={id} />
