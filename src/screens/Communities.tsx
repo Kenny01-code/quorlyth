@@ -11,6 +11,7 @@ import { cleanTag, cn, when } from '../lib/util'
 import { ShareCard } from '../components/ShareCard'
 import { useDraftState } from '../lib/useDraftState'
 import { askJson } from '../ai/client'
+import { ResourceAccessRequestPage, ResourceAccessRequestsPanel } from '../components/ResourceAccess'
 
 const ICONS = ['community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab']
 const BADGE_ICONS = ['star', 'community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab', 'approve', 'lock']
@@ -259,10 +260,11 @@ function Detail({ cid }: { cid: string }) {
     const requestedTab = new URLSearchParams(loc.search).get('tab')
     const canReviewCommunityRequests = a.canManageCommunity(cid)
     if (requestedTab === 'join-requests' && canReviewCommunityRequests) setTab(3)
-    else if (requestedTab === 'ai-organizer-requests' && canReviewCommunityRequests) setTab(4)
-    else if (!['join-requests', 'ai-organizer-requests'].includes(requestedTab || '') || !canReviewCommunityRequests) setTab(0)
+    else if (requestedTab === 'access-requests' && canReviewCommunityRequests) setTab(4)
+    else if (requestedTab === 'ai-organizer-requests' && canReviewCommunityRequests) setTab(5)
+    else if (!['join-requests', 'access-requests', 'ai-organizer-requests'].includes(requestedTab || '') || !canReviewCommunityRequests) setTab(0)
   }, [loc.search, cid, a.me?.id, a.platformAdmin, a.data.communities])
-  if (!c) return <Empty icon="community" title="Community not found" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back</button></Empty>
+  if (!c) return <ResourceAccessRequestPage type="community" resourceId={cid} />
 
   const own = a.canManageCommunity(cid) && !preview
   const myJoinRequest = a.data.joinRequests.find(r => r.cid === cid && r.userId === a.me?.id)
@@ -279,7 +281,7 @@ function Detail({ cid }: { cid: string }) {
   list = [...list].sort(sort === 1 ? (x, y) => a.votesOf(y.id) - a.votesOf(x.id) : sort === 2 ? (x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1) : (x, y) => y.at - x.at)
   const pin = c.pinned ? data.ideas.find(i => i.id === c.pinned) : null
   const tags = Object.entries(list.reduce((o: Record<string, number>, i) => { (i.tags || []).forEach(t => (o[t] = (o[t] || 0) + 1)); return o }, {})).sort((x, y) => y[1] - x[1]).slice(0, 10).map(x => x[0])
-  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'AI organizer requests', 'Insights', 'Settings'] : [])]
+  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'Access requests', 'AI organizer requests', 'Insights', 'Settings'] : [])]
 
   async function organizeIdeaWithAI() {
     if (!c) return a.toast('Community not found. Refresh and try again.')
@@ -525,9 +527,10 @@ function Detail({ cid }: { cid: string }) {
         </div>
       )}
       {tab === 3 && own && <JoinRequests cid={cid} />}
-      {tab === 4 && own && <AIOrganizerRequests cid={cid} />}
-      {tab === 5 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
-      {tab === 6 && own && <CommunitySettings c={c} memberIds={mem.filter(userId => userId !== communityCreatorId)} />}
+      {tab === 4 && own && <ResourceAccessRequestsPanel type="community" resourceId={cid} />}
+      {tab === 5 && own && <AIOrganizerRequests cid={cid} />}
+      {tab === 6 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
+      {tab === 7 && own && <CommunitySettings c={c} memberIds={mem.filter(userId => userId !== communityCreatorId)} />}
     </>
   )
 }
