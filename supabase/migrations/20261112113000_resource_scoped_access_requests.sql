@@ -2782,9 +2782,9 @@ $function$
           perform private.emit_quorlyth_notification(
             v_recipient,
             'resource-access-request:' || new.path || ':' || txid_current() || ':' || v_recipient,
-            'access', 'invite',
+            'resource-access', 'invite',
             v_actor_name || ' requested access to ' || v_community_name,
-            new.data->>'resourceId', v_cid, v_at
+            new.data->>'resourceId', '/communities/' || v_cid || '?tab=access-requests', v_at
           );
         end loop;
       elsif new.data->>'resourceType' = 'workspace' then
@@ -3134,9 +3134,9 @@ $function$
           perform private.emit_quorlyth_notification(
             v_recipient,
             'resource-access-request:' || new.path || ':' || txid_current() || ':' || v_recipient,
-            'access', 'invite',
+            'resource-access', 'invite',
             v_actor_name || ' requested access to ' || v_title,
-            v_project_id, null, v_at
+            v_project_id, '/workspaces/' || v_project_id, v_at
           );
         end loop;
       end if;
@@ -3475,11 +3475,11 @@ $function$
       perform private.emit_quorlyth_notification(
         v_actor,
         'resource-access-decision:' || new.path || ':' || txid_current(),
-        'access',
+        'resource-access',
         case new.data->>'status' when 'approved' then 'approve' else 'alert' end,
         'Your request for ' || v_title || ' access was ' || new.data->>'status',
         new.data->>'resourceId',
-        case when new.data->>'resourceType' = 'idea' then null else new.data->>'resourceId' end,
+        '/request-resource-access/' || new.data->>'resourceType' || '/' || new.data->>'resourceId',
         v_at
       );
     end if;
