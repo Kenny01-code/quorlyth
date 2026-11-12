@@ -227,3 +227,136 @@ body:before {
     transition: none !important;
   }
 }
+
+
+/* -----------------------------------------------------------
+   High-contrast Quorlyth Orange finishing pass
+   ----------------------------------------------------------- */
+
+/* Homepage: keep the two explanatory routes unmistakable. */
+#root .hero-actions > a.btn[href="#how-it-works"],
+#root .hero-actions > button.btn:not(.p) {
+  color: #211A17 !important;
+  border: 1px solid #F97316 !important;
+  background: #F97316 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 8px 22px -14px rgba(249,115,22,.9) !important;
+}
+#root .hero-actions > a.btn[href="#how-it-works"] :is(svg,span),
+#root .hero-actions > button.btn:not(.p) :is(svg,span) {
+  color: #211A17 !important;
+}
+
+/* Automation integration and AI-architect surfaces: solid orange, black copy. */
+#root #main .wa-screen .wa-connected-services.glass,
+#root #main .wa-screen .wa-ai-architect.glass,
+#root #main .wa-screen .wa-plain-guide {
+  color: #211A17 !important;
+  border: 1px solid #F97316 !important;
+  background: #F97316 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 18px 42px -30px rgba(249,115,22,.58) !important;
+}
+#root #main .wa-screen .wa-connected-services :is(h3,p,b,strong,small,span,em),
+#root #main .wa-screen .wa-ai-architect :is(h3,p,b,strong,small,span,label),
+#root #main .wa-screen .wa-plain-guide :is(h3,p,b,strong,small,span,i) {
+  color: #211A17 !important;
+}
+#root #main .wa-screen .wa-connected-service {
+  border-color: rgba(33,26,23,.2) !important;
+  background: rgba(255,255,255,.28) !important;
+  color: #211A17 !important;
+}
+#root #main .wa-screen .wa-connected-empty {
+  border: 1px solid rgba(33,26,23,.32) !important;
+  background: rgba(255,255,255,.38) !important;
+  color: #211A17 !important;
+}
+#root #main .wa-screen .wa-connected-services-note {
+  padding: 12px 14px !important;
+  border: 1px solid rgba(33,26,23,.2) !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.28) !important;
+  color: #211A17 !important;
+}
+#root #main .wa-screen .wa-connected-services-note b {
+  color: #211A17 !important;
+}
+#root #main .wa-screen .wa-ai-architect :is(input,textarea,select) {
+  border: 1px solid rgba(33,26,23,.35) !important;
+  background: rgba(255,255,255,.72) !important;
+  color: #211A17 !important;
+  caret-color: #211A17 !important;
+}
+#root #main .wa-screen .wa-ai-architect :is(input,textarea,select)::placeholder {
+  color: rgba(33,26,23,.58) !important;
+}
+#root #main .wa-screen .wa-ai-architect .wa-ai-architect-mark {
+  border-color: rgba(33,26,23,.25) !important;
+  background: rgba(255,255,255,.3) !important;
+  color: #211A17 !important;
+}
+#root #main .wa-screen .wa-plain-guide-steps article {
+  border-color: rgba(33,26,23,.2) !important;
+  background: rgba(255,255,255,.22) !important;
+}
+
+/* Standalone projects: the zero-workspace count and form labels read in black. */
+#root .sw-intro {
+  padding: 13px 15px !important;
+  border: 1px solid rgba(249,115,22,.6) !important;
+  border-radius: 13px !important;
+  background: #F97316 !important;
+  color: #211A17 !important;
+}
+#root .sw-list-heading h3 {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 7px 12px !important;
+  border: 1px solid #F97316 !important;
+  border-radius: 10px !important;
+  background: #F97316 !important;
+  color: #211A17 !important;
+}
+#root .sw-create:not(.sw-first-work) .sw-field > span {
+  width: fit-content !important;
+  max-width: 100% !important;
+  padding: 6px 9px !important;
+  border: 1px solid rgba(33,26,23,.2) !important;
+  border-radius: 8px !important;
+  background: #F97316 !important;
+  color: #211A17 !important;
+}
+#root .sw-create:not(.sw-first-work) .sw-field > span small {
+  color: #211A17 !important;
+}
+#root .sw-list-heading + .sw-empty {
+  border-color: #F97316 !important;
+  background: #F97316 !important;
+  color: #211A17 !important;
+}
+#root .sw-list-heading + .sw-empty :is(h3,p,span,svg) {
+  color: #211A17 !important;
+}
+#root .sw-list-heading + .sw-empty .btn {
+  border-color: #211A17 !important;
+  background: #211A17 !important;
+  color: #F97316 !important;
+}
+
+/* Profile impact values and their descriptions: solid orange with black typography. */
+#root .profile-impact-grid .profile-impact-card {
+  border-color: #F97316 !important;
+  background: #F97316 !important;
+  color: #211A17 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 12px 30px -24px rgba(249,115,22,.8) !important;
+}
+#root .profile-impact-grid .profile-impact-card :is(span,strong,small) {
+  color: #211A17 !important;
+}
+
+/* Every glyph inside the milestone board follows the exact brand orange. */
+#root .ql-milestone-board :is(svg,.ql-section-mark,.ql-milestone-icon,.ql-milestone-mark) {
+  color: #F97316 !important;
+}
+#root .ql-milestone-board svg [stroke] {
+  stroke: currentColor !important;
+}
