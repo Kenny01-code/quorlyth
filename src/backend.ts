@@ -21,8 +21,8 @@ export interface Backend {
   isPlatformAdmin(): Promise<boolean>
   isPlatformOwner?(): Promise<boolean>
   reviewCommunityJoinRequest(cid: string, userId: string, status: 'approved' | 'declined'): Promise<void>
-  requestResourceAccess(type: 'community' | 'workspace', resourceId: string, message: string): Promise<void>
-  reviewResourceAccessRequest(type: 'community' | 'workspace', resourceId: string, userId: string, status: 'approved' | 'declined'): Promise<void>
+  requestResourceAccess(type: 'community' | 'workspace' | 'idea', resourceId: string, message: string): Promise<void>
+  reviewResourceAccessRequest(type: 'community' | 'workspace' | 'idea', resourceId: string, userId: string, status: 'approved' | 'declined'): Promise<void>
   uploadWorkFile?(ideaId: string, milestoneId: string, file: File): Promise<string>
   getWorkFileUrl?(path: string): Promise<string>
   deleteWorkFile?(path: string): Promise<void>
