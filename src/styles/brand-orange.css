@@ -360,3 +360,23 @@ body:before {
 #root .ql-milestone-board svg [stroke] {
   stroke: currentColor !important;
 }
+
+
+/* Manage automations panel: solid orange surface with readable black copy. */
+#root .arch-page .arch-my-automations {
+  border: 1px solid #F97316 !important;
+  background: #F97316 !important;
+  color: #211A17 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 16px 36px -28px rgba(249,115,22,.7) !important;
+}
+#root .arch-page .arch-my-automations :is(.arch-overline,strong,p) {
+  color: #211A17 !important;
+}
+#root .arch-page .arch-my-automations .btn {
+  border: 1px solid rgba(33,26,23,.42) !important;
+  background: rgba(33,26,23,.1) !important;
+  color: #211A17 !important;
+}
+#root .arch-page .arch-my-automations .btn :is(svg,span) {
+  color: #211A17 !important;
+}
