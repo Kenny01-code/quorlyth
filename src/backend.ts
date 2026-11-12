@@ -365,7 +365,10 @@ export async function createBackend(): Promise<Backend> {
       } else {
         const memberPath = 'standaloneProjectMembers/' + resourceId + '__' + userId
         const existing = await store.get(memberPath) || {}
-        const role = ['owner', 'manager', 'contributor'].includes(existing.role) ? existing.role : 'viewer'
+        if (existing.status === 'active' || existing.status === 'invited') {
+          throw new Error('This user already has active access or a pending invitation. Use the existing membership or invitation flow.')
+        }
+        const role = 'viewer'
         await store.set(memberPath, {
           ...existing,
           id: existing.id || resourceId + '__' + userId,
