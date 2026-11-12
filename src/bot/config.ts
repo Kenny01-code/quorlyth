@@ -22,7 +22,7 @@ export const VOICE_ACCENTS: { id: VoiceAccent; name: string; description: string
 ]
 
 export interface BotSettings { tone: string; len: string; emo: boolean; about: string; voice: boolean; calm: boolean; robot: boolean; model: 'quick' | 'smart'; vid: string; accent: VoiceAccent; theme: string }
-export const BOT_DEFAULTS: BotSettings = { tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', accent: 'auto', theme: 'onyx' }
+export const BOT_DEFAULTS: BotSettings = { tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', accent: 'auto', theme: 'champagne' }
 
 export const SKILLS: { id: string; n: string; icon: string; d: string; own: boolean }[] = [
   { id: 'brief', n: 'Community briefing', icon: 'insight', d: 'Themes, demand and next steps from your ideas.', own: true },
