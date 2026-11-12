@@ -10,7 +10,7 @@ var sc=new Scene(),cam=new PerspectiveCamera(30,W/H,.1,60),es=new Scene(),root=n
 function pn(w,h,x,y,z,ry,rx,c){var m=new Mesh(new PlaneGeometry(w,h),new MeshBasicMaterial({color:c||0xffffff,side:DoubleSide}));m.position.set(x,y,z);m.rotation.set(rx||0,ry||0,0);es.add(m)}
 pn(8,3,0,6,2,0,Math.PI/2);pn(2,9,-7,0,3,1.1);pn(2,9,7,0,3,-1.1);pn(10,1.5,0,-5,4,0,-.6,0x777777);pn(6,6,0,2,-8,0,0,0x333333);
 var pm=new PMREMGenerator(r);sc.environment=pm.fromScene(es,.04).texture;
-var pearl=new MeshPhysicalMaterial({color:0xeeeeee,roughness:.26,clearcoat:1,clearcoatRoughness:.08}),blk=new MeshPhysicalMaterial({color:0x070707,roughness:.12,metalness:.5,clearcoat:1,clearcoatRoughness:.05,envMapIntensity:1.5}),chr=new MeshStandardMaterial({color:0xdddddd,roughness:.12,metalness:1}),glow=new MeshBasicMaterial({color:0xffffff,toneMapped:false});
+var pearl=new MeshPhysicalMaterial({color:0xf97316,emissive:0xf97316,emissiveIntensity:.14,roughness:.32,metalness:.04,clearcoat:.65,clearcoatRoughness:.16,toneMapped:false}),blk=new MeshPhysicalMaterial({color:0x070707,roughness:.12,metalness:.5,clearcoat:1,clearcoatRoughness:.05,envMapIntensity:1.5}),chr=new MeshStandardMaterial({color:0xdddddd,roughness:.12,metalness:1}),glow=new MeshBasicMaterial({color:0xffffff,toneMapped:false});
 function M(g,m,x,y,z){var o=new Mesh(g,m);o.position.set(x||0,y||0,z||0);return o}
 function fit(w,h){var a=w/h;cam.aspect=a;cam.position.set(0,.55,a<1?9.5/a*.95:(opt.tight?8.2:9.5));cam.lookAt(0,.55,0);cam.updateProjectionMatrix()}fit(W,H);
 var key=new DirectionalLight(0xffffff,1.1);key.position.set(3,5,6);var rim=new DirectionalLight(0xffffff,.8);rim.position.set(-5,2,-4);sc.add(key,rim,new AmbientLight(0xffffff,.15));
