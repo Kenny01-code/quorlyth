@@ -1,6 +1,6 @@
 import '../styles/standalone-workspaces.css'
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
@@ -485,6 +485,10 @@ function WorkspaceProjectView() {
   const progress = projectTasks.length ? Math.round(doneCount / projectTasks.length * 100) : 0
   const pendingReviews = projectArtifacts.filter(item => item.status === 'submitted').length
   const [tab, setTab] = useState<WorkspaceTab>('overview')
+  const location = useLocation()
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('tab') === 'team') setTab('team')
+  }, [location.search])
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [taskTitle, setTaskTitle] = useState('')
