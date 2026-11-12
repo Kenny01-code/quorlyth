@@ -1,4 +1,4 @@
--- Resource-scoped access requests for unlisted communities and standalone workspaces.
+-- Resource-scoped access requests for unlisted communities, private ideas, and standalone workspaces.
 -- Requests are reviewed by the resource owner (or an active workspace manager),
 -- never by the global platform queue. Collaboration-linked workspaces keep their
 -- existing Apply to collaborate / accepted-collaborator flow.
@@ -181,65 +181,12 @@ as $function$
     );
 $function$;
 
-create or replace function private.can_update_resource_access_request(
-  p_path text,
-  p_data jsonb
-)
-returns boolean
-language plpgsql
-stable
-security definer
-set search_path to ''
-set row_security to 'off'
-as $function$
-declare
-  v_uid text := (select auth.uid())::text;
-  v_old jsonb;
-begin
-  if v_uid is null or p_path is null or p_data is null then
-    return false;
-  end if;
-
-  select existing.data into v_old
-  from public.docs existing
-  where existing.path = p_path;
-
-  if v_old is null
-    or v_old->>'userId' is distinct from v_uid
-    or v_old->>'resourceType' is distinct from p_data->>'resourceType'
-    or v_old->>'resourceId' is distinct from p_data->>'resourceId'
-    or p_path <> 'resourceAccessRequests/' ||
-      coalesce(v_old->>'resourceType', '') || '__' ||
-      coalesce(v_old->>'resourceId', '') || '__' || v_uid
-    or p_data->>'userId' is distinct from v_uid
-    or length(coalesce(p_data->>'message', '')) > 500 then
-    return false;
-  end if;
-
-  -- The UPDATE USING expression receives the existing row. Permit that row to
-  -- be selected only when it is no longer pending; the WITH CHECK expression
-  -- then permits a fresh pending request. A pending request cannot be edited.
-  if p_data->>'status' is not distinct from v_old->>'status'
-    and v_old->>'status' in ('declined', 'withdrawn') then
-    return true;
-  end if;
-
-  return v_old->>'status' in ('declined', 'withdrawn')
-    and p_data->>'status' = 'pending'
-    and coalesce(p_data->>'requestedAt', '') ~ '^[0-9]{10,16}$'
-    and (p_data - 'status' - 'requestedAt' - 'message') =
-        (v_old - 'status' - 'requestedAt' - 'message');
-end;
-$function$;
-
 revoke all on function private.can_review_resource_access(text, text) from public, anon;
 revoke all on function private.can_request_resource_access(text, jsonb) from public, anon;
 revoke all on function private.can_read_resource_access_request(text, jsonb) from public, anon;
-revoke all on function private.can_update_resource_access_request(text, jsonb) from public, anon;
 grant execute on function private.can_review_resource_access(text, text) to authenticated;
 grant execute on function private.can_request_resource_access(text, jsonb) to authenticated;
 grant execute on function private.can_read_resource_access_request(text, jsonb) to authenticated;
-grant execute on function private.can_update_resource_access_request(text, jsonb) to authenticated;
 
 drop policy if exists docs_resource_access_read on public.docs;
 create policy docs_resource_access_read
