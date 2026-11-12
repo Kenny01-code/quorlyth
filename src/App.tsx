@@ -6,6 +6,7 @@ import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
 import { Landing } from './screens/Landing'
 import { Logo } from './lib/Logo'
+import { ResourceAccessRoute } from './components/ResourceAccess'
 const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
 const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
@@ -442,6 +443,7 @@ export default function App() {
               <Route path="/database" element={<Database />} />
               <Route path="/access" element={<Access />} />
               <Route path="/request-access" element={<Access />} />
+              <Route path="/request-resource-access/:type/:id" element={<ResourceAccessRoute />} />
               <Route path="/me" element={<Me />} />
               <Route path="/me/:id" element={<Me />} />
               <Route path="*" element={<MissingRoute />} />
