@@ -7,7 +7,7 @@ import { when } from '../lib/util'
 import { ResourceAccessRequest } from '../lib/types'
 import '../styles/resource-access.css'
 
-export type ResourceAccessType = 'community' | 'workspace'
+export type ResourceAccessType = 'community' | 'workspace' | 'idea'
 
 export function resourceAccessRequestPath(type: ResourceAccessType, resourceId: string, userId: string) {
   return 'resourceAccessRequests/' + type + '__' + resourceId + '__' + userId
@@ -28,13 +28,13 @@ function useResourceAccessRequests(type: ResourceAccessType, resourceId: string)
       if (!active) return
       setRequests(docs
         .map(doc => ({ ...doc.data, id: doc.id }) as ResourceAccessRequest)
-        .filter(request => request.resourceType === type && request.resourceId === resourceId)
+        .filter(request => (request.resourceType === type && request.resourceId === resourceId) || (type === 'community' && request.resourceType === 'idea' && a.data.ideas.some(idea => idea.id === request.resourceId && idea.cid === resourceId)))
         .sort((first, second) => second.requestedAt - first.requestedAt))
     }, error => {
       console.warn('Resource access requests could not refresh:', error)
     })
     return () => { active = false; off() }
-  }, [a.backend?.store, a.me?.id, type, resourceId])
+  }, [a.backend?.store, a.me?.id, a.data.ideas, type, resourceId])
 
   return requests
 }
@@ -57,8 +57,8 @@ export function ResourceAccessRequestPage({ type, resourceId }: { type: Resource
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const noun = type === 'community' ? 'community' : 'workspace'
-  const destination = type === 'community' ? '/communities/' + encodeURIComponent(resourceId) : '/workspaces/' + encodeURIComponent(resourceId)
+  const noun = type === 'community' ? 'community' : type === 'workspace' ? 'workspace' : 'idea'
+  const destination = type === 'community' ? '/communities/' + encodeURIComponent(resourceId) : type === 'workspace' ? '/workspaces/' + encodeURIComponent(resourceId) : '/idea/' + encodeURIComponent(resourceId)
 
   async function submit() {
     if (!a.me || !a.backend) return setError('Sign in again before requesting access.')
@@ -105,7 +105,7 @@ export function ResourceAccessRequestPage({ type, resourceId }: { type: Resource
         </div>
       </> : mine?.status === 'pending' ? <>
         <h2 style={{ fontSize: 26 }}>Request sent.</h2>
-        <p className="mut" style={{ marginTop: 8 }}>The owner has been notified through their resource access queue. You can return here to check the decision.</p>
+        <p className="mut" style={{ marginTop: 8 }}>Your request is in the resource owner’s access queue. Return here to check the decision.</p>
         <div className="row" style={{ cursor: 'default', marginTop: 18 }}>
           <Icon name="status" />
           <div className="t"><h3 style={{ fontSize: 15 }}>Waiting for review</h3><p className="dim">Sent {when(mine.requestedAt)}. You do not need to send another request.</p></div>
@@ -139,7 +139,7 @@ export function ResourceAccessRequestsPanel({ type, resourceId }: { type: Resour
     setError('')
     setBusyId(request.userId)
     try {
-      await a.backend.reviewResourceAccessRequest(type, resourceId, request.userId, status)
+      await a.backend.reviewResourceAccessRequest(request.resourceType, request.resourceId, request.userId, status)
       a.toast(status === 'approved' ? 'Access granted for this resource.' : 'Access request declined.')
     } catch (failure: any) {
       console.error('Resource access review failed:', failure)
@@ -151,7 +151,7 @@ export function ResourceAccessRequestsPanel({ type, resourceId }: { type: Resour
 
   return <section className="glass pad q-resource-access__queue">
     <div className="q-resource-access__queue-heading">
-      <div><p className="dim">RESOURCE ACCESS</p><h3>Access requests</h3><p className="mut">Only requests for this {type === 'community' ? 'community' : 'workspace'} appear here.</p></div>
+      <div><p className="dim">RESOURCE ACCESS</p><h3>Access requests</h3><p className="mut">Only requests for this {type === 'community' ? 'community' : 'workspace'} appear here. Idea requests from this community are included.</p></div>
       <span className="chip">{pending.length} pending</span>
     </div>
     {error && <p className="q-resource-access__error" role="alert"><Icon name="alert" size={14} />{error}</p>}
