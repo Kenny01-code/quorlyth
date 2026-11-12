@@ -76,16 +76,7 @@ export function ResourceAccessRequestPage({ type, resourceId }: { type: Resource
         nav(destination)
         return
       }
-      const payload = {
-        resourceType: type,
-        resourceId,
-        userId: a.me.id,
-        message: message.trim().slice(0, 500),
-        status: 'pending',
-        requestedAt: Date.now(),
-      }
-      if (existing) await a.backend.store.set(path, { ...existing, ...payload })
-      else await a.backend.store.create(path, payload)
+      await a.backend.requestResourceAccess(type, resourceId, message.trim().slice(0, 500))
       a.toast('Access request sent to the resource owner.')
     } catch (failure: any) {
       console.error('Resource access request failed:', failure)
