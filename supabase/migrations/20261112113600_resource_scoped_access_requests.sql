@@ -19,7 +19,7 @@ declare
   community_data jsonb;
   request_data jsonb;
 begin
-  if new.path not like 'members/%' then
+  if new.path not like 'members/%' or split_part(new.path, '/', 3) <> '' then
     return new;
   end if;
   if authenticated_uid is null then
@@ -451,6 +451,7 @@ declare
   v_resource jsonb;
   v_membership jsonb;
   v_community_id text;
+  v_role text;
   v_now_ms bigint := (extract(epoch from now()) * 1000)::bigint;
 begin
   if v_actor is null then
