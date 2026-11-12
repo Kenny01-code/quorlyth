@@ -381,12 +381,15 @@ begin
   from public.docs member
   where member.path = 'standaloneProjectMembers/' || p_resource_id || '__' || p_user_id::text;
 
-  -- Preserve any previous elevated role. A resource-access approval may add
-  -- Viewer access, but must never downgrade an existing owner/manager/contributor.
-  v_role := case
-    when v_membership->>'role' in ('owner', 'manager', 'contributor') then v_membership->>'role'
-    else 'viewer'
-  end;
+  -- Do not turn a pending invitation into an accepted membership, and do not
+  -- reactivate an already-active membership through this secondary access path.
+  -- Removed memberships are deliberately restored as Viewer so revocation cannot
+  -- silently restore prior manager/contributor permissions.
+  if v_membership->>'status' in ('active', 'invited') then
+    raise exception 'This user already has active access or a pending invitation. Use the existing membership or invitation flow.'
+      using errcode = '23505';
+  end if;
+  v_role := 'viewer';
 
   insert into public.docs as existing(path, data)
   values (
