@@ -380,3 +380,29 @@ body:before {
 #root .arch-page .arch-my-automations .btn :is(svg,span) {
   color: #211A17 !important;
 }
+
+
+/* Final contrast reinforcement for the original orange workspace screens. */
+#root .arch-page .arch-my-automations,
+#root .arch-page .arch-my-automations * {
+  color: #1A0B03 !important;
+}
+#root .arch-page .arch-my-automations {
+  background: #F97316 !important;
+  border-color: #F97316 !important;
+}
+#root .ql-milestone-board svg,
+#root .ql-milestone-board .ql-section-mark,
+#root .ql-milestone-board .ql-milestone-marker,
+#root .ql-milestone-board .ql-status-chip svg,
+#root .ql-milestone-board .ql-priority-chip svg,
+#root .ql-milestone-board .ql-meta-chip svg,
+#root .ql-milestone-board .ql-assignee-chip svg,
+#root .ql-milestone-board .ql-filter svg,
+#root .ql-milestone-board .ql-milestone-actions svg {
+  color: #F97316 !important;
+  stroke: #F97316 !important;
+}
+#root .ql-milestone-board svg [stroke] {
+  stroke: #F97316 !important;
+}
