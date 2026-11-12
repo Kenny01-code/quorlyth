@@ -288,6 +288,7 @@ begin
     or p_resource_id is null
     or p_resource_id !~ '^[A-Za-z0-9_-]{1,120}$'
     or p_user_id is null
+    or p_status is null
     or p_status not in ('approved', 'declined') then
     raise exception 'Invalid resource access decision' using errcode = '22023';
   end if;
