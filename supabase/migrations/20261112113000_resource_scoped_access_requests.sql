@@ -378,3 +378,108 @@ $function$;
 
 revoke all on function public.review_resource_access_request(text, text, uuid, text) from public, anon;
 grant execute on function public.review_resource_access_request(text, text, uuid, text) to authenticated;
+
+-- All submissions and resubmissions pass through one authenticated function.
+-- This avoids relying on a client-side upsert to safely retry a declined request.
+create or replace function public.submit_resource_access_request(
+  p_resource_type text,
+  p_resource_id text,
+  p_message text default ''
+)
+returns void
+language plpgsql
+security definer
+set search_path to ''
+set row_security to 'off'
+as $function$
+declare
+  v_uid uuid := (select auth.uid());
+  v_path text;
+  v_resource jsonb;
+  v_previous jsonb;
+  v_now_ms bigint := (extract(epoch from now()) * 1000)::bigint;
+  v_message text := left(btrim(coalesce(p_message, '')), 500);
+  v_payload jsonb;
+begin
+  if v_uid is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+  if p_resource_type not in ('community', 'workspace')
+    or p_resource_id is null
+    or p_resource_id !~ '^[A-Za-z0-9_-]{1,120}$'
+    or length(coalesce(p_message, '')) > 500 then
+    raise exception 'Invalid resource access request' using errcode = '22023';
+  end if;
+
+  if p_resource_type = 'community' then
+    select resource.data into v_resource
+    from public.docs resource
+    where resource.path = 'communities/' || p_resource_id;
+
+    if v_resource is null
+      or coalesce(v_resource->>'vis', 'listed') <> 'unlisted'
+      or coalesce(v_resource->>'arch', 'false') = 'true'
+      or v_resource->>'ownerId' = v_uid::text
+      or v_resource->>'createdBy' = v_uid::text
+      or private.is_member_of_community(p_resource_id) then
+      raise exception 'This community is not accepting a resource access request' using errcode = '42501';
+    end if;
+  else
+    select resource.data into v_resource
+    from public.docs resource
+    where resource.path = 'standaloneProjects/' || p_resource_id
+      and resource.data->>'id' = p_resource_id;
+
+    if v_resource is null
+      or coalesce(v_resource->>'status', 'active') <> 'active'
+      or coalesce(v_resource->>'linkedIdeaId', '') <> ''
+      or v_resource->>'createdBy' = v_uid::text
+      or exists (
+        select 1
+        from public.docs member
+        where member.path = 'standaloneProjectMembers/' || p_resource_id || '__' || v_uid::text
+          and member.data->>'projectId' = p_resource_id
+          and member.data->>'userId' = v_uid::text
+          and member.data->>'status' in ('active', 'invited')
+      ) then
+      raise exception 'This standalone workspace is not accepting a resource access request' using errcode = '42501';
+    end if;
+  end if;
+
+  v_path := 'resourceAccessRequests/' || p_resource_type || '__' ||
+    p_resource_id || '__' || v_uid::text;
+
+  select request.data into v_previous
+  from public.docs request
+  where request.path = v_path
+  for update;
+
+  if v_previous->>'status' = 'pending' then
+    raise exception 'Your access request is already waiting for review' using errcode = '23505';
+  end if;
+  if v_previous->>'status' = 'approved' then
+    raise exception 'Your access to this resource has already been approved' using errcode = '23505';
+  end if;
+
+  v_payload := jsonb_build_object(
+    'resourceType', p_resource_type,
+    'resourceId', p_resource_id,
+    'userId', v_uid::text,
+    'message', v_message,
+    'status', 'pending',
+    'requestedAt', v_now_ms
+  );
+
+  if v_previous is null then
+    insert into public.docs(path, data) values (v_path, v_payload);
+  else
+    update public.docs
+    set data = v_payload,
+        updated_at = now()
+    where path = v_path;
+  end if;
+end;
+$function$;
+
+revoke all on function public.submit_resource_access_request(text, text, text) from public, anon;
+grant execute on function public.submit_resource_access_request(text, text, text) to authenticated;
