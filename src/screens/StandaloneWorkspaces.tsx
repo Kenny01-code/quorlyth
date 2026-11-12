@@ -5,6 +5,7 @@ import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { EvidencePreview } from '../components/EvidencePreview'
+import { ResourceAccessRequestPage, ResourceAccessRequestsPanel } from '../components/ResourceAccess'
 import { useApp } from '../data/AppProvider'
 import { askJson } from '../ai/client'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
@@ -1081,6 +1082,8 @@ function WorkspaceProjectView() {
     return [...(canMentionEveryone ? [everyone] : []), ...people]
   }, [mentionQuery, team, a.me?.id, a.nm])
 
+  if (!project) return <ResourceAccessRequestPage type="workspace" resourceId={id} />
+
   function updateCommentDraft(value: string, caret: number) {
     setCommentText(value)
     const beforeCaret = value.slice(0, caret)
@@ -1378,6 +1381,7 @@ function WorkspaceProjectView() {
     </div>}
 
     {tab === 'team' && <div className="sw-evidence-layout">
+      {canManage && !project.linkedIdeaId && <ResourceAccessRequestsPanel type="workspace" resourceId={id} />}
       <section className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">PEOPLE</p><h3>Project team</h3><p>Only active teammates have workspace access. Invites must be accepted by the invited account.</p></div><span className="sw-count">{team.length} active</span></div>
         <div className="sw-team-list">{team.map(member=><div className="sw-team-member" key={member.userId}><Av id={member.userId} size={36}/><div><strong>{a.nm(member.userId)}{member.userId===a.me?.id?' · You':''}</strong><small>{member.role.charAt(0).toUpperCase()+member.role.slice(1)} · Joined {localDate(member.updatedAt||member.at)}</small></div><span className={'sw-role-pill role-'+member.role}>{member.role}</span>{canManage&&project.status==='active'&&member.role!=='owner'&&member.userId!==a.me?.id&&<label className="sw-member-role-control"><span>Role</span><select aria-label={'Change role for ' + a.nm(member.userId)} value={member.role} disabled={busy==='role-'+member.userId} onChange={e=>void updateMemberRole(member,e.target.value as 'manager'|'contributor'|'viewer')}><option value="contributor">Contributor · can be assigned work</option><option value="viewer">Viewer · read-only</option>{isOwner&&<option value="manager">Manager · can manage workspace</option>}{member.role==='manager'&&!isOwner&&<option value="manager" disabled>Manager · owner-managed</option>}</select></label>}</div>)}</div>
         {canManage&&project.status==='active'&&<form className="sw-invite-form" onSubmit={inviteMember}><p className="ql-eyebrow">INVITE A TEAMMATE</p><label className="sw-field"><span>Person</span><select value={inviteUser} onChange={e=>setInviteUser(e.target.value)} required><option value="">Select a Quorlyth member</option>{profilePeople.map(person=><option key={person.id} value={person.id}>{person.name}</option>)}</select></label><label className="sw-field"><span>Permission</span><select value={inviteRole} onChange={e=>setInviteRole(e.target.value as 'contributor'|'viewer')}><option value="contributor">Contributor · can start assigned tasks</option><option value="viewer">Viewer · read-only</option></select></label><button className="btn p" disabled={busy.startsWith('invite-')}><QuorlythGlyph name="invite" size={14}/>Invite to workspace</button>{!profilePeople.length&&<p className="sw-muted">No other visible member profiles were found. The owner can invite someone once their public Quorlyth profile exists.</p>}</form>}
