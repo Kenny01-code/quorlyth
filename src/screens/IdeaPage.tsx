@@ -12,6 +12,7 @@ import { useUserState } from '../lib/userState'
 import { reviewIdeas } from '../ai/review'
 import { useDraftState } from '../lib/useDraftState'
 import { PromotionPreview } from '../components/PromotionPreview'
+import { ResourceAccessRequestPage } from '../components/ResourceAccess'
 
 export function IdeaPage() {
   return <Gate><Inner /></Gate>
@@ -49,7 +50,7 @@ function Inner() {
       .finally(() => { if (active) setMentionLoading(false) })
     return () => { active = false }
   }, [mentionOpen, idea?.cid, a.backend])
-  if (!idea) return <Empty icon="idea" title="This idea is not available" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back to communities</button></Empty>
+  if (!idea) return <ResourceAccessRequestPage type="idea" resourceId={id || ''} />
   const ideaCommunity = a.data.communities.find(c => c.id === idea.cid)
   const archivedCommunity = !!ideaCommunity?.arch
   const r = a.data.reviews[idea.id]
