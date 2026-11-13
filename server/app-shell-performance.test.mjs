@@ -465,8 +465,8 @@ test('search palette keeps its original surface with black result copy and visib
   assert.ok(styles.includes('#cmd .rr > svg'))
   assert.ok(styles.includes('#1c1511'))
   assert.ok(styles.includes('#9a3412'))
-  assert.doesNotMatch(styles, /#cmd \\.cb\\s*\\{/)
-  assert.doesNotMatch(styles, /#cmd \\.rr:hover/)
+  assert.ok(!styles.includes('#cmd .cb'))
+  assert.ok(!styles.includes('#cmd .rr:hover'))
 })
 
 test('the robot loading state never renders a miniature duplicate character', async () => {
