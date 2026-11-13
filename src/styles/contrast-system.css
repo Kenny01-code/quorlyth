@@ -326,3 +326,113 @@ body {
   color: #ef784b !important;
   stroke: currentColor;
 }
+
+
+/* Search palette contrast pass: fully legible copy, labels, keyboard hints and icons. */
+#cmd {
+  background: rgba(12, 9, 7, .78) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(110%) !important;
+  backdrop-filter: blur(14px) saturate(110%) !important;
+}
+#cmd .cb {
+  color: #fff1e5 !important;
+  border: 1px solid rgba(255, 131, 59, .42) !important;
+  background: linear-gradient(155deg, #2b211b 0%, #211914 54%, #19130f 100%) !important;
+  box-shadow: 0 28px 78px rgba(0, 0, 0, .68), inset 0 1px 0 rgba(255, 226, 204, .12) !important;
+}
+#cmd .cs {
+  color: #fff1e5 !important;
+  border-bottom-color: rgba(255, 177, 119, .2) !important;
+}
+#cmd .cs > svg,
+#cmd .cs .ic {
+  color: #ffad78 !important;
+  opacity: 1 !important;
+  stroke: currentColor !important;
+}
+#cmd .cs input {
+  color: #fff7ef !important;
+  caret-color: #ff833b !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #fff7ef !important;
+}
+#cmd .cs input::placeholder {
+  color: #d6bba8 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #d6bba8 !important;
+}
+#cmd .cs .chip {
+  color: #ffcfaa !important;
+  border-color: rgba(255, 177, 119, .32) !important;
+  background: rgba(255, 131, 59, .1) !important;
+  opacity: 1 !important;
+}
+#cmd .sl {
+  height: 3px !important;
+  background: rgba(255, 226, 204, .18) !important;
+}
+#cmd .sl i {
+  background: linear-gradient(90deg, #d06a40, #ff833b, #ffc18e) !important;
+  box-shadow: 0 0 12px rgba(255, 131, 59, .48) !important;
+}
+#cmd .clist { scrollbar-color: #bb7049 rgba(255, 226, 204, .06) !important; }
+#cmd .clist::-webkit-scrollbar-thumb { background: #bb7049 !important; }
+#cmd .gh {
+  color: #ffad78 !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+  letter-spacing: .13em !important;
+}
+#cmd .rr {
+  color: #fff1e5 !important;
+  border-color: rgba(255, 226, 204, .08) !important;
+  background: rgba(255, 226, 204, .025) !important;
+  opacity: 1 !important;
+}
+#cmd .rr:hover,
+#cmd .rr.on {
+  color: #fff7ef !important;
+  border-color: rgba(255, 131, 59, .58) !important;
+  background: linear-gradient(100deg, rgba(255, 131, 59, .19), rgba(255, 226, 204, .055)) !important;
+  box-shadow: inset 3px 0 0 #ff833b, 0 6px 18px rgba(0, 0, 0, .16) !important;
+}
+#cmd .rr > svg,
+#cmd .rr .ic {
+  color: #ffad78 !important;
+  opacity: 1 !important;
+  stroke: currentColor !important;
+  filter: drop-shadow(0 0 5px rgba(255, 131, 59, .18));
+}
+#cmd .rr .t { color: #fff1e5 !important; opacity: 1 !important; }
+#cmd .rr h3 {
+  color: #fff7ef !important;
+  opacity: 1 !important;
+  font-weight: 650 !important;
+  text-shadow: none !important;
+}
+#cmd .rr p,
+#cmd .rr .dim {
+  color: #dfcaba !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #dfcaba !important;
+}
+#cmd .rr:hover .dim,
+#cmd .rr.on .dim { color: #f1d5c0 !important; }
+#cmd .mut,
+#cmd .cf,
+#cmd .cf span {
+  color: #d6bba8 !important;
+  opacity: 1 !important;
+}
+#cmd .cf {
+  border-top-color: rgba(255, 177, 119, .18) !important;
+}
+#cmd .cf kbd,
+#cmd kbd {
+  color: #ffcfaa !important;
+  border-color: rgba(255, 177, 119, .32) !important;
+  background: rgba(255, 131, 59, .08) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #cmd .rr, #cmd .sl i { transition: none !important; }
+}
