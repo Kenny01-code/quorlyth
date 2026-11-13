@@ -1,16 +1,15 @@
 export const THEMES = {
-  // One canonical, saturated Quorlyth orange for the 3D robot and voice orb.
+  // Warm Quorlyth terracotta with the original deep-ink faceplate and mechanical accents.
   terracotta: {
     n: 'Quorlyth Orange',
-    p: 0xff833b,
-    // Deep burnt orange for the faceplate and mechanical trim - no black shell surfaces.
-    b: 0xd06a40,
-    c: 0xffeadc,
-    g: 0xffc18e,
-    e: 0xb9471b,
-    ei: 0.22,
-    g1: '#FF833B',
-    g2: '#D06A40',
-    cr: '255,131,59',
+    p: 0xef784b,
+    b: 0x211a17,
+    c: 0xf0ead9,
+    g: 0xffa16f,
+    e: 0x8e351d,
+    ei: 0.3,
+    g1: '#EF784B',
+    g2: '#8E351D',
+    cr: '239,120,75',
   },
 } as const
