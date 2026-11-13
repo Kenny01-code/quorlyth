@@ -3,7 +3,8 @@ export const THEMES = {
   terracotta: {
     n: 'Quorlyth Orange',
     p: 0xff7417,
-    b: 0x211a17,
+    // Deep burnt orange for the faceplate and mechanical trim - no black shell surfaces.
+    b: 0x9b2e05,
     c: 0xf0ead9,
     g: 0xffb15d,
     e: 0x9b2e05,
