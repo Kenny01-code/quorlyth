@@ -165,7 +165,7 @@ function CollaborationList() {
             <div style={{ minWidth: 0 }}>
               <p className="dim">{community?.name || 'Community'}</p>
               <h3 style={{ marginTop: 4, overflowWrap: 'anywhere' }}>{idea.title}</h3>
-              {application.message && <p className="mut" style={{ marginTop: 4, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{application.message}</p>}
+              {application.message && <p className="mut q-writeup" style={{ marginTop: 4, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{application.message}</p>}
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 8 }}>
                 <span className={'chip' + (application.status === 'accepted' ? ' on' : '')}>{statusLabel}</span>
                 <span className="dim">Submitted {when(application.at) || 'recently'}</span>
@@ -211,7 +211,7 @@ function CollaborationList() {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <p className="dim">{community?.name || 'Community'} · {!project ? 'Workspace setup needed' : project.status === 'completed' ? 'Completed' : 'Active project'}</p>
                 <h3 style={{ fontSize: 20, marginTop: 5, overflowWrap: 'anywhere' }}>{idea.title}</h3>
-                <p className="mut" style={{ marginTop: 7 }}>{project?.summary || (!project ? 'This accepted collaboration needs its workspace initialized. Open it to finish setup.' : 'No project brief has been added yet.')}</p>
+                <p className="mut q-writeup" style={{ marginTop: 7 }}>{project?.summary || (!project ? 'This accepted collaboration needs its workspace initialized. Open it to finish setup.' : 'No project brief has been added yet.')}</p>
               </div>
               <span className="chip"><QuorlythGlyph name="workspace" size={14} />Open workspace</span>
             </div>
@@ -503,7 +503,7 @@ function Workspace() {
             </div>
             <div>
               <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Suggested project brief</p>
-              <p className="mut" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p>
+              <p className="mut q-writeup" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p>
               <p className="dim" style={{ fontSize: 11, marginTop: 5 }}>Signal score: {aiPlan.signal_score}/100 · AI estimate, not a measured engagement metric.</p>
             </div>
             <div style={{ display: 'grid', gap: 8 }}>
@@ -514,7 +514,7 @@ function Workspace() {
                   return selected.includes(item.title) ? selected.filter(title => title !== item.title) : [...selected, item.title]
                 })} />
                 <span><strong>{String(index + 1).padStart(2, '0')} · {item.title}</strong>
-                <p className="mut">{item.description}</p>
+                <p className="mut q-writeup">{item.description}</p>
                 <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p></span>
               </label>)}
             </div>
@@ -785,7 +785,7 @@ function Workspace() {
             <span className="dim" style={{ fontSize: 11 }}>{when(comment.at)}</span>
             {comment.parentId ? <span className="dim" style={{ fontSize: 11 }}>Reply</span> : null}
           </p>
-          <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 4 }}>{comment.text}</p>
+          <p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 4 }}>{comment.text}</p>
           <ChatAttachmentList attachments={comment.attachments} />
           {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 11, marginTop: 5 }}>Mentioned: {comment.mentionedUserIds.map(userId => a.nm(userId)).join(', ')}</p> : null}
           <div className="acts" style={{ marginTop: 6, gap: 6 }}>
@@ -830,7 +830,7 @@ function Workspace() {
             <span className="chip">{project?.status === 'completed' ? 'Completed' : 'Active'}</span>
           </div>
           <h3 style={{ fontSize: 18, marginTop: 16 }}>Project brief</h3>
-          <p className="mut" style={{ marginTop: 8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{project?.summary || 'The project owner has not added a brief yet.'}</p>
+          <p className="mut q-writeup" style={{ marginTop: 8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{project?.summary || 'The project owner has not added a brief yet.'}</p>
           {project?.dueAt ? <p className="ql-muted ql-project-deadline"><QuorlythGlyph name="calendar" size={14} />Target delivery · {dateLabel(project.dueAt)}</p> : null}
           <div className="ql-workspace-progress">
             <div className="ql-workspace-progress__header"><span>Work completed</span><strong>{completed}/{milestones.length} · {progress}%</strong></div>
@@ -907,7 +907,7 @@ function Workspace() {
               <div className="glass pad"><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Estimated signal score</p><strong style={{ fontSize: 28, fontWeight: 400 }}>{aiPlan.signal_score}<span className="dim" style={{ fontSize: 14 }}>/100</span></strong><p className="mut" style={{ fontSize: 12 }}>AI estimate of clarity, relevance, and actionability</p></div>
               <div className="glass pad"><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Estimated noise reduction</p><strong style={{ fontSize: 28, fontWeight: 400 }}>{aiPlan.noise_reduction_ratio}<span className="dim" style={{ fontSize: 14 }}>%</span></strong><p className="mut" style={{ fontSize: 12 }}>AI estimate for the supplied discussion only, not a measured platform-wide metric</p></div>
             </div>
-            <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Suggested project</p><h4 style={{ fontSize: 17, marginTop: 4 }}>{aiPlan.project_title}</h4><p className="mut" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p></div>
+            <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Suggested project</p><h4 style={{ fontSize: 17, marginTop: 4 }}>{aiPlan.project_title}</h4><p className="mut q-writeup" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p></div>
             <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Why these signals</p><p className="mut" style={{ marginTop: 5 }}>{aiPlan.evidence_summary || 'Review the source discussion alongside the proposed milestones.'}</p></div>
             {aiPlan.lead_collaborator && <p className="mut">Suggested lead collaborator: <strong>{a.nm(aiPlan.lead_collaborator)}</strong> <span className="dim">(confirm with the team before assigning)</span></p>}
             {!!aiPlan.definition_of_done.length && <div><p className="dim" style={{ fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase' }}>Project definition of done</p><ul style={{ marginTop: 7, paddingLeft: 20 }}>{aiPlan.definition_of_done.map((item, index) => <li key={index} className="mut" style={{ marginTop: 5 }}>{item}</li>)}</ul></div>}
@@ -919,11 +919,11 @@ function Workspace() {
                   return selected.includes(item.title) ? selected.filter(title => title !== item.title) : [...selected, item.title]
                 })} />
                 <span><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><span className="chip">{String(index + 1).padStart(2, '0')}</span><strong>{item.title}</strong><span className="chip">{item.priority}</span></div>
-                <p className="mut">{item.description}</p>
+                <p className="mut q-writeup">{item.description}</p>
                 <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p></span>
               </label>)}
             </div>
-            {!!aiPlan.filtered_out.length && <details><summary className="mut" style={{ cursor: 'pointer' }}>View filtered items ({aiPlan.filtered_out.length})</summary><div style={{ display: 'grid', gap: 8, marginTop: 10 }}>{aiPlan.filtered_out.map((item, index) => <div key={item.item + index} className="glass pad"><strong>{item.item}</strong><p className="mut" style={{ marginTop: 4 }}>{item.reason}</p></div>)}</div></details>}
+            {!!aiPlan.filtered_out.length && <details><summary className="mut" style={{ cursor: 'pointer' }}>View filtered items ({aiPlan.filtered_out.length})</summary><div style={{ display: 'grid', gap: 8, marginTop: 10 }}>{aiPlan.filtered_out.map((item, index) => <div key={item.item + index} className="glass pad"><strong>{item.item}</strong><p className="mut q-writeup" style={{ marginTop: 4 }}>{item.reason}</p></div>)}</div></details>}
             <div className="acts"><button className="btn p" disabled={applyingPlan || aiBusy || (!aiIncludeSummary && (!aiIncludeMilestones || !(aiSelectedMilestones?.length ?? aiPlan.milestones.length)))} onClick={applyAIPlan}><QuorlythGlyph name="check" size={14} />{applyingPlan ? 'Applying selected changes…' : 'Apply selected changes'}</button><button className="btn" disabled={applyingPlan} onClick={() => setAiPlan(null)}>Discard draft</button></div>
             {aiApplyProgress.length > 0 && <div className="ql-ai-apply-progress" role="status" aria-live="polite"><strong>{applyingPlan ? 'Quorlyth is applying your selected fields' : 'Latest apply progress'}</strong>{aiApplyProgress.map((step, index) => <div key={step.label + index}><span className={'ql-ai-apply-dot ' + step.status}>{step.status === 'done' ? '✓' : step.status === 'failed' ? '!' : '·'}</span><span>{step.label}</span><small>{step.status === 'done' ? 'Saved' : step.status === 'failed' ? 'Needs attention' : 'In progress'}</small></div>)}</div>}
             <p className="dim" style={{ fontSize: 11 }}>Quorlyth will only update the selected fields and add the checked milestones. Suggested lead assignments are never applied automatically.</p>
@@ -969,13 +969,13 @@ function Workspace() {
               <div className="ql-evidence-record__identity"><span className="ql-evidence-record__mark"><QuorlythGlyph name="document" size={17} /></span><div><p className="ql-eyebrow">REVISION {String(submission.revision).padStart(2, '0')} · {dateLabel(submission.submittedAt)}</p><h4>{linkedMilestone?.title || 'Project deliverable'}</h4><p>Submitted by {a.nm(submission.submittedBy)}</p></div></div>
               <span className={'ql-evidence-decision status-' + submission.status}>{decisionLabel}</span>
             </div>
-            <p className="ql-evidence-record__summary">{submission.summary}</p>
+            <p className="ql-evidence-record__summary q-writeup">{submission.summary}</p>
             {submission.aiReview && <section className="ql-evidence-review-note" style={{ display: 'grid', gap: 8, marginTop: 12, borderColor: submission.aiReview.status === 'needs_changes' ? 'rgba(255,154,118,.32)' : 'var(--line, rgba(255,255,255,.12))' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <strong><QuorlythGlyph name="review" size={14}/> Quorlyth plan-alignment review</strong>
                 <span className="ql-evidence-decision">{submission.aiReview.status === 'aligned' ? 'Likely aligned' : submission.aiReview.status === 'needs_changes' ? 'Gaps detected' : submission.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Human judgement needed'} · {submission.aiReview.alignmentScore}/100</span>
               </div>
-              <p>{submission.aiReview.summary}</p>
+              <p className="q-writeup">{submission.aiReview.summary}</p>
               {!!submission.aiReview.matchedCriteria.length && <div><small className="ql-eyebrow">POSSIBLE MATCHES</small><ul>{submission.aiReview.matchedCriteria.map((item,index)=><li key={'match-'+index}>{item}</li>)}</ul></div>}
               {!!submission.aiReview.gaps.length && <div><small className="ql-eyebrow">GAPS TO CHECK</small><ul>{submission.aiReview.gaps.map((item,index)=><li key={'gap-'+index}>{item}</li>)}</ul></div>}
               {!!submission.aiReview.recommendations.length && <div><small className="ql-eyebrow">RECOMMENDED NEXT STEPS</small><ul>{submission.aiReview.recommendations.map((item,index)=><li key={'rec-'+index}>{item}</li>)}</ul></div>}
