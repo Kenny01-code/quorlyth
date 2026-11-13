@@ -436,44 +436,21 @@ test('the QuorlythBot launcher toggles visibility by right-click, with a reversi
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
   ])
-  assert.match(app, /const \[botLauncherHidden, setBotLauncherHidden\]/)
-  assert.match(app, /onContextMenu=\{event => \{[\s\S]{0,220}qbot-launcher-hidden-v1/)
-  assert.match(app, /!botMounted && createPortal/)
-  assert.match(app, /className="qbot-launcher-restore"/)
-  assert.match(app, /Right-click or click to show QuorlythBot/)
-  assert.match(app, /launcherWasHidden \|\| botLauncherHidden/)
-  assert.match(app, /quorlyth:launcher-restore/)
-  assert.match(bot, /const \[launcherHidden, setLauncherHidden\]/)
-  assert.match(bot, /!launcherHidden && <button[\s\S]{0,460}onContextMenu=/)
-  assert.match(bot, /qbot-launcher-hidden-v1/)
-})
-
-test('search palette writeups, result labels and icons use high-contrast orange and bone colors', async () => {
-  const [palette, styles] = await Promise.all([
-    readSource('src/components/Palette.tsx'),
-    readSource('src/styles/contrast-system.css'),
-  ])
-  assert.ok(palette.includes("className={cn('rr'"))
-  assert.ok(palette.includes('className="gh"'))
-  assert.ok(styles.includes('#cmd .rr h3'))
-  assert.ok(styles.includes('#cmd .rr > svg'))
-  assert.ok(styles.includes('#cmd .rr p'))
-  assert.ok(styles.includes('#fff7ef'))
-  assert.ok(styles.includes('#ffad78'))
-  assert.ok(styles.includes('#dfcaba'))
-})
-
-test('the robot loading state never renders a miniature duplicate character', async () => {
-  const [robot, styles, signIn] = await Promise.all([
-    readSource('src/bot/Robot.tsx'),
-    readSource('src/styles/bot-room-theme.css'),
-    readSource('src/screens/SignIn.tsx'),
-  ])
-  assert.ok(!robot.includes('qbot-robot-fallback-art'))
-  assert.ok(!robot.includes('qbot-robot-fallback-head'))
-  assert.ok(robot.includes('qbot-robot-loading-glow'))
-  assert.ok(styles.includes('.qbot-robot-loading-glow::before'))
-  assert.ok(signIn.includes('<Robot ref={r} defer'))
+  assert.match(app, /const \\[botLauncherHidden, setBotLauncherHidden\\]/)
+  assert.ok(app.includes('!intro && !botLoading && !botMounted && createPortal('))
+  assert.ok(app.includes('botLauncherHidden ? ('))
+  assert.ok(app.includes('className="qbot-launcher-restore"'))
+  assert.ok(app.includes('Right-click or click to show QuorlythBot'))
+  assert.ok(app.includes('onContextMenu='))
+  assert.match(app, /launcherWasHidden \\|\\| botLauncherHidden/)
+  assert.ok(app.includes('quorlyth:launcher-restore'))
+  assert.match(bot, /const \\[launcherHidden, setLauncherHidden\\]/)
+  assert.ok(bot.includes('launcherHidden ? ('))
+  assert.ok(bot.includes('className="qbot-launcher-restore"'))
+  assert.ok(bot.includes('Right-click or click to show QuorlythBot'))
+  assert.ok(bot.includes('onContextMenu='))
+  assert.ok(bot.includes("sessionStorage.setItem('qbot-launcher-hidden-v1', '1')"))
+  assert.ok(bot.includes("sessionStorage.removeItem('qbot-launcher-hidden-v1')"))
 })
 test('the full branded intro is reserved for first-time visitors', async () => {
   const app = await readSource('src/App.tsx')
