@@ -174,7 +174,7 @@ function Inner() {
       <div className="msg" style={{ alignItems: 'flex-start' }}><Av id={comment.authorId} size={30} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <h3 style={{ fontSize: 15 }}><button className="lk" onClick={() => nav('/me/' + comment.authorId)}>{a.nm(comment.authorId)}</button> <span className="dim">{when(comment.at)}</span></h3>
-          <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{comment.text}</p>
+          <p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{comment.text}</p>
           {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 12, marginTop: 5 }}>Tagged: {comment.mentionedUserIds.map(uid => a.nm(uid)).join(', ')}</p> : null}
           <div className="acts" style={{ marginTop: 7, gap: 8 }}>
             <button className="chip" type="button" onClick={() => startReply(comment.id)}><Icon name="reply" size={13} />Reply</button>
@@ -206,7 +206,7 @@ function Inner() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16 }}>
             <Av id={idea.authorId} size={32} /><button className="lk dim" onClick={() => nav('/me/' + idea.authorId)}>{a.nm(idea.authorId)}</button><span className="dim">{when(idea.at)}</span>
           </div>
-          <p className="mut" style={{ fontSize: 17, whiteSpace: 'pre-wrap' }}>{idea.body}</p>
+          <p className="mut q-writeup" style={{ fontSize: 17, whiteSpace: 'pre-wrap' }}>{idea.body}</p>
           <IdeaMediaGallery idea={idea} />
           {idea.authorId === a.me?.id && <div className="reason" style={{ marginTop: 20 }}>
             <h3 style={{ fontSize: 18 }}>Your idea, your collaboration</h3>
@@ -238,7 +238,7 @@ function Inner() {
                 <button className="btn p" disabled={applying}><Icon name="send" size={15} />{applying ? 'Sending application…' : 'Apply to collaborate'}</button>
               </form>}
           </div>}
-          {r?.score != null && <div className="reason" style={{ marginTop: 26 }}><span className="dim">AI review {r.score}</span><p>{r.reason}</p></div>}
+          {r?.score != null && <div className="reason" style={{ marginTop: 26 }}><span className="dim">AI review {r.score}</span><p className="q-writeup">{r.reason}</p></div>}
           <h3 style={{ margin: '26px 0 4px' }}>Discussion</h3>
           {comments.length ? topLevelComments.map(comment => renderComment(comment)) : <p className="mut" style={{ padding: '14px 0' }}>No replies yet. Start the conversation.</p>}
           {replyTo && <div className="chip" style={{ marginTop: 14, display: 'inline-flex', gap: 8 }}>Replying to {a.nm(comments.find(comment => comment.id === replyTo)?.authorId || '')} <button type="button" className="lk" onClick={() => setReplyTo(null)}>Cancel</button></div>}
