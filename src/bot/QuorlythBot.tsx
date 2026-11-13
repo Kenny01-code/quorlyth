@@ -3914,23 +3914,44 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
 
   return (
     <>
-      {!launcherHidden && <button
-        id="astl"
-        type="button"
-        className={cn('astl', open && 'hide')}
-        aria-label="Open QuorlythBot"
-        aria-expanded={open}
-        aria-controls="ast"
-        title="Ask QuorlythBot"
-        onClick={openPanel}
-        onContextMenu={event => {
-          event.preventDefault()
-          try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
-          setLauncherHidden(true)
-        }}
-      >
-        <span className="astm"><Logo size={30} /></span>{greet && <span className="astb">{greet}</span>}
-      </button>}
+      {launcherHidden ? (
+        <button
+          type="button"
+          className="qbot-launcher-restore"
+          aria-label="Restore QuorlythBot launcher"
+          title="Right-click or click to show QuorlythBot"
+          onClick={() => {
+            try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
+            setLauncherHidden(false)
+          }}
+          onContextMenu={event => {
+            event.preventDefault()
+            try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
+            setLauncherHidden(false)
+          }}
+        >
+          <span className="qbot-launcher-restore-mark" aria-hidden="true" />
+          <span className="qbot-launcher-restore-tip">Right-click to show QuorlythBot</span>
+        </button>
+      ) : (
+        <button
+          id="astl"
+          type="button"
+          className={cn('astl', open && 'hide')}
+          aria-label="Open QuorlythBot"
+          aria-expanded={open}
+          aria-controls="ast"
+          title="Ask QuorlythBot. Right-click to hide this launcher."
+          onClick={openPanel}
+          onContextMenu={event => {
+            event.preventDefault()
+            try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
+            setLauncherHidden(true)
+          }}
+        >
+          <span className="astm"><Logo size={30} /></span>{greet && <span className="astb">{greet}</span>}
+        </button>
+      )}
       {open && (
         <div id="ast">
           <div id="bot" className={cn('astp glass bot qbot-sidebar-compact-v2', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
