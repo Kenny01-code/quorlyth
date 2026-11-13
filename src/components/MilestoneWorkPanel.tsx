@@ -337,7 +337,7 @@ export function MilestoneWorkPanel({ idea, milestone, submissions, canManage, ca
                 <div className="q-work-submission__by"><strong>{a.nm(submission.submittedBy)}</strong><small>Revision {submission.revision} · {dateTime(submission.submittedAt)}</small></div>
                 <span className={'q-work-status is-' + submission.status}>{statusLabel(submission.status)}</span>
               </div>
-              <p className="q-work-submission__summary">{submission.summary}</p>
+              <p className="q-work-submission__summary q-writeup">{submission.summary}</p>
               {submission.attachments.length > 0 && <div className="q-work-submission__files">{submission.attachments.map(attachment => <AttachmentLink key={attachment.path} attachment={attachment} />)}</div>}
               {submission.reviewNote && <div className={'q-work-feedback ' + (submission.status === 'changes_requested' ? 'is-changes' : 'is-approved')}><QuorlythGlyph name={submission.status === 'changes_requested' ? 'alert' : 'complete'} size={16} /><div><strong>{submission.status === 'changes_requested' ? 'Changes requested' : 'Review note'}</strong><p>{submission.reviewNote}</p>{submission.reviewedAt ? <small>Reviewed {dateTime(submission.reviewedAt)}{submission.reviewedBy ? ' by ' + a.nm(submission.reviewedBy) : ''}</small> : null}</div></div>}
               {canManage && projectActive && submission.status === 'submitted' && submission.submittedBy === a.me?.id && (
