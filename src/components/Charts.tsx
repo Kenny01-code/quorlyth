@@ -184,9 +184,18 @@ export function Heat({ ideas, val }: { ideas: { at: number }[]; val: boolean }) 
   ideas.forEach(i => { const d = new Date(i.at); if (isNaN(d.getTime())) return; hm[(d.getDay() + 6) % 7][Math.floor(d.getHours() / 2)]++ })
   const hx = Math.max(1, ...hm.flat())
   const DN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const heatFill = (count: number) => {
+    if (!count) return '#241a16'
+    const intensity = count / hx
+    if (intensity >= .8) return '#ffad84'
+    if (intensity >= .6) return '#ff9567'
+    if (intensity >= .4) return '#ef784b'
+    if (intensity >= .2) return '#ce623d'
+    return '#984327'
+  }
   return (
     <div className="hm2"><span />{[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22].map(h => <span key={h} style={{ textAlign: 'center' }}>{h}</span>)}
-      {hm.map((r, i) => <div key={i} style={{ display: 'contents' }}><span>{DN[i]}</span>{r.map((v, j) => <i key={j} title={`${v} ideas`} style={{ ['--a' as any]: (0.05 + (v / hx) * 0.6).toFixed(2) }}>{val && v ? v : ''}</i>)}</div>)}
+      {hm.map((r, i) => <div key={i} style={{ display: 'contents' }}><span>{DN[i]}</span>{r.map((v, j) => <i key={j} className={`q-heat-cell${v ? ' has-activity' : ''}`} title={`${v} ideas`} style={{ backgroundColor: heatFill(v), color: v / hx >= .4 ? '#211a17' : '#fff' }}>{val && v ? v : ''}</i>)}</div>)}
     </div>
   )
 }
