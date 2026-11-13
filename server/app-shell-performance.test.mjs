@@ -448,6 +448,33 @@ test('the QuorlythBot launcher toggles visibility by right-click, with a reversi
   assert.match(bot, /qbot-launcher-hidden-v1/)
 })
 
+test('search palette writeups, result labels and icons use high-contrast orange and bone colors', async () => {
+  const [palette, styles] = await Promise.all([
+    readSource('src/components/Palette.tsx'),
+    readSource('src/styles/contrast-system.css'),
+  ])
+  assert.ok(palette.includes("className={cn('rr'"))
+  assert.ok(palette.includes('className="gh"'))
+  assert.ok(styles.includes('#cmd .rr h3'))
+  assert.ok(styles.includes('#cmd .rr > svg'))
+  assert.ok(styles.includes('#cmd .rr p'))
+  assert.ok(styles.includes('#fff7ef'))
+  assert.ok(styles.includes('#ffad78'))
+  assert.ok(styles.includes('#dfcaba'))
+})
+
+test('the robot loading state never renders a miniature duplicate character', async () => {
+  const [robot, styles, signIn] = await Promise.all([
+    readSource('src/bot/Robot.tsx'),
+    readSource('src/styles/bot-room-theme.css'),
+    readSource('src/screens/SignIn.tsx'),
+  ])
+  assert.ok(!robot.includes('qbot-robot-fallback-art'))
+  assert.ok(!robot.includes('qbot-robot-fallback-head'))
+  assert.ok(robot.includes('qbot-robot-loading-glow'))
+  assert.ok(styles.includes('.qbot-robot-loading-glow::before'))
+  assert.ok(signIn.includes('<Robot ref={r} defer'))
+})
 test('the full branded intro is reserved for first-time visitors', async () => {
   const app = await readSource('src/App.tsx')
   assert.ok(app.includes("localStorage.getItem('qintro') !== '1'"))
