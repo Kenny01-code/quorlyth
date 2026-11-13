@@ -1,15 +1,15 @@
 export const THEMES = {
-  // One canonical Quorlyth material palette for the 3D robot and voice orb.
+  // One canonical, saturated Quorlyth orange for the 3D robot and voice orb.
   terracotta: {
     n: 'Quorlyth Orange',
-    p: 0xef784b,
+    p: 0xff7417,
     b: 0x211a17,
     c: 0xf0ead9,
-    g: 0xffa16f,
-    e: 0x8e351d,
-    ei: 0.3,
-    g1: '#EF784B',
-    g2: '#8E351D',
-    cr: '239,120,75',
+    g: 0xffb15d,
+    e: 0x9b2e05,
+    ei: 0.48,
+    g1: '#FF7417',
+    g2: '#9B2E05',
+    cr: '255,116,23',
   },
 } as const
