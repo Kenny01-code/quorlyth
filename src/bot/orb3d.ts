@@ -173,9 +173,9 @@ function createGlowTexture() {
   const context = canvas.getContext('2d')
   if (!context) return null
   const gradient = context.createRadialGradient(64, 64, 2, 64, 64, 64)
-  gradient.addColorStop(0, 'rgba(239,120,75,0.4)')
-  gradient.addColorStop(0.38, 'rgba(255,161,111,0.18)')
-  gradient.addColorStop(1, 'rgba(142,53,29,0)')
+  gradient.addColorStop(0, 'rgba(255,116,23,0.42)')
+  gradient.addColorStop(0.38, 'rgba(255,177,93,0.2)')
+  gradient.addColorStop(1, 'rgba(155,46,5,0)')
   context.fillStyle = gradient
   context.fillRect(0, 0, 128, 128)
   const texture = new CanvasTexture(canvas)
@@ -224,9 +224,9 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
 
   const key = new DirectionalLight(0xffc4a3, 1.25)
   key.position.set(-3.5, 4, 5)
-  const rim = new DirectionalLight(0xef784b, 2.0)
+  const rim = new DirectionalLight(0xff7417, 2.25)
   rim.position.set(4, -1, -4)
-  const warmFill = new DirectionalLight(0x8e351d, 0.82)
+  const warmFill = new DirectionalLight(0x9b2e05, 0.9)
   warmFill.position.set(0, -4, 4)
   scene.add(new AmbientLight(0xf0ead9, 0.58), key, rim, warmFill)
 
@@ -235,9 +235,9 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
       uTime: { value: 0 },
       uEnergy: { value: 0.2 },
       uCalm: { value: 0 },
-      uTerracotta: { value: new Color(0xef784b) },
-      uOrange: { value: new Color(0xffa16f) },
-      uDeep: { value: new Color(0x8e351d) },
+      uTerracotta: { value: new Color(0xff7417) },
+      uOrange: { value: new Color(0xffb15d) },
+      uDeep: { value: new Color(0x9b2e05) },
       uBone: { value: new Color(0xf0ead9) },
     },
     vertexShader,
@@ -254,7 +254,7 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
   const shell = new Mesh(
     new SphereGeometry(1.012, 112, 88),
     new MeshPhysicalMaterial({
-      color: 0xd97755,
+      color: 0xff7417,
       roughness: 0.2,
       metalness: 0.16,
       clearcoat: 1,
@@ -269,14 +269,14 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
 
   const ringHot = new Mesh(
     new TorusGeometry(1.2, 0.009, 10, 240),
-    new MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.8, toneMapped: false, depthWrite: false }),
+    new MeshBasicMaterial({ color: 0xffb15d, transparent: true, opacity: 0.8, toneMapped: false, depthWrite: false }),
   )
   ringHot.rotation.set(1.12, 0.12, -0.22)
   root.add(ringHot)
 
   const ringTerracotta = new Mesh(
     new TorusGeometry(1.31, 0.006, 8, 220),
-    new MeshBasicMaterial({ color: 0xd97755, transparent: true, opacity: 0.52, toneMapped: false, depthWrite: false }),
+    new MeshBasicMaterial({ color: 0xff7417, transparent: true, opacity: 0.52, toneMapped: false, depthWrite: false }),
   )
   ringTerracotta.rotation.set(0.52, -0.88, 0.2)
   root.add(ringTerracotta)
