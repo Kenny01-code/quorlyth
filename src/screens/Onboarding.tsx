@@ -44,7 +44,7 @@ function Inner() {
       <div className="glass pad" style={{ maxWidth: 640, margin: '20px auto', padding: 40 }}>
         <h2>Join your first community.</h2><p className="mut" style={{ margin: '10px 0 24px' }}>Pick what you care about.</p>
         {a.data.communities.length ? a.data.communities.map(c => { const j = a.joined(c.id); return (
-          <div key={c.id} className="row" style={{ cursor: 'default' }}><Icon name="community" /><div className="t"><h3 style={{ fontSize: 15 }}>{c.name}</h3><p className="dim">{c.purpose}</p></div>
+          <div key={c.id} className="row" style={{ cursor: 'default' }}><Icon name="community" /><div className="t"><h3 style={{ fontSize: 15 }}>{c.name}</h3><p className="dim q-writeup">{c.purpose}</p></div>
             <button className={cn('btn', !j && 'p')} style={{ padding: '9px 18px' }} onClick={() => a.join(c.id, !j)}>{j ? 'Joined' : 'Join'}</button></div>) }) : <p className="mut">No communities yet.</p>}
         <div className="acts"><button className="btn p" onClick={() => { void finishOnboarding() }}>Continue</button></div>
       </div>
