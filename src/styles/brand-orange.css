@@ -406,3 +406,81 @@ body:before {
 #root .ql-milestone-board svg [stroke] {
   stroke: #F97316 !important;
 }
+
+
+/* Dee: final neutral homepage actions and guaranteed high-contrast orange surfaces. */
+/* Homepage secondary actions: quiet ivory, black type, orange edge. */
+#root .hero-actions > a.btn[href="#how-it-works"],
+#root .hero-actions > button.btn:not(.p) {
+  color: #1A0B03 !important;
+  border: 1px solid rgba(249, 115, 22, .62) !important;
+  background: linear-gradient(180deg, #FFF9F2 0%, #F5EEE6 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .92),
+    0 9px 24px -18px rgba(249, 115, 22, .58) !important;
+}
+#root .hero-actions > a.btn[href="#how-it-works"] :is(svg, span),
+#root .hero-actions > button.btn:not(.p) :is(svg, span) {
+  color: #1A0B03 !important;
+}
+#root .hero-actions > a.btn[href="#how-it-works"]:hover,
+#root .hero-actions > button.btn:not(.p):hover {
+  color: #1A0B03 !important;
+  border-color: #F97316 !important;
+  background: linear-gradient(180deg, #FFF1E5 0%, #FFE7D3 100%) !important;
+  box-shadow: 0 12px 26px -18px rgba(249, 115, 22, .72) !important;
+}
+
+/* Manage Automations remains a strong orange panel; every word stays black. */
+#root .arch-page .arch-my-automations,
+#root .arch-page .arch-my-automations * {
+  color: #1A0B03 !important;
+}
+#root .arch-page .arch-my-automations {
+  background: #F97316 !important;
+  border-color: #F97316 !important;
+}
+#root .arch-page .arch-my-automations .btn {
+  color: #1A0B03 !important;
+  border: 1px solid rgba(26, 11, 3, .3) !important;
+  background: #FFF7ED !important;
+}
+#root .arch-page .arch-my-automations .btn :is(svg, span) {
+  color: #1A0B03 !important;
+}
+
+/* Project workspace count, empty state and form labels. */
+#root .sw-list-heading,
+#root .sw-list-heading *,
+#root .sw-list-heading + .sw-empty,
+#root .sw-list-heading + .sw-empty *,
+#root .sw-create .sw-field > span,
+#root .sw-create .sw-field > span * {
+  color: #1A0B03 !important;
+}
+
+/* Social publishing empty state and Capability boundary copy. */
+#root #main .wa-screen .wa-connected-empty,
+#root #main .wa-screen .wa-connected-empty *,
+#root #main .wa-screen .wa-plain-guide,
+#root #main .wa-screen .wa-plain-guide * {
+  color: #1A0B03 !important;
+}
+
+/* Profile impact numbers and supporting descriptions. */
+#root .profile-impact-grid .profile-impact-card,
+#root .profile-impact-grid .profile-impact-card * {
+  color: #1A0B03 !important;
+  text-shadow: none !important;
+}
+
+/* Keep milestone marks in the exact Quorlyth orange. */
+#root .ql-milestone-board :is(svg, .ql-section-mark, .ql-milestone-icon, .ql-milestone-mark, .ql-milestone-marker) {
+  color: #F97316 !important;
+}
+#root .ql-milestone-board svg [stroke] {
+  stroke: #F97316 !important;
+}
+#root .ql-milestone-board svg [fill="currentColor"] {
+  fill: #F97316 !important;
+}
