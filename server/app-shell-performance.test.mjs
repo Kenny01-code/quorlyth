@@ -470,7 +470,7 @@ test('search palette writeups, result labels and icons use high-contrast orange 
 test('the robot loading state never renders a miniature duplicate character', async () => {
   const [robot, styles, signIn] = await Promise.all([
     readSource('src/bot/Robot.tsx'),
-    readSource('src/styles/bot-room-theme.css'),
+    readSource('src/styles/contrast-system.css'),
     readSource('src/screens/SignIn.tsx'),
   ])
   assert.ok(!robot.includes('qbot-robot-fallback-art'))
