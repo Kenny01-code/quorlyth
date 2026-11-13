@@ -36,13 +36,16 @@
 #astl.astl:focus-visible { outline: 2px solid #ef784b !important; outline-offset: 5px !important; }
 #astl.astl:disabled { filter: saturate(.72); cursor: progress; }
 
-#astl .astm svg,
-.astm svg,
-.astm2 svg {
+/* The Bot launcher and compact Bot header use the same orange Quorlyth brand mark as the top navigation. */
+#astl .astm .q-logo-mark,
+.astm .q-logo-mark,
+.astm2 .q-logo-mark {
   color: #ef784b !important;
   stroke: currentColor !important;
+  stroke-width: 1.6px !important;
   fill: none !important;
-  filter: drop-shadow(0 0 7px rgba(239, 120, 75, .2)) !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 8px rgba(239, 120, 75, .28)) !important;
 }
 .astl-hint { border-color: rgba(249, 115, 22, .55) !important; background: var(--qbot-coal) !important; color: var(--qbot-bone) !important; }
 
