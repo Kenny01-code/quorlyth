@@ -453,19 +453,20 @@ test('the QuorlythBot launcher toggles visibility by right-click, with a reversi
   assert.ok(bot.includes("sessionStorage.setItem('qbot-launcher-hidden-v1', '1')"))
   assert.ok(bot.includes("sessionStorage.removeItem('qbot-launcher-hidden-v1')"))
 })
-test('search palette writeups, result labels and icons use high-contrast orange and bone colors', async () => {
+test('search palette keeps its original surface with black result copy and visible icons', async () => {
   const [palette, styles] = await Promise.all([
     readSource('src/components/Palette.tsx'),
     readSource('src/styles/contrast-system.css'),
   ])
   assert.ok(palette.includes("className={cn('rr'"))
   assert.ok(palette.includes('className="gh"'))
-  assert.ok(styles.includes('#cmd .rr h3'))
+  assert.ok(styles.includes('#cmd .rr .t h3'))
+  assert.ok(styles.includes('#cmd .rr .t p'))
   assert.ok(styles.includes('#cmd .rr > svg'))
-  assert.ok(styles.includes('#cmd .rr p'))
-  assert.ok(styles.includes('#fff7ef'))
-  assert.ok(styles.includes('#ffad78'))
-  assert.ok(styles.includes('#dfcaba'))
+  assert.ok(styles.includes('#1c1511'))
+  assert.ok(styles.includes('#9a3412'))
+  assert.doesNotMatch(styles, /#cmd \\.cb\\s*\\{/)
+  assert.doesNotMatch(styles, /#cmd \\.rr:hover/)
 })
 
 test('the robot loading state never renders a miniature duplicate character', async () => {
@@ -511,4 +512,12 @@ test('QuorlythBot chat frame reduces expensive blur and offscreen transcript ren
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]{0,240}backdrop-filter: none !important/)
   assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,1\.0\)\)/)
   assert.match(robot, /if\(now-lastRender<1000\/30\)/)
+})
+
+test('QuorlythBot uses a balanced terracotta shell with deep-ink accents', async () => {
+  const theme = await readSource('src/bot/robot-themes.ts')
+  assert.ok(theme.includes('p: 0xef784b'))
+  assert.ok(theme.includes('b: 0x211a17'))
+  assert.ok(theme.includes("g1: '#EF784B'"))
+  assert.ok(!theme.includes('p: 0xff833b'))
 })
