@@ -44,7 +44,7 @@ export function NotifPanel({ list, sound, onSound, desktopPermission, onDesktop,
               nav(destination)
             }}>
             {n.unread ? <i className="dot" /> : <i className="nd2" />}<Icon name={n.icon} size={18} />
-            <div style={{ minWidth: 0 }}><p style={{ fontSize: 14 }}>{n.text}</p><p className="dim">{when(n.at)}</p></div>
+            <div style={{ minWidth: 0 }}><p className="q-writeup" style={{ fontSize: 14 }}>{n.text}</p><p className="dim">{when(n.at)}</p></div>
           </div>
         )) : <p className="mut" style={{ padding: '24px 12px', textAlign: 'center' }}>You are all caught up.</p>}
         </div>
