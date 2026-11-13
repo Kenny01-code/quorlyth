@@ -1,0 +1,170 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Icon } from '../lib/Icon'
+import { Gate } from '../components/Gate'
+import { Av, Empty, Head, Num } from '../components/ui'
+import { useApp } from '../data/AppProvider'
+import { userFacingMutationError } from '../lib/userFacingErrors'
+import { when } from '../lib/util'
+import { AreaChart, ChartViewport } from '../components/Charts'
+import { ShareCard } from '../components/ShareCard'
+import { askJson } from '../ai/client'
+import { useDraftState } from '../lib/useDraftState'
+import { PromotionPreview } from '../components/PromotionPreview'
+
+export function Dashboard() {
+  return <Gate><Inner /></Gate>
+}
+
+function Inner() {
+  const a = useApp()
+  const nav = useNavigate()
+  const { data: rawData, owner, platformOwner, me, settingsLoaded, platformRolesReady } = a
+  const ownedCommunities = rawData.communities.filter(c => a.ownsCommunity(c.id))
+  const communityOwner = !owner && ownedCommunities.length > 0
+  const ownedCommunityIds = new Set(ownedCommunities.map(c => c.id))
+  const scopedIdeas = communityOwner ? rawData.ideas.filter(i => ownedCommunityIds.has(i.cid)) : rawData.ideas
+  const scopedIdeaIds = new Set(scopedIdeas.map(i => i.id))
+  const data = communityOwner ? {
+    ...rawData,
+    communities: ownedCommunities,
+    ideas: scopedIdeas,
+    reviews: Object.fromEntries(Object.entries(rawData.reviews).filter(([id]) => scopedIdeaIds.has(id))),
+    promotions: rawData.promotions.filter(p => scopedIdeaIds.has(p.ideaId)),
+  } : rawData
+  const scopedMemberIds = new Set(Object.entries(rawData.members).filter(([, memberships]) => Object.entries(memberships || {}).some(([cid, joined]) => joined && (communityOwner ? ownedCommunityIds.has(cid) : true))).map(([uid]) => uid))
+  const memberCount = communityOwner ? scopedMemberIds.size : Object.keys(data.members).length
+  const memberView = !owner && !communityOwner
+  const memberId = me?.id || ''
+  const myIdeas = rawData.ideas.filter(idea => idea.authorId === memberId)
+  const joinedCommunityIds = new Set(rawData.communities.filter(community => a.joined(community.id)).map(community => community.id))
+  // Members get the existing dashboard layout, but only with activity that is relevant to them.
+  const dashboardIdeas = memberView
+    ? rawData.ideas.filter(idea => idea.authorId === memberId || joinedCommunityIds.has(idea.cid))
+    : data.ideas
+  const initialSetup = { name: '', firstCommunity: '' }
+  const [setupDraft, setSetupDraft, clearSetupDraft] = useDraftState(`q-draft:${a.me?.id}:dashboard-setup`, initialSetup)
+  const { name, firstCommunity: c1 } = setupDraft
+  const setName = (name: string) => setSetupDraft(d => ({ ...d, name }))
+  const setC1 = (firstCommunity: string) => setSetupDraft(d => ({ ...d, firstCommunity }))
+  const s = data.settings
+
+  // Wait for the account's initial settings snapshot and verified platform role before
+  // deciding whether this is an existing space or a genuinely new-space setup.
+  if (!settingsLoaded || !platformRolesReady) {
+    // Wait for account settings and verified roles before showing dashboard actions.
+    // Keep the gate, but avoid replacing the view with an animated loader.
+    return <span className="sr" role="status" aria-live="polite">Verifying your dashboard access…</span>
+  }
+
+  if (platformOwner && !s) {
+    return (
+      <>
+        <Head kicker="Dashboard" title={`Welcome, ${me!.name.split(' ')[0]}.`} />
+        <div className="glass pad" style={{ maxWidth: 640 }}>
+          <h3>Set up your space</h3>
+          <p className="dim" style={{ marginTop: 4 }}>Setup is saved as a draft on this device.</p>
+          <label className="field"><span>Space name</span><input value={name} onChange={e => setName(e.target.value)} placeholder="Your name or brand" /></label>
+          <label className="field"><span>First community</span><input value={c1} onChange={e => setC1(e.target.value)} placeholder="For example, Behind the scenes" /></label>
+          <div className="acts"><button className="btn p" onClick={async () => { if (!name.trim()) return a.toast('Name your space'); if (await a.saveSettings({ name: name.trim() }) && (!c1.trim() || await a.createCommunity({ name: c1.trim() }))) clearSetupDraft(initialSetup) }}>Create my space</button><button className="btn" onClick={() => clearSetupDraft(initialSetup)}>Discard draft</button></div>
+        </div>
+      </>
+    )
+  }
+  if (!s && !platformOwner && !owner && ownedCommunities.length === 0) return <>
+    <Head kicker="Dashboard" title={`Welcome, ${me!.name.split(' ')[0]}.`} />
+    <Empty icon="status" title="Your account is active" text="The platform workspace is still being set up. You can already browse communities and view your personal analytics.">
+      <div className="acts" style={{ justifyContent: 'center', marginTop: 12 }}>
+        <button className="btn" onClick={() => nav('/communities')}>Browse communities</button>
+        <button className="btn p" onClick={() => nav('/analytics')}><Icon name="insight" size={15} />Open analytics</button>
+      </div>
+    </Empty>
+  </>
+
+  const pending = memberView ? 0 : data.ideas.filter(i => a.statusOf(i.id) === 'review').length
+  const ranked = memberView ? [] : data.ideas.filter(i => data.reviews[i.id]?.score != null && a.statusOf(i.id) === 'review').sort((x, y) => data.reviews[y.id].score! - data.reviews[x.id].score!).slice(0, 3)
+  const recent = [...dashboardIdeas].sort((x, y) => y.at - x.at).slice(0, 5)
+  const dashboardIdeaIds = new Set(dashboardIdeas.map(idea => idea.id))
+  const recentPromotions = data.promotions.filter(promotion => dashboardIdeaIds.has(promotion.ideaId)).sort((first, second) => second.at - first.at).slice(0, 3)
+  const backed = memberView ? [] : [...data.ideas].map(idea => ({ idea, votes: a.votesOf(idea.id) }))
+    .filter(x => x.votes > 0 && a.statusOf(x.idea.id) !== 'declined')
+    .sort((x, y) => y.votes - x.votes || y.idea.at - x.idea.at).slice(0, 3)
+  const list = memberView ? recent : ranked.length ? ranked : recent
+  const dd = (() => { const d = 864e5, t0 = new Date().setHours(0, 0, 0, 0), v: number[] = [], t: number[] = []; for (let i = 29; i >= 0; i--) { const st = t0 - i * d; v.push((memberView ? myIdeas : data.ideas).filter(x => x.at >= st && x.at < st + d).length); t.push(st) } return { v, d: t } })()
+  const stats: [string, number][] = memberView
+    ? [
+        ['Communities joined', joinedCommunityIds.size],
+        ['Ideas shared by you', myIdeas.length],
+        ['Backings received', myIdeas.reduce((sum, idea) => sum + a.votesOf(idea.id), 0)],
+        ['Ideas selected', myIdeas.filter(idea => ['selected', 'promoted'].includes(a.statusOf(idea.id))).length],
+      ]
+    : [['Waiting for review', pending], ['Ideas shared', data.ideas.length], ['Members', memberCount], ['Ready to share', data.promotions.length]]
+
+  return (
+    <>
+      <Head kicker={communityOwner ? (data.communities.length === 1 ? data.communities[0].name : 'My communities') : s?.name || 'Your space'} title={owner ? (pending ? `${pending} idea${pending === 1 ? ' is' : 's are'} waiting for you.` : 'You are all caught up.') : communityOwner ? 'Your community is taking shape.' : `Welcome, ${me!.name.split(' ')[0]}.`}
+        right={<button className="btn p" onClick={() => nav(owner ? '/queue' : communityOwner ? '/analytics' : '/communities')}><Icon name={owner ? 'queue' : communityOwner ? 'insight' : 'community'} />{owner ? 'Open review queue' : communityOwner ? 'View analytics' : 'Browse communities'}</button>} />
+      {s?.ann && <div className="glass pad" style={{ marginBottom: 18, display: 'flex', gap: 14 }}><Icon name="spark" size={20} /><div><p className="dim">Announcement</p><p style={{ marginTop: 4 }}>{s.ann}</p></div></div>}
+      <div className="grid g4" style={{ marginBottom: 18 }}>
+        {stats.map(([l, v]) => <div key={l} className="glass pad"><p className="dim">{l}</p><Num n={v} /></div>)}
+      </div>
+      <div className="grid g32">
+      <div className="glass pad"><div className="head" style={{ marginBottom: 10 }}><div className="chart-heading-animated"><h3>Ideas over time</h3><p className="dim">Last 30 days</p></div>{(owner || communityOwner) && <button className="chip" onClick={() => nav('/analytics')}>Open analytics</button>}</div>
+        {data.ideas.length ? <ChartViewport label="Ideas over time chart"><AreaChart dd={dd} o={{ sm: true, pts: false, lab: false, avg: false, ma: false, grid: true }} /></ChartViewport> : <Empty icon="insight" title="No ideas yet" text="Ideas will appear here as members share them." />}</div>
+      <div className="glass pad">
+        <h3 style={{ marginBottom: 8 }}>{ranked.length ? 'Top picks from QuorlythBot' : 'Latest ideas'}</h3>
+        {list.length === 0 && <p className="mut" style={{ padding: '18px 0' }}>Nothing here yet.</p>}
+        {list.map(i => {
+          const r = data.reviews[i.id]
+          return (
+            <button key={i.id} className="row rowbtn" onClick={() => nav('/idea/' + i.id)}>
+              {r?.score != null ? <div className="score" style={{ width: 46, height: 46, fontSize: 15 }}>{r.score}</div> : <Av id={i.authorId} size={34} />}
+              <div className="t"><h3 style={{ fontSize: 15 }}>{i.title}</h3><p className="dim">{a.nm(i.authorId)}, {when(i.at)}</p></div>
+            </button>
+          )
+        })}
+      </div></div>
+      {recentPromotions.length > 0 && <section className="promotion-library" style={{ marginTop: 18 }}>
+        <div className="head"><div><p className="dim">COMMUNITY MOMENTUM</p><h3>Recently promoted</h3><p className="mut">See which community ideas are moving forward and the copy prepared to share.</p></div></div>
+        <div className="grid g2">{recentPromotions.map(promotion => { const sourceIdea = dashboardIdeas.find(idea => idea.id === promotion.ideaId); return sourceIdea ? <PromotionPreview key={promotion.id} idea={sourceIdea} promotion={promotion} compact /> : null })}</div>
+      </section>}
+      {!memberView && <div className="glass pad" style={{ marginTop: 18 }}>
+        <div className="head" style={{ marginBottom: 8 }}><div><h3>Most backed by members</h3><p className="dim">Community support, separate from AI review scores</p></div><button className="chip" onClick={() => nav('/communities')}>Explore communities</button></div>
+        {backed.length ? backed.map(({ idea, votes }) => <button key={idea.id} className="row rowbtn" onClick={() => nav('/idea/' + idea.id)}>
+          <div className="score" style={{ width: 42, height: 42, fontSize: 14 }}>{votes}</div>
+          <div className="t"><h3 style={{ fontSize: 15 }}>{idea.title}</h3><p className="dim">{data.communities.find(c => c.id === idea.cid)?.name || 'Community'} · {a.nm(idea.authorId)}</p></div>
+          <span className="dim">{votes} {votes === 1 ? 'backing' : 'backings'}</span>
+        </button>) : <p className="mut" style={{ padding: '14px 0' }}>Member backing will appear here as people support ideas. No popularity is inferred before they do.</p>}
+      </div>}
+      {owner && <Briefing />}
+      {owner && <ShareCard title="Your space link" url={location.origin} sub="Share this with the people you want in your space." />}
+    </>
+  )
+}
+
+function Briefing() {
+  const a = useApp()
+  const [busy, setBusy] = useState(false)
+  const [b, setB] = useState<{ summary: string; themes: { name: string; note: string }[]; steps: string[]; at: number } | null>(null)
+  useEffect(() => a.backend!.store.subscribe('settings', d => setB(d.find(x => x.id === 'briefing')?.data || null)), [a.backend])
+  async function gen() {
+    const l = [...a.data.ideas].sort((x, y) => y.at - x.at).slice(0, 40)
+    if (!l.length) return a.toast('No ideas to read yet')
+    setBusy(true)
+    try {
+      const o = await askJson<any>(`You are briefing a creator about what their fan community is saying. Read these ideas and return JSON only: {"summary":string (two or three plain sentences),"themes":[{"name":string,"note":string}] (up to 4),"steps":[string] (up to 3 concrete next steps)}. Be honest and specific and do not invent anything not in the ideas.\nIdeas: ${JSON.stringify(l.map(i => ({ title: i.title, details: (i.body || '').slice(0, 300), backers: a.votesOf(i.id), tags: i.tags || [] })))}`)
+      await a.backend!.store.set('settings/briefing', { summary: String(o.summary || '').slice(0, 600), themes: (o.themes || []).slice(0, 4), steps: (o.steps || []).slice(0, 3).map(String), at: Date.now() })
+      a.toast('Briefing ready')
+    } catch (e: any) { console.error('Quorlyth briefing generation failed:', e); a.toast(userFacingMutationError(e, 'prepare the briefing')) }
+    setBusy(false)
+  }
+  return (
+    <div className="glass pad" style={{ marginTop: 18 }}>
+      <div className="head" style={{ marginBottom: 14 }}><div><h3>Community briefing</h3><p className="dim">{b ? 'Generated ' + when(b.at) : 'A summary of what your community is saying'}</p></div>
+        <button className={b ? 'btn' : 'btn p'} disabled={busy} onClick={gen}><Icon name="spark" size={16} />{busy ? 'Reading your community...' : b ? 'Refresh' : 'Generate briefing'}</button></div>
+      {b ? <><p style={{ marginBottom: 18 }}>{b.summary}</p><div className="grid g2"><div><p className="dim" style={{ marginBottom: 8 }}>Themes</p>{(b.themes || []).map(t => <div key={t.name} className="row" style={{ cursor: 'default', alignItems: 'flex-start' }}><Icon name="tag" /><div className="t"><h3 style={{ fontSize: 15, whiteSpace: 'normal' }}>{t.name}</h3><p className="dim" style={{ whiteSpace: 'normal' }}>{t.note}</p></div></div>)}</div>
+        <div><p className="dim" style={{ marginBottom: 8 }}>Suggested next steps</p>{(b.steps || []).map(x => <div key={x} className="row" style={{ cursor: 'default', alignItems: 'flex-start' }}><Icon name="approve" /><div className="t"><p style={{ whiteSpace: 'normal' }}>{x}</p></div></div>)}</div></div></>
+        : <p className="mut">{a.data.ideas.length ? 'Generate a briefing to see themes and next steps.' : 'A briefing appears once members share ideas.'}</p>}
+    </div>
+  )
+}

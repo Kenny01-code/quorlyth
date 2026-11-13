@@ -1,0 +1,214 @@
+import { type PointerEvent, type ReactNode, type WheelEvent, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Av } from './ui'
+
+/** Shared horizontal chart viewport. The scrollbar is hidden, but wheel, drag, keyboard and touch scrolling remain available. */
+export function ChartViewport({ children, label }: { children: ReactNode; label: string }) {
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ pointerId: number; x: number; left: number; moved: boolean } | null>(null)
+  const [hasOverflow, setHasOverflow] = useState(false)
+
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const measure = () => {
+      const next = viewport.scrollWidth > viewport.clientWidth + 1
+      setHasOverflow(current => current === next ? current : next)
+    }
+    measure()
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    observer?.observe(viewport)
+    Array.from(viewport.children).forEach(child => {
+      if (child instanceof Element) observer?.observe(child)
+    })
+    window.addEventListener('resize', measure)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [children])
+
+  const onWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const viewport = event.currentTarget
+    const hasHorizontalOverflow = viewport.scrollWidth > viewport.clientWidth + 1
+    if (!event.shiftKey || !hasHorizontalOverflow) return
+    viewport.scrollLeft += Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+    event.preventDefault()
+  }
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return
+    if (event.currentTarget.scrollWidth <= event.currentTarget.clientWidth + 1) return
+    drag.current = { pointerId: event.pointerId, x: event.clientX, left: event.currentTarget.scrollLeft, moved: false }
+    event.currentTarget.classList.add('is-grabbed')
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch {}
+  }
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const current = drag.current
+    if (!current || current.pointerId !== event.pointerId) return
+    const dx = event.clientX - current.x
+    if (Math.abs(dx) > 3) current.moved = true
+    if (current.moved) {
+      event.currentTarget.scrollLeft = current.left - dx
+      event.preventDefault()
+    }
+  }
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId !== event.pointerId) return
+    drag.current = null
+    event.currentTarget.classList.remove('is-grabbed')
+    try { event.currentTarget.releasePointerCapture(event.pointerId) } catch {}
+  }
+
+  return (
+    <div className="chart-viewport">
+      <div
+        ref={viewportRef}
+        className="chs chs--slide-view"
+        role="region"
+        aria-label={label}
+        tabIndex={0}
+        title="Swipe, drag, or hold Shift while using the mouse wheel to explore this chart"
+        onWheel={onWheel}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >{children}</div>
+      {hasOverflow && <p className="chart-viewport__hint">Swipe or drag horizontally to see all chart details</p>}
+    </div>
+  )
+}
+
+export interface Daily { v: number[]; d: number[] }
+export const fd = (t: number) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+
+export interface AreaOpts { sm: boolean; pts: boolean; lab: boolean; avg: boolean; ma: boolean; grid: boolean }
+export function AreaChart({ dd, o }: { dd: Daily; o: AreaOpts }) {
+  const id = useId().replace(/:/g, '')
+  const v = dd.v, n = dd.v.length, W = Math.max(760, n * 28 + 80), H = 300, L = 40, R = 12, T = 18, B = 32, pw = W - L - R, ph = H - T - B
+  const mx = Math.max(1, ...v), mr = Math.ceil(mx * 1.15) || 1
+  const X = (i: number) => L + (n > 1 ? i / (n - 1) : 0.5) * pw, Y = (y: number) => T + ph - (y / mr) * ph
+  const pts = v.map((y, i) => [X(i), Y(y)])
+  const path = (p: number[][]) => {
+    if (!o.sm) return p.map((q, i) => (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' ')
+    let d = 'M' + p[0][0].toFixed(1) + ' ' + p[0][1].toFixed(1)
+    for (let i = 1; i < p.length; i++) { const m = (p[i - 1][0] + p[i][0]) / 2; d += ` C${m.toFixed(1)} ${p[i - 1][1].toFixed(1)} ${m.toFixed(1)} ${p[i][1].toFixed(1)} ${p[i][0].toFixed(1)} ${p[i][1].toFixed(1)}` }
+    return d
+  }
+  const line = path(pts)
+  const lineRef = useRef<SVGPathElement>(null)
+  useLayoutEffect(() => {
+    const element = lineRef.current
+    if (!element) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      element.style.strokeDasharray = 'none'
+      element.style.strokeDashoffset = '0'
+      return
+    }
+    let length = 0
+    try { length = element.getTotalLength() } catch { return }
+    if (!length) return
+    element.style.transition = 'none'
+    element.style.strokeDasharray = String(length)
+    element.style.strokeDashoffset = String(length)
+    const frame = window.requestAnimationFrame(() => {
+      element.style.transition = 'stroke-dashoffset 1050ms cubic-bezier(.2,.75,.25,1)'
+      element.style.strokeDashoffset = '0'
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [line])
+  const avg = v.reduce((x, y) => x + y, 0) / (n || 1)
+  const ma = v.map((_, i) => { const w = v.slice(Math.max(0, i - 6), i + 1); return [X(i), Y(w.reduce((x, y) => x + y, 0) / w.length)] })
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: `max(100%, ${W}px)`, minWidth: `${W}px`, maxWidth: 'none', height: 'auto', display: 'block' }} role="img" aria-label="Ideas per day">
+      <defs><linearGradient id={'af' + id} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d97755" stopOpacity=".26" /><stop offset="1" stopColor="#d97755" stopOpacity="0" /></linearGradient></defs>
+      {[0, 1, 2, 3, 4].map(g => { const yy = T + (ph * g) / 4; return <g key={g}>{o.grid && <line x1={L} x2={W - R} y1={yy} y2={yy} stroke="rgba(33,26,23,.12)" />}<text x={L - 8} y={yy + 4} textAnchor="end" fill="#655d53" fontSize="11">{Math.round(mr * (1 - g / 4))}</text></g> })}
+      {[0, 1, 2, 3, 4].map(k => { const i = Math.round((k * (n - 1)) / 4); return <text key={k} x={X(i)} y={H - 8} textAnchor="middle" fill="#655d53" fontSize="11">{fd(dd.d[i])}</text> })}
+      <path d={`${line} L${X(n - 1)} ${T + ph} L${X(0)} ${T + ph}Z`} fill={`url(#af${id})`} />
+      <path ref={lineRef} d={line} fill="none" stroke="#b85b40" strokeWidth="2.5" strokeLinecap="round" style={{ filter: 'drop-shadow(0 2px 4px rgba(184,91,64,.28))' }} />
+      {o.avg && <><line x1={L} x2={W - R} y1={Y(avg)} y2={Y(avg)} stroke="#9b9385" strokeDasharray="5 5" /><text x={W - R} y={Y(avg) - 6} textAnchor="end" fill="#655d53" fontSize="11">avg {avg.toFixed(1)}</text></>}
+      {o.ma && <path d={path(ma)} fill="none" stroke="#9b9385" strokeWidth="1.5" strokeDasharray="2 5" />}
+      {pts.map((p, i) => <g key={i}>{o.pts && <circle cx={p[0]} cy={p[1]} r="3.2" fill="#f0ead9" stroke="#b85b40" strokeWidth="1.8"><title>{fd(dd.d[i])}: {v[i]}</title></circle>}{o.lab && (n <= 31 || v[i] === mx) && v[i] > 0 && <text x={p[0]} y={p[1] - 9} textAnchor="middle" fill="#30251f" fontSize="11">{v[i]}</text>}</g>)}
+    </svg>
+  )
+}
+
+export interface BarOpts { m: string; o: 'v' | 'h'; s: string; n: number; lab: boolean; grid: boolean; avg: boolean; pct: boolean }
+export function BarChart({ rows, o }: { rows: { n: string; v: number }[]; o: BarOpts }) {
+  const gradientId = 'bar' + useId().replace(/:/g, '')
+  // Vertical comparisons scale with the number of communities so category labels and bars do not collide.
+  const maxLabelChars = Math.max(0, ...rows.map(r => Math.min(r.n.length, 28)))
+  const categoryPitch = Math.max(92, Math.min(220, maxLabelChars * 7 + 30))
+  const W = Math.max(760, rows.length * categoryPitch + 80), tot = rows.reduce((a, r) => a + r.v, 0), mx = Math.max(1, ...rows.map(r => r.v)), avg = tot / (rows.length || 1)
+  const lab = (r: { v: number }) => (o.lab ? (o.pct && tot ? Math.round((r.v / tot) * 100) + '%' : r.v) : '')
+  if (o.o === 'h') {
+    const rh = 46, H = rows.length * rh + 34, L = Math.max(160, Math.min(250, maxLabelChars * 7 + 28)), pw = W - L - 70
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: `max(100%, ${W}px)`, minWidth: `${W}px`, maxWidth: 'none', height: 'auto', display: 'block' }} role="img" aria-label="Bar chart">
+        <defs><linearGradient id={gradientId + 'h'} x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#b85b40" /><stop offset="1" stopColor="#d9a06e" /></linearGradient></defs>
+        {[0, 1, 2, 3, 4].map(g => { const x = L + (pw * g) / 4; return <g key={g}>{o.grid && <line x1={x} x2={x} y1={6} y2={H - 24} stroke="rgba(33,26,23,.12)" />}<text x={x} y={H - 6} textAnchor="middle" fill="#655d53" fontSize="11">{Math.round((mx * g) / 4)}</text></g> })}
+        {rows.map((r, i) => { const y = i * rh + 8, w = Math.max((r.v / mx) * pw, 3); return <g key={i} className="bvh"><title>{r.n}: {r.v}</title><text x={L - 12} y={y + rh / 2 - 2} textAnchor="end" fill="#655d53" fontSize="12">{r.n.slice(0, 28)}</text><rect className="bv" style={{ ['--i' as any]: i }} x={L} y={y + 6} width={w} height={rh - 22} rx="8" fill={`url(#${gradientId}h)`} opacity=".92" />{o.lab && <text x={L + w + 10} y={y + rh / 2 - 2} fill="#30251f" fontSize="12">{lab(r)}</text>}</g> })}
+        {o.avg && <><line x1={L + (avg / mx) * pw} x2={L + (avg / mx) * pw} y1={4} y2={H - 24} stroke="#9b9385" strokeDasharray="5 5" opacity=".8" /><text x={L + (avg / mx) * pw} y={H - 12} textAnchor="middle" fill="#655d53" fontSize="11">avg {avg.toFixed(1)}</text></>}
+      </svg>
+    )
+  }
+  const H = 340, L = 44, B = 56, T = 28, pw = W - L - 12, ph = H - T - B, bw = Math.min(64, (pw / (rows.length || 1)) * 0.62)
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: `max(100%, ${W}px)`, minWidth: `${W}px`, maxWidth: 'none', height: 'auto', display: 'block' }} role="img" aria-label="Bar chart">
+      <defs><linearGradient id={gradientId + 'v'} x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor="#b85b40" /><stop offset="1" stopColor="#d9a06e" /></linearGradient></defs>
+      {[0, 1, 2, 3, 4].map(g => { const y = T + (ph * g) / 4; return <g key={g}>{o.grid && <line x1={L} x2={W - 12} y1={y} y2={y} stroke="rgba(33,26,23,.12)" />}<text x={L - 8} y={y + 4} textAnchor="end" fill="#655d53" fontSize="11">{Math.round(mx * (1 - g / 4))}</text></g> })}
+      {rows.map((r, i) => { const cx = L + (pw * (i + 0.5)) / rows.length, h = Math.max((r.v / mx) * ph, 3); return <g key={i} className="bvh"><title>{r.n}: {r.v}</title><rect className="bv" style={{ ['--i' as any]: i }} x={cx - bw / 2} y={T + ph - h} width={bw} height={h} rx="10" fill={`url(#${gradientId}v)`} opacity=".92" />{o.lab && <text x={cx} y={T + ph - h - 8} textAnchor="middle" fill="#30251f" fontSize="12">{lab(r)}</text>}<text x={cx} y={H - B + 22} textAnchor="middle" fill="#655d53" fontSize="12">{r.n.slice(0, 28)}</text></g> })}
+      {o.avg && <><line x1={L} x2={W - 12} y1={T + ph - (avg / mx) * ph} y2={T + ph - (avg / mx) * ph} stroke="#9b9385" strokeDasharray="5 5" opacity=".8" /><text x={W - 12} y={T + ph - (avg / mx) * ph - 6} textAnchor="end" fill="#655d53" fontSize="11">avg {avg.toFixed(1)}</text></>}
+    </svg>
+  )
+}
+
+export function Donut({ items, total, o }: { items: [string, number, string][]; total: number; o: { pct: boolean; tot: boolean } }) {
+  const t = total || 1
+  let off = 0
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <svg viewBox="0 0 42 42" width="190" height="190" style={{ margin: '14px 0', maxWidth: '100%' }}>
+        <circle cx="21" cy="21" r="15.9155" fill="none" stroke="rgba(33,26,23,.12)" strokeWidth="2.2" />
+        {items.map(([n, c, col], index) => { const p = (c / t) * 100, q = off; off += p; return p ? <circle key={n} className="qth-donut-segment" cx="21" cy="21" r="15.9155" fill="none" stroke={col} strokeWidth="2.2" strokeDasharray={`${Math.max(p - 1, 0.1)} ${101 - p}`} strokeDashoffset={-q} transform="rotate(-90 21 21)" style={{ ['--qth-dash' as any]: `${Math.max(p - 1, 0.1)} ${101 - p}`, ['--qth-delay' as any]: `${index * 55}ms` }}><title>{n}: {c}</title></circle> : null })}
+        {o.tot && <text x="21" y="22.5" textAnchor="middle" fill="#211a17" fontSize="6" fontWeight="500">{total}</text>}
+      </svg>
+      <div style={{ display: 'grid', gap: 8, textAlign: 'left' }}>
+        {items.map(([n, c, col]) => <div key={n} className="dim" style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}><span><i style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: col, marginRight: 8 }} />{n}</span><span>{c}{o.pct ? ` (${Math.round((c / t) * 100)}%)` : ''}</span></div>)}
+      </div>
+    </div>
+  )
+}
+
+export function Heat({ ideas, val }: { ideas: { at: number }[]; val: boolean }) {
+  const hm = Array.from({ length: 7 }, () => Array(12).fill(0))
+  ideas.forEach(i => { const d = new Date(i.at); if (isNaN(d.getTime())) return; hm[(d.getDay() + 6) % 7][Math.floor(d.getHours() / 2)]++ })
+  const hx = Math.max(1, ...hm.flat())
+  const DN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  return (
+    <div className="hm2"><span />{[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22].map(h => <span key={h} style={{ textAlign: 'center' }}>{h}</span>)}
+      {hm.map((r, i) => <div key={i} style={{ display: 'contents' }}><span>{DN[i]}</span>{r.map((v, j) => <i key={j} title={`${v} ideas`} style={{ ['--a' as any]: (0.05 + (v / hx) * 0.6).toFixed(2) }}>{val && v ? v : ''}</i>)}</div>)}
+    </div>
+  )
+}
+
+export function Funnel({ rows, o }: { rows: [string, number][]; o: { pct: boolean; rel: boolean } }) {
+  const fm = Math.max(1, ...rows.map(r => Math.max(0, r[1])))
+  const baseline = rows[0]?.[1] || 0
+  return <>{rows.map((r, i) => {
+    const previous = i > 0 ? Math.max(0, rows[i - 1][1]) : 0
+    const rawPercent = i === 0
+      ? (Math.max(0, r[1]) > 0 ? 100 : 0)
+      : o.rel
+        ? (previous > 0 ? (Math.max(0, r[1]) / previous) * 100 : 0)
+        : (baseline > 0 ? (Math.max(0, r[1]) / baseline) * 100 : 0)
+    const pc = Math.max(0, Math.min(100, Math.round(rawPercent)))
+    const width = Math.max(0, Math.min(100, (Math.max(0, r[1]) / fm) * 100))
+    return <div key={r[0]} style={{ marginTop: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="mut">{r[0]}</span><span>{r[1]}{o.pct && <span className="dim"> {pc}%</span>}</span></div><div className="bar" style={{ height: 6 }}><i style={{ width: width + '%' }} /></div></div>
+  })}</>
+}
+
+export function TopList({ ids, src, nm }: { ids: string[]; src: Record<string, number>; nm: (id: string) => string }) {
+  if (!ids.length) return <p className="mut" style={{ padding: '18px 0' }}>No contributions yet.</p>
+  const top = Math.max(1, src[ids[0]])
+  return <>{ids.map((u, i) => <div key={u} className="row" style={{ cursor: 'default' }}><span className="dim" style={{ width: 16 }}>{i + 1}</span><Av id={u} size={30} /><div className="t"><h3 style={{ fontSize: 15 }}>{nm(u)}</h3><div className="bar"><i style={{ width: (src[u] / top) * 100 + '%' }} /></div></div><span>{src[u]}</span></div>)}</>
+}

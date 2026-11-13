@@ -1,0 +1,140 @@
+/* Social sharing surfaces used by Settings invites and promotion drafts. */
+.q-social-invite { min-width:0; }
+.q-social-invite .acts { display:flex; flex-wrap:wrap; gap:7px; }
+.q-social-invite .btn { min-height:36px; justify-content:center; padding:8px 12px; border-radius:11px; font-size:11px; }
+.q-social-share-block { display:grid; gap:16px; width:min(100%,760px); margin:16px auto 24px; padding:20px; border:1px solid rgba(255,255,255,.12); border-radius:20px; background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),rgba(4,4,5,.76); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+.q-social-share-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.q-social-share-heading h3 { margin:3px 0 5px; color:#F0EAD9; font-size:18px; font-weight:520; letter-spacing:-.025em; }
+.q-social-share-heading p:not(.ql-eyebrow) { max-width:520px; margin:0; color:rgba(235,235,242,.52); font-size:11px; line-height:1.65; }
+.q-social-native-share { flex:none; min-height:38px; }
+.q-social-share-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.q-social-share-target { display:flex; align-items:center; gap:9px; min-width:0; min-height:46px; padding:8px 10px; border:1px solid rgba(255,255,255,.11); border-radius:12px; background:rgba(255,255,255,.035); color:#F0EAD9; font:inherit; font-size:11px; text-align:left; cursor:pointer; transition:background .16s,border-color .16s,transform .16s; }
+.q-social-share-target:hover { background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.25); transform:translateY(-1px); }
+.q-social-share-target > span:nth-child(2) { min-width:0; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.q-social-share-target > svg { flex:none; color:#D7CBB9; }
+.q-social-share-mark { display:grid; place-items:center; flex:0 0 26px; width:26px; height:26px; border:1px solid rgba(255,255,255,.14); border-radius:8px; background:rgba(255,255,255,.06); color:#fff; font-size:10px; font-weight:650; }
+.q-social-share-manual { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:13px; border-top:1px solid rgba(255,255,255,.08); }
+.q-social-share-manual p { flex:1 0 100%; margin:0; font-size:10px; }
+.q-social-share-manual .btn { min-height:35px; padding:7px 10px; border-radius:10px; font-size:10px; }
+.q-social-share-footnote { margin:0; color:rgba(235,235,242,.36); font-size:10px; line-height:1.65; }
+.q-social-platform-row { align-items:flex-start; }
+.q-social-platforms { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; }
+.q-social-platforms .chip { min-height:32px; padding:6px 10px; font-size:10px; }
+@media(max-width:640px) {
+  .q-social-share-block { padding:15px 13px; gap:13px; border-radius:17px; }
+  .q-social-share-heading { flex-direction:column; }
+  .q-social-native-share { width:100%; justify-content:center; }
+  .q-social-share-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .q-social-share-target { min-height:43px; }
+  .q-social-invite .acts { gap:6px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .q-social-share-target { transition:none; }
+}
+
+
+/* Social OAuth account management and direct publishing */
+.q-social-settings,
+.q-social-direct-publish { display:grid; gap:16px; min-width:0; }
+.q-social-settings-heading,
+.q-social-direct-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; }
+.q-social-settings-heading h3,
+.q-social-direct-heading h3 { margin:3px 0 5px; font-size:20px; font-weight:500; letter-spacing:-.025em; }
+.q-social-settings-heading p:not(.ql-eyebrow),
+.q-social-direct-heading p:not(.ql-eyebrow) { max-width:620px; margin:0; font-size:11px; line-height:1.6; }
+.q-social-section-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+.q-social-section-heading > strong { font-size:13px; font-weight:550; }
+.q-social-connected-list,
+.q-social-provider-setup { min-width:0; padding:15px; border:1px solid rgba(255,255,255,.1); border-radius:16px; background:rgba(255,255,255,.018); }
+.q-social-connected-list { display:grid; gap:8px; }
+.q-social-connection { display:flex; align-items:center; gap:10px; min-width:0; padding:10px; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.025); }
+.q-social-provider-mark { display:grid; place-items:center; flex:0 0 34px; width:34px; height:34px; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:rgba(255,255,255,.06); color:#fff; font-size:12px; font-weight:650; }
+.q-social-connection-copy { display:grid; flex:1 1 140px; min-width:0; gap:2px; }
+.q-social-connection-copy strong { font-size:11px; font-weight:550; }
+.q-social-connection-copy > span,
+.q-social-connection-copy small { overflow:hidden; color:rgba(235,235,242,.52); font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.q-social-connected-tag { flex:none; padding:5px 8px; border:1px solid rgba(255,255,255,.15); border-radius:20px; color:#E4DCC9; font-size:9px; }
+.q-social-disconnect { flex:none; min-height:30px; padding:6px 9px; font-size:9px; }
+.q-social-empty,
+.q-social-not-supported { margin:0; padding:12px; border:1px dashed rgba(255,255,255,.13); border-radius:12px; color:rgba(235,235,242,.53); font-size:11px; line-height:1.6; }
+.q-social-provider-setup { display:grid; gap:10px; }
+.q-social-provider-card { display:grid; gap:10px; min-width:0; padding:13px; border:1px solid rgba(255,255,255,.09); border-radius:14px; background:rgba(255,255,255,.018); }
+.q-social-provider-card-heading { display:flex; align-items:center; gap:10px; min-width:0; }
+.q-social-provider-card-heading > div { flex:1 1 180px; min-width:0; }
+.q-social-provider-card-heading strong { font-size:12px; font-weight:550; }
+.q-social-provider-card-heading p { margin:3px 0 0; color:rgba(235,235,242,.52); font-size:10px; line-height:1.5; }
+.q-social-provider-status { flex:none; padding:5px 8px; border:1px solid rgba(255,255,255,.11); border-radius:20px; color:rgba(235,235,242,.5); font-size:9px; }
+.q-social-provider-status.is-ready { border-color:rgba(255,255,255,.2); color:#F0EAD9; }
+.q-social-provider-products { margin:0; color:rgba(235,235,242,.5); font-size:10px; line-height:1.55; }
+.q-social-provider-details { color:rgba(235,235,242,.55); font-size:10px; }
+.q-social-provider-details summary { cursor:pointer; }
+.q-social-provider-details code { display:block; margin-top:8px; padding:9px; overflow-wrap:anywhere; border:1px solid rgba(255,255,255,.08); border-radius:9px; background:rgba(0,0,0,.2); color:#E4DCC9; font-size:9px; line-height:1.6; white-space:normal; }
+.q-social-config-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:end; padding-top:8px; border-top:1px solid rgba(255,255,255,.07); }
+.q-social-config-fields .field { margin:0; }
+.q-social-config-fields .field > span { font-size:10px; }
+.q-social-config-fields input { min-width:0; font-size:12px; }
+.q-social-config-fields > button { grid-column:1/-1; justify-self:start; }
+.q-social-provider-connect-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-top:8px; border-top:1px solid rgba(255,255,255,.07); }
+.q-social-provider-connect-row > span { font-size:10px; }
+.q-social-provider-connect-row .btn { min-height:34px; padding:7px 10px; font-size:10px; }
+.q-social-owner-note { margin:0; font-size:10px; }
+.q-social-callback { display:flex; align-items:center; justify-content:space-between; gap:14px; min-width:0; padding:13px; border:1px solid rgba(255,255,255,.1); border-radius:13px; background:rgba(255,255,255,.018); }
+.q-social-callback > div { display:grid; flex:1 1 200px; min-width:0; gap:4px; }
+.q-social-callback strong { font-size:11px; font-weight:550; }
+.q-social-callback p { margin:0; font-size:10px; }
+.q-social-callback code { overflow-wrap:anywhere; color:#E4DCC9; font-size:9px; line-height:1.5; }
+.q-social-security-note { margin:0; color:rgba(235,235,242,.4); font-size:10px; line-height:1.6; }
+.q-social-alert,
+.q-social-notice { margin:0; padding:10px 12px; border:1px solid rgba(255,255,255,.17); border-radius:11px; background:rgba(255,255,255,.035); color:#F0EAD9; font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.q-social-alert { border-color:rgba(255,255,255,.24); color:#F0EAD9; }
+.q-social-notice a { display:inline-flex; align-items:center; gap:4px; margin-left:6px; color:#fff; text-decoration:underline; text-underline-offset:3px; }
+.q-social-direct-publish { margin:18px auto 24px; width:min(100%,760px); padding:17px; border:1px solid rgba(255,255,255,.13); border-radius:17px; background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.012)),rgba(4,4,5,.65); }
+.q-social-direct-count { flex:none; padding:5px 8px; border:1px solid rgba(255,255,255,.12); border-radius:20px; color:#E4DCC9; font-size:9px; }
+.q-social-no-connections { display:grid; justify-items:start; gap:10px; }
+.q-social-no-connections p { margin:0; font-size:11px; line-height:1.55; }
+.q-social-publish-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.q-social-publish-actions .btn { min-height:36px; padding:8px 11px; font-size:10px; }
+.q-social-direct-publish .field { margin-bottom:10px; }
+.q-social-direct-publish .field small { line-height:1.5; }
+.q-social-not-supported { border-style:solid; }
+.q-social-not-supported strong { display:block; margin-bottom:4px; color:#E4DCC9; font-size:10px; }
+.q-social-not-supported p { margin:0; }
+@media(max-width:640px) {
+  .q-social-settings-heading,
+  .q-social-direct-heading { flex-direction:column; }
+  .q-social-connection { flex-wrap:wrap; }
+  .q-social-connection-copy { flex-basis:calc(100% - 54px); }
+  .q-social-connected-tag { margin-left:44px; }
+  .q-social-disconnect { margin-left:auto; }
+  .q-social-provider-card-heading { flex-wrap:wrap; }
+  .q-social-provider-card-heading > div { flex:1 1 calc(100% - 50px); }
+  .q-social-provider-status { margin-left:44px; }
+  .q-social-config-fields { grid-template-columns:minmax(0,1fr); }
+  .q-social-callback { align-items:flex-start; flex-direction:column; }
+  .q-social-direct-publish { padding:13px; }
+}
+
+/* Real social brand SVGs used by connected accounts and share targets. */
+.q-brand-svg { display:block; flex:none; width:17px; height:17px; fill:currentColor; }
+.q-brand-svg-x,
+.q-brand-svg-threads,
+.q-brand-svg-tiktok { color:#fff; }
+.q-brand-svg-linkedin { color:#0a66c2; }
+.q-brand-svg-facebook { color:#0866ff; }
+.q-brand-svg-instagram { color:#e4405f; }
+.q-brand-svg-pinterest { color:#e60023; }
+.q-brand-svg-bluesky { color:#0085ff; }
+.q-brand-svg-reddit { color:#ff4500; }
+.q-brand-svg-whatsapp { color:#25d366; }
+.q-brand-svg-telegram { color:#229ed9; }
+.q-brand-svg-youtube { color:#ff0033; }
+.q-social-provider-mark { gap:3px; }
+.q-social-provider-mark > .q-brand-svg { width:17px; height:17px; }
+.q-social-meta-mark > .q-brand-svg { width:13px; height:13px; }
+.q-social-share-mark > .q-brand-svg { width:15px; height:15px; }
+.q-social-share-manual .q-brand-svg { width:13px; height:13px; }
+
+.q-social-meta-mark { display:flex; align-items:center; justify-content:center; }
+
+/* Google G is a branded mark: leave its SVG path colours untouched. */
+.google-brand-svg { color: #4285f4 !important; stroke: none !important; }

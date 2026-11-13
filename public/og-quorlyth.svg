@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Quorlyth - An operating system for fanbases</title>
+  <desc id="desc">Bring your audience together, surface ideas, and give contributors credit.</desc>
+  <defs>
+    <radialGradient id="bg" cx="78%" cy="5%" r="85%"><stop offset="0" stop-color="#3b241b"/><stop offset=".48" stop-color="#211a17"/><stop offset="1" stop-color="#181817"/></radialGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a55"/><stop offset=".55" stop-color="#F97316"/><stop offset="1" stop-color="#C64D0B"/></linearGradient>
+    <linearGradient id="bone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#f0ead9"/></linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g fill="none" stroke="url(#orange)" stroke-width="2" opacity=".62">
+    <circle cx="1005" cy="265" r="245"/><circle cx="1005" cy="265" r="205"/><circle cx="1005" cy="265" r="165"/><circle cx="1005" cy="265" r="125"/><circle cx="1005" cy="265" r="85"/>
+  </g>
+  <g fill="none" stroke="#f0ead9" stroke-width="2" opacity=".8"><circle cx="1005" cy="265" r="48"/><circle cx="1005" cy="265" r="23"/><path d="M1005 265 1120 380"/></g>
+  <rect x="72" y="76" width="210" height="44" rx="22" fill="#F97316"/>
+  <text x="94" y="105" fill="#211a17" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" letter-spacing="3">QUORLYTH</text>
+  <text x="74" y="226" fill="url(#bone)" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="600" letter-spacing="-3">Your fanbase.</text>
+  <text x="74" y="310" fill="url(#bone)" font-family="Arial, Helvetica, sans-serif" font-size="62" font-weight="500" letter-spacing="-2.5">Organised around ideas.</text>
+  <text x="78" y="386" fill="#d9cdbb" font-family="Arial, Helvetica, sans-serif" font-size="22" letter-spacing=".5">Communities / Ideas / Creator choice / Credit</text>
+  <path d="M78 440 H490" stroke="#F97316" stroke-width="3"/>
+  <text x="78" y="490" fill="#f0ead9" font-family="Arial, Helvetica, sans-serif" font-size="22">An operating system for fanbases</text>
+</svg>

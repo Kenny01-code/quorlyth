@@ -1,0 +1,96 @@
+CREATE OR REPLACE FUNCTION private.can_update_standalone_doc(p_path text, p_data jsonb)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+ SET row_security TO 'off'
+AS $function$
+declare
+  uid text := (select auth.uid())::text;
+  old_data jsonb;
+  project_id text;
+begin
+  if uid is null or p_path is null or p_data is null or jsonb_typeof(p_data) <> 'object' then return false; end if;
+  select d.data into old_data from public.docs d where d.path = p_path;
+  if old_data is null then return false; end if;
+
+  if p_path ~ '^standaloneProjects/[^/]+$' then
+    project_id := split_part(p_path,'/',2);
+    return p_data->>'id' = project_id
+      and p_data->>'createdBy' = old_data->>'createdBy'
+      and p_data->>'at' = old_data->>'at'
+      and p_data->>'visibility' = 'team'
+      and p_data->>'status' in ('active','completed')
+      and length(trim(coalesce(p_data->>'title',''))) between 2 and 100
+      and length(trim(coalesce(p_data->>'summary',''))) between 8 and 4000
+      and private.can_manage_standalone_project(project_id);
+  elsif p_path ~ '^standaloneProjectMembers/[^/]+$' then
+    project_id := old_data->>'projectId';
+    if p_data->>'id' is distinct from old_data->>'id'
+      or p_data->>'projectId' is distinct from project_id
+      or p_data->>'userId' is distinct from old_data->>'userId'
+      or p_data->>'invitedBy' is distinct from old_data->>'invitedBy'
+      or p_data->>'role' is distinct from old_data->>'role' then
+      return false;
+    end if;
+    -- An invitee can accept their own invite, but cannot change their role.
+    if old_data->>'userId' = uid and old_data->>'status' = 'invited'
+      and p_data->>'status' in ('invited','active')
+      and (p_data - 'status' - 'updatedAt') is not distinct from (old_data - 'status' - 'updatedAt') then
+      return true;
+    end if;
+    return private.can_manage_standalone_project(project_id)
+      and old_data->>'role' <> 'owner'
+      and p_data->>'role' = old_data->>'role'
+      and p_data->>'status' in ('invited','active','removed');
+  elsif p_path ~ '^standaloneTasks/[^/]+$' then
+    project_id := old_data->>'projectId';
+    if p_data->>'id' is distinct from old_data->>'id'
+      or p_data->>'projectId' is distinct from project_id
+      or p_data->>'createdBy' is distinct from old_data->>'createdBy'
+      or p_data->>'at' is distinct from old_data->>'at'
+      or p_data->>'status' not in ('todo','in_progress','done') then
+      return false;
+    end if;
+    if private.can_manage_standalone_project(project_id) then
+      return length(trim(coalesce(p_data->>'title',''))) between 2 and 140;
+    end if;
+    return p_data->>'status' = 'in_progress'
+      and old_data->>'status' = 'todo'
+      and coalesce(old_data->>'assigneeId','') in ('', uid)
+      and p_data->>'assigneeId' = uid
+      and (p_data - 'status' - 'updatedAt' - 'assigneeId') is not distinct from (old_data - 'status' - 'updatedAt' - 'assigneeId')
+      and private.is_standalone_project_member(project_id, array['contributor','manager','owner']::text[]);
+  elsif p_path ~ '^standaloneArtifacts/[^/]+$' then
+    project_id := old_data->>'projectId';
+    return old_data->>'status' = 'submitted'
+      and p_data->>'id' = old_data->>'id'
+      and p_data->>'projectId' = project_id
+      and p_data->>'taskId' = old_data->>'taskId'
+      and p_data->>'kind' = old_data->>'kind'
+      and p_data->>'summary' = old_data->>'summary'
+      and p_data->'attachments' is not distinct from old_data->'attachments'
+      and p_data->>'provider' = old_data->>'provider'
+      and p_data->>'url' is not distinct from old_data->>'url'
+      and p_data->>'sourceMetadata' is not distinct from old_data->>'sourceMetadata'
+      and p_data->>'submittedBy' = old_data->>'submittedBy'
+      and p_data->>'verifiedAt' is not distinct from old_data->>'verifiedAt'
+      and p_data->>'verificationStatus' = old_data->>'verificationStatus'
+      and (
+        (old_data->>'provider' = 'github' and old_data->>'verificationStatus' = 'source_verified')
+        or (old_data->>'provider' = 'manual' and old_data->>'verificationStatus' = 'submitted_evidence')
+      )
+      and p_data->>'status' in ('approved','changes_requested')
+      and p_data->>'reviewedBy' = uid
+      and p_data->>'reviewedBy' is distinct from old_data->>'submittedBy'
+      and coalesce(p_data->>'reviewedAt','') ~ '^[0-9]{10,16}$'
+      and coalesce(p_data->>'updatedAt','') ~ '^[0-9]{10,16}$'
+      and length(coalesce(p_data->>'reviewNote','')) <= 1600
+      and (p_data->>'status' <> 'changes_requested' or length(trim(coalesce(p_data->>'reviewNote',''))) >= 4)
+      and private.can_manage_standalone_project(project_id);
+  end if;
+  return false;
+end;
+$function$;
+
+notify pgrst, 'reload schema';

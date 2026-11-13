@@ -1,0 +1,295 @@
+/* One authoritative QuorlythBot visual system. Layout remains in bot.css; all colour and surfaces live here. */
+:root {
+  --qbot-orange: #F97316;
+  --qbot-orange-deep: #C2410C;
+  --qbot-terracotta: #D97755;
+  --qbot-rust: #B85B40;
+  --qbot-bone: #F0EAD9;
+  --qbot-bone-soft: #D7CBB9;
+  --qbot-ink: #211A17;
+  --qbot-ink-soft: #51483D;
+  --qbot-coal: #181817;
+  --qbot-panel: #252421;
+}
+
+/* Floating launcher: solid favicon orange, dark glyph, no translucent glass treatment. */
+#astl.astl,
+.astl {
+  border: 1px solid rgba(240, 234, 217, .55) !important;
+  background: #F97316 !important;
+  box-shadow: 0 16px 38px -18px rgba(0, 0, 0, .78), inset 0 1px 0 rgba(255, 239, 224, .52) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#astl.astl:hover,
+.astl:hover { background: #FF8A35 !important; }
+#astl.astl::before {
+  border-color: rgba(249, 115, 22, .52) !important;
+  box-shadow: 0 0 25px rgba(249, 115, 22, .24) !important;
+}
+#astl.astl:focus-visible { outline: 3px solid #F97316 !important; outline-offset: 5px !important; }
+#astl.astl:disabled { filter: saturate(.72); cursor: progress; }
+
+#astl .astm svg,
+.astm svg,
+.astm2 svg { color: var(--qbot-ink) !important; filter: drop-shadow(0 2px 5px rgba(33, 26, 23, .24)) !important; }
+.astl-hint { border-color: rgba(249, 115, 22, .55) !important; background: var(--qbot-coal) !important; color: var(--qbot-bone) !important; }
+
+/* Main QuorlythBot window remains charcoal, with orange edge lighting and warm-bone typography. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+  --qbot-terracotta: #D97755;
+  --qbot-orange: #F97316;
+  --qbot-rust: #B85B40;
+  --qbot-bone: #F0EAD9;
+  --qbot-bone-soft: #D7CBB9;
+  --qbot-ink: #211A17;
+  --qbot-ink-soft: #51483D;
+  border: 1px solid rgba(249, 115, 22, .42) !important;
+  border-radius: 22px !important;
+  background:
+    radial-gradient(ellipse 76% 38% at 50% 0%, rgba(249, 115, 22, .17), transparent 72%),
+    linear-gradient(150deg, #302722 0%, #201D1A 43%, #181817 100%) !important;
+  box-shadow: 0 30px 82px rgba(0, 0, 0, .76), inset 0 1px 0 rgba(240, 234, 217, .12) !important;
+  color: var(--qbot-bone) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(120%) !important;
+  backdrop-filter: blur(24px) saturate(120%) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot)::before {
+  background: linear-gradient(120deg, rgba(240, 234, 217, .06), transparent 30%, transparent 72%, rgba(249, 115, 22, .12)) !important;
+}
+
+/* Core Bot panes, transcript and stage share the same charcoal family. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.bh, .bc, .ast-in, .ast-log, .bsl, .bstage, .ast-stage) {
+  border-color: rgba(249, 115, 22, .22) !important;
+  background-color: rgba(240, 234, 217, .045) !important;
+  color: var(--qbot-bone) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 234, 217, .055) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.bh, .bc, .ast-in) {
+  background: linear-gradient(145deg, rgba(240, 234, 217, .075), rgba(240, 234, 217, .022)) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(h1, h2, h3, h4, p, label, small, span, b, strong, em, time, summary) {
+  color: var(--qbot-bone) !important;
+  opacity: 1;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.dim, .mut, .bst, .hint, .helper, .caption, .ast-log, .qbot-action) {
+  color: var(--qbot-bone-soft) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.ic, .quorlyth-glyph) {
+  color: var(--qbot-orange) !important;
+  opacity: 1 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bst i {
+  background: var(--qbot-orange) !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, .15), 0 0 17px rgba(249, 115, 22, .48) !important;
+}
+
+/* Light Bot cards deliberately use ink typography and burnt-orange icons. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .glass {
+  border-color: rgba(33, 26, 23, .18) !important;
+  background: linear-gradient(145deg, #F7F0E2, #EDE3D1) !important;
+  color: var(--qbot-ink) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .glass :is(h1, h2, h3, h4, p, label, small, span, b, strong, em, time, summary) {
+  color: var(--qbot-ink) !important;
+  opacity: 1 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .glass :is(.dim, .mut, .hint, .helper, .caption) { color: var(--qbot-ink-soft) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .glass :is(.ic, .quorlyth-glyph) { color: var(--qbot-orange-deep) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .glass :is(.chip, button:not(.btn)) {
+  border-color: rgba(33, 26, 23, .2) !important;
+  background: rgba(33, 26, 23, .045) !important;
+  color: var(--qbot-ink) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .glass :is(.chip, button:not(.btn)):is(:hover, :focus-visible, .on) {
+  border-color: rgba(184, 91, 64, .5) !important;
+  background: rgba(217, 119, 85, .18) !important;
+  color: var(--qbot-ink) !important;
+}
+
+/* Warm-bone Bot sidebar with dark labels and orange iconography. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs {
+  border-right: 1px solid rgba(184, 91, 64, .3) !important;
+  background: linear-gradient(180deg, #F0EAD9 0%, #E7DCC8 100%) !important;
+  color: var(--qbot-ink) !important;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, .32) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(.bs-t, .bs-s, .bs-f) { border-color: rgba(33, 26, 23, .14) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(.bwm, button, input, b, i, span, small, p, label) {
+  color: var(--qbot-ink) !important;
+  opacity: 1 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(.ic, .quorlyth-glyph) { color: var(--qbot-orange-deep) !important; opacity: 1 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(.dim, .mut, .bsu i) { color: var(--qbot-ink-soft) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb {
+  min-height: 49px;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  color: var(--qbot-ink) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb:is(:hover, :focus-visible, .on) {
+  border-color: rgba(184, 91, 64, .32) !important;
+  background: rgba(217, 119, 85, .18) !important;
+  color: var(--qbot-ink) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb:is(:hover, :focus-visible, .on) .ic { color: var(--qbot-orange-deep) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw {
+  border: 1px solid rgba(33, 26, 23, .18) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 253, 247, .82) !important;
+  box-shadow: inset 0 1px 2px rgba(33, 26, 23, .06) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw input { background: transparent !important; color: var(--qbot-ink) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw input::placeholder { color: #70685D !important; opacity: 1 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci {
+  border-color: rgba(33, 26, 23, .15) !important;
+  background: rgba(255, 253, 247, .56) !important;
+  color: var(--qbot-ink) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci:is(:hover, :focus-visible, .on) { border-color: rgba(184, 91, 64, .35) !important; background: rgba(217, 119, 85, .18) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci .ic { color: var(--qbot-orange-deep) !important; }
+
+/* Composer is a clearly defined dark input surface; placeholder and focus remain readable. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(textarea, input) {
+  border-color: rgba(217, 119, 85, .3) !important;
+  background: rgba(18, 17, 15, .84) !important;
+  color: var(--qbot-bone) !important;
+  caret-color: var(--qbot-orange) !important;
+  box-shadow: inset 0 1px 5px rgba(0, 0, 0, .24) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(textarea, input)::placeholder { color: #D7CBB9 !important; opacity: 1 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(button, textarea, input, select):focus-visible { outline: 2px solid rgba(249, 115, 22, .88) !important; outline-offset: 3px !important; }
+
+/* Bot wordmark and live-state accents echo the favicon instead of the former grayscale system. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bwm span {
+  background: linear-gradient(100deg, #C2410C 0%, #F97316 38%, #D97755 68%, #F0EAD9 100%) !important;
+  background-size: 260% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bwm { color: var(--qbot-orange-deep) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.bvc, .bsi, .bci, .bib, .chip) .ic { color: currentColor !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh .bib { color: var(--qbot-bone) !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh .bib:is(:hover, :focus-visible) { border-color: rgba(249, 115, 22, .62) !important; background: rgba(249, 115, 22, .14) !important; color: #FFB17B !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh .bib.on { border-color: var(--qbot-orange) !important; background: var(--qbot-orange) !important; color: var(--qbot-ink) !important; }
+
+/* Orange light stage: dark mechanics, bone trim, vivid orange shell and rim-light. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.bstage, .ast-stage) {
+  border: 1px solid rgba(249, 115, 22, .5) !important;
+  background:
+    radial-gradient(ellipse 62% 64% at 50% 48%, rgba(249, 115, 22, .23), transparent 72%),
+    radial-gradient(ellipse 70% 55% at 50% 100%, rgba(217, 119, 85, .12), transparent 76%),
+    linear-gradient(145deg, rgba(240, 234, 217, .045), rgba(249, 115, 22, .055)),
+    #201D1A !important;
+  box-shadow: inset 0 1px 0 rgba(240, 234, 217, .1), inset 0 0 54px rgba(249, 115, 22, .08), 0 22px 54px -36px rgba(0, 0, 0, .82) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.bstage, .ast-stage) canvas { filter: none !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.ast-cap, .bnm) { color: var(--qbot-bone) !important; text-shadow: 0 1px 10px rgba(0, 0, 0, .48); }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-cap { opacity: 1 !important; }
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .btn.p {
+  border: 1px solid #C2410C !important;
+  background: #F97316 !important;
+  color: #211A17 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 24px -18px rgba(249, 115, 22, .65) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .btn.p:hover { background: #FF8A35 !important; border-color: #C2410C !important; color: #211A17 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .btn.p :is(svg, span, .ic) { color: #211A17 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .am.mu {
+  border: 1px solid rgba(240, 234, 217, .28) !important;
+  background: linear-gradient(145deg, #FF944D, #F97316) !important;
+  color: #211A17 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .am.mu :is(p, span, b, small, .ic) { color: #211A17 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .am.ma {
+  border: 1px solid rgba(249, 115, 22, .24) !important;
+  background: rgba(240, 234, 217, .075) !important;
+  color: #F0EAD9 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-action { color: #D7CBB9 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsscrim { background: rgba(24, 24, 23, .62) !important; }
+
+/* Three-dot / right-click chat menu: wider, solid bone, clear hierarchy and full-size actions. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx {
+  min-width: 0 !important;
+  max-width: min(320px, calc(100vw - 16px)) !important;
+  padding: 11px !important;
+  border: 1px solid rgba(184, 91, 64, .56) !important;
+  border-radius: 17px !important;
+  background: #F0EAD9 !important;
+  box-shadow: 0 24px 58px rgba(0, 0, 0, .62), inset 0 1px 0 rgba(255, 255, 255, .75) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  color: #211A17 !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(184, 91, 64, .45) transparent !important;
+  overscroll-behavior: contain !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmh {
+  padding: 11px 12px 12px !important;
+  margin: 0 2px 8px !important;
+  border-bottom: 1px solid rgba(33, 26, 23, .16) !important;
+  color: #51483D !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: .025em !important;
+  line-height: 1.45 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx button[role="menuitem"],
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmsub button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  width: 100% !important;
+  min-height: 47px !important;
+  padding: 11px 12px !important;
+  border: 1px solid transparent !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+  color: #211A17 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  text-align: left !important;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx button[role="menuitem"] .ic,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmsub button .ic { color: #C2410C !important; opacity: 1 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx button[role="menuitem"]:is(:hover, :focus-visible),
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmsub button:is(:hover, :focus-visible) {
+  border-color: rgba(184, 91, 64, .38) !important;
+  background: rgba(217, 119, 85, .18) !important;
+  color: #211A17 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .46) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmx-r { margin-left: auto !important; color: #51483D !important; font-size: 17px !important; font-weight: 700 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmsub {
+  max-height: 150px !important;
+  overflow-y: auto !important;
+  padding: 5px 0 6px 10px !important;
+  margin: 1px 0 6px 8px !important;
+  border-left: 2px solid rgba(184, 91, 64, .3) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmsub button { min-height: 41px !important; padding: 9px 10px !important; font-size: 13px !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmsub button.on { border-color: rgba(184, 91, 64, .4) !important; background: rgba(217, 119, 85, .22) !important; color: #211A17 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .danger { color: #8F2F1D !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .danger .ic { color: #9A3412 !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .danger:is(:hover, :focus-visible) { border-color: rgba(153, 27, 27, .24) !important; background: rgba(185, 28, 28, .1) !important; color: #7F1D1D !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx :is(button, a):focus-visible { outline: 2px solid #F97316 !important; outline-offset: 2px !important; }
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx-backdrop { position: absolute !important; inset: 0 !important; }
+
+@media (max-width: 620px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx { width: min(292px, calc(100vw - 16px)) !important; max-width: min(292px, calc(100vw - 16px)) !important; padding: 8px !important; border-radius: 15px !important; }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx button[role="menuitem"] { min-height: 44px !important; padding: 10px 10px !important; font-size: 13px !important; }
+}
+@media (max-width: 760px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) { background: linear-gradient(150deg, #302722, #181817) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx *,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs *,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs *::before,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs *::after { transition: none !important; }
+}

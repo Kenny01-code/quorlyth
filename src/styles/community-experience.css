@@ -1,0 +1,371 @@
+/* Community discovery and contrast refinement. Keep all states inside the Quorlyth orange/bone/charcoal system. */
+
+/* Normalize the house glyphs on light surfaces so legacy white/green/blue icon colors never wash out. */
+#root #main .ic:not(.google-brand-svg):not(.q-brand-svg) {
+  color: var(--q-bone) !important;
+  opacity: 1 !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+  .ic:not(.google-brand-svg):not(.q-brand-svg) {
+  color: #51483d !important;
+  opacity: 1 !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+  :is(.btn.p, .chip.on) .ic:not(.google-brand-svg):not(.q-brand-svg) {
+  color: var(--q-ink) !important;
+}
+
+#root #main .head .ic:not(.google-brand-svg):not(.q-brand-svg),
+#root #main .demo-banner .ic:not(.google-brand-svg):not(.q-brand-svg),
+#root #main :is(.btn.p, button.btn.p, .community-filter-tab.is-active, .community-search__icon) .ic:not(.google-brand-svg):not(.q-brand-svg) {
+  color: var(--q-ink) !important;
+}
+
+#root #main .community-creator-name .creator-badge {
+  border-color: rgba(184, 91, 64, .28) !important;
+  background: linear-gradient(120deg, rgba(217, 119, 85, .18), rgba(249, 115, 22, .07)) !important;
+  color: #793c2c !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65) !important;
+}
+
+#root #main .community-creator-name .creator-badge::after { opacity: .25; }
+#root #main .ccl .cic .ic { color: var(--q-orange) !important; }
+
+/* A compact, editorial discovery surface for the three community collections. */
+#root #main .community-explorer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 12px 0 22px;
+  padding: clamp(18px, 2.6vw, 28px);
+  border: 1px solid rgba(240, 234, 217, .12);
+  border-radius: 25px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, .11), transparent 40%),
+    linear-gradient(145deg, #f4eedf 0%, #eee6d6 58%, #e8dfcf 100%);
+  box-shadow: 0 22px 58px -42px rgba(0, 0, 0, .78), inset 0 1px 0 rgba(255, 255, 255, .92);
+  color: var(--q-ink);
+}
+
+#root #main .community-explorer::before {
+  position: absolute;
+  z-index: -1;
+  top: -90px;
+  right: -70px;
+  width: 270px;
+  height: 270px;
+  border: 1px solid rgba(184, 91, 64, .13);
+  border-radius: 50%;
+  box-shadow: 0 0 0 24px rgba(184, 91, 64, .025), 0 0 0 48px rgba(184, 91, 64, .018);
+  content: "";
+  pointer-events: none;
+}
+
+#root #main .community-explorer__intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+#root #main .community-explorer__eyebrow {
+  margin: 0 0 7px;
+  color: #8b4a35 !important;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .19em;
+  line-height: 1.3;
+}
+
+#root #main .community-explorer__title {
+  margin: 0;
+  color: var(--q-ink) !important;
+  font-family: "Iowan Old Style", "Baskerville", Georgia, serif !important;
+  font-size: clamp(25px, 3vw, 34px) !important;
+  font-weight: 400 !important;
+  letter-spacing: -.045em !important;
+  line-height: 1.05 !important;
+}
+
+#root #main .community-explorer__subtitle {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: #655d53 !important;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#root #main .community-explorer__signal {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 10px 12px;
+  border: 1px solid rgba(184, 91, 64, .16);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, .58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .76);
+}
+
+#root #main .community-explorer__signal span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--q-terracotta-dark);
+}
+#root #main .community-explorer__signal span:nth-child(2) { background: var(--q-orange); }
+#root #main .community-explorer__signal span:nth-child(3) { background: #bca38b; }
+
+#root #main .community-explorer__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, .9fr);
+  align-items: center;
+  gap: 13px;
+}
+
+#root #main .community-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid rgba(33, 26, 23, .12);
+  border-radius: 17px;
+  background: rgba(33, 26, 23, .055);
+  box-shadow: inset 0 1px 2px rgba(33, 26, 23, .035);
+}
+
+#root #main .community-filter-tab {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: #574d42 !important;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 680;
+  white-space: nowrap;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+#root #main .community-filter-tab > .ic { color: #765b49 !important; flex: none; }
+#root #main .community-filter-tab:hover { background: rgba(255, 253, 247, .68); border-color: rgba(184, 91, 64, .16); }
+#root #main .community-filter-tab:active { transform: scale(.985); }
+#root #main .community-filter-tab:focus-visible { outline: 3px solid rgba(249, 115, 22, .38); outline-offset: 2px; }
+
+#root #main .community-filter-tab.is-active {
+  border-color: rgba(184, 91, 64, .46);
+  background: linear-gradient(135deg, #f68a4a, #d97755 82%);
+  box-shadow: 0 7px 17px -12px rgba(114, 49, 28, .78), inset 0 1px 0 rgba(255, 238, 225, .6);
+  color: #211a17 !important;
+}
+#root #main .community-filter-tab.is-active > .ic { color: #211a17 !important; }
+
+#root #main .community-filter-tab__count {
+  display: inline-grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0 6px;
+  border: 1px solid rgba(33, 26, 23, .13);
+  border-radius: 999px;
+  background: rgba(33, 26, 23, .07);
+  color: #51483d;
+  font-size: 10px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+#root #main .community-filter-tab.is-active .community-filter-tab__count {
+  border-color: rgba(33, 26, 23, .2);
+  background: rgba(33, 26, 23, .12);
+  color: #211a17;
+}
+
+#root #main .community-search {
+  display: flex;
+  min-width: 0;
+  min-height: 56px;
+  align-items: center;
+  gap: 11px;
+  padding: 5px 8px 5px 6px;
+  border: 1px solid rgba(33, 26, 23, .2);
+  border-radius: 17px;
+  background: rgba(255, 253, 247, .88);
+  box-shadow: 0 5px 17px -15px rgba(33, 26, 23, .42), inset 0 1px 0 rgba(255, 255, 255, .94);
+  cursor: text;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease, transform .2s ease;
+}
+
+#root #main .community-search:focus-within,
+#root #main .community-search.has-query {
+  border-color: rgba(184, 91, 64, .68);
+  background: #fffdf7;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, .11), 0 13px 28px -22px rgba(33, 26, 23, .5), inset 0 1px 0 #fff;
+}
+
+#root #main .community-search__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  place-items: center;
+  border: 1px solid rgba(184, 91, 64, .25);
+  border-radius: 13px;
+  background: linear-gradient(145deg, #f98b4b, #d97755);
+  box-shadow: 0 5px 13px -9px rgba(119, 47, 26, .82), inset 0 1px 0 rgba(255, 238, 225, .6);
+}
+#root #main .community-search__icon .ic { color: #211a17 !important; }
+
+#root #main .community-search input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #211a17 !important;
+  font-family: inherit;
+  font-size: 13px !important;
+  font-weight: 570;
+}
+#root #main .community-search input::placeholder { color: #756b60 !important; opacity: 1; }
+#root #main .community-search input::-webkit-search-cancel-button { display: none; }
+
+#root #main .community-search__hint {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  flex: none;
+  padding: 0 9px;
+  border: 1px solid rgba(33, 26, 23, .12);
+  border-radius: 8px;
+  background: rgba(33, 26, 23, .045);
+  color: #756b60;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+
+#root #main .community-search__clear {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border: 1px solid rgba(33, 26, 23, .14);
+  border-radius: 11px;
+  background: rgba(33, 26, 23, .055);
+  color: #51483d;
+  cursor: pointer;
+}
+#root #main .community-search__clear:hover { border-color: rgba(184, 91, 64, .42); background: rgba(217, 119, 85, .13); }
+#root #main .community-search__clear .ic { color: #51483d !important; }
+
+#root #main .community-explorer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 15px;
+  padding: 12px 2px 0;
+  border-top: 1px solid rgba(33, 26, 23, .12);
+  color: #51483d;
+  font-size: 11px;
+  font-weight: 650;
+}
+#root #main .community-explorer__footer strong { color: #8b4a35; font-size: 14px; font-variant-numeric: tabular-nums; }
+#root #main .community-explorer__footer-muted,
+#root #main .community-explorer__footer-note { color: #756b60; font-weight: 500; }
+#root #main .community-results { min-height: 100px; }
+
+@media (max-width: 980px) {
+  #root #main .community-explorer__controls { grid-template-columns: 1fr; }
+  #root #main .community-filter-tabs { width: 100%; }
+}
+
+@media (max-width: 620px) {
+  #root #main .community-explorer { margin-top: 8px; padding: 17px 14px; border-radius: 21px; }
+  #root #main .community-explorer__intro { margin-bottom: 15px; }
+  #root #main .community-explorer__title { font-size: 27px !important; }
+  #root #main .community-explorer__subtitle { font-size: 11px; }
+  #root #main .community-explorer__signal { display: none; }
+  #root #main .community-filter-tabs { gap: 3px; padding: 4px; }
+  #root #main .community-filter-tab { min-height: 43px; gap: 5px; padding: 7px 6px; font-size: 10px; }
+  #root #main .community-filter-tab > .ic { width: 14px; height: 14px; }
+  #root #main .community-filter-tab__count { min-width: 19px; height: 19px; padding: 0 4px; font-size: 9px; }
+  #root #main .community-search { min-height: 54px; gap: 9px; }
+  #root #main .community-search__icon { width: 40px; height: 40px; }
+  #root #main .community-search input { font-size: 12px !important; }
+  #root #main .community-search__hint { display: none; }
+  #root #main .community-explorer__footer { align-items: flex-start; flex-direction: column; gap: 5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root #main .community-filter-tab,
+  #root #main .community-search { transition: none !important; }
+}
+
+
+/* Shared button and pill contrast: dark surfaces use bone labels, light cards use ink labels. */
+#root #main :is(.btn, button.btn, a.btn, .chip, button.chip) {
+  border-color: rgba(240, 234, 217, .22) !important;
+  background: rgba(240, 234, 217, .075) !important;
+  color: var(--q-bone) !important;
+}
+
+#root #main :is(.btn, button.btn, a.btn, .chip, button.chip) .ic:not(.google-brand-svg):not(.q-brand-svg) {
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+  :is(.btn, button.btn, a.btn, .chip, button.chip) {
+  border-color: rgba(33, 26, 23, .17) !important;
+  background: rgba(33, 26, 23, .055) !important;
+  color: var(--q-ink) !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+  :is(.btn.p, button.btn.p, a.btn.p, .chip.on, button.chip.on) {
+  border-color: var(--q-terracotta-dark) !important;
+  background: var(--q-terracotta) !important;
+  color: var(--q-ink) !important;
+}
+
+#root #main :is(.btn.p, button.btn.p, a.btn.p, .chip.on, button.chip.on) {
+  border-color: var(--q-terracotta-dark) !important;
+  background: var(--q-terracotta) !important;
+  color: var(--q-ink) !important;
+}
+
+#root #main :is(.btn.p, button.btn.p, a.btn.p, .chip.on, button.chip.on) .ic:not(.google-brand-svg):not(.q-brand-svg),
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+  :is(.btn.p, button.btn.p, a.btn.p, .chip.on, button.chip.on) .ic:not(.google-brand-svg):not(.q-brand-svg) {
+  color: var(--q-ink) !important;
+}
+
+#root #main :is(.creator-badge, .community-member-badge) {
+  border-color: rgba(184, 91, 64, .25) !important;
+  background: rgba(217, 119, 85, .12) !important;
+  color: #793c2c !important;
+}
+
+#root #main :is(.creator-badge, .community-member-badge) .ic:not(.google-brand-svg):not(.q-brand-svg) {
+  color: #793c2c !important;
+}

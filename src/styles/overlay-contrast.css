@@ -1,0 +1,255 @@
+/* Overlay contrast fix: keep floating menus and search panels visually isolated
+   from the site's glass surfaces, especially on narrow/mobile viewports. */
+
+/* QuorlythBot's Ideas/actions menu and chat context menus. */
+#root #ast #bot .cmx.glass,
+#root .astp.bot .cmx.glass,
+#root body > .qbot-drawer-portal.bot .cmx.glass,
+body > .qbot-drawer-portal.bot .cmx.glass {
+  color: #f6f6f8 !important;
+  background-color: #101113 !important;
+  background-image:
+    linear-gradient(145deg, #202124 0%, #111214 42%, #0b0c0e 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.23) !important;
+  box-shadow:
+    0 26px 80px rgba(0, 0, 0, 0.88),
+    0 0 0 1px rgba(255, 255, 255, 0.035),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  isolation: isolate;
+  opacity: 1;
+}
+
+#root #ast #bot .cmx.glass::after,
+#root .astp.bot .cmx.glass::after,
+#root body > .qbot-drawer-portal.bot .cmx.glass::after,
+body > .qbot-drawer-portal.bot .cmx.glass::after {
+  opacity: 0.018 !important;
+  mix-blend-mode: normal !important;
+}
+
+#root #ast #bot .cmx .cmh,
+#root .astp.bot .cmx .cmh,
+#root body > .qbot-drawer-portal.bot .cmx .cmh,
+body > .qbot-drawer-portal.bot .cmx .cmh {
+  color: #f4f4f6 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border-bottom-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+#root #ast #bot .cmx .cmc,
+#root .astp.bot .cmx .cmc,
+#root body > .qbot-drawer-portal.bot .cmx .cmc,
+body > .qbot-drawer-portal.bot .cmx .cmc {
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(255, 255, 255, 0.13) !important;
+}
+
+#root #ast #bot .cmx .cmc > span,
+#root .astp.bot .cmx .cmc > span,
+#root body > .qbot-drawer-portal.bot .cmx .cmc > span,
+body > .qbot-drawer-portal.bot .cmx .cmc > span {
+  color: #b9bbc1 !important;
+  font-weight: 650 !important;
+}
+
+#root #ast #bot .cmx button[role="menuitem"],
+#root #ast #bot .cmx .cmsub button,
+#root .astp.bot .cmx button[role="menuitem"],
+#root .astp.bot .cmx .cmsub button,
+#root body > .qbot-drawer-portal.bot .cmx button[role="menuitem"],
+#root body > .qbot-drawer-portal.bot .cmx .cmsub button,
+body > .qbot-drawer-portal.bot .cmx button[role="menuitem"],
+body > .qbot-drawer-portal.bot .cmx .cmsub button {
+  color: #ededf0 !important;
+  font-weight: 600 !important;
+}
+
+#root #ast #bot .cmx button[role="menuitem"] svg,
+#root .astp.bot .cmx button[role="menuitem"] svg,
+#root body > .qbot-drawer-portal.bot .cmx button[role="menuitem"] svg,
+body > .qbot-drawer-portal.bot .cmx button[role="menuitem"] svg {
+  color: #c4c6cb !important;
+}
+
+#root #ast #bot .cmx button[role="menuitem"]:is(:hover, :focus-visible),
+#root #ast #bot .cmx .cmsub button:is(:hover, :focus-visible),
+#root .astp.bot .cmx button[role="menuitem"]:is(:hover, :focus-visible),
+#root .astp.bot .cmx .cmsub button:is(:hover, :focus-visible),
+#root body > .qbot-drawer-portal.bot .cmx button[role="menuitem"]:is(:hover, :focus-visible),
+#root body > .qbot-drawer-portal.bot .cmx .cmsub button:is(:hover, :focus-visible),
+body > .qbot-drawer-portal.bot .cmx button[role="menuitem"]:is(:hover, :focus-visible),
+body > .qbot-drawer-portal.bot .cmx .cmsub button:is(:hover, :focus-visible) {
+  color: #ffffff !important;
+  background: #2a2b2f !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Search command palette opened from the top navigation. */
+#root #cmd {
+  isolation: isolate;
+  background: rgba(0, 0, 0, 0.78) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(75%) !important;
+  backdrop-filter: blur(12px) saturate(75%) !important;
+}
+
+#root #cmd .cb.glass {
+  color: #f6f6f8 !important;
+  background-color: #111214 !important;
+  background-image:
+    linear-gradient(145deg, #202124 0%, #121315 42%, #0b0c0e 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  border-radius: 22px !important;
+  box-shadow:
+    0 32px 100px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+#root #cmd .cb.glass::after {
+  opacity: 0.015 !important;
+  mix-blend-mode: normal !important;
+}
+
+#root #cmd .cs {
+  background: #090a0c !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 15px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055) !important;
+}
+
+#root #cmd .cs input {
+  color: #ffffff !important;
+  background: transparent !important;
+  font-size: 16px !important;
+  font-weight: 550 !important;
+}
+
+#root #cmd .cs input::placeholder {
+  color: #92949b !important;
+  opacity: 1 !important;
+}
+
+#root #cmd .cs .chip {
+  color: #e5e6e9 !important;
+  background: #222327 !important;
+  border-color: rgba(255, 255, 255, 0.17) !important;
+  font-weight: 650 !important;
+}
+
+#root #cmd .gh {
+  color: #b7b9c0 !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.12em !important;
+}
+
+#root #cmd .rr {
+  color: #f0f0f3 !important;
+  border-color: transparent !important;
+  border-radius: 13px !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease !important;
+}
+
+#root #cmd .rr :is(h3, p, svg) {
+  color: inherit;
+}
+
+#root #cmd .rr h3 {
+  color: #f8f8fa !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+#root #cmd .rr p {
+  color: #b7b9c0 !important;
+  font-weight: 500 !important;
+}
+
+#root #cmd .rr:is(:hover, .on) {
+  background: #292a2e !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+#root #cmd .rr.on {
+  box-shadow: inset 3px 0 0 #f4f4f6 !important;
+}
+
+#root #cmd .sl {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+#root #cmd .cf {
+  color: #b5b7bd !important;
+  border-top-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* On phones, the menu/palette uses solid fills so the page beneath never
+   shines through the text or individual rows. Keep touch targets comfortable. */
+@media (max-width: 620px) {
+  #root #ast #bot .cmx.glass,
+  #root .astp.bot .cmx.glass,
+  #root body > .qbot-drawer-portal.bot .cmx.glass,
+  body > .qbot-drawer-portal.bot .cmx.glass {
+    background-color: #101113 !important;
+    background-image: linear-gradient(160deg, #1b1c1f 0%, #101113 50%, #090a0c 100%) !important;
+    border-color: rgba(255, 255, 255, 0.26) !important;
+    box-shadow:
+      0 24px 65px rgba(0, 0, 0, 0.92),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  }
+
+  #root #ast #bot .cmx button[role="menuitem"],
+  #root .astp.bot .cmx button[role="menuitem"],
+  #root body > .qbot-drawer-portal.bot .cmx button[role="menuitem"],
+  body > .qbot-drawer-portal.bot .cmx button[role="menuitem"] {
+    min-height: 42px !important;
+    font-size: 13px !important;
+  }
+
+  #root #cmd {
+    padding: max(10px, env(safe-area-inset-top, 0px)) 10px max(10px, env(safe-area-inset-bottom, 0px)) !important;
+    place-items: start center !important;
+    padding-top: max(14px, calc(env(safe-area-inset-top, 0px) + 8px)) !important;
+  }
+
+  #root #cmd .cb.glass {
+    width: 100% !important;
+    max-width: 600px !important;
+    max-height: calc(100dvh - max(20px, env(safe-area-inset-top, 0px)) - max(12px, env(safe-area-inset-bottom, 0px))) !important;
+    border-radius: 18px !important;
+    padding: 9px !important;
+  }
+
+  #root #cmd .clist {
+    max-height: min(62dvh, 460px) !important;
+    padding: 5px !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root #cmd .rr {
+    gap: 10px !important;
+    padding: 12px 10px !important;
+  }
+
+  #root #cmd .cf {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root #cmd *,
+  #root #ast #bot .cmx *,
+  #root .astp.bot .cmx *,
+  body > .qbot-drawer-portal.bot .cmx * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

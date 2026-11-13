@@ -1,0 +1,46 @@
+{
+  "name": "quorlyth",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:ai": "node server/dev-server.mjs",
+    "start:ai": "node server/railway-server.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test server/*.test.mjs",
+    "dev:vite": "node scripts/dev.mjs --frontend-only",
+    "start": "node server/railway-server.mjs",
+    "ai:data:generate": "node scripts/generate-ai-training-data.mjs",
+    "ai:voice-data:generate": "node scripts/generate-ai-voice-training-data.mjs",
+    "ai:data:validate": "node scripts/validate-ai-training-data.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "jspdf": "^4.2.1",
+    "ogl": "^1.0.11",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4",
+    "three": "0.128.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.9",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "0.128.0",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^6.4.5"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "overrides": {
+    "dompurify": "^3.4.17"
+  }
+}

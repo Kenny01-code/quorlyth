@@ -1,0 +1,652 @@
+:root {
+  color-scheme: dark;
+  --k: #181817;
+  --w: #f0ead9;
+  --g3: #3e3932;
+  --g4: #756d62;
+  --g5: #9b9385;
+  --g6: #e4dcc9;
+  --line: rgba(37, 30, 25, .16);
+  --q-coal: #181817;
+  --q-coal-soft: #252421;
+  --q-bone: #f0ead9;
+  --q-bone-deep: #e3dac7;
+  --q-terracotta: #d97755;
+  --q-terracotta-dark: #b85b40;
+  --q-terracotta-link: #9b4632;
+  --q-orange: #f97316;
+  --q-ink: #211a17;
+  --q-muted: #70685d;
+  --q-ink-soft: #51483d;
+  --q-icon: #c2410c;
+  --q-edge-dark: rgba(35, 28, 23, .17);
+  --q-edge-light: rgba(240, 234, 217, .2);
+  --q-shadow: 0 22px 54px -34px rgba(0, 0, 0, .48);
+  background: var(--q-coal);
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+html {
+  background: var(--q-coal) !important;
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: clip;
+  background: var(--q-coal) !important;
+  color: var(--q-bone) !important;
+  font-family: Inter, "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: .005em;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body::before {
+  z-index: 0 !important;
+  background:
+    radial-gradient(ellipse 75% 38% at 50% -18%, rgba(217, 119, 85, .13), transparent 78%),
+    radial-gradient(ellipse 55% 36% at 8% 100%, rgba(249, 115, 22, .055), transparent 78%);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  color: var(--q-bone) !important;
+  background: transparent !important;
+}
+
+#root :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--q-bone) !important;
+  font-family: "Iowan Old Style", "Baskerville", "Palatino Linotype", "Book Antiqua", Georgia, serif !important;
+  font-weight: 400 !important;
+  letter-spacing: -.038em !important;
+  line-height: 1.1 !important;
+  text-wrap: balance;
+}
+
+#root h1 { font-size: clamp(2.5rem, 5.8vw, 5rem); }
+#root h2 { font-size: clamp(1.9rem, 3.8vw, 3.2rem); }
+
+#root :is(p, li, dd, dt, blockquote, figcaption, label) { line-height: 1.65; }
+#root :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow) { color: rgba(240, 234, 217, .76) !important; }
+
+#root main#main {
+  position: relative;
+  width: min(100%, 1440px);
+  max-width: 1440px;
+  min-height: calc(100vh - 76px);
+  margin: 0 auto;
+  padding: clamp(24px, 3.8vw, 54px) clamp(18px, 5vw, 72px) 100px;
+  color: var(--q-bone);
+}
+
+#root #main > section.on { min-height: 50vh; }
+
+/* A single material language: charcoal foundations, bone surfaces, terracotta actions, brass details. */
+#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]) {
+  border: 1px solid var(--q-edge-dark) !important;
+  border-radius: 20px;
+  background: var(--q-bone) !important;
+  box-shadow: var(--q-shadow), inset 0 1px 0 rgba(255, 255, 255, .76) !important;
+  color: var(--q-ink) !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)::before {
+  background: linear-gradient(110deg, rgba(255, 255, 255, .24), transparent 30%, transparent 76%, rgba(249, 115, 22, .07));
+}
+
+/* Text inside the shared warm-bone material must use ink, never translucent white. */
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
+  :is(h1, h2, h3, h4, h5, h6, p, li, dd, dt, blockquote, figcaption, label, small, span, b, strong, em, time, output, summary, button, a, .mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow)
+  :not(.chat-page *)
+  :not(.wa-preview-node *)
+  :not(.wa-preview-filter *)
+  :not(.wa-preview-action *)
+  :not(.wa-ai-build-status *)
+  :not(.wa-ai-live-preview *)
+  :not(.wa-connected-services *)
+  :not(.wa-plain-guide *)
+  :not(.wa-runtime-status *)
+  :not(.ql-workspace-stat-grid > div *)
+  :not(.ql-workspace-next *)
+  :not(.ql-evidence-ledger__notice *)
+  :not(.ql-evidence-record *)
+  :not(.ql-evidence-review-note *)
+  :not(.ql-evidence-file *)
+  :not(.ql-assignee-picker__list *)
+  :not(.ql-workspace-evidence-notice *)
+  :not(.q-work-file *)
+  :not(.q-work-readonly *)
+  :not(.q-social-share-block *)
+  :not(.q-social-direct-publish *)
+  :not(.promotion-source *)
+  :not(.arch-map-shell *)
+  :not(.arch-connected-card *)
+  :not(.wa-map-canvas-scroll *)
+  :not(.q-backup-privacy *)
+  :not(.sw-empty-inline *)
+  :not(.sw-mini-task *)
+  :not(.sw-repo-row *)
+  :not(.sw-task-form *)
+  :not(.sw-task *)
+  :not(.sw-inline-form *)
+  :not(.sw-artifact *)
+  :not(.sw-team-member *)
+  :not(.sw-comment > div *)
+  :not(.sw-evidence-attachment *)
+  :not(.sw-assignee-picker__list *)
+  :not(.sw-commit-preview *) {
+  color: var(--q-ink) !important;
+  opacity: 1;
+}
+
+/* Supporting copy remains softer than headings, but is still comfortably readable. */
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
+  :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow, small, figcaption, time)
+  :not(.chat-page *)
+  :not(.wa-preview-node *)
+  :not(.wa-preview-filter *)
+  :not(.wa-preview-action *)
+  :not(.wa-ai-build-status *)
+  :not(.wa-ai-live-preview *)
+  :not(.wa-connected-services *)
+  :not(.wa-plain-guide *)
+  :not(.wa-runtime-status *)
+  :not(.ql-workspace-stat-grid > div *)
+  :not(.ql-workspace-next *)
+  :not(.ql-evidence-ledger__notice *)
+  :not(.ql-evidence-record *)
+  :not(.ql-evidence-review-note *)
+  :not(.ql-evidence-file *)
+  :not(.ql-assignee-picker__list *)
+  :not(.ql-workspace-evidence-notice *)
+  :not(.q-work-file *)
+  :not(.q-work-readonly *)
+  :not(.q-social-share-block *)
+  :not(.q-social-direct-publish *)
+  :not(.promotion-source *)
+  :not(.arch-map-shell *)
+  :not(.arch-connected-card *)
+  :not(.wa-map-canvas-scroll *)
+  :not(.q-backup-privacy *)
+  :not(.sw-empty-inline *)
+  :not(.sw-mini-task *)
+  :not(.sw-repo-row *)
+  :not(.sw-task-form *)
+  :not(.sw-task *)
+  :not(.sw-inline-form *)
+  :not(.sw-artifact *)
+  :not(.sw-team-member *)
+  :not(.sw-comment > div *)
+  :not(.sw-evidence-attachment *)
+  :not(.sw-assignee-picker__list *) {
+  color: var(--q-ink-soft) !important;
+}
+
+/* Glyphs on warm-bone cards use deep orange for legibility. */
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
+  :is(.ic, .quorlyth-glyph, svg:not(.q-brand-svg):not(.google-brand-svg):not([class*="brand"]):not([class*="logo"]):not([class*="recharts"]):not([class*="chart"]):not([class*="success"]):not([class*="error"]):not([class*="warning"]):not([class*="danger"]))
+  :not(.chat-page *)
+  :not(.wa-preview-node *)
+  :not(.wa-preview-filter *)
+  :not(.wa-preview-action *)
+  :not(.wa-ai-build-status *)
+  :not(.wa-ai-live-preview *)
+  :not(.wa-connected-services *)
+  :not(.wa-plain-guide *)
+  :not(.wa-runtime-status *)
+  :not(.ql-workspace-stat-grid *)
+  :not(.ql-workspace-next *)
+  :not(.ql-evidence-ledger__notice *)
+  :not(.ql-evidence-record *)
+  :not(.ql-evidence-review-note *)
+  :not(.ql-evidence-file *)
+  :not(.ql-assignee-picker__list *)
+  :not(.ql-workspace-evidence-notice *)
+  :not(.q-work-file *)
+  :not(.q-work-readonly *)
+  :not(.q-social-share-block *)
+  :not(.q-social-direct-publish *)
+  :not(.promotion-source *)
+  :not(.arch-map-shell *)
+  :not(.arch-connected-card *)
+  :not(.wa-map-canvas-scroll *)
+  :not(.q-backup-privacy *)
+  :not(.sw-empty-inline *)
+  :not(.sw-mini-task *)
+  :not(.sw-repo-row *)
+  :not(.sw-task-form *)
+  :not(.sw-task *)
+  :not(.sw-inline-form *)
+  :not(.sw-artifact *)
+  :not(.sw-team-member *)
+  :not(.sw-comment *)
+  :not(.sw-evidence-attachment *)
+  :not(.sw-assignee-picker__list *)
+  :not(.sw-commit-preview *) {
+  color: var(--q-icon) !important;
+  opacity: 1 !important;
+}
+
+/* Dark inset panels keep bright favicon orange rather than low-contrast rust. */
+#root #main :is(.wa-preview-node, .wa-preview-filter, .wa-preview-action, .wa-ai-build-status, .wa-ai-live-preview, .wa-connected-services, .wa-plain-guide, .wa-runtime-status, .ql-workspace-stat-grid, .ql-workspace-next, .ql-evidence-ledger__notice, .ql-evidence-record, .ql-evidence-review-note, .ql-evidence-file, .ql-assignee-picker__list, .ql-workspace-evidence-notice, .q-work-file, .q-work-readonly, .q-social-share-block, .q-social-direct-publish, .promotion-source, .arch-map-shell, .arch-connected-card, .wa-map-canvas-scroll, .q-backup-privacy, .sw-empty-inline, .sw-mini-task, .sw-repo-row, .sw-task-form, .sw-task, .sw-inline-form, .sw-artifact, .sw-team-member, .sw-comment, .sw-evidence-attachment, .sw-assignee-picker__list, .sw-commit-preview) :is(.ic, .quorlyth-glyph, svg:not(.q-brand-svg):not(.google-brand-svg):not([class*="brand"]):not([class*="logo"]):not([class*="recharts"]):not([class*="chart"])) {
+  color: var(--q-orange) !important;
+  opacity: 1 !important;
+}
+
+/* Preserve semantic status and provider/brand treatments. */
+#root #main :is(.status-success, .is-success, [data-status="success"]) :is(.ic, .quorlyth-glyph, svg),
+#root #main :is(.status-error, .is-error, [data-status="error"]) :is(.ic, .quorlyth-glyph, svg),
+#root #main :is(.status-warning, .is-warning, [data-status="warning"]) :is(.ic, .quorlyth-glyph, svg) {
+  color: currentColor !important;
+}
+
+/* Icons on filled orange actions switch to ink so they stay visible. */
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+  :is(.btn.p, button.btn.p, .chip.on, button.chip.on)
+  :is(.ic, .quorlyth-glyph, svg) {
+  color: var(--q-ink) !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu) :is(a, .link):not(.btn) {
+  color: var(--q-terracotta-link) !important;
+}
+
+/* Brand logos and chart series retain their own semantic colours. */
+
+#root #main .lg .fm .field > span,
+#root #main .lg .fm .dv {
+  color: var(--q-ink) !important;
+  font-weight: 600;
+}
+
+#root #main .lg .fm .mut {
+  color: #51483d !important;
+}
+
+#root #main .lg .fm .iw {
+  border: 1px solid rgba(33, 26, 23, .2) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 253, 247, .82) !important;
+  box-shadow: inset 0 1px 2px rgba(33, 26, 23, .06) !important;
+}
+
+#root #main .lg .fm .iw :is(input, .ic) {
+  color: var(--q-ink) !important;
+}
+
+#root #main .lg .fm .iw input {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#root #main .lg .fm .iw input::placeholder {
+  color: #70685d !important;
+}
+
+#root #main .lg .fm .iw > .ic {
+  opacity: 1;
+}
+
+#root #main .lg .fm :is(.field, .iw) :is(svg:not(.q-brand-svg):not(.google-brand-svg), .ic:not(.q-brand-svg):not(.google-brand-svg)) {
+  color: #51483d !important;
+  opacity: 1;
+}
+
+#root .head {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  overflow: hidden;
+  margin: 0 0 28px !important;
+  padding: clamp(25px, 4vw, 46px) clamp(22px, 4vw, 48px) clamp(42px, 6vw, 68px) !important;
+  border: 6px solid rgba(240, 234, 217, .7);
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, transparent 0 76%, var(--q-coal) 76%),
+    var(--q-terracotta);
+  box-shadow: 0 24px 54px -38px rgba(0, 0, 0, .46);
+}
+
+#root .head::before {
+  position: absolute;
+  z-index: 0;
+  right: -2%;
+  bottom: 8%;
+  left: -2%;
+  height: 24%;
+  background: var(--q-bone);
+  clip-path: polygon(0 5%, 13% 25%, 28% 57%, 43% 72%, 56% 68%, 70% 48%, 84% 20%, 100% 0, 100% 34%, 86% 54%, 72% 78%, 58% 98%, 43% 100%, 28% 82%, 14% 54%, 0 34%);
+  content: "";
+  pointer-events: none;
+}
+
+#root .head > * { position: relative; z-index: 1; }
+#root .head :is(h1, h2, h3) { color: var(--q-ink) !important; }
+#root .head :is(.dim, .mut, p) { color: rgba(33, 26, 23, .76) !important; }
+#root .head .eyebrow,
+#root .head > :first-child > :first-child:not(:is(h1, h2, h3)) { color: rgba(33, 26, 23, .72) !important; }
+
+#root #nav {
+  position: sticky !important;
+  top: max(10px, env(safe-area-inset-top, 0px)) !important;
+  z-index: 60 !important;
+  width: fit-content !important;
+  max-width: min(1260px, calc(100% - 24px)) !important;
+  min-height: 54px;
+  margin: 10px auto 0 !important;
+  padding: 6px 9px !important;
+  gap: 6px !important;
+  border: 1px solid rgba(240, 234, 217, .27) !important;
+  border-radius: 999px !important;
+  background: rgba(24, 24, 23, .94) !important;
+  box-shadow: 0 14px 38px -25px rgba(0, 0, 0, .8), inset 0 1px 0 rgba(240, 234, 217, .1) !important;
+  color: var(--q-bone) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+#root #nav::before { display: none; }
+#root #nav b.nav-wordmark {
+  display: inline-flex !important;
+  color: var(--q-bone) !important;
+  font-family: "Iowan Old Style", "Baskerville", Georgia, serif !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  letter-spacing: .12em !important;
+}
+
+#root #nav .navmain,
+#root #nav .navend { gap: 4px !important; }
+
+#root #nav .navmain .nav-item,
+#root #nav .navmain button,
+#root #nav .navend button,
+#root #nav .lgb { color: rgba(240, 234, 217, .75) !important; }
+
+#root #nav .navmain .nav-item {
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+#root #nav .navmain .nav-item:hover,
+#root #nav .navend button:hover,
+#root #nav .lgb:hover {
+  color: var(--q-bone) !important;
+  background: rgba(240, 234, 217, .08) !important;
+}
+
+#root #nav .navmain .nav-item.on {
+  border: 1px solid rgba(240, 234, 217, .26) !important;
+  color: var(--q-ink) !important;
+  background: var(--q-bone) !important;
+  box-shadow: 0 5px 16px -8px rgba(0, 0, 0, .55) !important;
+}
+
+#root #nav .navmain .nav-item.on > svg { color: var(--q-ink) !important; }
+#root #nav .navmain .nav-item:not(.on) > svg,
+#root #nav .navend button > svg,
+#root #nav .lgb > svg { color: #ef784b !important; }
+
+#root #nav .navend :is(.srch, .bl, .navav) {
+  border-color: rgba(240, 234, 217, .2) !important;
+  background: rgba(240, 234, 217, .055) !important;
+  color: var(--q-bone) !important;
+}
+
+#root #nav .navend .srch kbd {
+  border-color: rgba(240, 234, 217, .2) !important;
+  background: rgba(240, 234, 217, .08) !important;
+  color: var(--q-bone) !important;
+}
+
+#root #nav .nsl i { background: linear-gradient(90deg, var(--q-orange), var(--q-terracotta)) !important; }
+#sp { background: linear-gradient(90deg, var(--q-orange), var(--q-terracotta), var(--q-bone)) !important; }
+
+#root .demo-banner {
+  border: 1px solid rgba(249, 115, 22, .45) !important;
+  border-radius: 18px !important;
+  background: var(--q-bone) !important;
+  box-shadow: var(--q-shadow) !important;
+  color: var(--q-ink) !important;
+}
+
+#root .demo-banner :is(b, small) { color: var(--q-ink) !important; }
+
+#root :is(.btn, button.btn, button.chip, .chip, [role="button"]) {
+  border-color: rgba(33, 26, 23, .18);
+  border-radius: 999px;
+  color: var(--q-ink);
+  font-weight: 550;
+  transition: transform .18s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease;
+}
+
+#root :is(.btn, button.btn, button.chip):hover {
+  border-color: rgba(184, 91, 64, .48);
+  box-shadow: 0 8px 22px -15px rgba(43, 30, 24, .38);
+  transform: translateY(-1px);
+}
+
+#root :is(.btn.p, button.btn.p) {
+  border-color: var(--q-terracotta-dark) !important;
+  background: var(--q-terracotta) !important;
+  box-shadow: 0 8px 22px -14px rgba(148, 65, 41, .5) !important;
+  color: var(--q-ink) !important;
+}
+
+#root :is(.btn.p, button.btn.p):hover { background: #F97316 !important; }
+
+#root button.chip,
+#root .chip {
+  border-color: rgba(33, 26, 23, .16);
+  background: rgba(33, 26, 23, .045);
+  color: var(--q-ink);
+}
+
+#root :is(.chip.on, button.chip.on) {
+  border-color: var(--q-terracotta-dark) !important;
+  background: var(--q-terracotta) !important;
+  color: var(--q-ink) !important;
+}
+
+#root :is(input, textarea, select, [contenteditable="true"]) {
+  border-color: rgba(33, 26, 23, .2) !important;
+  border-radius: 12px;
+  background: rgba(255, 253, 247, .82) !important;
+  box-shadow: inset 0 1px 2px rgba(33, 26, 23, .06) !important;
+  color: var(--q-ink) !important;
+}
+
+#root :is(input, textarea, select, [contenteditable="true"]):focus,
+#root :is(input, textarea, select, [contenteditable="true"]):focus-visible {
+  border-color: rgba(184, 91, 64, .6) !important;
+  box-shadow: 0 0 0 3px rgba(184, 91, 64, .12) !important;
+}
+
+#root :is(input, textarea, select)::placeholder { color: #70685d !important; }
+
+#root :is(textarea, [contenteditable="true"]) {
+  min-height: 48px;
+  padding: 12px 14px !important;
+  font: inherit;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+  caret-color: var(--q-terracotta-dark);
+}
+
+#root :is(textarea, [contenteditable="true"])::placeholder { color: #70685d !important; }
+
+#root :is(a, .link):not(.btn):not(.nav-item) {
+  color: #ff9a59;
+  text-decoration-color: rgba(249, 115, 22, .45);
+  text-underline-offset: .18em;
+}
+
+#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu) :is(a, .link):not(.btn) { color: var(--q-terracotta-link) !important; }
+#root .bar i { background: linear-gradient(90deg, var(--q-terracotta), var(--q-orange)) !important; }
+
+#root :is(.row, .msg, tr, .list-item):hover { background-color: rgba(184, 91, 64, .07) !important; }
+
+#root :is(.row.on, tr.selected, .list-item.active) {
+  border-color: rgba(184, 91, 64, .28) !important;
+  background-color: rgba(217, 119, 85, .11) !important;
+}
+
+#root :is(table, th, td) { border-color: rgba(33, 26, 23, .14); }
+#root :is(th, .table-head) { color: var(--q-ink); }
+
+#root :is([role="dialog"], .modal, .dialog, .sheet, .popover, .dropdown, .menu) {
+  border-color: var(--q-edge-dark) !important;
+  background: var(--q-bone) !important;
+  color: var(--q-ink) !important;
+}
+
+#root :is([role="dialog"], .modal, .dialog, .sheet, .popover, .dropdown, .menu) :is(h1, h2, h3, h4, p, label, small) { color: var(--q-ink) !important; }
+#root :is(.toast, [role="status"], [role="alert"]) { border-color: rgba(249, 115, 22, .42); }
+#root :is(.skip-link, :focus-visible) { outline-color: var(--q-orange) !important; }
+::selection { background: rgba(249, 115, 22, .33); color: var(--q-ink); }
+
+/* Split-tone cover motif from the selected visual reference. */
+#root #main .hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: clamp(520px, 68vh, 700px);
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: hidden;
+  margin: 0 auto 44px;
+  padding: clamp(56px, 8vh, 96px) clamp(20px, 5vw, 58px) 52px;
+  border: 8px solid rgba(240, 234, 217, .74);
+  border-radius: 2px;
+  background: var(--q-terracotta);
+  box-shadow: 0 28px 72px -45px rgba(0, 0, 0, .72);
+  text-align: left;
+}
+
+#root #main .hero::before {
+  position: absolute;
+  z-index: -1;
+  right: -3%;
+  bottom: 18%;
+  left: -3%;
+  height: 25%;
+  background: var(--q-bone);
+  clip-path: polygon(0 0, 13% 24%, 26% 52%, 39% 72%, 52% 80%, 65% 69%, 78% 45%, 91% 17%, 100% 0, 100% 39%, 90% 49%, 76% 74%, 63% 94%, 51% 100%, 38% 91%, 24% 72%, 11% 48%, 0 30%);
+  content: "";
+  pointer-events: none;
+}
+
+#root #main .hero::after {
+  position: absolute;
+  z-index: -2;
+  right: -3%;
+  bottom: -1px;
+  left: -3%;
+  height: 34%;
+  background:
+    repeating-linear-gradient(105deg, rgba(249, 115, 22, .12) 0 1px, transparent 1px 13px),
+    var(--q-coal);
+  clip-path: polygon(0 0, 12% 21%, 25% 44%, 39% 62%, 52% 70%, 65% 62%, 79% 43%, 91% 17%, 100% 0, 100% 100%, 0 100%);
+  content: "";
+  pointer-events: none;
+}
+
+#root #main .hero > .orb,
+#root #main .hero > .hmark,
+#root #main .hero > .hz { display: none !important; }
+
+#root #main .hero > :not(.orb):not(.hz) { z-index: 1; }
+
+#root #main .hero > .chip {
+  margin-bottom: 20px;
+  border-color: rgba(33, 26, 23, .19) !important;
+  background: rgba(240, 234, 217, .56) !important;
+  color: var(--q-ink) !important;
+}
+
+#root #main .hero h1.hero-title {
+  max-width: 1040px;
+  min-height: 0 !important;
+  margin: 0 0 16px;
+  color: var(--q-ink) !important;
+  font-size: clamp(3rem, 8vw, 7rem) !important;
+  letter-spacing: -.072em !important;
+  line-height: .94 !important;
+  text-align: left;
+}
+
+#root #main .hero h1.hero-title::after {
+  position: absolute;
+  top: 52%;
+  left: 3%;
+  width: 82%;
+  border-top: 1px solid rgba(249, 115, 22, .94);
+  content: "";
+  pointer-events: none;
+  transform: rotate(-2.2deg);
+}
+
+#root #main .hero-copy {
+  max-width: 600px !important;
+  min-height: 0 !important;
+  margin: 10px 0 18px !important;
+  color: rgba(33, 26, 23, .84) !important;
+  font-size: clamp(13px, 1.25vw, 16px) !important;
+  line-height: 1.65 !important;
+  text-align: left;
+}
+
+#root #main .hero-actions { justify-content: flex-start; gap: 9px; }
+#root #main .hero-note { margin: auto 0 0 !important; padding-top: 30px; color: rgba(240, 234, 217, .7) !important; }
+
+/* QuorlythBot surfaces are defined once in bot-room-theme.css. */
+
+@media (max-width: 860px) {
+  #root main#main { padding: 22px 16px 76px; }
+  #root #nav { width: calc(100% - 16px) !important; max-width: 100% !important; }
+  #root #nav b.nav-wordmark { display: none !important; }
+  #root #main .hero { min-height: 560px; padding: 58px 20px 46px; }
+  #root #main .hero h1.hero-title { font-size: clamp(2.8rem, 10vw, 5.2rem) !important; }
+  #root .head { padding: 24px 20px 48px !important; }
+}
+
+@media (max-width: 560px) {
+  #root main#main { padding-right: 12px; padding-left: 12px; }
+  #root #main .hero { min-height: 530px; padding: 46px 16px 38px; border-width: 5px; }
+  #root #main .hero h1.hero-title { font-size: clamp(2.65rem, 11vw, 4.4rem) !important; }
+  #root #main .hero-actions { width: min(100%, 340px); flex-direction: column; }
+  #root #main .hero-actions .btn { width: 100%; justify-content: center; }
+  #root .head { flex-direction: column; gap: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root *,
+  #root *::before,
+  #root *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

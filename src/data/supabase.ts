@@ -1,0 +1,440 @@
+import { DocStore, Doc, GrowthEvent, SelfTrackedGrowthEventName, isDirectChild, deepMerge } from './docstore'
+import { nextRetryAttempt, retryDelayForAttempt } from './retry-policy.js'
+
+/**
+ * Supabase implementation. One table, `docs(path text primary key, data jsonb)`.
+ * See supabase/schema.sql for the table and the row level security rules.
+ * Only loaded when VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.
+ */
+export async function createSupabaseStore(url: string, key: string) {
+  const { createClient } = await import('@supabase/supabase-js')
+  const sb = createClient(url, key)
+
+  // Fan out the single docs-table change stream to interested collections. One
+  // channel per collection scales poorly because every docs write reaches every
+  // channel and can trigger a burst of redundant SELECTs.
+  const realtimeListeners = new Map<symbol, {
+    collections: string[]
+    refresh: (collections?: string[]) => void
+    onRealtimeError: (status: string, error: unknown) => void
+  }>()
+  let sharedDocsChannel: ReturnType<typeof sb.channel> | null = null
+
+  const ensureSharedDocsChannel = () => {
+    if (sharedDocsChannel) return
+    sharedDocsChannel = sb.channel('docs:shared:' + Math.random().toString(36).slice(2))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'docs' }, payload => {
+        const newPath = (payload.new as { path?: unknown } | null)?.path
+        const oldPath = (payload.old as { path?: unknown } | null)?.path
+        const changedPaths = [newPath, oldPath].filter((path): path is string => typeof path === 'string')
+        for (const listener of realtimeListeners.values()) {
+          // Route known path changes to only the affected collection queries.
+          // A missing path still triggers a full reconciliation for safety.
+          if (!changedPaths.length) {
+            listener.refresh()
+            continue
+          }
+          const changedCollections = [...new Set(changedPaths.flatMap(path =>
+            listener.collections.filter(collection => isDirectChild(collection, path))
+          ))]
+          if (changedCollections.length) listener.refresh(changedCollections)
+        }
+      })
+      .subscribe((status, error) => {
+        if (status === 'SUBSCRIBED') {
+          // Reconcile every live collection after initial connection and after any
+          // Realtime reconnect, so a missed event during a network gap cannot leave
+          // the UI stale until an unrelated future write.
+          for (const listener of realtimeListeners.values()) listener.refresh()
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          for (const listener of realtimeListeners.values()) listener.onRealtimeError(status, error)
+        }
+      })
+  }
+
+  const store: DocStore = {
+    async listCommunityMembers(cid) {
+      const { data, error } = await sb.rpc('list_community_member_ids', { p_cid: cid })
+      if (error) throw new Error(error.message || 'Could not load community members')
+      return (data || []).map((row: { user_id: string }) => row.user_id)
+    },
+    async listCommunityContributors(cid) {
+      const { data, error } = await sb.rpc('list_community_contributors', { p_cid: cid })
+      if (error) throw new Error(error.message || 'Could not load community contributors')
+      return (data || []).map((row: { user_id: string; ideas_count: number | string; backings_count: number | string }) => ({
+        userId: row.user_id,
+        ideas: Number(row.ideas_count) || 0,
+        backings: Number(row.backings_count) || 0,
+      }))
+    },
+    async listGrowthEvents() {
+      // Page the ledger so the dashboard keeps working beyond PostgREST's row cap.
+      // The table's RLS policy is the authority: non-platform admins receive no rows.
+      const pageSize = 500
+      const records: GrowthEvent[] = []
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await sb
+          .from('growth_events')
+          .select('id,user_id,actor_id,event_name,event_key,occurred_at')
+          .order('occurred_at', { ascending: false })
+          .range(offset, offset + pageSize - 1)
+        if (error) throw new Error(error.message || 'Could not load platform growth events')
+        const page = (data || []) as GrowthEvent[]
+        records.push(...page)
+        if (page.length < pageSize) break
+        if (records.length >= 20000) break
+      }
+      return records
+    },
+    async trackGrowthEvent(eventName: SelfTrackedGrowthEventName, eventKey = '') {
+      if (eventName === 'active_day') {
+        // Server-derived auth.uid() and UTC date keep this self-only event within RLS.
+        const { error } = await sb.rpc('track_active_day')
+        if (error) throw new Error(error.message || 'Could not record daily account activity')
+        return
+      }
+      const { data: authData, error: authError } = await sb.auth.getUser()
+      if (authError || !authData.user) throw new Error('Sign in before recording account activity.')
+      const userId = authData.user.id
+      const { error } = await sb.from('growth_events').upsert({
+        user_id: userId,
+        actor_id: userId,
+        event_name: eventName,
+        event_key: eventKey.slice(0, 256),
+      }, { onConflict: 'user_id,event_name,event_key', ignoreDuplicates: true })
+      // Event keys are idempotent by design. A repeat visit or retry is not a failure.
+      if (error && error.code !== '23505') throw new Error(error.message || 'Could not record account activity')
+    },
+    async exportAll() {
+      // Page the complete docs table; PostgreSQL row-level security limits this export
+      // to records visible to the currently authenticated user.
+      const pageSize = 500
+      const records: { path: string; data: any; updatedAt?: string | null }[] = []
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await sb.from('docs').select('path,data,updated_at').order('path', { ascending: true }).range(offset, offset + pageSize - 1)
+        if (error) throw error
+        const page = (data || []) as { path: string; data: any; updated_at?: string | null }[]
+        records.push(...page.map(row => ({ path: row.path, data: row.data, updatedAt: row.updated_at ?? null })))
+        if (page.length < pageSize) break
+      }
+      return records
+    },
+    async get(path) {
+      const { data, error } = await sb.from('docs').select('data').eq('path', path).maybeSingle()
+      if (error) throw error
+      return data?.data ?? null
+    },
+    async create(path, data) {
+      // New records must use INSERT: upsert invokes ON CONFLICT UPDATE policies too.
+      const { error } = await sb.from('docs').insert({ path, data })
+      if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the write')
+    },
+    async set(path, data) {
+      // Chat records are append-only. INSERT avoids Postgres requiring an UPDATE
+      // policy for PostgREST upserts, while preserving upsert behavior for mutable docs.
+      const collection = path.split('/')[0]
+      const isAppendOnlyChatRecord = (collection === 'conversations' || collection === 'messages') && path.split('/').length === 2
+      const { error } = isAppendOnlyChatRecord
+        ? await sb.from('docs').insert({ path, data })
+        : await sb.from('docs').upsert({ path, data })
+      if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the write')
+    },
+    async update(path, patch) {
+      const cur = await store.get(path)
+      if (!cur) throw new Error('not_found')
+      const next = deepMerge(cur, patch)
+      const isRootWorkSubmission = path.startsWith('workSubmissions/') && !path.slice('workSubmissions/'.length).includes('/')
+      const isRootProject = path.startsWith('projects/') && !path.slice('projects/'.length).includes('/')
+      const isRootMilestone = path.startsWith('milestones/') && !path.slice('milestones/'.length).includes('/')
+      if (isRootWorkSubmission || isRootProject || isRootMilestone) {
+        // These records have narrow UPDATE permissions. A direct UPDATE avoids
+        // evaluating restrictive INSERT policies during an upsert (notably the
+        // AI-organized milestone guard) when a teammate starts or edits work.
+        const { data, error } = await sb.from('docs').update({ data: next }).eq('path', path).select('path').maybeSingle()
+        if (error) throw new Error(error.message || error.details || error.hint || 'Database rejected the update')
+        if (!data) {
+          throw new Error(isRootProject
+            ? 'Project update permission denied or this project is no longer available.'
+            : isRootMilestone
+              ? 'Milestone update permission denied or this milestone is no longer available.'
+              : 'Review permission denied or this submission is no longer pending.')
+        }
+        return
+      }
+      await store.set(path, next)
+    },
+    async delete(path) {
+      const { error } = await sb.from('docs').delete().or(`path.eq.${path},path.like.${path}/%`)
+      if (error) throw error
+    },
+    subscribe(collection, cb, onError) {
+      let lastErrorMessage = ''
+      let retryAttempt = 0
+      let retryTimer: ReturnType<typeof setTimeout> | undefined
+      let refreshTimer: ReturnType<typeof setTimeout> | undefined
+      let loadSequence = 0
+      let stopped = false
+
+      const reportError = (error: unknown) => {
+        const detail = error as { message?: string; code?: string; cause?: unknown } | null
+        const message = detail?.message || String(error)
+        const scopedError = Object.assign(new Error(`[shared data: ${collection}] ${message}`), {
+          collection,
+          code: detail?.code,
+          cause: error,
+        })
+        if (message !== lastErrorMessage) onError?.(scopedError)
+        lastErrorMessage = message
+      }
+
+      const scheduleRetry = () => {
+        if (stopped || retryTimer) return
+        // Keep recovering from transient Supabase/network failures for the entire
+        // lifetime of the subscription. A finite retry list could leave a tab stale
+        // forever after a prolonged outage, even after the network recovered.
+        const delay = retryDelayForAttempt(retryAttempt)
+        retryAttempt = nextRetryAttempt(retryAttempt)
+        retryTimer = setTimeout(() => {
+          retryTimer = undefined
+          void load()
+        }, delay)
+      }
+
+      const load = async () => {
+        if (stopped) return
+        // Realtime events can trigger overlapping reads. Only the newest read is
+        // allowed to publish its snapshot, otherwise a slow older SELECT can roll
+        // the UI back after a newer update has already arrived.
+        const sequence = ++loadSequence
+        try {
+          // Use a primary-key range instead of LIKE. The '/' separator is
+          // immediately before '0' in ASCII, so [collection/, collection0)
+          // covers the complete collection prefix and can use docs_pkey.
+          // Keep the direct-child guard below so nested records remain excluded.
+          const prefix = collection + '/'
+          const upperBound = collection + '0'
+          const { data, error } = await sb.from('docs')
+            .select('path,data')
+            .gte('path', prefix)
+            .lt('path', upperBound)
+          if (stopped || sequence !== loadSequence) return
+          if (error) {
+            reportError(error)
+            scheduleRetry()
+            return
+          }
+
+          if (retryTimer) clearTimeout(retryTimer)
+          retryTimer = undefined
+          retryAttempt = 0
+          lastErrorMessage = ''
+          const docs: Doc[] = (data || [])
+            .filter(r => isDirectChild(collection, r.path))
+            .map(r => ({ id: r.path.slice(collection.length + 1), data: r.data }))
+          cb(docs)
+        } catch (error) {
+          if (stopped || sequence !== loadSequence) return
+          reportError(error)
+          scheduleRetry()
+        }
+      }
+
+      const queueRefresh = () => {
+        if (stopped) return
+        if (refreshTimer) clearTimeout(refreshTimer)
+        refreshTimer = setTimeout(() => {
+          refreshTimer = undefined
+          void load()
+        }, 85)
+      }
+
+      const token = Symbol(collection)
+      realtimeListeners.set(token, {
+        collections: [collection],
+        refresh: queueRefresh,
+        onRealtimeError: (status, error) => {
+          reportError(error || new Error(`Realtime subscription status: ${status}`))
+          scheduleRetry()
+        },
+      })
+      ensureSharedDocsChannel()
+      void load()
+
+      return () => {
+        stopped = true
+        loadSequence += 1
+        if (retryTimer) clearTimeout(retryTimer)
+        if (refreshTimer) clearTimeout(refreshTimer)
+        realtimeListeners.delete(token)
+        if (realtimeListeners.size === 0 && sharedDocsChannel) {
+          const channel = sharedDocsChannel
+          sharedDocsChannel = null
+          void sb.removeChannel(channel)
+        }
+      }
+    },
+    subscribeMany(collections, cb, onError) {
+      const watchedCollections = [...new Set(collections.map(collection => collection.trim()).filter(Boolean))]
+      let lastErrorMessage = ''
+      let retryAttempt = 0
+      let retryTimer: ReturnType<typeof setTimeout> | undefined
+      let refreshTimer: ReturnType<typeof setTimeout> | undefined
+      let loadSequence = 0
+      let stopped = false
+
+      if (!watchedCollections.length) {
+        cb({})
+        return () => {}
+      }
+
+      const watchedSet = new Set(watchedCollections)
+      const reportError = (error: unknown) => {
+        const detail = error as { message?: string; code?: string; cause?: unknown } | null
+        const message = detail?.message || String(error)
+        const scopedError = Object.assign(new Error(`[shared data: ${watchedCollections.join(', ')}] ${message}`), {
+          collections: watchedCollections,
+          code: detail?.code,
+          cause: error,
+        })
+        if (message !== lastErrorMessage) onError?.(scopedError)
+        lastErrorMessage = message
+      }
+
+      const scheduleRetry = () => {
+        if (stopped || retryTimer) return
+        const delay = retryDelayForAttempt(retryAttempt)
+        retryAttempt = nextRetryAttempt(retryAttempt)
+        retryTimer = setTimeout(() => {
+          retryTimer = undefined
+          void load()
+        }, delay)
+      }
+
+      const load = async (requestedCollections?: string[]) => {
+        if (stopped) return
+        const sequence = ++loadSequence
+        try {
+          const targets = requestedCollections
+            ? [...new Set(requestedCollections)].filter(collection => watchedSet.has(collection))
+            : watchedCollections
+          if (!targets.length) return
+          const grouped: Record<string, Doc[]> = Object.fromEntries(
+            targets.map(collection => [collection, [] as Doc[]]),
+          )
+
+          if (!requestedCollections) {
+            // Initial account hydration: one RLS-scoped read over only the app
+            // collections required for the first snapshot. Do not pull chat,
+            // activity, automation or other on-demand collections into startup.
+            const collectionFilters = targets.map(collection => {
+              if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(collection)) {
+                throw new Error('Invalid collection name in startup subscription.')
+              }
+              return `and(path.gte.${collection}/,path.lt.${collection}0)`
+            })
+            const pageSize = 1000
+            for (let offset = 0; ; offset += pageSize) {
+              const { data, error } = await sb.from('docs')
+                .select('path,data')
+                .or(collectionFilters.join(','))
+                .order('path', { ascending: true })
+                .range(offset, offset + pageSize - 1)
+              if (stopped || sequence !== loadSequence) return
+              if (error) throw error
+              const rows = data || []
+              for (const row of rows) {
+                const slash = row.path.indexOf('/')
+                if (slash <= 0) continue
+                const collection = row.path.slice(0, slash)
+                if (!watchedSet.has(collection) || !isDirectChild(collection, row.path)) continue
+                grouped[collection].push({
+                  id: row.path.slice(slash + 1),
+                  data: row.data,
+                })
+              }
+              if (rows.length < pageSize) break
+            }
+          } else {
+            // Once hydrated, update only collections affected by a specific
+            // Realtime event. This keeps ordinary writes from re-reading the
+            // whole account snapshot.
+            const results = await Promise.all(targets.map(async collection => {
+              const prefix = collection + '/'
+              const upperBound = collection + '0'
+              const { data, error } = await sb.from('docs')
+                .select('path,data')
+                .gte('path', prefix)
+                .lt('path', upperBound)
+              if (error) throw error
+              return {
+                collection,
+                docs: (data || [])
+                  .filter(row => isDirectChild(collection, row.path))
+                  .map(row => ({ id: row.path.slice(collection.length + 1), data: row.data })),
+              }
+            }))
+            if (stopped || sequence !== loadSequence) return
+            for (const result of results) grouped[result.collection] = result.docs
+          }
+
+          if (stopped || sequence !== loadSequence) return
+          if (retryTimer) clearTimeout(retryTimer)
+          retryTimer = undefined
+          retryAttempt = 0
+          lastErrorMessage = ''
+          cb(grouped)
+        } catch (error) {
+          if (stopped || sequence !== loadSequence) return
+          reportError(error)
+          scheduleRetry()
+        }
+      }
+
+      const pendingRefreshes = new Set<string>()
+      let refreshEverything = false
+      const queueRefresh = (requestedCollections?: string[]) => {
+        if (stopped) return
+        if (!requestedCollections) {
+          refreshEverything = true
+          pendingRefreshes.clear()
+        } else if (!refreshEverything) {
+          requestedCollections.forEach(collection => pendingRefreshes.add(collection))
+        }
+        if (refreshTimer) clearTimeout(refreshTimer)
+        refreshTimer = setTimeout(() => {
+          refreshTimer = undefined
+          const scope = refreshEverything ? undefined : [...pendingRefreshes]
+          refreshEverything = false
+          pendingRefreshes.clear()
+          void load(scope)
+        }, 100)
+      }
+
+      const token = Symbol('collections')
+      realtimeListeners.set(token, {
+        collections: watchedCollections,
+        refresh: queueRefresh,
+        onRealtimeError: (status, error) => {
+          reportError(error || new Error(`Realtime subscription status: ${status}`))
+          scheduleRetry()
+        },
+      })
+      ensureSharedDocsChannel()
+      void load()
+
+      return () => {
+        stopped = true
+        loadSequence += 1
+        if (retryTimer) clearTimeout(retryTimer)
+        if (refreshTimer) clearTimeout(refreshTimer)
+        realtimeListeners.delete(token)
+        if (realtimeListeners.size === 0 && sharedDocsChannel) {
+          const channel = sharedDocsChannel
+          sharedDocsChannel = null
+          void sb.removeChannel(channel)
+        }
+      }
+    },
+  }
+  return { store, sb }
+}

@@ -1,0 +1,152 @@
+# Quorlyth
+
+**An operating system for fanbases.** Quorlyth helps creators turn a noisy audience into focused communities where people can share ideas, collaborate, and help creators decide what deserves to move forward.
+
+- **Live app:** https://quorlyth.vercel.app
+- **Source:** https://github.com/Kenny01-code/quorlyth
+- **Assessment brief and acceptance checklist:** [ASSESSMENT.md](./ASSESSMENT.md)
+- **System architecture and workflow diagrams:** [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- **Production readiness audit:** [docs/PRODUCTION-READINESS.md](./docs/PRODUCTION-READINESS.md)
+
+## The problem
+
+Creators receive more messages, ideas, collaboration requests, and opportunities than they can review one by one. Valuable ideas and contributors can get lost in the noise.
+
+Quorlyth organizes that flow:
+
+**Followers → Interest communities → Ideas → Collaboration → AI-assisted surfacing → Creator decisions → Promotion**
+
+## What is in the current codebase
+
+The React application includes routes and screens for the landing page, sign-in, onboarding, dashboard, communities, idea details, creator review queue, promotion preparation, analytics, settings, data administration, access requests, member profiles, and the Quorlyth assistant.
+
+Implemented code paths also cover community creation and membership, idea submission, voting and comments, review statuses, collaboration applications, creator decisions, project/milestone tracking, profile/settings updates, demo mode, and server-side AI endpoints. Availability in the interface is not a guarantee that every workflow has been verified end-to-end in production; see the assessment checklist for the validation still required.
+
+## Tech stack
+
+- React 18, TypeScript, Vite, React Router
+- Supabase Auth and shared data storage (optional dependency)
+- Server-side Node.js AI handlers for Gemini, Grok, and OpenAI
+- Vercel deployment configuration
+- Node's built-in test runner
+
+## Repository map
+
+```text
+.
+├── api/                    # Vercel function entry points for AI routes
+├── public/                 # Static public assets
+├── scripts/                # Project scripts
+├── server/                 # Server-only AI handlers and tests
+├── src/
+│   ├── ai/                 # AI client/integration helpers
+│   ├── bot/                # Quorlyth assistant and voice/workspace UI
+│   ├── components/         # Shared UI and navigation components
+│   ├── data/               # App provider, local/demo data, Supabase adapter
+│   ├── lib/                # Types, utilities, notifications and app helpers
+│   ├── screens/             # Route-level screens
+│   └── styles/              # Application styles
+├── supabase/
+│   ├── migrations/          # Incremental database policy/schema changes
+│   ├── schema.sql           # Base schema/setup reference
+│   └── owner-email-migration.sql
+├── index.html
+├── package.json
+├── vite.config.ts
+└── vercel.json
+```
+
+## Run locally
+
+Use Node.js 22.x. From the repository root in Windows PowerShell:
+
+```powershell
+npm install
+Copy-Item .env.example .env
+```
+
+Set `VITE_SUPABASE_ANON_KEY` in `.env` to the public anon/publishable key from this project's Vercel **Production** environment. The URL in `.env.example` is already pinned to the canonical Quorlyth Supabase project (`tujvptxjmkihwrqbqmyk`). Never use a service-role key in a `VITE_*` variable.
+
+Then start the complete local app with one command:
+
+```powershell
+npm run dev
+```
+
+This starts the Vite web app at exactly http://localhost:5173 and the local AI API at http://localhost:8787. Vite proxies `/api` requests to the AI server, so QuorlythBot's text and voice routes use the local handlers without a second terminal. The command also stops both processes together when you press Ctrl+C.
+
+The startup script validates that both Supabase variables exist and that the URL targets the same Supabase project as production. It refuses to start in local-storage-only mode, which can otherwise show a different account and unrelated data. Vite uses a strict port: when port 5173 is occupied, startup fails instead of silently moving to 5174 and leaving an older app answering at the URL you normally open. Stop the existing Vite process before starting another one.
+
+For a frontend-only session without local AI routes, use `npm run dev:vite`; it applies the same backend and port checks. Do not start `npm run dev:ai` separately while `npm run dev` is already running; the combined command has already started it.
+
+**Important:** Local preview intentionally uses the same production accounts and shared data as the live site. Do not run destructive actions or create test records from localhost. Use a separate Supabase project for isolated testing.
+
+### Match the deployed app locally
+
+- Use the same Git commit as the production deployment when you want the same screens and code. The current production deployment is sourced from `Kenny01-code/quorlyth` on `main`.
+- The normal local dev commands are pinned to the production Supabase project so the same active account and shared data are used. Add `http://localhost:5173` to the Supabase Auth redirect allow-list. Use only the public anon/publishable key in browser variables; never put the service-role key in a `VITE_*` variable.
+- Configure the same server-side AI provider keys in local `.env` (for example `GEMINI_API_KEY`, `XAI_API_KEY`, `OPENAI_API_KEY`, and `ELEVENLABS_API_KEY`) to reproduce the deployed bot features. Keep these secrets server-side.
+- Local code and environment settings do not start a second copy of the production automation worker. When local changes are written to the same Supabase project, its deployed database triggers and worker can still process them. Use a separate development Supabase project for isolated automation testing.
+
+## Environment variables
+
+Start with the names in [`.env.example`](./.env.example). Common AI settings are:
+
+- `AI_PROVIDER` — `auto`, `gemini`, `grok`, or `openai`
+- `GEMINI_API_KEY`
+- `XAI_API_KEY`
+- `OPENAI_API_KEY`
+- `YOUTUBE_API_KEY` — optional, server-only YouTube Data API v3 evidence for live idea reviews. Missing keys, quota limits, and API failures do not block AI scoring.
+  - The server caches identical queries for six hours, limits cache-miss search calls per warm instance, and stops after quota errors. Google separately enforces the project-wide search.list quota (100 calls/day by default).
+  - The review queue displays direct per-video counts only; it does not calculate averages or aggregate metrics. Stored video evidence and its YouTube-specific rationale expire after 29 days, then the scheduled Supabase retention job removes them.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Provider keys and `YOUTUBE_API_KEY` must remain server-side. Never prefix these secrets with `VITE_`. Do not commit `.env`, paste API keys into source files, or expose secret keys in browser code. OpenAI is currently used for live voice/natural speech paths; check the implementation and provider availability before assuming every modality is supported by every provider.
+
+## Supabase setup
+
+1. Create a Supabase project.
+2. Review `supabase/schema.sql` and the incremental SQL files under `supabase/migrations/` against your intended database before applying them.
+3. Enable the authentication providers you want to support.
+4. Set the Supabase URL and public/anon key in your local environment and configure the correct local/deployed redirect URLs in Supabase Auth.
+5. Configure equivalent production environment variables in Vercel.
+
+**Production safety:** the base schema is a setup reference, not a substitute for reviewing the current production policies. Apply migrations deliberately and do not blindly re-run broad policy definitions against an existing production database.
+
+## Workflow automation and deadlines
+
+Production automation runs on the server after a workflow is activated. Supported product events are placed on a durable queue and processed by the authenticated automation worker. The worker also checks project, task and milestone due dates, emitting a single `deadline.reached` event per record/deadline pair while the work item remains active or unfinished. Configure a workflow with the `Deadline reached alert` template and an in-app notification action to receive the safest first deadline alert. The builder's `Run sample test` button executes actions immediately with sample data; it does not simulate waiting for a real due date. A deadline event never auto-completes or deletes the underlying work item.
+
+## Tests and build
+
+```powershell
+npm test
+npm run typecheck
+npm run build
+```
+
+The latest local verification recorded for the reliability/collaboration change set was **6 tests passing** and a successful production build. Bundle-size warnings were reported for some chunks; this is not the same as a live production smoke test. Re-run the commands above against the current checkout before release.
+
+## Dedicated cloud AI service
+
+The persistent AI API can run separately from the static website:
+
+- Start command: `npm start` (or `npm run start:ai`)
+- Health check: `/healthz`
+- The service binds to Railway's assigned `PORT` and listens on `0.0.0.0`.
+- Configure `AI_ALLOWED_ORIGINS=https://quorlyth.vercel.app` and `AI_RATE_LIMIT_PER_MINUTE=120` as Railway variables.
+- Set provider secrets directly in the cloud host's secret-variable UI. Never commit keys or expose them in a `VITE_*` variable.
+- Once the service has a public HTTPS URL, set `VITE_AI_API_BASE_URL` to that origin in the Vercel production environment and redeploy the frontend. Leave it unset until the AI service is live; the frontend then continues using the existing same-origin Vercel API routes.
+
+Required provider variables depend on features in use: one or more of `GEMINI_API_KEY`, `XAI_API_KEY`, `OPENAI_API_KEY`; `ELEVENLABS_API_KEY` for selected ElevenLabs speech; `YOUTUBE_API_KEY` for YouTube enrichment; and `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (or their `SUPABASE_URL` / `SUPABASE_ANON_KEY` aliases) for authenticated server-side bot context. Keep the site's existing Vercel AI routes in place as the safe fallback during rollout.
+
+## Deployment
+
+The production domain is https://quorlyth.vercel.app. A successful Vercel build only proves that the built artifact was created; it does not prove authentication, Supabase policies, AI provider keys, or every collaboration flow works in production.
+
+The Vercel project has previously received CLI-based deployments. Confirm the deployment's commit SHA and Git integration before assuming a push to `main` automatically deploys. The intended long-term setup is to connect this project to the GitHub repository and production branch, configure environment variables in Vercel, and verify each production deployment in the Vercel dashboard.
+
+## Project requirements
+
+See [ASSESSMENT.md](./ASSESSMENT.md) for the original problem statement, MVP requirements, user journey, acceptance checklist, and honest verification status.

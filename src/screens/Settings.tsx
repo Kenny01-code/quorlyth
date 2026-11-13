@@ -1,0 +1,225 @@
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Icon, GoogleG } from '../lib/Icon'
+import { Logo } from '../lib/Logo'
+import { Gate } from '../components/Gate'
+import { ShareCard } from '../components/ShareCard'
+import { Av, Chip, Head } from '../components/ui'
+import { useApp } from '../data/AppProvider'
+import { cn, when } from '../lib/util'
+import { useDraftState } from '../lib/useDraftState'
+import { useUserState } from '../lib/userState'
+import { useNotifs } from '../lib/notifs'
+import { BackupRestore } from '../components/BackupRestore'
+import { socialShareUrl } from '../lib/socialShare'
+import { SocialAccountsSettings } from '../components/SocialAccountsSettings'
+import '../styles/social-sharing.css'
+
+export function Settings() {
+  return <Gate><Inner /></Gate>
+}
+
+function Inner() {
+  const a = useApp()
+  const userState = useUserState()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const notifications = useNotifs(a, userState.st)
+  const s = a.data.settings || {}
+  const [tab, setTab] = useState(() => searchParams.get('tab') === 'social' ? (a.platformAdmin ? 6 : 2) : a.platformAdmin && searchParams.get('tab') === 'requests' ? 2 : 0)
+  const socialTab = a.platformAdmin ? 6 : 2
+  const initialSpace = { name: s.name || '', tag: s.tag || '', ann: s.ann || '', appr: !!s.appr }
+  const [spaceDraft, setSpaceDraft, clearSpaceDraft] = useDraftState(`q-draft:${a.me?.id}:settings:space`, initialSpace)
+  const { name, tag, ann, appr } = spaceDraft
+  const setName = (name: string) => setSpaceDraft(d => ({ ...d, name }))
+  const setTag = (tag: string) => setSpaceDraft(d => ({ ...d, tag }))
+  const setAnn = (ann: string) => setSpaceDraft(d => ({ ...d, ann }))
+  const setAppr = (appr: boolean) => setSpaceDraft(d => ({ ...d, appr }))
+  const initialWeights = [s.wo ?? 40, s.wf ?? 25, s.wr ?? 35]
+  const [w, setW, clearWeightsDraft] = useDraftState(`q-draft:${a.me?.id}:settings:weights`, initialWeights)
+  const [emails, setEmails, clearInviteDraft] = useDraftState(`q-draft:${a.me?.id}:settings:invite`, '')
+  const url = location.origin
+  const inviteMessage = 'Join my space on Quorlyth: ' + url
+  const text = encodeURIComponent(inviteMessage)
+  const tabs = a.platformAdmin ? ['Space', 'AI weights', 'Requests', 'Invite', 'Personal', 'Backup & restore', 'Connected accounts'] : ['Personal', 'Backup & restore', 'Connected accounts']
+  const reqs = [...a.data.requests].sort((x, y) => y.at - x.at)
+  const openReqs = reqs.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at })
+  const unreadRequestKeys = notifications.filter(n => n.kind === 'settings' && n.unread).map(n => n.key)
+  const trackInviteShare = () => {
+    if (a.backend?.auth.mode !== 'supabase') return
+    void a.backend.store.trackGrowthEvent('invite_link_shared', 'settings-invite').catch(error => {
+      console.warn('Could not record invite sharing:', error)
+    })
+  }
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'social') setTab(socialTab)
+    else if (a.platformAdmin && searchParams.get('tab') === 'requests') setTab(2)
+  }, [searchParams, a.platformAdmin, socialTab])
+  useEffect(() => {
+    if (a.platformAdmin && tab === 2 && unreadRequestKeys.length) void userState.patch({ read: Object.fromEntries(unreadRequestKeys.map(key => [key, true])) })
+  }, [tab, unreadRequestKeys.join('|'), a.platformAdmin])
+
+  return (
+    <>
+      <Head kicker="Settings" title="Make it yours." />
+      <div className="grid q" style={{ gridTemplateColumns: '.6fr 1.4fr' }}>
+        <div className="glass" style={{ padding: 12 }}>
+          {tabs.map((t, i) => <div key={t} className={cn('row', tab === i && 'on')} tabIndex={0} onClick={() => { setTab(i); setSearchParams(i === 2 && a.platformAdmin ? { tab: 'requests' } : i === socialTab ? { tab: 'social' } : {}, { replace: true }) }} onKeyDown={e => { if (e.key === 'Enter') { setTab(i); setSearchParams(i === 2 && a.platformAdmin ? { tab: 'requests' } : i === socialTab ? { tab: 'social' } : {}, { replace: true }) } }}><div className="t"><h3 style={{ fontSize: 15 }}>{t}</h3></div>{a.platformAdmin && i === 2 && openReqs.length > 0 && <b className={cn('nav-count', unreadRequestKeys.length > 0 && 'pulse')}>{openReqs.length > 9 ? '9+' : openReqs.length}</b>}</div>)}
+        </div>
+        <div className="glass pad">
+          {(!a.platformAdmin && tab === 0 || a.platformAdmin && tab === 4) && <PersonalSettings />}
+          {(!a.platformAdmin && tab === 1 || a.platformAdmin && tab === 5) && <BackupRestore />}
+          {tab === socialTab && <SocialAccountsSettings />}
+          {a.platformAdmin && tab === 0 && <>
+            <h3>Your space</h3><p className="dim" style={{ marginTop: 4 }}>Unfinished settings are saved as a draft on this device.</p>
+            <label className="field"><span>Space name</span><input value={name} maxLength={60} onChange={e => setName(e.target.value)} placeholder="Your name or brand" /></label>
+            <label className="field"><span>One line about it</span><input value={tag} maxLength={120} onChange={e => setTag(e.target.value)} placeholder="Where my community shapes what comes next" /></label>
+            <label className="field"><span>Announcement</span><textarea value={ann} maxLength={240} onChange={e => setAnn(e.target.value)} placeholder="A note everyone sees on the dashboard" /></label>
+            <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve who can post</h3><p className="dim">People must be approved before they share ideas</p></div><button className={cn('tg', appr && 'on')} role="switch" aria-checked={appr} aria-label="Approve who can post" onClick={() => setAppr(!appr)}><i /></button></div>
+            <div className="acts"><button className="btn p" onClick={async () => { if (!name.trim()) return a.toast('Give your space a name'); if (await a.saveSettings({ name: name.trim(), tag: tag.trim(), ann: ann.trim(), appr })) clearSpaceDraft(spaceDraft) }}><Icon name="save" size={16} />Save changes</button><button className="btn" onClick={() => clearSpaceDraft(initialSpace)}><Icon name="rotate" size={16} />Discard draft</button></div>
+          </>}
+          {a.platformAdmin && tab === 1 && <>
+            <h3>How QuorlythBot ranks ideas</h3><p className="dim" style={{ margin: '6px 0 10px' }}>Set how much each signal matters.</p>
+            {['Originality', 'Feasibility', 'Audience relevance'].map((l, i) => <div key={l} className="set" style={{ display: 'block' }}><div style={{ display: 'flex', justifyContent: 'space-between' }}><h3 style={{ fontSize: 15 }}>{l}</h3><span>{w[i]}%</span></div><input type="range" min={0} max={100} value={w[i]} aria-label={l} style={{ marginTop: 18 }} onChange={e => setW(w.map((x, k) => (k === i ? +e.target.value : x)))} /></div>)}
+            <div className="acts"><button className="btn p" onClick={async () => { if (await a.saveSettings({ wo: w[0], wf: w[1], wr: w[2] })) clearWeightsDraft(w) }}>Save weights</button><button className="btn" onClick={async () => { setW([40, 25, 35]); if (await a.saveSettings({ wo: 40, wf: 25, wr: 35 })) clearWeightsDraft([40, 25, 35]) }}><Icon name="rotate" size={16} />Reset</button></div>
+          </>}
+          {a.platformAdmin && tab === 2 && <>
+            <h3>Platform access requests</h3><p className="dim" style={{ marginTop: 4 }}>Only platform administrators can review requests to enter Quorlyth. Community join requests are managed inside each community.</p>
+            {reqs.length ? reqs.map(r => {
+              const d = a.data.decisions[r.id]; const open = !d || d.at < r.at
+              return (
+                <div key={r.id} className="set" style={{ alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: 12 }}><div><Av id={r.id} size={38} /></div><div><h3 style={{ fontSize: 15 }}>{a.nm(r.id)}</h3><p className="dim">{(r.platforms || []).join(', ')}{r.aud ? ', ' + r.aud : ''}, {when(r.at)}</p>{r.note && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.note}</p>}</div></div>
+                  <div className="acts" style={{ margin: 0 }}>{open ? <><button className="btn p" style={{ padding: '9px 18px' }} onClick={() => a.decide(r.id, 'approved')}>Approve</button><button className="btn" style={{ padding: '9px 18px' }} onClick={() => a.decide(r.id, 'declined')}>Decline</button></> : <span className="chip">{d!.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
+                </div>
+              )
+            }) : <p className="mut" style={{ padding: '20px 0' }}>No requests yet.</p>}
+          </>}
+          {a.platformAdmin && tab === 3 && <>
+            <h3>Let people in</h3><p className="dim" style={{ margin: '6px 0 16px' }}>People sign in with Google or their email. Share the link, or approve them yourself under Requests.</p>
+            <div className="grid g3" style={{ marginBottom: 6 }}>
+              <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Invite by email</h3><label className="field"><span>Their emails, separated by commas</span><input value={emails} onChange={e => setEmails(e.target.value)} placeholder="friend@email.com" /></label><div className="acts"><a className="btn p" href={`mailto:${encodeURIComponent(emails.replace(/\s+/g, ''))}?subject=${encodeURIComponent('Join me on Quorlyth')}&body=${text}`} onClick={() => clearInviteDraft('')}><Icon name="mail" size={16} />Write the email</a><button className="chip" onClick={() => clearInviteDraft('')}>Discard draft</button></div></div>
+              <div className="glass pad q-social-invite" style={{ padding: 18 }}>
+                <h3 style={{ fontSize: 15 }}>Share across social channels</h3>
+                <p className="dim" style={{ margin: '6px 0 10px' }}>Open a network's share composer. Quorlyth does not need your social password or store a social login.</p>
+                <p className="lnk" style={{ marginTop: 10 }}>{url}</p>
+                <div className="acts">
+                  <button className="btn p" onClick={() => navigator.clipboard.writeText(url).then(() => { trackInviteShare(); a.toast('Link copied') }).catch(() => a.toast('Could not copy the link'))}><Icon name="link" size={16} />Copy link</button>
+                  <a className="btn" href={socialShareUrl('x', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>X</a>
+                  <a className="btn" href={socialShareUrl('facebook', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Facebook</a>
+                  <a className="btn" href={socialShareUrl('linkedin', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={() => { trackInviteShare(); void navigator.clipboard.writeText(inviteMessage).catch(() => {}) }}>LinkedIn</a>
+                  <a className="btn" href={socialShareUrl('threads', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Threads</a>
+                  <a className="btn" href={socialShareUrl('bluesky', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Bluesky</a>
+                  <a className="btn" href={socialShareUrl('reddit', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Reddit</a>
+                  <a className="btn" href={socialShareUrl('whatsapp', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>WhatsApp</a>
+                  <a className="btn" href={socialShareUrl('telegram', inviteMessage, url, 'Join my Quorlyth space')} target="_blank" rel="noopener noreferrer" onClick={trackInviteShare}>Telegram</a>
+                  <button className="btn" onClick={() => { void navigator.clipboard.writeText(inviteMessage).then(() => { trackInviteShare(); a.toast('Invite copied. Paste it into Instagram.') }).catch(() => a.toast('Could not copy the invite.')) }}>Copy for Instagram</button>
+                  <button className="btn" onClick={() => { void navigator.clipboard.writeText(inviteMessage).then(() => { trackInviteShare(); a.toast('Invite copied. Paste it into TikTok.') }).catch(() => a.toast('Could not copy the invite.')) }}>Copy for TikTok</button>
+                </div>
+              </div>
+              <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Approve people yourself</h3><p className="dim" style={{ margin: '8px 0 12px' }}>Turn on approval and members send a request you can accept under Requests.</p><div className="acts" style={{ margin: 0 }}><Chip onClick={() => setTab(0)}>Space settings</Chip><Chip onClick={() => setTab(2)}>View requests</Chip></div></div>
+            </div>
+            <ShareCard title="Scan to join" url={url} sub="Anyone you share this with signs in first." />
+          </>}
+        </div>
+      </div>
+    </>
+  )
+}
+
+
+function PersonalSettings() {
+  const a = useApp()
+  const userState = useUserState()
+  const profile = a.data.profiles[a.me?.id || ''] || {}
+  const [name, setName] = useState(profile.name || a.me?.name || '')
+  const [headline, setHeadline] = useState(profile.head || '')
+  const [bio, setBio] = useState(profile.bio || '')
+  const [photo, setPhoto] = useState(profile.photo || a.me?.avatarUrl || '')
+  const preferences = userState.st.preferences || {}
+  const [visibility, setVisibility] = useState<'public' | 'members' | 'private'>(preferences.profileVisibility || 'members')
+  const [emailNotifications, setEmailNotifications] = useState(preferences.emailNotifications ?? true)
+  const [desktopNotifications, setDesktopNotifications] = useState(preferences.desktopNotifications ?? true)
+  const [soundEnabled, setSoundEnabled] = useState(preferences.sound ?? true)
+  const [messageNotifications, setMessageNotifications] = useState(preferences.messageNotifications ?? true)
+  const [messageSounds, setMessageSounds] = useState(preferences.messageSounds ?? preferences.sound ?? true)
+  useEffect(() => {
+    setName(profile.name || a.me?.name || '')
+    setHeadline(profile.head || '')
+    setBio(profile.bio || '')
+    setPhoto(profile.photo || a.me?.avatarUrl || '')
+  }, [a.me?.id, profile.name, profile.head, profile.bio, profile.photo])
+  useEffect(() => {
+    setVisibility(preferences.profileVisibility || 'members')
+    setEmailNotifications(preferences.emailNotifications ?? true)
+    setDesktopNotifications(preferences.desktopNotifications ?? true)
+    setSoundEnabled(preferences.sound ?? true)
+    setMessageNotifications(preferences.messageNotifications ?? true)
+    setMessageSounds(preferences.messageSounds ?? preferences.sound ?? true)
+  }, [a.me?.id, userState.st.preferences])
+  return <>
+    <h3>Your personal settings</h3>
+    <p className="dim" style={{ margin: '6px 0 16px' }}>These preferences belong to your account, not to a community or another member. They sync through your Quorlyth account.</p>
+    <label className="field"><span>Display name</span><input value={name} maxLength={80} onChange={e => setName(e.target.value)} placeholder="Your display name" /></label>
+    <label className="field"><span>Headline</span><input value={headline} maxLength={120} onChange={e => setHeadline(e.target.value)} placeholder="What you do or what you care about" /></label>
+    <label className="field"><span>About you</span><textarea value={bio} maxLength={600} onChange={e => setBio(e.target.value)} placeholder="A short introduction for your profile" /></label>
+    <label className="field"><span>Avatar image URL</span><input value={photo} maxLength={1000} onChange={e => setPhoto(e.target.value)} placeholder="https://…" inputMode="url" /></label>
+    <label className="field"><span>Profile visibility</span><select value={visibility} onChange={e => setVisibility(e.target.value as typeof visibility)}><option value="public">Public profile</option><option value="members">Signed-in members</option><option value="private">Private profile</option></select></label>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Email notifications</h3><p className="dim">Your preference for optional email updates.</p></div><button className={cn('tg', emailNotifications && 'on')} role="switch" aria-checked={emailNotifications} onClick={() => setEmailNotifications(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Desktop notifications</h3><p className="dim">Browser notifications when supported and permitted.</p></div><button className={cn('tg', desktopNotifications && 'on')} role="switch" aria-checked={desktopNotifications} onClick={() => setDesktopNotifications(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Notification sounds</h3><p className="dim">Sounds for general activity alerts.</p></div><button className={cn('tg', soundEnabled && 'on')} role="switch" aria-checked={soundEnabled} aria-label="Toggle general notification sounds" onClick={() => setSoundEnabled(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Message notifications</h3><p className="dim">Turn incoming message alerts on or off without changing your unread messages.</p></div><button className={cn('tg', messageNotifications && 'on')} role="switch" aria-checked={messageNotifications} aria-label="Toggle message notifications" onClick={() => setMessageNotifications(v => !v)}><i /></button></div>
+    <div className="set"><div><h3 style={{ fontSize: 15 }}>Message sounds</h3><p className="dim">Play a sound when an incoming message arrives. This preference is separate from general activity alerts.</p></div><button className={cn('tg', messageSounds && 'on')} role="switch" aria-checked={messageSounds} aria-label="Toggle message sounds" disabled={!messageNotifications} onClick={() => setMessageSounds(v => !v)}><i /></button></div>
+    <div className="acts"><button className="btn p" onClick={async () => {
+      const saved = await a.saveProfile({ name: name.trim(), head: headline.trim(), bio: bio.trim(), photo: photo.trim() })
+      if (!saved) return
+      await userState.patch({ preferences: { profileVisibility: visibility, emailNotifications, desktopNotifications, sound: soundEnabled, inAppNotifications: false, messageNotifications, messagePopups: false, messageSounds } })
+      a.toast('Personal settings saved')
+    }}><Icon name="save" size={16} />Save personal settings</button></div>
+    <div className="glass pad" style={{ marginTop: 20, padding: 18, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ width: 62, height: 62, flex: '0 0 62px', display: 'grid', placeItems: 'center', border: '1px solid rgba(255,255,255,.12)', borderRadius: 16, background: 'rgba(255,255,255,.025)' }}>
+        <Logo size={48} />
+      </div>
+      <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+        <h3 style={{ fontSize: 15, marginBottom: 4 }}>Quorlyth logo</h3>
+        <p className="dim" style={{ fontSize: 12, lineHeight: 1.5, margin: 0 }}>Download the Quorlyth site mark as a high-resolution PNG image with a transparent background.</p>
+      </div>
+      <button className="btn p" type="button" aria-label="Download the Quorlyth site logo as a PNG" onClick={async () => {
+        try {
+          const image = new Image()
+          image.src = '/quorlyth-logo.svg'
+          await image.decode()
+
+          const canvas = document.createElement('canvas')
+          canvas.width = 512
+          canvas.height = 512
+          const context = canvas.getContext('2d')
+          if (!context) throw new Error('PNG export is not available in this browser')
+          context.clearRect(0, 0, 512, 512)
+          context.drawImage(image, 0, 0, 512, 512)
+
+          const png = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG encoding failed')), 'image/png')
+          })
+          const url = URL.createObjectURL(png)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = 'quorlyth-logo.png'
+          link.style.display = 'none'
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+          a.toast('Quorlyth logo downloaded as PNG')
+        } catch (error) {
+          console.error('Could not export Quorlyth logo as PNG:', error)
+          a.toast('Could not download the logo. Please try again.')
+        }
+      }}>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3" /></svg>
+        Download PNG
+      </button>
+    </div>
+    <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>Notification preferences are saved to your account. Email delivery depends on configured notification services.</p>
+  </>
+}

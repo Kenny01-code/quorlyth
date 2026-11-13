@@ -1,0 +1,17 @@
+/* Tiny field-side QuorlythBot: keep streamed suggestions readable and visibly in progress. */
+.q-writing-stream-hint {
+  display:flex; align-items:center; gap:8px;
+  margin:7px 0 0; padding:8px 10px;
+  border:1px solid rgba(255,255,255,.08); border-radius:10px;
+  background:rgba(255,255,255,.025); color:#D7CBB9;
+  font-size:10px; line-height:1.5;
+}
+.q-writing-stream-hint::before {
+  content:""; display:block; width:6px; height:6px; flex:none;
+  border-radius:50%; background:#fff; box-shadow:0 0 10px rgba(255,255,255,.45);
+  animation:qWritingStreamPulse 1.15s ease-in-out infinite;
+}
+.q-writing-option:disabled { opacity:.78; cursor:wait; }
+.q-writing-option:disabled .q-writing-option-use { opacity:.4; }
+@keyframes qWritingStreamPulse { 0%,100% { opacity:.45; transform:scale(.85); } 50% { opacity:1; transform:scale(1.1); } }
+@media(prefers-reduced-motion:reduce) { .q-writing-stream-hint::before { animation:none; } }
