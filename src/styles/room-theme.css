@@ -67,7 +67,7 @@ body::before {
   background: transparent !important;
 }
 
-#root :is(h1, h2, h3, h4, h5, h6) {
+#root :is(h1, h2, h3, h4, h5, h6):not(.q-writeup *) {
   color: var(--q-bone) !important;
   font-family: "Iowan Old Style", "Baskerville", "Palatino Linotype", "Book Antiqua", Georgia, serif !important;
   font-weight: 400 !important;
@@ -76,10 +76,10 @@ body::before {
   text-wrap: balance;
 }
 
-#root h1 { font-size: clamp(2.5rem, 5.8vw, 5rem); }
-#root h2 { font-size: clamp(1.9rem, 3.8vw, 3.2rem); }
+#root h1:not(.q-writeup *) { font-size: clamp(2.5rem, 5.8vw, 5rem); }
+#root h2:not(.q-writeup *) { font-size: clamp(1.9rem, 3.8vw, 3.2rem); }
 
-#root :is(p, li, dd, dt, blockquote, figcaption, label) { line-height: 1.65; }
+#root :is(p, li, dd, dt, blockquote, figcaption, label):not(.q-writeup *) { line-height: 1.65; }
 #root :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow) { color: rgba(240, 234, 217, .76) !important; }
 
 #root main#main {
@@ -95,7 +95,7 @@ body::before {
 #root #main > section.on { min-height: 50vh; }
 
 /* A single material language: charcoal foundations, bone surfaces, terracotta actions, brass details. */
-#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]) {
+#root :is(.glass, .card, .panel, .lift, .idea, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]) {
   border: 1px solid var(--q-edge-dark) !important;
   border-radius: 20px;
   background: var(--q-bone) !important;
@@ -105,12 +105,12 @@ body::before {
   backdrop-filter: none;
 }
 
-#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)::before {
+#root :is(.glass, .card, .panel, .lift, .idea, .sheet, .dialog, .popover, .dropdown, .menu)::before {
   background: linear-gradient(110deg, rgba(255, 255, 255, .24), transparent 30%, transparent 76%, rgba(249, 115, 22, .07));
 }
 
 /* Text inside the shared warm-bone material must use ink, never translucent white. */
-#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
+#root #main :is(.glass, .card, .panel, .lift, .idea, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
   :is(h1, h2, h3, h4, h5, h6, p, li, dd, dt, blockquote, figcaption, label, small, span, b, strong, em, time, output, summary, button, a, .mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow)
   :not(.chat-page *)
   :not(.wa-preview-node *)
@@ -149,13 +149,14 @@ body::before {
   :not(.sw-comment > div *)
   :not(.sw-evidence-attachment *)
   :not(.sw-assignee-picker__list *)
-  :not(.sw-commit-preview *) {
+  :not(.sw-commit-preview *)
+  :not(.q-writeup) {
   color: var(--q-ink) !important;
   opacity: 1;
 }
 
 /* Supporting copy remains softer than headings, but is still comfortably readable. */
-#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
+#root #main :is(.glass, .card, .panel, .lift, .idea, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
   :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow, small, figcaption, time)
   :not(.chat-page *)
   :not(.wa-preview-node *)
@@ -193,12 +194,13 @@ body::before {
   :not(.sw-team-member *)
   :not(.sw-comment > div *)
   :not(.sw-evidence-attachment *)
-  :not(.sw-assignee-picker__list *) {
+  :not(.sw-assignee-picker__list *)
+  :not(.q-writeup) {
   color: var(--q-ink-soft) !important;
 }
 
 /* Glyphs on warm-bone cards use deep orange for legibility. */
-#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
+#root #main :is(.glass, .card, .panel, .lift, .idea, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
   :is(.ic, .quorlyth-glyph, svg:not(.q-brand-svg):not(.google-brand-svg):not([class*="brand"]):not([class*="logo"]):not([class*="recharts"]):not([class*="chart"]):not([class*="success"]):not([class*="error"]):not([class*="warning"]):not([class*="danger"]))
   :not(.chat-page *)
   :not(.wa-preview-node *)
@@ -237,7 +239,8 @@ body::before {
   :not(.sw-comment *)
   :not(.sw-evidence-attachment *)
   :not(.sw-assignee-picker__list *)
-  :not(.sw-commit-preview *) {
+  :not(.sw-commit-preview *)
+  :not(.q-writeup) {
   color: var(--q-icon) !important;
   opacity: 1 !important;
 }
@@ -256,13 +259,13 @@ body::before {
 }
 
 /* Icons on filled orange actions switch to ink so they stay visible. */
-#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+#root #main :is(.glass, .card, .panel, .lift, .idea, .sheet, .dialog, .popover, .dropdown, .menu)
   :is(.btn.p, button.btn.p, .chip.on, button.chip.on)
   :is(.ic, .quorlyth-glyph, svg) {
   color: var(--q-ink) !important;
 }
 
-#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu) :is(a, .link):not(.btn) {
+#root #main :is(.glass, .card, .panel, .lift, .idea, .sheet, .dialog, .popover, .dropdown, .menu) :is(a, .link):not(.btn) {
   color: var(--q-terracotta-link) !important;
 }
 
@@ -501,7 +504,7 @@ body::before {
   text-underline-offset: .18em;
 }
 
-#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu) :is(a, .link):not(.btn) { color: var(--q-terracotta-link) !important; }
+#root :is(.glass, .card, .panel, .lift, .idea, .sheet, .dialog, .popover, .dropdown, .menu) :is(a, .link):not(.btn) { color: var(--q-terracotta-link) !important; }
 #root .bar i { background: linear-gradient(90deg, var(--q-terracotta), var(--q-orange)) !important; }
 
 #root :is(.row, .msg, tr, .list-item):hover { background-color: rgba(184, 91, 64, .07) !important; }
@@ -650,3 +653,51 @@ body::before {
     transition-duration: .01ms !important;
   }
 }
+
+
+/* USER WRITEUPS — content typography is independent of the orange interface theme.
+   Add .q-writeup to idea bodies, comments, briefs, rules, drafts and social copy.
+   This keeps authored wording readable without changing stored content. */
+#root #main .q-writeup {
+  font-family: Inter, "Avenir Next", Avenir, "Segoe UI", sans-serif !important;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.75 !important;
+  letter-spacing: 0 !important;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: none;
+}
+#root #main .q-writeup :is(p, li, dd, dt, blockquote, figcaption) {
+  font-family: inherit !important;
+  font-size: inherit;
+  font-weight: 400;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+  color: inherit !important;
+  white-space: inherit;
+  overflow-wrap: anywhere;
+}
+#root #main .q-writeup :is(h1, h2, h3, h4, h5, h6) {
+  font-family: inherit !important;
+  font-weight: 650 !important;
+  letter-spacing: -.02em !important;
+  line-height: 1.28 !important;
+  color: inherit !important;
+  text-wrap: pretty;
+}
+#root #main .q-writeup h1 { font-size: 1.7em !important; }
+#root #main .q-writeup h2 { font-size: 1.5em !important; }
+#root #main .q-writeup h3 { font-size: 1.25em !important; }
+#root #main .q-writeup h4 { font-size: 1.12em !important; }
+#root #main .q-writeup h5,
+#root #main .q-writeup h6 { font-size: 1em !important; }
+#root #main .q-writeup p { margin: 0 0 .8em; }
+#root #main .q-writeup p:last-child { margin-bottom: 0; }
+#root #main .q-writeup :is(ul, ol) { margin: .45em 0 .9em; padding-left: 1.6em; }
+#root #main .q-writeup li + li { margin-top: .3em; }
+#root #main .q-writeup blockquote { margin: .8em 0; padding: .15em 0 .15em 1em; border-left: 2px solid var(--q-orange); opacity: .9; }
+#root #main .q-writeup :is(pre, code) { font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important; overflow-wrap: anywhere; }
+#root #main .q-writeup a { color: var(--q-terracotta-link) !important; text-underline-offset: 3px; }
+#root #main .q-writeup :is(strong, b) { font-weight: 650; }
