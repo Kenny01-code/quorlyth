@@ -313,7 +313,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                 <div className="ql-milestone-card__title"><p className="ql-eyebrow">Outcome {String(index + 1).padStart(2, '0')}</p><h4>{milestone.title}</h4></div>
                 <span className={'ql-status-chip status-' + milestone.status}><QuorlythGlyph name={milestone.status === 'done' ? 'complete' : milestone.status === 'in_progress' ? 'progress' : 'checkpoint'} size={13} />{STATUS_LABEL[milestone.status]}</span>
               </div>
-              {milestone.description && <p className="ql-milestone-description">{milestone.description}</p>}
+              {milestone.description && <p className="ql-milestone-description q-writeup">{milestone.description}</p>}
               <div className="ql-milestone-tags">
                 <span className={'ql-priority-chip priority-' + priority}><QuorlythGlyph name="priority" size={13} />{PRIORITY_LABEL[priority]}</span>
                 {milestone.dueAt ? <span className={'ql-meta-chip' + (milestoneOverdue ? ' is-alert' : '')}><QuorlythGlyph name="due" size={13} />{milestoneOverdue ? 'Overdue · ' : 'Due · '}{dateLabel(milestone.dueAt)}</span> : <span className="ql-meta-chip"><QuorlythGlyph name="calendar" size={13} />No due date</span>}
