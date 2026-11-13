@@ -436,15 +436,15 @@ test('the QuorlythBot launcher toggles visibility by right-click, with a reversi
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
   ])
-  assert.match(app, /const \\[botLauncherHidden, setBotLauncherHidden\\]/)
+  assert.ok(app.includes('const [botLauncherHidden, setBotLauncherHidden]'))
   assert.ok(app.includes('!intro && !botLoading && !botMounted && createPortal('))
   assert.ok(app.includes('botLauncherHidden ? ('))
   assert.ok(app.includes('className="qbot-launcher-restore"'))
   assert.ok(app.includes('Right-click or click to show QuorlythBot'))
   assert.ok(app.includes('onContextMenu='))
-  assert.match(app, /launcherWasHidden \\|\\| botLauncherHidden/)
+  assert.ok(app.includes('launcherWasHidden || botLauncherHidden'))
   assert.ok(app.includes('quorlyth:launcher-restore'))
-  assert.match(bot, /const \\[launcherHidden, setLauncherHidden\\]/)
+  assert.ok(bot.includes('const [launcherHidden, setLauncherHidden]'))
   assert.ok(bot.includes('launcherHidden ? ('))
   assert.ok(bot.includes('className="qbot-launcher-restore"'))
   assert.ok(bot.includes('Right-click or click to show QuorlythBot'))
