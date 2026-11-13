@@ -181,7 +181,7 @@ test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the 
   assert.match(themes, /export const THEMES/)
   assert.match(robot3d, /from ["']three["']/)
   assert.match(robot, /import\('\.\/robot3d'\)/)
-  assert.match(bot, /<Robot ref=\{robot\} theme=\{theme\}/)
+  assert.match(bot, /<Robot\s+ref=\{robot\}\s+theme=\{theme\}/)
 })
 
 test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', async () => {
