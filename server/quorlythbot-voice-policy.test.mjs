@@ -79,7 +79,7 @@ test('Normal chat starts ElevenLabs speech while the answer is still streaming',
   assert.match(bot, /preferElevenLabsVoice:\s*true/)
 })
 
-test('Automatic page-guide popups are removed and QuorlythBot loads only on explicit request', async () => {
+test('Automatic page-guide popups are removed and QuorlythBot opens after the welcome', async () => {
   const app = await readSource('src/App.tsx')
   assert.doesNotMatch(app, /PageAssist|pageBotPrompt|page-assist|quorlyth:page-assist/)
   assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
