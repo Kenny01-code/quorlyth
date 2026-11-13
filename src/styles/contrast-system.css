@@ -1,0 +1,339 @@
+/* Quorlyth high-contrast system
+   Loaded after the feature styles so the palette is consistent across every route.
+   Authored content is never rewritten; only its presentation is adjusted. */
+
+:root {
+  --k: #151311;
+  --w: #fbf3e7;
+  --g3: #3d332b;
+  --g4: #cbbda9;
+  --g5: #e5d8c6;
+  --g6: #f5ecdf;
+  --line: rgba(251, 243, 231, .22);
+
+  --q-coal: #151311;
+  --q-coal-soft: #211d19;
+  --q-bone: #fbf3e7;
+  --q-bone-deep: #efe2cf;
+  --q-terracotta: #d06a40;
+  --q-terracotta-dark: #8e351d;
+  --q-terracotta-link: #7f2c18;
+  --q-orange: #ff833b;
+  --q-ink: #1c1511;
+  --q-muted: #514338;
+  --q-ink-soft: #514338;
+  --q-icon: #9d3a10;
+  --q-edge-dark: rgba(28, 21, 17, .28);
+  --q-edge-light: rgba(251, 243, 231, .24);
+  --q-shadow: 0 24px 64px -38px rgba(0, 0, 0, .66);
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+html,
+body {
+  background-color: var(--q-coal) !important;
+}
+
+body {
+  color: #f5ecdf !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root,
+#root main#main {
+  color: #f5ecdf;
+}
+
+/* Global headings and helper copy on the charcoal parts of the application. */
+#root :is(h1, h2, h3, h4, h5, h6):not(.q-writeup *):not(#nav *) {
+  color: #f8efe3 !important;
+  font-weight: 500;
+  text-shadow: none;
+}
+
+#root :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow):not(.q-writeup):not(.q-writeup *):not(:is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]) *) {
+  color: #d4c6b4 !important;
+  opacity: 1 !important;
+}
+
+/* Light surfaces: clean bone, dark ink, and secondary text that remains readable. */
+#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]):not(#nav *) {
+  border-color: var(--q-edge-dark) !important;
+  background-color: var(--q-bone) !important;
+  color: var(--q-ink) !important;
+  box-shadow: var(--q-shadow), inset 0 1px 0 rgba(255, 255, 255, .9) !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
+  :is(h1, h2, h3, h4, h5, h6, p, li, dd, dt, blockquote, figcaption, label, small, span, b, strong, em, time, output, summary, .mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow)
+  :not(.q-writeup):not(.q-writeup *)
+  :not(:is(.wa-preview-node, .wa-preview-filter, .wa-preview-action, .wa-ai-build-status, .wa-ai-live-preview, .wa-connected-services, .wa-plain-guide, .wa-runtime-status, .ql-workspace-stat-grid, .ql-workspace-next, .ql-evidence-ledger__notice, .ql-evidence-record, .ql-evidence-review-note, .ql-evidence-file, .ql-assignee-picker__list, .ql-workspace-evidence-notice, .q-work-file, .q-work-readonly, .q-social-share-block, .q-social-direct-publish, .q-work-submission, .q-work-feedback, .promotion-source, .arch-map-shell, .arch-connected-card, .wa-map-canvas-scroll, .q-backup-privacy, .sw-empty-inline, .sw-mini-task, .sw-repo-row, .sw-task-form, .sw-task, .sw-inline-form, .sw-artifact, .sw-team-member, .sw-comment, .sw-evidence-attachment, .sw-assignee-picker__list, .sw-commit-preview) *) {
+  color: var(--q-ink) !important;
+  opacity: 1 !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"])
+  :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow, small, figcaption, time)
+  :not(.q-writeup):not(.q-writeup *)
+  :not(:is(.wa-preview-node, .wa-preview-filter, .wa-preview-action, .wa-ai-build-status, .wa-ai-live-preview, .wa-connected-services, .wa-plain-guide, .wa-runtime-status, .ql-workspace-stat-grid, .ql-workspace-next, .ql-evidence-ledger__notice, .ql-evidence-record, .ql-evidence-review-note, .ql-evidence-file, .ql-assignee-picker__list, .ql-workspace-evidence-notice, .q-work-file, .q-work-readonly, .q-social-share-block, .q-social-direct-publish, .q-work-submission, .q-work-feedback, .promotion-source, .arch-map-shell, .arch-connected-card, .wa-map-canvas-scroll, .q-backup-privacy, .sw-empty-inline, .sw-mini-task, .sw-repo-row, .sw-task-form, .sw-task, .sw-inline-form, .sw-artifact, .sw-team-member, .sw-comment, .sw-evidence-attachment, .sw-assignee-picker__list, .sw-commit-preview) *) {
+  color: var(--q-ink-soft) !important;
+  opacity: 1 !important;
+}
+
+/* Written material chooses its foreground from the surface it is actually on. */
+#root #main .q-writeup {
+  color: #f5ecdf !important;
+  font-family: Inter, "Avenir Next", Avenir, "Segoe UI", sans-serif !important;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.78 !important;
+  letter-spacing: .005em !important;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: none;
+  opacity: 1 !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]).q-writeup,
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]) .q-writeup:not(:is(.wa-preview-node, .wa-preview-filter, .wa-preview-action, .wa-ai-build-status, .wa-ai-live-preview, .wa-connected-services, .wa-plain-guide, .wa-runtime-status, .ql-workspace-stat-grid, .ql-workspace-next, .ql-evidence-ledger__notice, .ql-evidence-record, .ql-evidence-review-note, .ql-evidence-file, .ql-assignee-picker__list, .ql-workspace-evidence-notice, .q-work-file, .q-work-readonly, .q-social-share-block, .q-social-direct-publish, .q-work-submission, .q-work-feedback, .promotion-source, .arch-map-shell, .arch-connected-card, .wa-map-canvas-scroll, .q-backup-privacy, .sw-empty-inline, .sw-mini-task, .sw-repo-row, .sw-task-form, .sw-task, .sw-inline-form, .sw-artifact, .sw-team-member, .sw-comment, .sw-evidence-attachment, .sw-assignee-picker__list, .sw-commit-preview) *) {
+  color: var(--q-ink) !important;
+}
+
+/* Known inset work, evidence, social and automation panels are intentionally dark. */
+#root #main :is(.wa-preview-node, .wa-preview-filter, .wa-preview-action, .wa-ai-build-status, .wa-ai-live-preview, .wa-connected-services, .wa-plain-guide, .wa-runtime-status, .ql-workspace-stat-grid, .ql-workspace-next, .ql-evidence-ledger__notice, .ql-evidence-record, .ql-evidence-review-note, .ql-evidence-file, .ql-assignee-picker__list, .ql-workspace-evidence-notice, .q-work-file, .q-work-readonly, .q-social-share-block, .q-social-direct-publish, .q-work-submission, .q-work-feedback, .promotion-source, .arch-map-shell, .arch-connected-card, .wa-map-canvas-scroll, .q-backup-privacy, .sw-empty-inline, .sw-mini-task, .sw-repo-row, .sw-task-form, .sw-task, .sw-inline-form, .sw-artifact, .sw-team-member, .sw-comment, .sw-evidence-attachment, .sw-assignee-picker__list, .sw-commit-preview) .q-writeup {
+  color: #f4e9da !important;
+}
+
+/* Explicitly protect every child of a writeup from global card typography selectors. */
+#root #main .q-writeup :where(*) {
+  color: inherit !important;
+  font-family: inherit !important;
+  letter-spacing: inherit !important;
+  opacity: 1 !important;
+}
+
+#root #main .q-writeup :is(p, li, dd, dt, blockquote, figcaption) {
+  font-size: inherit;
+  line-height: inherit !important;
+  white-space: inherit;
+  overflow-wrap: anywhere;
+}
+
+#root #main .q-writeup :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: 650 !important;
+  line-height: 1.3 !important;
+  text-wrap: pretty;
+}
+
+#root #main .q-writeup h1 { font-size: 1.7em !important; }
+#root #main .q-writeup h2 { font-size: 1.5em !important; }
+#root #main .q-writeup h3 { font-size: 1.25em !important; }
+#root #main .q-writeup h4 { font-size: 1.12em !important; }
+#root #main .q-writeup :is(h5, h6) { font-size: 1em !important; }
+#root #main .q-writeup p { margin: 0 0 .8em; }
+#root #main .q-writeup p:last-child { margin-bottom: 0; }
+#root #main .q-writeup :is(ul, ol) { margin: .45em 0 .9em; padding-left: 1.6em; }
+#root #main .q-writeup li + li { margin-top: .3em; }
+#root #main .q-writeup blockquote { margin: .8em 0; padding: .15em 0 .15em 1em; border-left: 3px solid var(--q-orange); opacity: 1 !important; }
+#root #main .q-writeup :is(pre, code) { font-family: ui-monospace, SFMono-Regular, Consolas, monospace !important; overflow-wrap: anywhere; }
+#root #main .q-writeup a { color: var(--q-terracotta-link) !important; text-decoration-color: currentColor; text-underline-offset: 3px; }
+#root #main :is(.wa-preview-node, .wa-preview-filter, .wa-preview-action, .wa-ai-build-status, .wa-ai-live-preview, .wa-connected-services, .wa-plain-guide, .wa-runtime-status, .ql-workspace-stat-grid, .ql-workspace-next, .ql-evidence-ledger__notice, .ql-evidence-record, .ql-evidence-review-note, .ql-evidence-file, .ql-assignee-picker__list, .ql-workspace-evidence-notice, .q-work-file, .q-work-readonly, .q-social-share-block, .q-social-direct-publish, .q-work-submission, .q-work-feedback, .promotion-source, .arch-map-shell, .arch-connected-card, .wa-map-canvas-scroll, .q-backup-privacy, .sw-empty-inline, .sw-mini-task, .sw-repo-row, .sw-task-form, .sw-task, .sw-inline-form, .sw-artifact, .sw-team-member, .sw-comment, .sw-evidence-attachment, .sw-assignee-picker__list, .sw-commit-preview) .q-writeup a {
+  color: #ff9a62 !important;
+}
+
+/* Homepage: solid dark lettering on the clay hero, and bright support copy below it. */
+#root #main .hero {
+  background: #d06a40 !important;
+  border-color: rgba(251, 243, 231, .88) !important;
+}
+
+#root #main .hero h1.hero-title {
+  color: #1c1511 !important;
+  font-weight: 550 !important;
+  text-shadow: none !important;
+}
+
+#root #main .hero .hero-copy {
+  color: #211710 !important;
+  opacity: 1 !important;
+  font-weight: 500 !important;
+  text-shadow: none !important;
+}
+
+#root #main .hero .hero-note {
+  color: #fff6e9 !important;
+  opacity: 1 !important;
+  font-weight: 550 !important;
+  text-shadow: 0 1px 2px rgba(21, 19, 17, .5);
+}
+
+#root #main .hero > .chip {
+  color: #1c1511 !important;
+  background: #fbf3e7 !important;
+  border-color: rgba(28, 21, 17, .35) !important;
+  font-weight: 650;
+}
+
+#root #main .hero .btn:not(.p) {
+  color: #1c1511 !important;
+  background: rgba(251, 243, 231, .32) !important;
+  border-color: rgba(28, 21, 17, .52) !important;
+  font-weight: 650 !important;
+}
+
+#root #main .hero .btn.p {
+  color: #fbf3e7 !important;
+  background: #8e351d !important;
+  border-color: #8e351d !important;
+}
+
+#root #main .hero .btn.p :is(svg, .ic) { color: inherit !important; }
+
+/* The rest of the landing page keeps a bright editorial hierarchy on charcoal. */
+#root #main .sec > :is(.mut, .dim, p),
+#root #main .preview-copy :is(.mut, .dim, p:not(.eyebrow)),
+#root #main .ft,
+#root #main .footer-description,
+#root #main .footer-copyright {
+  color: #d4c6b4 !important;
+  opacity: 1 !important;
+}
+
+#root #main .preview-copy .eyebrow,
+#root #main .sec > .eyebrow {
+  color: #f0a47e !important;
+  opacity: 1 !important;
+  font-weight: 650;
+}
+
+#root #main .mani {
+  background: linear-gradient(180deg, #fffaf2 0%, #e6d5c0 100%) !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  font-weight: 350 !important;
+  text-shadow: none !important;
+}
+
+/* Card headings and labels stay ink-dark, including interactive status and form controls. */
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+  :is(h1, h2, h3, h4, h5, h6, .field > span, .field label, .table-head, th):not(.q-writeup):not(.q-writeup *) {
+  color: var(--q-ink) !important;
+  opacity: 1 !important;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu)
+  :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow, small, time):not(.q-writeup):not(.q-writeup *) {
+  color: var(--q-ink-soft) !important;
+  opacity: 1 !important;
+}
+
+/* Consistent actions and links across dark and light surfaces. */
+#root :is(.btn.p, button.btn.p, .chip.on, button.chip.on) {
+  border-color: var(--q-terracotta-dark) !important;
+  background: var(--q-terracotta-dark) !important;
+  color: #fbf3e7 !important;
+  font-weight: 650 !important;
+}
+
+#root :is(.btn.p, button.btn.p, .chip.on, button.chip.on) :is(svg, .ic) {
+  color: #fbf3e7 !important;
+}
+
+#root :is(.btn, button.btn, .chip, button.chip):not(.p):not(.on) {
+  border-color: rgba(251, 243, 231, .28);
+}
+
+#root :is(a, .link):not(.btn):not(.nav-item) {
+  color: #ff9a62;
+  text-decoration-color: rgba(255, 154, 98, .55);
+  text-underline-offset: .18em;
+}
+
+#root #main :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu) :is(a, .link):not(.btn):not(.q-writeup *) {
+  color: var(--q-terracotta-link) !important;
+}
+
+#root #main :is(input, textarea, select, [contenteditable="true"]) {
+  border-color: rgba(28, 21, 17, .34) !important;
+  background: #fffdf7 !important;
+  color: #1c1511 !important;
+}
+
+#root #main :is(input, textarea, select)::placeholder {
+  color: #615448 !important;
+  opacity: 1 !important;
+}
+
+#root #main :is(input, textarea, select):focus,
+#root #main :is(input, textarea, select):focus-visible,
+#root #main [contenteditable="true"]:focus,
+#root #main [contenteditable="true"]:focus-visible {
+  border-color: #a94422 !important;
+  box-shadow: 0 0 0 3px rgba(208, 106, 64, .24) !important;
+}
+
+#root #nav {
+  border-color: rgba(251, 243, 231, .32) !important;
+  background: rgba(21, 19, 17, .97) !important;
+  color: #fbf3e7 !important;
+}
+
+#root #nav :is(button, a, .nav-item) { color: #f4e9da !important; }
+#root #nav .navmain .nav-item.on {
+  color: #1c1511 !important;
+  background: #fbf3e7 !important;
+}
+#root #nav .navmain .nav-item.on > svg { color: #1c1511 !important; }
+#root #nav .navmain .nav-item:not(.on) > svg,
+#root #nav .navend button > svg,
+#root #nav .lgb > svg { color: #ff9a62 !important; }
+
+#root .head {
+  background-color: #d06a40 !important;
+  border-color: rgba(251, 243, 231, .88) !important;
+}
+#root .head :is(h1, h2, h3, p, .dim, .mut, .eyebrow) {
+  color: #211710 !important;
+  opacity: 1 !important;
+}
+
+#root :is(.skip-link, :focus-visible) {
+  outline-color: #ff833b !important;
+  outline-width: 2px;
+  outline-offset: 3px;
+}
+
+::selection {
+  background: rgba(255, 131, 59, .42);
+  color: #1c1511;
+}
+
+@media (max-width: 680px) {
+  #root #main .hero .hero-copy {
+    font-size: 16px !important;
+    line-height: 1.7 !important;
+  }
+  #root #main .q-writeup {
+    font-size: 14.5px;
+    line-height: 1.75 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .q-writeup,
+  #root .hero,
+  #root .mani {
+    animation: none !important;
+    transition: none !important;
+  }
+}
