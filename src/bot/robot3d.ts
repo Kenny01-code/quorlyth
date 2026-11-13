@@ -5,15 +5,15 @@ import { ACESFilmicToneMapping, AdditiveBlending, AmbientLight, BoxGeometry, Can
 import { THEMES } from './robot-themes'
 export { THEMES }
 
-export function robot3d(cv,opt){opt=opt||{};var W=cv.clientWidth||320,H=cv.clientHeight||320,r=new WebGLRenderer({canvas:cv,antialias:true,alpha:true});r.setPixelRatio(Math.min(window.devicePixelRatio||1,1.0));r.setSize(W,H,false);r.outputEncoding=sRGBEncoding;r.toneMapping=ACESFilmicToneMapping;r.toneMappingExposure=1.18;
-var sc=new Scene(),cam=new PerspectiveCamera(30,W/H,.1,60),es=new Scene(),root=new Group();sc.add(root);es.background=new Color(0x3a2114);
+export function robot3d(cv,opt){opt=opt||{};var W=cv.clientWidth||320,H=cv.clientHeight||320,r=new WebGLRenderer({canvas:cv,antialias:true,alpha:true});r.setPixelRatio(Math.min(window.devicePixelRatio||1,1.0));r.setSize(W,H,false);r.outputEncoding=sRGBEncoding;r.toneMapping=ACESFilmicToneMapping;r.toneMappingExposure=1.06;
+var sc=new Scene(),cam=new PerspectiveCamera(30,W/H,.1,60),es=new Scene(),root=new Group();sc.add(root);es.background=new Color(0x7a4930);
 function pn(w,h,x,y,z,ry,rx,c){var m=new Mesh(new PlaneGeometry(w,h),new MeshBasicMaterial({color:c||0xf0ead9,side:DoubleSide}));m.position.set(x,y,z);m.rotation.set(rx||0,ry||0,0);es.add(m)}
-pn(8,3,0,6,2,0,Math.PI/2);pn(2,9,-7,0,3,1.1);pn(2,9,7,0,3,-1.1);pn(10,1.5,0,-5,4,0,-.6,0x777777);pn(6,6,0,2,-8,0,0,0x333333);
+pn(8,3,0,6,2,0,Math.PI/2);pn(2,9,-7,0,3,1.1);pn(2,9,7,0,3,-1.1);pn(10,1.5,0,-5,4,0,-.6,0xc98259);pn(6,6,0,2,-8,0,0,0xd06a40);
 var pm=new PMREMGenerator(r);sc.environment=pm.fromScene(es,.04).texture;
-var shell=new MeshPhysicalMaterial({color:0xff7417,emissive:0x9b2e05,emissiveIntensity:.42,roughness:.28,metalness:.04,clearcoat:.82,clearcoatRoughness:.13,envMapIntensity:.4}),blk=new MeshPhysicalMaterial({color:0x9b2e05,roughness:.3,metalness:.06,clearcoat:.55,clearcoatRoughness:.16,envMapIntensity:.32}),chr=new MeshStandardMaterial({color:0xf0ead9,roughness:.3,metalness:.12}),glow=new MeshBasicMaterial({color:0xffb15d,toneMapped:false}),arm=new MeshPhysicalMaterial({color:0xff7417,emissive:0x9b2e05,emissiveIntensity:.34,roughness:.3,metalness:.04,clearcoat:.8,clearcoatRoughness:.15,envMapIntensity:.35});
+var shell=new MeshPhysicalMaterial({color:0xff833b,emissive:0xb9471b,emissiveIntensity:.22,roughness:.34,metalness:.015,clearcoat:.34,clearcoatRoughness:.2,envMapIntensity:.24}),blk=new MeshPhysicalMaterial({color:0xd06a40,roughness:.38,metalness:.01,clearcoat:.2,clearcoatRoughness:.24,envMapIntensity:.16}),chr=new MeshStandardMaterial({color:0xffeadc,roughness:.38,metalness:.02}),glow=new MeshBasicMaterial({color:0xffc18e,toneMapped:false}),arm=new MeshPhysicalMaterial({color:0xff833b,emissive:0xb9471b,emissiveIntensity:.18,roughness:.34,metalness:.01,clearcoat:.32,clearcoatRoughness:.2,envMapIntensity:.22});
 function M(g,m,x,y,z){var o=new Mesh(g,m);o.position.set(x||0,y||0,z||0);return o}
 function fit(w,h){var a=w/h;cam.aspect=a;cam.position.set(0,.55,a<1?9.5/a*.95:(opt.tight?8.2:9.5));cam.lookAt(0,.55,0);cam.updateProjectionMatrix()}fit(W,H);
-var key=new DirectionalLight(0xfff1e5,1.25);key.position.set(3,5,6);var rim=new DirectionalLight(0xff7417,1.35);rim.position.set(-5,2,-4);sc.add(key,rim,new AmbientLight(0xffe2ca,.68));
+var key=new DirectionalLight(0xfff4eb,1.5);key.position.set(3,5,6);var rim=new DirectionalLight(0xffa45e,1.12);rim.position.set(-5,2,-4);sc.add(key,rim,new AmbientLight(0xffe8d8,.82));
 var hd=new Group(),sk=M(new SphereGeometry(.95,96,64),shell);sk.scale.set(1,1.05,.98);hd.add(sk);hd.add(M(new SphereGeometry(.975,96,64,Math.PI/2-.95,1.9,Math.PI/2-.55,1.1),blk));
 var eyes=new Group();[-1,1].forEach(function(d){var e=M(new SphereGeometry(.1,32,16),glow,d*.3,.12,.94);e.scale.set(1,1.6,.3);eyes.add(e)});hd.add(eyes);
 var vb=new Group(),bars=[];for(var i=0;i<9;i++){var x=(i-4)*.08,z=Math.sqrt(Math.max(.975*.975-x*x-.3*.3,.2))*.99,b=M(new BoxGeometry(.045,1,.02),glow,x,-.28,z);b.scale.y=.04;vb.add(b);bars.push(b)}hd.add(vb);
