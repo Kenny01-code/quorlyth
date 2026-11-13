@@ -150,7 +150,7 @@ body::before {
   :not(.sw-evidence-attachment *)
   :not(.sw-assignee-picker__list *)
   :not(.sw-commit-preview *)
-  :not(.q-writeup) {
+  :not(.q-writeup):not(.q-writeup *) {
   color: var(--q-ink) !important;
   opacity: 1;
 }
@@ -195,7 +195,7 @@ body::before {
   :not(.sw-comment > div *)
   :not(.sw-evidence-attachment *)
   :not(.sw-assignee-picker__list *)
-  :not(.q-writeup) {
+  :not(.q-writeup):not(.q-writeup *) {
   color: var(--q-ink-soft) !important;
 }
 
@@ -240,7 +240,7 @@ body::before {
   :not(.sw-evidence-attachment *)
   :not(.sw-assignee-picker__list *)
   :not(.sw-commit-preview *)
-  :not(.q-writeup) {
+  :not(.q-writeup):not(.q-writeup *) {
   color: var(--q-icon) !important;
   opacity: 1 !important;
 }
