@@ -173,9 +173,9 @@ function createGlowTexture() {
   const context = canvas.getContext('2d')
   if (!context) return null
   const gradient = context.createRadialGradient(64, 64, 2, 64, 64, 64)
-  gradient.addColorStop(0, 'rgba(249,115,22,0.34)')
-  gradient.addColorStop(0.38, 'rgba(217,119,85,0.17)')
-  gradient.addColorStop(1, 'rgba(184,91,64,0)')
+  gradient.addColorStop(0, 'rgba(239,120,75,0.4)')
+  gradient.addColorStop(0.38, 'rgba(255,161,111,0.18)')
+  gradient.addColorStop(1, 'rgba(142,53,29,0)')
   context.fillStyle = gradient
   context.fillRect(0, 0, 128, 128)
   const texture = new CanvasTexture(canvas)
@@ -224,9 +224,9 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
 
   const key = new DirectionalLight(0xffc4a3, 1.25)
   key.position.set(-3.5, 4, 5)
-  const rim = new DirectionalLight(0xf97316, 1.8)
+  const rim = new DirectionalLight(0xef784b, 2.0)
   rim.position.set(4, -1, -4)
-  const warmFill = new DirectionalLight(0xd97755, 0.75)
+  const warmFill = new DirectionalLight(0x8e351d, 0.82)
   warmFill.position.set(0, -4, 4)
   scene.add(new AmbientLight(0xf0ead9, 0.58), key, rim, warmFill)
 
@@ -235,9 +235,9 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
       uTime: { value: 0 },
       uEnergy: { value: 0.2 },
       uCalm: { value: 0 },
-      uTerracotta: { value: new Color(0xd97755) },
-      uOrange: { value: new Color(0xf97316) },
-      uDeep: { value: new Color(0xb85b40) },
+      uTerracotta: { value: new Color(0xef784b) },
+      uOrange: { value: new Color(0xffa16f) },
+      uDeep: { value: new Color(0x8e351d) },
       uBone: { value: new Color(0xf0ead9) },
     },
     vertexShader,
