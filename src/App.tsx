@@ -147,7 +147,7 @@ export default function App() {
   // Open QuorlythBot automatically once the welcome screen and account sync are
   // complete. This exposes the current bot experience without requiring a launcher click.
   useEffect(() => {
-    const identity = a.me?.id || (a.demo ? 'demo' : null)
+    const identity = a.me?.id || (a.demo ? 'demo' : 'visitor')
     if (!identity) {
       botAutoOpenedForRef.current = null
       return
@@ -469,7 +469,7 @@ export default function App() {
       {bell && <Suspense fallback={null}><NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} /></Suspense>}
       {palette && <Suspense fallback={null}><Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} /></Suspense>}
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
-      {!botMounted && !botLauncherHidden && createPortal(
+      {!intro && !botLoading && !botMounted && !botLauncherHidden && createPortal(
         <div className="qbot-launcher-portal" data-quorlyth-launcher>
           <button
             id="astl"
