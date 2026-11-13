@@ -76,39 +76,40 @@
 @media(max-width:480px){.growth-metrics{gap:8px}.growth-metric{padding:13px}.growth-metric__top{align-items:flex-start;gap:7px}.growth-metric__top>.dim{font-size:10px}.growth-metric>strong{font-size:31px}.growth-metric>p{font-size:10px;min-height:42px}.growth-secondary{grid-template-columns:minmax(0,1fr)}.growth-daily-chart{height:148px}.growth-daily-bars{height:112px}.growth-toolbar{align-items:flex-start}.growth-ranges{max-width:100%;flex-wrap:wrap}.growth-ranges button{padding:7px 10px}}
 
 
-/* Growth data visuals only: Quorlyth orange appears as an outline stroke, never a solid fill. */
+/* Growth analytics only: solid Quorlyth orange fills for chart data and activity visuals. */
 .growth-page .growth-daily-chart {
-  border-bottom-color: rgba(239, 120, 75, .28);
+  border-bottom-color: rgba(239, 120, 75, .32);
 }
 .growth-page .growth-daily-bars i.active,
 .growth-page .growth-legend i.active {
   box-sizing: border-box;
-  background: transparent !important;
-  border: 1.5px solid #ef784b;
+  background: #ef784b !important;
+  border: 1px solid #ef784b;
 }
 .growth-page .growth-daily-bars i.signup,
 .growth-page .growth-legend i.signup {
   box-sizing: border-box;
-  background: transparent !important;
-  border: 1.5px dashed rgba(239, 120, 75, .72);
+  background: rgba(239, 120, 75, .48) !important;
+  border: 1px solid rgba(239, 120, 75, .72);
 }
 .growth-page .growth-funnel-track {
-  border: 1px solid rgba(239, 120, 75, .25);
-  background: transparent !important;
+  border: 0;
+  background: rgba(239, 120, 75, .12) !important;
 }
 .growth-page .growth-funnel-track > i {
   box-sizing: border-box;
-  background: transparent !important;
-  border: 1.5px solid #ef784b;
+  background: #ef784b !important;
+  border: 0;
+  box-shadow: 0 0 12px rgba(239, 120, 75, .16);
 }
 .growth-page .growth-recent-dot {
   box-sizing: border-box;
-  background: transparent !important;
-  border: 1.5px solid #ef784b;
-  box-shadow: 0 0 0 4px rgba(239, 120, 75, .08);
+  background: #ef784b !important;
+  border: 0;
+  box-shadow: 0 0 0 4px rgba(239, 120, 75, .13), 0 0 10px rgba(239, 120, 75, .2);
 }
 .growth-page .growth-spinner {
   background: transparent;
-  border-color: rgba(239, 120, 75, .24);
+  border-color: rgba(239, 120, 75, .22);
   border-top-color: #ef784b;
 }
