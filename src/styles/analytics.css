@@ -205,3 +205,19 @@
 @media (prefers-reduced-motion: reduce) {
   .analytics-chart-overlay { animation: none; }
 }
+
+/* When ideas arrive: fully filled orange cells with a quiet, premium finish. */
+.hm2 i.q-heat-cell {
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 191, 157, .14);
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 239, 228, .12), 0 2px 7px rgba(0, 0, 0, .16);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.hm2 i.q-heat-cell.has-activity:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 239, 228, .2), 0 0 0 1px rgba(239, 120, 75, .35), 0 5px 12px rgba(0, 0, 0, .24);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm2 i.q-heat-cell { transition: none; }
+}
