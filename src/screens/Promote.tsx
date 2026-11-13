@@ -58,7 +58,7 @@ function Inner() {
           const sourceIdea = visibleIdeas.find(item => item.id === p.ideaId)
           return sourceIdea
             ? <PromotionPreview key={p.id} idea={sourceIdea} promotion={p} compact />
-            : <div key={p.id} className="glass pad"><p className="dim">Original idea unavailable</p><p className="promotion-post-copy" style={{ marginTop: 8 }}>{p.text}</p><p className="dim" style={{ marginTop: 8 }}>{when(p.at)}</p></div>
+            : <div key={p.id} className="glass pad"><p className="dim">Original idea unavailable</p><p className="promotion-post-copy q-writeup" style={{ marginTop: 8 }}>{p.text}</p><p className="dim" style={{ marginTop: 8 }}>{when(p.at)}</p></div>
         })}
       </div>
     </section>
@@ -98,7 +98,7 @@ function Inner() {
         <div className="glass pad" style={{ maxWidth: 760, margin: '0 auto' }}><div className="done">
           <div className="score"><Icon name="approve" size={34} /></div><h2>Your post is ready.</h2>
           <p className="mut" style={{ margin: '12px auto 0', maxWidth: 420 }}>Your credited post draft is saved in Quorlyth. You can publish directly to a connected account or use the share options below.</p>
-          <div className="post" style={{ margin: '24px 0', textAlign: 'left', whiteSpace: 'pre-wrap' }}>{pub}</div>
+          <div className="post q-writeup" style={{ margin: '24px 0', textAlign: 'left', whiteSpace: 'pre-wrap' }}>{pub}</div>
           <div className="acts" style={{ justifyContent: 'center' }}>
             <button className="btn p" onClick={() => navigator.clipboard.writeText(pub).then(() => a.toast('Copied'))}>Copy post</button>
             <button className="btn" onClick={() => { const u = URL.createObjectURL(new Blob([pub], { type: 'text/plain' })); const l = document.createElement('a'); l.href = u; l.download = 'quorlyth-post.txt'; l.click(); URL.revokeObjectURL(u) }}>Save as file</button>
@@ -255,7 +255,7 @@ function Inner() {
               }}><Icon name="rank" size={16} />Give me 3 options</button></>}
           </div>
         </div>
-        {opts.length > 0 && <div style={{ marginTop: 18 }}><p className="dim" style={{ marginBottom: 8 }}>Options</p>{opts.map((o, k) => <div key={k} className="row" style={{ alignItems: 'flex-start' }}><div className="t"><p className="dim">{o.label}</p><p style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>{o.text}</p></div><button className="btn" style={{ padding: '8px 16px' }} onClick={() => { setDraft(o.text); setHt([]) }}>Use this</button></div>)}</div>}
+        {opts.length > 0 && <div style={{ marginTop: 18 }}><p className="dim" style={{ marginBottom: 8 }}>Options</p>{opts.map((o, k) => <div key={k} className="row" style={{ alignItems: 'flex-start' }}><div className="t"><p className="dim">{o.label}</p><p className="q-writeup" style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>{o.text}</p></div><button className="btn" style={{ padding: '8px 16px' }} onClick={() => { setDraft(o.text); setHt([]) }}>Use this</button></div>)}</div>}
         <label className="field"><span style={{ display: 'flex', justifyContent: 'space-between' }}><span>Your post</span><span className="dim" style={{ color: draft.length > lim ? '#fff' : undefined, fontWeight: draft.length > lim ? 500 : undefined }}>{draft.length} / {lim}</span></span>
           <textarea ref={ta} value={draft} onChange={e => setDraft(e.target.value)} style={{ minHeight: 170 }} placeholder="Write a post, or let QuorlythBot draft one" /></label>
         <p className="dim" style={{ marginTop: -8 }}>Edits autosave on this device. Save a credited draft to Quorlyth before reviewing sharing options; external publishing only happens after you confirm a supported destination.</p>
@@ -309,7 +309,7 @@ function Inner() {
             <div className="q-promo-preview-top"><div className="q-promo-brand-mark"><Icon name="spark" size={16} /></div><div><strong>Quorlyth</strong><small>Idea feed preview</small></div><span className="q-promo-preview-platform">Quorlyth</span></div>
             <div className="q-promo-preview-copy">
               <p className="q-promo-preview-idea">{idea.title}</p>
-              <p>{draft.trim() || 'Your post preview will appear here as you write.'}</p>
+              <p className="q-writeup">{draft.trim() || 'Your post preview will appear here as you write.'}</p>
               {ht.length > 0 && <div className="q-promo-preview-tags">{ht.map(tag => <span key={tag}>#{tag}</span>)}</div>}
             </div>
             <div className="q-promo-preview-footer"><span><Icon name="community" size={16} /> Community idea</span><span><Icon name="edit" size={16} /> Draft preview</span></div>
