@@ -44,27 +44,27 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.ok(openStart >= 0, 'the shared launcher opener exists')
   const helper = app.slice(openStart, app.indexOf('// Load the AI writing helper', openStart))
   assert.ok(helper.indexOf('await loadQuorlythBot()') < helper.indexOf('setBotMounted(true)'), 'the bot mounts only after its module resolves')
-  assert.match(app, /createPortal\(/)
-  assert.match(app, /document\.body/)
+  assert.match(app, /createPortal\\(/)
+  assert.match(app, /document\\.body/)
   assert.match(app, /data-quorlyth-launcher/)
+  assert.match(app, /botLauncherHidden \\? \\([\\s\\S]*?qbot-launcher-restore/)
   assert.match(app, /botLoadError && <div className="qbot-launcher-load-error"/)
   assert.doesNotMatch(app, /deferredLauncherHidden|deferredHoldTimer|onPointerDown=/)
-  assert.match(app, /onContextMenu=\{event => \{[\s\S]{0,220}qbot-launcher-hidden-v1/)
-  assert.match(css, /#astl\.astl\s*\{[\s\S]{0,300}position: fixed !important/)
-  assert.match(css, /#astl\.astl::before/)
+  assert.match(app, /onContextMenu=\\{event => \\{[\\s\\S]{0,220}qbot-launcher-hidden-v1/)
+  assert.match(css, /#astl\\.astl\\s*\\{[\\s\\S]{0,300}position: fixed !important/)
+  assert.match(css, /#astl\\.astl::before/)
   assert.match(css, /z-index: 110 !important/)
   const launcherStart = bot.indexOf('id="astl"')
   const launcherEnd = bot.indexOf('</button>', launcherStart)
   assert.ok(launcherStart >= 0 && launcherEnd > launcherStart, 'the mounted bot renders its own persistent launcher')
   const launcher = bot.slice(launcherStart, launcherEnd)
-  assert.match(launcher, /onClick=\{openPanel\}/)
+  assert.match(launcher, /onClick=\\{openPanel\\}/)
   assert.match(launcher, /onContextMenu=/)
   assert.doesNotMatch(launcher, /onPointerDown|onPointerUp/)
-  assert.match(bot, /setLauncherHidden\(true\)/)
+  assert.match(bot, /launcherHidden \\? \\([\\s\\S]*?qbot-launcher-restore/)
+  assert.match(bot, /setLauncherHidden\\(true\\)/)
   assert.doesNotMatch(bot, /startLauncherHold|launcherLongPressTriggered/)
 })
-
-
 test('the landing page rotates both approved support lines with the editorial reveal', async () => {
   const [landing, styles] = await Promise.all([
     readSource('src/screens/Landing.tsx'),
@@ -431,14 +431,16 @@ test('automation run history can be cleared without deleting workflows or notifi
   assert.match(automations, /Your workflows, active\/draft status, and automation notifications will remain/)
 })
 
-test('the QuorlythBot launcher can be hidden by right-click and restored with its keyboard shortcut', async () => {
+test('the QuorlythBot launcher toggles visibility by right-click, with a reversible restore hotspot', async () => {
   const [app, bot] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
   ])
   assert.match(app, /const \[botLauncherHidden, setBotLauncherHidden\]/)
   assert.match(app, /onContextMenu=\{event => \{[\s\S]{0,220}qbot-launcher-hidden-v1/)
-  assert.match(app, /!botMounted && !botLauncherHidden && createPortal/)
+  assert.match(app, /!botMounted && createPortal/)
+  assert.match(app, /className="qbot-launcher-restore"/)
+  assert.match(app, /Right-click or click to show QuorlythBot/)
   assert.match(app, /launcherWasHidden \|\| botLauncherHidden/)
   assert.match(app, /quorlyth:launcher-restore/)
   assert.match(bot, /const \[launcherHidden, setLauncherHidden\]/)
