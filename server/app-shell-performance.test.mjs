@@ -21,14 +21,17 @@ test('lazy route navigation shows a reduced-motion-aware loading surface instead
   assert.match(styles, /@media\(prefers-reduced-motion:reduce\)[\s\S]*qth-route-loading/)
 })
 
-test('QuorlythBot is not downloaded automatically during startup', async () => {
+test('QuorlythBot opens automatically after the welcome and account are ready', async () => {
   const app = await readSource('src/App.tsx')
-  assert.match(app, /const QuorlythBot = lazy\(loadQuorlythBot\)/)
+  assert.match(app, /const QuorlythBot = lazy\\(loadQuorlythBot\\)/)
+  assert.match(app, /Open QuorlythBot automatically once the welcome screen and account sync are/)
+  assert.match(app, /const identity = a\\.me\\?\\.id \\|\\| \\(a\\.demo \\? 'demo' : 'visitor'\\)/)
+  assert.match(app, /if \\(!a\\.ready \\|\\| a\\.startupError \\|\\| intro \\|\\| loc\\.pathname === '\\/signin'\\) return/)
+  assert.match(app, /if \\(a\\.me && \\(!a\\.dataReady \\|\\| !a\\.platformRolesReady\\)\\) return/)
+  assert.match(app, /void openQuorlythBot\\(\\)/)
+  assert.match(app, /!intro && !botLoading && !botMounted && !botLauncherHidden && createPortal\\(/)
   assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
-  assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
-  assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /id="astl"[\s\S]{0,320}onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /onClick=\{\(\) => \{ void openQuorlythBot\(\) \}\}/)
+  assert.doesNotMatch(app, /setTimeout\\(\\(\\) => \\{\\s*void loadQuorlythBot/)
 })
 
 test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
