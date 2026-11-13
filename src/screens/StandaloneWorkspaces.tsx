@@ -176,7 +176,7 @@ function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
       <div><p className="ql-eyebrow">MILESTONE · REVISION {submission.revision}</p><h4>{milestoneTitle}</h4></div>
       <span className={'sw-review-status status-' + submission.status}>{status}</span>
     </div>
-    <p className="sw-linked-submission__summary">{submission.summary}</p>
+    <p className="sw-linked-submission__summary q-writeup">{submission.summary}</p>
     <div className="sw-linked-submission__meta"><span>Submitted by {a.nm(submission.submittedBy)}</span><span>{new Date(submission.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span></div>
     {submission.reviewNote && <p className="sw-review-note"><strong>{submission.status === 'approved' ? 'Reviewer note' : 'Requested changes'}</strong><br />{submission.reviewNote}</p>}
     {fileLinks.length > 0 && <div className="sw-linked-submission__files">{fileLinks.map(file => file.url
@@ -393,7 +393,7 @@ function WorkspaceProjectList() {
       const currentInvite = members.find(member => member.projectId === project.id && member.userId === a.me?.id && member.status === 'invited')
       return <button type="button" className="glass pad sw-project-card" key={project.id} onClick={() => nav('/workspaces/' + project.id)}>
         <div className="sw-project-card__top"><span className="sw-mark"><QuorlythGlyph name="workspace" size={18} /></span><span className={'sw-pill' + (project.status === 'completed' ? ' is-done' : '')}>{currentInvite ? 'Invitation' : project.status === 'completed' ? 'Completed' : 'Active'}</span></div>
-        <h3>{project.title}</h3><p>{project.summary}</p>
+        <h3>{project.title}</h3><p className="q-writeup">{project.summary}</p>
         <div className="sw-project-card__meta"><span><QuorlythGlyph name="team" size={13} />{team.length || 1} teammate{(team.length || 1) === 1 ? '' : 's'}</span><span><QuorlythGlyph name="calendar" size={13} />{project.dueAt ? localDate(project.dueAt) : 'No deadline'}</span></div>
         {project.linkedIdeaId && <small className="sw-project-card__linked"><QuorlythGlyph name="link" size={12}/>Connected to a community project</small>}
         <div className="sw-project-card__footer"><span>{project.createdBy === a.me?.id ? 'Owned by you' : 'Shared with you'}</span><span>Open workspace <QuorlythGlyph name="arrow" size={14} /></span></div>
@@ -1170,7 +1170,7 @@ function WorkspaceProjectView() {
   }
 
   if (invitation) {
-    return <div className="sw-invite-shell"><Head kicker="Project invitation" title={project.title} /><section className="glass pad sw-invite-card"><span className="sw-pill"><QuorlythGlyph name="invite" size={14} />Waiting for your response</span><p>{project.summary}</p><p className="sw-muted">Invited by {a.nm(invitation.invitedBy)} as a {invitation.role}. Accept to access tasks, evidence and the team room.</p><button type="button" className="btn p" disabled={busy==='accept-invite'} onClick={() => void acceptInvitation()}><QuorlythGlyph name="check" size={15} />{busy==='accept-invite' ? 'Accepting…' : 'Accept invitation'}</button>{error && <p className="sw-error">{error}</p>}</section></div>
+    return <div className="sw-invite-shell"><Head kicker="Project invitation" title={project.title} /><section className="glass pad sw-invite-card"><span className="sw-pill"><QuorlythGlyph name="invite" size={14} />Waiting for your response</span><p className="q-writeup">{project.summary}</p><p className="sw-muted">Invited by {a.nm(invitation.invitedBy)} as a {invitation.role}. Accept to access tasks, evidence and the team room.</p><button type="button" className="btn p" disabled={busy==='accept-invite'} onClick={() => void acceptInvitation()}><QuorlythGlyph name="check" size={15} />{busy==='accept-invite' ? 'Accepting…' : 'Accept invitation'}</button>{error && <p className="sw-error">{error}</p>}</section></div>
   }
 
   if (!role) return <div className="glass cent sw-empty"><span><QuorlythGlyph name="lock" size={28} /></span><h3>Private workspace</h3><p>Only active team members can open this project.</p><button type="button" className="btn" onClick={() => nav('/workspaces')}>Back to workspaces</button></div>
@@ -1194,7 +1194,7 @@ function WorkspaceProjectView() {
     </section>}
     <section className="sw-workspace-shell">
       <div className={'sw-workspace-summary' + (tab === 'team' ? ' sw-workspace-summary--room' : '')}>
-        <div className="sw-workspace-summary__copy"><p className="ql-eyebrow">PROJECT BRIEF</p><p>{project.summary}</p>{project.dueAt && <small><QuorlythGlyph name="calendar" size={13} />Target delivery · {localDate(project.dueAt)}</small>}</div>
+        <div className="sw-workspace-summary__copy"><p className="ql-eyebrow">PROJECT BRIEF</p><p className="q-writeup">{project.summary}</p>{project.dueAt && <small><QuorlythGlyph name="calendar" size={13} />Target delivery · {localDate(project.dueAt)}</small>}</div>
         {tab !== 'team' && <div className="sw-workspace-pulse"><p className="ql-eyebrow">DELIVERY PULSE</p><div className="sw-progress-number"><strong>{progress}%</strong><span>{doneCount} of {projectTasks.length} tasks approved complete</span></div><div className="sw-progress-track"><i style={{width:progress+'%'}} /></div><div className="sw-pulse-stats"><span><strong>{projectTasks.length}</strong>Tasks</span><span><strong>{pendingReviews}</strong>Awaiting review</span><span><strong>{projectRepos.length}</strong>GitHub repos</span></div></div>}
       </div>
       <div className="sw-tabs" role="tablist" aria-label="Standalone project sections">
@@ -1280,7 +1280,7 @@ function WorkspaceProjectView() {
         const currentAssignee = assignedTaskIds(task).includes(a.me?.id || '')
         return <article className="sw-task" key={task.id}>
           <div className="sw-task__top"><span className={'sw-task-check '+(task.status==='done'?'is-done':'')}>{task.status==='done'?<QuorlythGlyph name="check" size={14}/>:null}</span><div className="sw-task__title"><p className="ql-eyebrow">{task.status==='todo'?'QUEUED':task.status==='in_progress'?'IN PROGRESS':'APPROVED COMPLETE'}</p><h4>{task.title}</h4></div><span className={'sw-task-status '+(task.status==='done'?'is-done':'')}>{task.status==='done'?'Complete':task.status==='in_progress'?'Active':'Open'}</span></div>
-          {task.description && <p className="sw-task__description">{task.description}</p>}
+          {task.description && <p className="sw-task__description q-writeup">{task.description}</p>}
           {task.milestoneId && <p className="sw-task__description"><QuorlythGlyph name="link" size={13}/> Linked milestone: {linkedMilestones.find(milestone => milestone.id === task.milestoneId)?.title || 'Community milestone'} </p>}
           {task.acceptanceCriteria && <div className="sw-criteria"><span><QuorlythGlyph name="check" size={14}/></span><div><strong>Definition of done</strong><p>{task.acceptanceCriteria}</p></div></div>}
           <div className="sw-task__meta"><span><QuorlythGlyph name="person" size={13}/>{assignedTaskIds(task).length ? assignedTaskIds(task).length + ' assigned · ' + assignedTaskIds(task).map(uid => a.nm(uid)).join(', ') : 'Unassigned'}</span><span><QuorlythGlyph name="calendar" size={13}/>{task.dueAt?localDate(task.dueAt):'No deadline'}</span><button type="button" className="sw-link-button" onClick={()=>{setArtifactTask(task.id);setTab('evidence')}}><QuorlythGlyph name="link" size={13}/>{taskEvidence.length} evidence item{taskEvidence.length===1?'':'s'}</button></div>
@@ -1360,14 +1360,14 @@ function WorkspaceProjectView() {
                 <strong><QuorlythGlyph name="review" size={14}/> Quorlyth plan-alignment review</strong>
                 <span className={'sw-pill' + (artifact.aiReview.status === 'aligned' ? ' is-done' : '')}>{artifact.aiReview.status === 'aligned' ? 'Likely aligned' : artifact.aiReview.status === 'needs_changes' ? 'Gaps detected' : artifact.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Needs human judgement'} · {artifact.aiReview.alignmentScore}/100</span>
               </div>
-              <p className="sw-muted">{artifact.aiReview.summary}</p>
+              <p className="sw-muted q-writeup">{artifact.aiReview.summary}</p>
               {!!artifact.aiReview.matchedCriteria.length && <div><small className="ql-eyebrow">POSSIBLE MATCHES</small><ul className="sw-ai-review-list">{artifact.aiReview.matchedCriteria.map((item,index)=><li key={'match-'+index}>{item}</li>)}</ul></div>}
               {!!artifact.aiReview.gaps.length && <div><small className="ql-eyebrow">GAPS TO CHECK</small><ul className="sw-ai-review-list">{artifact.aiReview.gaps.map((item,index)=><li key={'gap-'+index}>{item}</li>)}</ul></div>}
               {!!artifact.aiReview.recommendations.length && <div><small className="ql-eyebrow">SUGGESTED NEXT ACTIONS</small><ul className="sw-ai-review-list">{artifact.aiReview.recommendations.map((item,index)=><li key={'rec-'+index}>{item}</li>)}</ul></div>}
               <small className="sw-muted">{artifact.aiReview.scopeNote} · {localDate(artifact.aiReview.reviewedAt)}</small>
             </section>}
             {artifact.url && <EvidencePreview url={artifact.url} name={artifact.summary || artifact.kind || "Submitted evidence"} summary={artifact.summary} compact={false} />}
-            {typeof meta.message==='string'&&<p className="sw-artifact__message">{meta.message.slice(0,700)}</p>}
+            {typeof meta.message==='string'&&<p className="sw-artifact__message q-writeup">{meta.message.slice(0,700)}</p>}
             {artifact.attachments?.map(attachment=><WorkspaceEvidenceAttachment key={attachment.path} attachment={attachment}/>)}
             {typeof meta.title==='string'&&<p className="sw-artifact__message">{meta.title.slice(0,300)}{typeof meta.state==='string'?' · '+meta.state:''}{meta.merged===true?' · Merged':''}</p>}
             {artifact.reviewNote&&<div className="sw-review-note"><strong>{artifact.status==='approved'?'Reviewer note':'Requested changes'}</strong><p>{artifact.reviewNote}</p>{artifact.reviewedBy&&artifact.reviewedAt&&<small>Reviewed by {a.nm(artifact.reviewedBy)} · {localDate(artifact.reviewedAt)}</small>}</div>}
@@ -1471,7 +1471,7 @@ function WorkspaceProjectView() {
                       <strong>{a.nm(comment.authorId)}</strong>
                       <small>{new Date(comment.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</small>
                     </div>
-                    <p>{comment.text}</p>
+                    <p className="q-writeup">{comment.text}</p>
                     {!!comment.mentionedUserIds?.length && <div className="sw-comment-mentions" aria-label="Tagged teammates"><span>Tagged</span>{comment.mentionedEveryone ? <b>@everyone</b> : comment.mentionedUserIds.map(userId => <b key={userId}>@{a.nm(userId)}</b>)}</div>}
                     <ChatAttachmentList attachments={comment.attachments} />
                   </div>
