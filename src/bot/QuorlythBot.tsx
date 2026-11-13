@@ -3906,7 +3906,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         id="astl"
         type="button"
         className={cn('astl', open && 'hide')}
-        aria-label="Ask QuorlythBot"
+        aria-label="Open QuorlythBot"
         aria-expanded={open}
         aria-controls="ast"
         title="Ask QuorlythBot"
@@ -3917,7 +3917,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           setLauncherHidden(true)
         }}
       >
-        <span className="astm"><span className="astm-brand-badge"><Logo size={28} /></span></span>{greet && <span className="astb">{greet}</span>}
+        <span className="astm"><Logo size={30} /></span>{greet && <span className="astb">{greet}</span>}
       </button>}
       {open && (
         <div id="ast">
