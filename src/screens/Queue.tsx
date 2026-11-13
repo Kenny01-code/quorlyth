@@ -276,8 +276,8 @@ function Inner() {
           <div className="glass pad lift">
             <span className="chip">{STATUS_LABEL[a.statusOf(d.id)]}</span>
             <h2 style={{ margin: '18px 0 12px' }}>{d.title}</h2>
-            <p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{d.body}</p>
-            {r?.score != null ? <>{m('Originality', r.o)}{m('Feasibility', r.f)}{m('Audience relevance', r.r)}<div className="reason" style={{ marginTop: 28 }}><span className="dim">Why this score</span><p>{r.reason}</p></div>{r.youtubeSignals && <YouTubePreview key={d.id} signal={r.youtubeSignals} refreshing={!!reviewProgress} onRefresh={() => { void run(false, d.id, true) }} />}</>
+            <p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap' }}>{d.body}</p>
+            {r?.score != null ? <>{m('Originality', r.o)}{m('Feasibility', r.f)}{m('Audience relevance', r.r)}<div className="reason" style={{ marginTop: 28 }}><span className="dim">Why this score</span><p className="q-writeup">{r.reason}</p></div>{r.youtubeSignals && <YouTubePreview key={d.id} signal={r.youtubeSignals} refreshing={!!reviewProgress} onRefresh={() => { void run(false, d.id, true) }} />}</>
               : <p className="dim" style={{ marginTop: 20 }}>Not reviewed by the AI yet.</p>}
             <div className="reason">
               <span className="dim">Idea author</span>
@@ -309,7 +309,7 @@ function Inner() {
                     </button>
                     <span className="chip">{application.status === 'pending' ? 'Pending' : application.status === 'accepted' ? 'Accepted' : 'Declined'}</span>
                   </div>
-                  {application.message && <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{application.message}</p>}
+                  {application.message && <p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{application.message}</p>}
                   <p className="dim" style={{ fontSize: 11 }}>
                     Applied {when(application.at) || 'recently'}{application.reviewedAt ? ' · Reviewed ' + (when(application.reviewedAt) || 'recently') : ''}
                   </p>
