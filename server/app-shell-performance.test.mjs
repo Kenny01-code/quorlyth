@@ -23,15 +23,15 @@ test('lazy route navigation shows a reduced-motion-aware loading surface instead
 
 test('QuorlythBot opens automatically after the welcome and account are ready', async () => {
   const app = await readSource('src/App.tsx')
-  assert.match(app, /const QuorlythBot = lazy\\(loadQuorlythBot\\)/)
-  assert.match(app, /Open QuorlythBot automatically once the welcome screen and account sync are/)
-  assert.match(app, /const identity = a\\.me\\?\\.id \\|\\| \\(a\\.demo \\? 'demo' : 'visitor'\\)/)
-  assert.match(app, /if \\(!a\\.ready \\|\\| a\\.startupError \\|\\| intro \\|\\| loc\\.pathname === '\\/signin'\\) return/)
-  assert.match(app, /if \\(a\\.me && \\(!a\\.dataReady \\|\\| !a\\.platformRolesReady\\)\\) return/)
-  assert.match(app, /void openQuorlythBot\\(\\)/)
-  assert.match(app, /!intro && !botLoading && !botMounted && !botLauncherHidden && createPortal\\(/)
+  assert.ok(app.includes('const QuorlythBot = lazy(loadQuorlythBot)'))
+  assert.ok(app.includes('Open QuorlythBot automatically once the welcome screen and account sync are'))
+  assert.ok(app.includes("const identity = a.me?.id || (a.demo ? 'demo' : 'visitor')"))
+  assert.ok(app.includes("if (!a.ready || a.startupError || intro || loc.pathname === '/signin') return"))
+  assert.ok(app.includes('if (a.me && (!a.dataReady || !a.platformRolesReady)) return'))
+  assert.ok(app.includes('void openQuorlythBot()'))
+  assert.ok(app.includes('!intro && !botLoading && !botMounted && !botLauncherHidden && createPortal('))
   assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
-  assert.doesNotMatch(app, /setTimeout\\(\\(\\) => \\{\\s*void loadQuorlythBot/)
+  assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
 })
 
 test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
