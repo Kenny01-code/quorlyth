@@ -48,7 +48,7 @@ export function PromotionPreview({ idea, promotion, compact = false }: {
       <section className="promotion-source">
         <p className="promotion-section-label">ORIGINAL COMMUNITY IDEA</p>
         <h4>{idea.title}</h4>
-        {!compact && idea.body && <p className="promotion-source-body">{idea.body}</p>}
+        {!compact && idea.body && <p className="promotion-source-body q-writeup">{idea.body}</p>}
         <div className="promotion-source-meta">
           <Av id={idea.authorId} size={25} />
           <span>Idea by <strong>{a.nm(idea.authorId)}</strong></span>
@@ -62,7 +62,7 @@ export function PromotionPreview({ idea, promotion, compact = false }: {
           <p className="promotion-section-label">SHARE-READY COPY</p>
           <span className="dim">{when(promotion.at)}</span>
         </div>
-        <p className="promotion-post-copy">{previewText}</p>
+        <p className="promotion-post-copy q-writeup">{previewText}</p>
         {compact && promotion.text.length > 250 && <p className="promotion-more-note">Preview shortened · open the idea to see the full copy</p>}
       </section>
 
