@@ -1,8 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Quorlyth">
   <rect width="48" height="48" rx="11" fill="#181817"/>
-  <g transform="translate(3.5 3.5) scale(.86)" fill="none" stroke="#F97316" stroke-width="3.2" stroke-linecap="round">
+  <g fill="none" stroke="#ef784b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M28.3 35.6A15 15 0 1 1 35.6 28.3"/>
-    <circle cx="22" cy="22" r="6" fill="#F97316" stroke="#F97316"/>
+    <circle cx="22" cy="22" r="6"/>
     <path d="M27.5 27.5L42 42"/>
+    <circle cx="22" cy="22" r="10" stroke-opacity=".25" stroke-dasharray="1 3"/>
   </g>
 </svg>

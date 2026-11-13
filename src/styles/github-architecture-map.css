@@ -20,3 +20,46 @@
 .arch-my-automations .btn svg,.arch-automation-created .btn svg{color:currentColor}
 .arch-automation-created{margin:24px 0;padding:20px 22px;border-color:rgba(184,91,64,.35);background:linear-gradient(115deg,#f0ead9,#e8dfd0)}
 @media(max-width:680px){.arch-my-automations,.arch-automation-created{align-items:stretch;flex-direction:column;gap:14px;padding:16px}.arch-my-automations .btn,.arch-automation-created .btn{width:100%;white-space:normal}}
+
+
+/* Solid, high-contrast action for the How It Works automation layer. */
+.arch-my-automations .arch-manage-automations-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 12px 18px;
+  border: 1px solid #8e351d !important;
+  border-radius: 12px;
+  background: #8e351d !important;
+  color: #fbf3e7 !important;
+  font-size: 13px;
+  font-weight: 700 !important;
+  letter-spacing: .01em;
+  box-shadow: 0 7px 18px rgba(111, 40, 24, .22);
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.arch-my-automations .arch-manage-automations-btn :is(svg, .ic) {
+  color: #fbf3e7 !important;
+}
+.arch-my-automations .arch-manage-automations-btn:hover {
+  border-color: #6f2818 !important;
+  background: #6f2818 !important;
+  color: #fffaf2 !important;
+  box-shadow: 0 10px 22px rgba(111, 40, 24, .3);
+  transform: translateY(-1px);
+}
+.arch-my-automations .arch-manage-automations-btn:active {
+  transform: translateY(0);
+}
+.arch-my-automations .arch-manage-automations-btn:focus-visible {
+  outline: 3px solid #ef784b;
+  outline-offset: 3px;
+}
+@media (max-width: 680px) {
+  .arch-my-automations .arch-manage-automations-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+}

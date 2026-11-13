@@ -319,3 +319,10 @@ body {
     transition: none !important;
   }
 }
+
+
+/* One shared Quorlyth mark: same open-ring geometry and orange used in the top navigation. */
+#root .q-logo-mark {
+  color: #ef784b !important;
+  stroke: currentColor;
+}

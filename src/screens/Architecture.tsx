@@ -196,7 +196,7 @@ function SystemArchitectureMap({ workflows, workflowDataReady, connections, conn
               ? latestWorkflow ? 'Most recently changed: ' + latestWorkflow.name + '. The map shows the shared system with your own saved workflow status layered on top.' : 'No saved workflows yet. Create one in Automation Studio and return here to see it reflected in this map.'
               : 'Sign in to Quorlyth to view your private automations here. Other visitors cannot see your saved workflows.'}</p>
           </div>
-          <button type="button" className="btn" onClick={onOpenAutomations}>Manage automations <Icon name="arrow-up-right" size={15} /></button>
+          <button type="button" className="btn p arch-manage-automations-btn" onClick={onOpenAutomations}>Manage automations <Icon name="arrow-up-right" size={15} /></button>
         </div>
       </div>
       <p className="arch-caption">The map combines Quorlyth’s shared production architecture with this account’s verified connections and saved workflow state. Signed-in production workflows use a persistent queue and scheduled worker; arbitrary calendar-style schedules and automatic social publishing are not currently workflow actions.</p>

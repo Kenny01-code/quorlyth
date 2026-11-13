@@ -14,7 +14,7 @@ export type QuorlythGlyphName =
   | 'copy' | 'redo' | 'sliders' | 'stage' | 'live' | 'stop' | 'palette' | 'pause'
 
 const SHAPES: Record<QuorlythGlyphName, ReactNode> = {
-  brand: <><path d="M18.4 4.9A8.7 8.7 0 1 0 19 17.8"/><path d="M15.5 15.5 21 21"/><path d="M18.4 4.9 21 3.5"/></>,
+  brand: <><path d="M14.15 17.8A7.5 7.5 0 1 1 17.8 14.15"/><circle cx="11" cy="11" r="3"/><path d="M13.75 13.75 21 21"/><circle cx="11" cy="11" r="5" strokeOpacity=".25" strokeDasharray=".5 1.5"/></>,
   workspace: <><path d="m12 3.3 8.2 4.2L12 11.7 3.8 7.5 12 3.3Z"/><path d="m3.8 12 8.2 4.3 8.2-4.3"/><path d="m3.8 16.5 8.2 4.2 8.2-4.2"/><path d="M12 11.8v4.5"/></>,
   milestone: <><path d="M3.5 12h4.2"/><path d="M16.3 12h4.2"/><path d="m12 4.1 5.3 7.9-5.3 7.9L6.7 12 12 4.1Z"/><circle cx="12" cy="12" r="1.2"/></>,
   timeline: <><path d="M3 7.5h18"/><path d="M3 16.5h18"/><circle cx="7" cy="7.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/><path d="M7 9.5v5.1M16.5 5v9.5"/></>,
@@ -103,13 +103,13 @@ export function QuorlythGlyph({ name, size = 20, className }: {
 }) {
   return (
     <svg
-      className={className || 'quorlyth-glyph'}
+      className={[className || 'quorlyth-glyph', name === 'brand' ? 'q-logo-mark' : ''].filter(Boolean).join(' ')}
       viewBox="0 0 24 24"
       width={size}
       height={size}
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.45"
+      strokeWidth={name === 'brand' ? 1.6 : 1.45}
       strokeLinecap="round"
       strokeLinejoin="round"
       style={{ ['--s' as any]: size + 'px' }}
