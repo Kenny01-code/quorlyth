@@ -12,27 +12,38 @@
   --qbot-panel: #252421;
 }
 
-/* Floating launcher: solid favicon orange, dark glyph, no translucent glass treatment. */
+/* QuorlythBot launcher uses the exact Quorlyth mark: charcoal surface, orange open-ring stroke. */
 #astl.astl,
 .astl {
-  border: 1px solid rgba(240, 234, 217, .55) !important;
-  background: #F97316 !important;
-  box-shadow: 0 16px 38px -18px rgba(0, 0, 0, .78), inset 0 1px 0 rgba(255, 239, 224, .52) !important;
+  border: 1px solid rgba(239, 120, 75, .48) !important;
+  background: #181817 !important;
+  box-shadow:
+    0 16px 38px -18px rgba(0, 0, 0, .78),
+    inset 0 1px 0 rgba(240, 234, 217, .12),
+    0 0 0 1px rgba(239, 120, 75, .08) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 #astl.astl:hover,
-.astl:hover { background: #FF8A35 !important; }
-#astl.astl::before {
-  border-color: rgba(249, 115, 22, .52) !important;
-  box-shadow: 0 0 25px rgba(249, 115, 22, .24) !important;
+.astl:hover {
+  background: #252421 !important;
+  border-color: rgba(239, 120, 75, .76) !important;
 }
-#astl.astl:focus-visible { outline: 3px solid #F97316 !important; outline-offset: 5px !important; }
+#astl.astl::before {
+  border-color: rgba(239, 120, 75, .42) !important;
+  box-shadow: 0 0 25px rgba(239, 120, 75, .16) !important;
+}
+#astl.astl:focus-visible { outline: 2px solid #ef784b !important; outline-offset: 5px !important; }
 #astl.astl:disabled { filter: saturate(.72); cursor: progress; }
 
 #astl .astm svg,
 .astm svg,
-.astm2 svg { color: var(--qbot-ink) !important; filter: drop-shadow(0 2px 5px rgba(33, 26, 23, .24)) !important; }
+.astm2 svg {
+  color: #ef784b !important;
+  stroke: currentColor !important;
+  fill: none !important;
+  filter: drop-shadow(0 0 7px rgba(239, 120, 75, .2)) !important;
+}
 .astl-hint { border-color: rgba(249, 115, 22, .55) !important; background: var(--qbot-coal) !important; color: var(--qbot-bone) !important; }
 
 /* Main QuorlythBot window remains charcoal, with orange edge lighting and warm-bone typography. */

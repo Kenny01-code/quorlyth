@@ -74,3 +74,41 @@
 @media(max-width:900px){.growth-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.growth-secondary{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.growth-panels,.growth-bottom{grid-template-columns:minmax(0,1fr)}.growth-intro{padding:16px}.growth-event-counts{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:480px){.growth-metrics{gap:8px}.growth-metric{padding:13px}.growth-metric__top{align-items:flex-start;gap:7px}.growth-metric__top>.dim{font-size:10px}.growth-metric>strong{font-size:31px}.growth-metric>p{font-size:10px;min-height:42px}.growth-secondary{grid-template-columns:minmax(0,1fr)}.growth-daily-chart{height:148px}.growth-daily-bars{height:112px}.growth-toolbar{align-items:flex-start}.growth-ranges{max-width:100%;flex-wrap:wrap}.growth-ranges button{padding:7px 10px}}
+
+
+/* Growth data visuals only: Quorlyth orange appears as an outline stroke, never a solid fill. */
+.growth-page .growth-daily-chart {
+  border-bottom-color: rgba(239, 120, 75, .28);
+}
+.growth-page .growth-daily-bars i.active,
+.growth-page .growth-legend i.active {
+  box-sizing: border-box;
+  background: transparent !important;
+  border: 1.5px solid #ef784b;
+}
+.growth-page .growth-daily-bars i.signup,
+.growth-page .growth-legend i.signup {
+  box-sizing: border-box;
+  background: transparent !important;
+  border: 1.5px dashed rgba(239, 120, 75, .72);
+}
+.growth-page .growth-funnel-track {
+  border: 1px solid rgba(239, 120, 75, .25);
+  background: transparent !important;
+}
+.growth-page .growth-funnel-track > i {
+  box-sizing: border-box;
+  background: transparent !important;
+  border: 1.5px solid #ef784b;
+}
+.growth-page .growth-recent-dot {
+  box-sizing: border-box;
+  background: transparent !important;
+  border: 1.5px solid #ef784b;
+  box-shadow: 0 0 0 4px rgba(239, 120, 75, .08);
+}
+.growth-page .growth-spinner {
+  background: transparent;
+  border-color: rgba(239, 120, 75, .24);
+  border-top-color: #ef784b;
+}
