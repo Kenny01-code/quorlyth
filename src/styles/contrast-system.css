@@ -64,7 +64,7 @@ body {
 }
 
 /* Light surfaces: clean bone, dark ink, and secondary text that remains readable. */
-#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]):not(#nav *) {
+#root :is(.glass, .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]):not(#nav):not(#nav *) {
   border-color: var(--q-edge-dark) !important;
   background-color: var(--q-bone) !important;
   color: var(--q-ink) !important;
@@ -278,21 +278,7 @@ body {
   box-shadow: 0 0 0 3px rgba(208, 106, 64, .24) !important;
 }
 
-#root #nav {
-  border-color: rgba(251, 243, 231, .32) !important;
-  background: rgba(21, 19, 17, .97) !important;
-  color: #fbf3e7 !important;
-}
-
-#root #nav :is(button, a, .nav-item) { color: #f4e9da !important; }
-#root #nav .navmain .nav-item.on {
-  color: #1c1511 !important;
-  background: #fbf3e7 !important;
-}
-#root #nav .navmain .nav-item.on > svg { color: #1c1511 !important; }
-#root #nav .navmain .nav-item:not(.on) > svg,
-#root #nav .navend button > svg,
-#root #nav .lgb > svg { color: #ff9a62 !important; }
+/* Keep the top navigation on its original room-theme styling. */
 
 #root .head {
   background-color: #d06a40 !important;
