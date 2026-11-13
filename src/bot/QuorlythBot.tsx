@@ -297,6 +297,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const role = !a.me ? 'visitor' : a.owner ? 'owner' : 'member'
   const communityOwner = !!a.me && a.data.communities.some(c => a.ownsCommunity(c.id))
   const robot = useRef<RobotApi | null>(null)
+  const robotReadyRef = useRef(false)
+  const pendingRobotPoseRef = useRef<'welcome' | 'wave' | null>(null)
   const log = useRef<HTMLDivElement>(null)
   const ctl = useRef<AbortController | null>(null)
   const rt = useRef<{ stop: () => void; respond?: () => void; interrupt?: () => void } | null>(null)
@@ -478,12 +480,22 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     })
     if (greeting.kind === 'quiet') {
       setCaption('')
-      robot.current?.wave()
+      pendingRobotPoseRef.current = 'wave'
+      if (robotReadyRef.current) {
+        pendingRobotPoseRef.current = null
+        robot.current?.wave()
+      }
       return
     }
 
     setCaption(greeting.text)
-    greeting.kind === 'first' ? robot.current?.welcome() : robot.current?.wave()
+    const openingPose = greeting.kind === 'first' ? 'welcome' : 'wave'
+    pendingRobotPoseRef.current = openingPose
+    if (robotReadyRef.current) {
+      pendingRobotPoseRef.current = null
+      if (openingPose === 'welcome') robot.current?.welcome()
+      else robot.current?.wave()
+    }
     // Speak the greeting automatically when the chat frame opens; the preview button is only for voice testing.
     say(greeting.text)
     window.setTimeout(() => setCaption(''), 6500)
@@ -3996,7 +4008,20 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
                 {view === 'voice' || !!live
                   ? <Orb ref={robot} theme={theme} calm={bs.calm} drag defer active={!minimized && (view === 'voice' || !!live)} />
-                  : <Robot ref={robot} theme={theme} calm={bs.calm} drag defer active={!minimized && view === 'chat' && bs.robot && stage !== 'off'} />}
+                  : <Robot
+                      ref={robot}
+                      theme={theme}
+                      calm={bs.calm}
+                      drag
+                      active={!minimized && view === 'chat' && bs.robot && stage !== 'off'}
+                      onReady={() => {
+                        robotReadyRef.current = true
+                        const pose = pendingRobotPoseRef.current
+                        pendingRobotPoseRef.current = null
+                        if (pose === 'welcome') robot.current?.welcome()
+                        else if (pose === 'wave') robot.current?.wave()
+                      }}
+                    />}
                 <div className={cn('ast-cap', caption && 'on')}>{caption}</div><div className="bnm">QuorlythBot</div>
               </div>
               {live && (
