@@ -363,14 +363,14 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
               {aiPlan && <div style={{ display: 'grid', gap: 10, borderTop: '1px solid var(--line, rgba(255,255,255,.12))', paddingTop: 12 }}>
                 <div>
                   <p className="dim" style={{ fontSize: 11, letterSpacing: '.07em', textTransform: 'uppercase' }}>Suggested project brief</p>
-                  <p className="mut" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p>
+                  <p className="mut q-writeup" style={{ marginTop: 5 }}>{aiPlan.project_summary}</p>
                   <p className="dim" style={{ fontSize: 11, marginTop: 5 }}>Signal score: {aiPlan.signal_score}/100 · AI estimate, not a measured engagement metric.</p>
                 </div>
                 <div style={{ display: 'grid', gap: 8 }}>
                   <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Proposed milestones · {aiPlan.milestones.length}</p>
                   {aiPlan.milestones.map((item, index) => <div key={item.title + index} className="glass pad" style={{ display: 'grid', gap: 5 }}>
                     <strong>{String(index + 1).padStart(2, '0')} · {item.title}</strong>
-                    <p className="mut">{item.description}</p>
+                    <p className="mut q-writeup">{item.description}</p>
                     <p className="dim" style={{ fontSize: 12 }}>Done when: {item.definition_of_done}</p>
                   </div>)}
                 </div>
@@ -404,7 +404,7 @@ function ProjectCard({ idea, project, milestones, canManage, canCollaborate, wor
                 <span className="dim">Project plan</span>
                 {canManage && <button type="button" className="chip" onClick={() => setEditSummary(true)}><QuorlythGlyph name="plan" size={13} />Edit</button>}
               </div>
-              <p style={{ marginTop: 8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{project.summary || 'No project summary has been added yet.'}</p>
+              <p className="q-writeup" style={{ marginTop: 8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{project.summary || 'No project summary has been added yet.'}</p>
               {project.dueAt ? <p className="ql-muted ql-project-deadline"><QuorlythGlyph name="calendar" size={14} />Target delivery · {dateLabel(project.dueAt)}</p> : null}
             </div>
           )}
