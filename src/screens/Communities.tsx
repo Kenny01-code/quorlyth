@@ -219,7 +219,7 @@ function List() {
                 <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{c.vis === 'unlisted' && <span className="chip">Unlisted</span>}{c.arch && <span className="chip on">Archived</span>}{a.ownsCommunity(c.id) && <span className="chip">Created by you</span>}</div>
                   <h3 style={{ fontSize: 20, fontWeight: 300 }}>{c.name}</h3>
-                  <p className="mut">{c.purpose}</p>
+                  <p className="mut q-writeup">{c.purpose}</p>
                   <div className="community-creator-identity"><Av id={creatorId(c) || c.ownerId || c.createdBy || ''} size={34} /><div className="community-creator-copy"><p className="dim" style={{ fontSize: 10 }}>CREATED BY</p><div className="community-creator-name"><button className="lk" onClick={() => creatorId(c) && nav('/me/' + creatorId(c))}>{creatorId(c) ? (a.nm(creatorId(c)) === 'Member' ? 'Community creator' : a.nm(creatorId(c))) : 'Community creator'}</button>{creatorId(c) && creatorId(c) !== data.ownerId && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY CREATOR</span>}</div></div></div>
                   <p className="dim" style={{ marginTop: 'auto' }}>{a.canManageCommunity(c.id) ? `${m} member${m === 1 ? '' : 's'}, ` : ''}{n} idea{n === 1 ? '' : 's'}</p>
                   <div className="acts" style={{ margin: 0 }}>
@@ -250,9 +250,9 @@ function List() {
             </div>
             {communityAIDraft && <div style={{ display: 'grid', gap: 8, borderTop: '1px solid var(--line, rgba(255,255,255,.12))', paddingTop: 12 }}>
               <div><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Suggested name</p><strong>{communityAIDraft.name}</strong></div>
-              <div><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Purpose</p><p className="mut">{communityAIDraft.purpose}</p></div>
-              <div><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Welcome message</p><p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{communityAIDraft.welcome}</p></div>
-              <div><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Guidelines</p><p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{communityAIDraft.rules}</p></div>
+              <div><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Purpose</p><p className="mut q-writeup">{communityAIDraft.purpose}</p></div>
+              <div><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Welcome message</p><p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap' }}>{communityAIDraft.welcome}</p></div>
+              <div><p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Guidelines</p><p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap' }}>{communityAIDraft.rules}</p></div>
               <button type="button" className="btn p" onClick={useCommunityAIDraft}><Icon name="check" size={14} />Use this draft</button>
             </div>}
           </section>
@@ -477,7 +477,7 @@ function Detail({ cid }: { cid: string }) {
             <span className="chip">{c.vis === 'unlisted' ? 'Unlisted' : 'Listed'}</span><span className="chip">{RULE[rule]}</span>{c.arch && <span className="chip on">Archived</span>}
           </div>
           <h2>{c.name}</h2>
-          <p className="mut" style={{ marginTop: 8, maxWidth: 620 }}>{c.purpose}</p>
+          <p className="mut q-writeup" style={{ marginTop: 8, maxWidth: 620 }}>{c.purpose}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}><Av id={communityCreatorId} size={36} /><div><p className="dim" style={{ fontSize: 10, letterSpacing: '.08em' }}>CREATED BY</p><button className="lk" onClick={() => communityCreatorId && nav('/me/' + communityCreatorId)}>{communityCreatorId && a.nm(communityCreatorId) !== 'Member' ? a.nm(communityCreatorId) : 'Community creator'}</button></div></div>
             {own && <>
@@ -498,7 +498,7 @@ function Detail({ cid }: { cid: string }) {
 
       {tab === 0 && (
         <>
-          {data.settings?.ann && <div className="glass pad" style={{ marginBottom: 18, display: 'flex', gap: 14 }}><Icon name="spark" size={20} /><p>{data.settings.ann}</p></div>}
+          {data.settings?.ann && <div className="glass pad" style={{ marginBottom: 18, display: 'flex', gap: 14 }}><Icon name="spark" size={20} /><p className="q-writeup">{data.settings.ann}</p></div>}
           {canPost ? (
             <div className="glass pad" style={{ marginBottom: 22 }}>
               <h3>Share an idea</h3>
@@ -509,7 +509,7 @@ function Detail({ cid }: { cid: string }) {
               {ideaAIDraft && <div className="glass pad" style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
                 <p className="dim" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em' }}>Review AI idea draft</p>
                 <h4 style={{ fontSize: 17 }}>{ideaAIDraft.title}</h4>
-                <p className="mut" style={{ whiteSpace: 'pre-wrap' }}>{ideaAIDraft.body}</p>
+                <p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap' }}>{ideaAIDraft.body}</p>
                 {ideaAIDraft.tags.length > 0 && <div className="acts" style={{ margin: 0 }}>{ideaAIDraft.tags.map(tag => <span className="chip" key={tag}>{tag}</span>)}</div>}
                 <div className="acts" style={{ margin: 0, flexWrap: 'wrap' }}><button type="button" className="btn p" onClick={useIdeaAIDraft}><Icon name="check" size={14} />Use this draft</button><button type="button" className="btn" onClick={() => setIdeaAIDraft(null)}>Discard</button></div>
               </div>}
@@ -597,8 +597,8 @@ function Detail({ cid }: { cid: string }) {
       {tab === 1 && (
         <>
           <div className="grid g2">
-            <div className="glass pad"><h3>Welcome</h3><p className="mut" style={{ marginTop: 10, whiteSpace: 'pre-wrap' }}>{c.welcome || 'Welcome. Share what you would love to see next.'}</p></div>
-            <div className="glass pad"><h3>Guidelines</h3><p className="mut" style={{ marginTop: 10, whiteSpace: 'pre-wrap' }}>{c.rules || 'Be kind, build on each other, and keep ideas specific.'}</p></div>
+            <div className="glass pad"><h3>Welcome</h3><p className="mut q-writeup" style={{ marginTop: 10, whiteSpace: 'pre-wrap' }}>{c.welcome || 'Welcome. Share what you would love to see next.'}</p></div>
+            <div className="glass pad"><h3>Guidelines</h3><p className="mut q-writeup" style={{ marginTop: 10, whiteSpace: 'pre-wrap' }}>{c.rules || 'Be kind, build on each other, and keep ideas specific.'}</p></div>
           </div>
           <div className="glass pad" style={{ marginTop: 18 }}><div className="stat3">
             {own && <div><p className="dim">Members</p><p className="num">{mem.length}</p></div>}
@@ -692,7 +692,7 @@ function JoinRequests({ cid }: { cid: string }) {
   return <div className="glass pad">
     <div className="profile-section-heading"><div><p className="dim">COMMUNITY MANAGEMENT</p><h3 style={{ marginBottom: 4 }}>Join requests</h3><p className="mut">Review requests for this community only. Platform access is managed separately. {pendingCount ? pendingCount + ' awaiting review.' : 'No requests are waiting for review.'}</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
     {requests.length ? requests.map(r => <div key={r.id} className="set" style={{ alignItems: 'flex-start' }}>
-      <div style={{ display: 'flex', gap: 12, minWidth: 0 }}><Av id={r.userId} size={38} /><div><h3 style={{ fontSize: 15 }}>{a.nm(r.userId)}</h3><p className="dim">{when(r.at)}</p>{r.message && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.message}</p>}</div></div>
+      <div style={{ display: 'flex', gap: 12, minWidth: 0 }}><Av id={r.userId} size={38} /><div><h3 style={{ fontSize: 15 }}>{a.nm(r.userId)}</h3><p className="dim">{when(r.at)}</p>{r.message && <p className="mut q-writeup" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.message}</p>}</div></div>
       <div className="acts" style={{ margin: 0, flexShrink: 0 }}>{r.status === 'pending' ? <><button className="btn p" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(r.userId, 'approved')}>{workingUserId === r.userId ? 'Saving…' : 'Approve'}</button><button className="btn" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(r.userId, 'declined')}>{workingUserId === r.userId ? 'Saving…' : 'Decline'}</button></> : <span className="chip">{r.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
     </div>) : <p className="mut" style={{ padding: '20px 0' }}>No join requests for this community yet.</p>}
   </div>
@@ -734,7 +734,7 @@ function AIOrganizerRequests({ cid }: { cid: string }) {
           <div style={{ minWidth: 0 }}>
             <h3 style={{ fontSize: 15 }}>{a.nm(request.userId)}</h3>
             <p className="dim">{idea ? 'Workspace: ' + idea.title : 'Idea no longer available'} · {when(request.at)}</p>
-            {request.message && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{request.message}</p>}
+            {request.message && <p className="mut q-writeup" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{request.message}</p>}
           </div>
         </div>
         <div className="acts" style={{ margin: 0, flexShrink: 0 }}>
