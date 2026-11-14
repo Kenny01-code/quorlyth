@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { streamChat } from '../ai/client'
+import { Logo } from '../lib/Logo'
 import '../styles/writing-assistant-live.css'
 
 type Point = { x: number; y: number }
@@ -336,9 +337,8 @@ export function WritingAssistant() {
     && anchorVisible
     ? createPortal(
       <div className="q-writing-assistant-anchor q-writing-assistant-ui" style={{ left: anchor.x, top: anchor.y, position: 'absolute' }}>
-        <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else { generation.current?.abort(); generation.current = null; setLoading(false); setOptions([]) } }}>
-          <span className="q-writing-robot-head" aria-hidden="true"><span className="q-writing-robot-antenna" /><span className="q-writing-robot-eye eye-left" /><span className="q-writing-robot-eye eye-right" /><span className="q-writing-robot-mouth" /></span>
-          <span className="q-writing-robot-glint" />
+        <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} style={{ color: '#EF784B' }} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else { generation.current?.abort(); generation.current = null; setLoading(false); setOptions([]) } }}>
+          <Logo size={22} breathe />
         </button>
       </div>,
       anchorRoot,
@@ -348,7 +348,7 @@ export function WritingAssistant() {
   const panelPortal = open && anchorVisible
     ? createPortal(
       <section className="q-writing-panel q-writing-assistant-ui" style={{ left: panel.x, top: panel.y, position: 'fixed' }} aria-label="QuorlythBot writing assistant">
-        <header className="q-writing-panel-head"><span className="q-writing-panel-symbol"><span className="q-writing-robot-head tiny"><span className="q-writing-robot-antenna" /><span className="q-writing-robot-eye eye-left" /><span className="q-writing-robot-eye eye-right" /><span className="q-writing-robot-mouth" /></span></span><div><b>QuorlythBot</b><small>WRITING ASSISTANT · STAYS HERE</small></div><button type="button" aria-label="Close writing assistant" onClick={() => { generation.current?.abort(); generation.current = null; setLoading(false); setOpen(false) }}>×</button></header>
+        <header className="q-writing-panel-head"><span className="q-writing-panel-symbol" style={{ color: '#EF784B' }}><Logo size={20} breathe /></span><div><b>QuorlythBot</b><small>WRITING ASSISTANT · STAYS HERE</small></div><button type="button" aria-label="Close writing assistant" onClick={() => { generation.current?.abort(); generation.current = null; setLoading(false); setOpen(false) }}>×</button></header>
         <div className="q-writing-modes">{MODES.map(item => <button type="button" key={item.id} className={mode.id === item.id ? 'on' : ''} disabled={loading} onClick={() => void improve(item)}>{item.label}</button>)}</div>
         {loading && <div className="q-writing-status"><span className="q-writing-pulse" />Refining your text…</div>}
         {error && <p className="q-writing-error" role="alert">{error}</p>}
