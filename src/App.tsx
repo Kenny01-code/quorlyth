@@ -6,6 +6,7 @@ import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
 import { Landing } from './screens/Landing'
 import { Logo } from './lib/Logo'
+import { QuorlythBotHead } from './bot/QuorlythBotHead'
 const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
 const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
@@ -102,7 +103,6 @@ export default function App() {
   const botMountedRef = useRef(false)
   const botLoadingRef = useRef(false)
   const pendingVoiceOpenRef = useRef(false)
-  const botAutoOpenedForRef = useRef<string | null>(null)
   const [writingAssistantMounted, setWritingAssistantMounted] = useState(false)
   const [desktopPermission, setDesktopPermission] = useState<NotificationPermission | 'unsupported'>(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
@@ -143,24 +143,6 @@ export default function App() {
       setBotLoading(false)
     }
   }, [])
-
-  // Open QuorlythBot automatically once the welcome screen and account sync are
-  // complete. This exposes the current bot experience without requiring a launcher click.
-  useEffect(() => {
-    const identity = a.me?.id || (a.demo ? 'demo' : 'visitor')
-    if (!identity) {
-      botAutoOpenedForRef.current = null
-      return
-    }
-    if (!a.ready || a.startupError || intro || loc.pathname === '/signin') return
-    if (a.me && (!a.dataReady || !a.platformRolesReady)) return
-    if (botAutoOpenedForRef.current === identity) return
-
-    // Respect a launcher the user deliberately hid; do not surprise-open it on restore.
-    botAutoOpenedForRef.current = identity
-    if (botLauncherHidden) return
-    void openQuorlythBot()
-  }, [a.me?.id, a.demo, a.ready, a.startupError, a.dataReady, a.platformRolesReady, intro, loc.pathname, botLauncherHidden, openQuorlythBot])
 
   // Load the AI writing helper only when someone actually focuses a textarea.
   // This keeps its AI/streaming client out of the initial application bundle.
@@ -510,7 +492,7 @@ export default function App() {
                   setBotLauncherHidden(true)
                 }}
               >
-                <span className="astm"><Logo size={30} /></span>
+                <span className="astm"><QuorlythBotHead size={38} /></span>
                 <span className="astl-hint" aria-hidden="true">Ask Quorlyth</span>
               </button>
               {botLoading && <span className="qbot-launcher-status" role="status">Opening QuorlythBot…</span>}
