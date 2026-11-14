@@ -521,3 +521,27 @@ test('QuorlythBot uses a balanced terracotta shell with deep-ink accents', async
   assert.ok(theme.includes("g1: '#EF784B'"))
   assert.ok(!theme.includes('p: 0xff833b'))
 })
+
+
+test('Request Access is a public application hub with owner-specific community routing and separate platform access', async () => {
+  const access = await readSource('src/screens/Access.tsx')
+  assert.match(access, /export function Access\(\)/)
+  assert.match(access, /filter\(community => community\.vis !== 'unlisted' && !community\.arch && community\.joinApproval\)/)
+  assert.match(access, /a\.requestCommunityJoin\(selected\.id, message\.trim\(\)\)/)
+  assert.match(access, /community\.ownerId \|\| community\.createdBy/)
+  assert.match(access, /\?tab=join-requests/)
+  assert.match(access, /function PlatformAccess\(\)/)
+  assert.match(access, /function GuestPlatformAccess\(\)/)
+  assert.match(access, /a\.sendRequest\(\{ platforms: pl, aud: au, note: note\.trim\(\) \}\)/)
+  assert.match(access, /Sign in first\. You'll return to this exact application after signing in\./)
+  assert.match(access, /Owner-reviewed applications/)
+})
+
+test('Improve text uses the visible orange Quorlyth logo mark in its launcher and panel', async () => {
+  const writing = await readSource('src/components/WritingAssistant.tsx')
+  assert.match(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
+  assert.match(writing, /<Logo size=\{22\} breathe \/>/)
+  assert.match(writing, /style=\{\{ color: '#EF784B' \}\}/)
+  assert.match(writing, /<Logo size=\{20\} breathe \/>/)
+  assert.doesNotMatch(writing, /q-writing-robot-head" aria-hidden="true"/)
+})
