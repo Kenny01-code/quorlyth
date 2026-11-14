@@ -5,6 +5,7 @@ import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
+import { QuorlythBotHead } from './QuorlythBotHead'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
@@ -3949,7 +3950,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             setLauncherHidden(true)
           }}
         >
-          <span className="astm"><Logo size={30} /></span>{greet && <span className="astb">{greet}</span>}
+          <span className="astm"><QuorlythBotHead size={38} /></span>{greet && <span className="astb">{greet}</span>}
         </button>
       )}
       {open && (
