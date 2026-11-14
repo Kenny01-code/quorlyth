@@ -15,6 +15,22 @@ import { useUserState } from '../lib/userState'
 import { useDraftState } from '../lib/useDraftState'
 import { communityOwnerLookup, isCommunityOwnerContribution } from '../lib/contributors'
 
+function PlatformAdminBadge({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      className={compact ? 'platform-verified-shield platform-verified-shield--compact' : 'platform-verified-shield'}
+      title="Verified Quorlyth platform administrator"
+    >
+      <svg viewBox="0 0 32 36" aria-hidden="true">
+        <path d="M16 2 28 7v9c0 8-4.7 13.6-12 18C8.7 29.6 4 24 4 16V7z" />
+        <path d="m10 17 4 4 8-9" />
+      </svg>
+      <span>PLATFORM ADMIN</span>
+    </span>
+  )
+}
+
+
 export function Me() {
   const { id } = useParams()
   return <Gate>{id ? <Public id={id} /> : <Mine />}</Gate>
@@ -82,7 +98,7 @@ function Mine() {
                 <span className="pav-initials" aria-hidden="true">{avatarInitials}</span>{photo && <img alt="" src={photo} onError={e => { e.currentTarget.style.display = 'none' }} />}<span className="cam"><Icon name="edit" size={14} /></span>
               </button>
             </div>
-            <div className="myspace-role-line">{(a.platformAdmin || a.owner) ? <span className="platform-verified-shield" title="Verified Quorlyth platform administrator"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 28 7v9c0 8-4.7 13.6-12 18C8.7 29.6 4 24 4 16V7z" /><path d="m10 17 4 4 8-9" /></svg><span>PLATFORM ADMIN</span></span> : created.length ? <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span> : <span className="chip">Member</span>}</div>
+            <div className="myspace-role-line">{(a.platformAdmin || a.owner) ? <PlatformAdminBadge /> : created.length ? <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span> : <span className="chip">Member</span>}</div>
           </div>
           <input ref={file} type="file" accept="image/*" className="hide" onChange={e => { const fl = e.target.files?.[0]; e.target.value = ''; if (fl) fl.size > 12e6 ? a.toast('That image is too large') : setCrop(fl) }} />
           <p className="dim" style={{ margin: '12px 0 0' }}>Profile edits are saved as a draft on this device until you save them.</p>
@@ -95,7 +111,7 @@ function Mine() {
           <div className="glass pad"><div className="stat3"><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{communities.length}</p></div></div></div>
           <ShareCard title="Your profile link" url={url} sub="Anyone with the link can see your profile." />
           <div className="glass pad"><h3 style={{ marginBottom: 8 }}>Communities</h3>
-            {communities.length ? communities.map(c => <div key={c.id} className="row" onClick={() => nav('/communities/' + c.id)}><Icon name="community" /><div className="t"><h3 style={{ fontSize: 15 }}>{c.name}</h3><p className="dim">{a.ownsCommunity(c.id) ? <><span className="community-owner-proof">✧ COMMUNITY OWNER</span> · Created by you</> : 'Joined'}</p></div></div>) : <><p className="mut">You have not created or joined any yet.</p><div className="acts"><button className="btn p" onClick={() => nav('/communities')}>Discover communities</button></div></>}</div>
+            {communities.length ? communities.map(c => <div key={c.id} className="row" onClick={() => nav('/communities/' + c.id)}><Icon name="community" /><div className="t"><h3 style={{ fontSize: 15 }}>{c.name}</h3><p className="dim">{a.ownsCommunity(c.id) ? <>{a.platformAdmin || a.owner ? <PlatformAdminBadge compact /> : <span className="community-owner-proof">✧ COMMUNITY OWNER</span>} · Created by you</> : 'Joined'}</p></div></div>) : <><p className="mut">You have not created or joined any yet.</p><div className="acts"><button className="btn p" onClick={() => nav('/communities')}>Discover communities</button></div></>}</div>
         </div>
       </div>
       
@@ -179,7 +195,7 @@ function Public({ id }: { id: string }) {
       <div className="head"><div><button className="chip" onClick={() => nav(-1)}>Back</button></div><div className="public-profile-actions">{id === a.me?.id && <button className="btn" onClick={() => nav('/me')}><Icon name="edit" size={16} />Edit profile</button>}</div></div>
       <div className="glass pad">
         <div className="pw"><span className="avx" style={{ width: 112, height: 112 }}><Av id={id} size={112} /></span>
-          <div style={{ minWidth: 0 }}><div className="profile-name-row"><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{isPlatformAdmin ? <span className="platform-verified-shield" title="Verified Quorlyth platform administrator"><svg viewBox="0 0 32 36" aria-hidden="true"><path d="M16 2 28 7v9c0 8-4.7 13.6-12 18C8.7 29.6 4 24 4 16V7z" /><path d="m10 17 4 4 8-9" /></svg><span>PLATFORM ADMIN</span></span> : isCommunityCreator && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span>}</div>{created.length > 0 && !isPlatformAdmin && <p className="dim profile-creator-proof">{created.length} {created.length === 1 ? 'community' : 'communities'} started</p>}{q?.head && <p className="mut q-writeup" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p className="q-writeup" style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
+          <div style={{ minWidth: 0 }}><div className="profile-name-row"><h2 style={{ fontSize: 'clamp(28px,4vw,40px)' }}>{a.nm(id)}</h2>{isPlatformAdmin ? <PlatformAdminBadge /> : isCommunityCreator && <span className="creator-badge"><span aria-hidden="true">✧</span> COMMUNITY OWNER</span>}</div>{created.length > 0 && !isPlatformAdmin && <p className="dim profile-creator-proof">{created.length} {created.length === 1 ? 'community' : 'communities'} started</p>}{q?.head && <p className="mut q-writeup" style={{ marginTop: 6 }}>{q.head}</p>}{q?.bio && <p className="q-writeup" style={{ marginTop: 14, maxWidth: 560, whiteSpace: 'pre-wrap' }}>{q.bio}</p>}</div></div>
         <div className="stat3" style={{ marginTop: 28 }}><div><p className="dim">Ideas</p><p className="num">{my.length}</p></div><div><p className="dim">Backings</p><p className="num">{rc}</p></div><div><p className="dim">Communities</p><p className="num">{communities.length}</p></div></div>
       </div>
       <ShareCard title="Profile link" url={location.origin + '/me/' + id} sub="Scan or open to view this profile." />
@@ -198,7 +214,7 @@ function Public({ id }: { id: string }) {
           const items = a.data.ideas.filter(i => i.cid === c.id)
           const backs = items.reduce((n, i) => n + a.votesOf(i.id), 0)
           return <article className="glass public-community-card" key={c.id}>
-            <button className="public-community-open" onClick={() => nav('/communities/' + c.id)}><span className="public-community-icon"><Icon name="community" size={21} /></span><span className="public-community-copy"><b>{c.name}</b><small>{created.some(own => own.id === c.id) ? 'Created by this member' : 'Member of this community'} · {items.length} {items.length === 1 ? 'idea' : 'ideas'} · {backs} backings</small>{created.some(own => own.id === c.id) ? <span className="community-member-badge community-owner-proof"><span aria-hidden="true">✧</span>COMMUNITY OWNER</span> : c.memberBadges?.[id] && <span className="community-member-badge"><span aria-hidden="true">✧</span>{c.memberBadges[id]}</span>}</span><Icon name="arrow-up-right" size={17} /></button>
+            <button className="public-community-open" onClick={() => nav('/communities/' + c.id)}><span className="public-community-icon"><Icon name="community" size={21} /></span><span className="public-community-copy"><b>{c.name}</b><small>{created.some(own => own.id === c.id) ? 'Created by this member' : 'Member of this community'} · {items.length} {items.length === 1 ? 'idea' : 'ideas'} · {backs} backings</small>{created.some(own => own.id === c.id) ? (isPlatformAdmin ? <PlatformAdminBadge compact /> : <span className="community-member-badge community-owner-proof"><span aria-hidden="true">✧</span>COMMUNITY OWNER</span>) : c.memberBadges?.[id] && <span className="community-member-badge"><span aria-hidden="true">✧</span>{c.memberBadges[id]}</span>}</span><Icon name="arrow-up-right" size={17} /></button>
             {c.purpose && <p className="mut public-community-purpose q-writeup">{c.purpose}</p>}
             <ShareCard title={c.name + ' link'} url={location.origin + '/communities/' + c.id} sub="Share this community with its direct link or QR code." />
           </article>
