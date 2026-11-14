@@ -21,17 +21,14 @@ test('lazy route navigation shows a reduced-motion-aware loading surface instead
   assert.match(styles, /@media\(prefers-reduced-motion:reduce\)[\s\S]*qth-route-loading/)
 })
 
-test('QuorlythBot opens automatically after the welcome and account are ready', async () => {
+test('QuorlythBot stays closed until a user deliberately opens the launcher', async () => {
   const app = await readSource('src/App.tsx')
   assert.ok(app.includes('const QuorlythBot = lazy(loadQuorlythBot)'))
-  assert.ok(app.includes('Open QuorlythBot automatically once the welcome screen and account sync are'))
-  assert.ok(app.includes("const identity = a.me?.id || (a.demo ? 'demo' : 'visitor')"))
-  assert.ok(app.includes("if (!a.ready || a.startupError || intro || loc.pathname === '/signin') return"))
-  assert.ok(app.includes('if (a.me && (!a.dataReady || !a.platformRolesReady)) return'))
-  assert.ok(app.includes('void openQuorlythBot()'))
-  assert.ok(app.includes('!intro && !botLoading && !botMounted && createPortal('))
-  assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
-  assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
+  assert.ok(app.includes('const openQuorlythBot = useCallback'))
+  assert.doesNotMatch(app, /botAutoOpenedForRef|Open QuorlythBot automatically/)
+  assert.match(app, /onClick=\{\(\) => \{ void openQuorlythBot\(\) \}\}/)
+  assert.match(app, /void openQuorlythBot\(true\)/)
+  assert.match(app, /\{botMounted && <Suspense fallback=\{null\}><QuorlythBot initialOpen/)
 })
 
 test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
@@ -544,4 +541,31 @@ test('Improve text uses the visible orange Quorlyth logo mark in its launcher an
   assert.match(writing, /style=\{\{ color: '#EF784B' \}\}/)
   assert.match(writing, /<Logo size=\{20\} breathe \/>/)
   assert.doesNotMatch(writing, /q-writing-robot-head" aria-hidden="true"/)
+})
+
+test('the QuorlythBot launcher uses the compact orange 3D robot-head mark', async () => {
+  const [app, bot, head, css] = await Promise.all([
+    readSource('src/App.tsx'),
+    readSource('src/bot/QuorlythBot.tsx'),
+    readSource('src/bot/QuorlythBotHead.tsx'),
+    readSource('src/styles/app.css'),
+  ])
+  assert.match(app, /QuorlythBotHead size=\{38\}/)
+  assert.match(bot, /QuorlythBotHead size=\{38\}/)
+  assert.match(head, /qbhead-shell/)
+  assert.match(head, /qbhead-face/)
+  assert.match(head, /#EF784B/)
+  assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
+})
+
+test('platform admins keep the solid orange role badge in My Space and public community cards', async () => {
+  const [me, css] = await Promise.all([
+    readSource('src/screens/Me.tsx'),
+    readSource('src/styles/app.css'),
+  ])
+  assert.match(me, /a\.platformAdmin \|\| a\.owner \? <PlatformAdminBadge compact \/>/)
+  assert.match(me, /isPlatformAdmin \? <PlatformAdminBadge compact \/>/)
+  assert.match(me, /function PlatformAdminBadge\(/)
+  assert.match(css, /background:linear-gradient\(145deg,#FFA16F 0%,#EF784B 48%,#D85F37 100%\)/)
+  assert.match(css, /\.platform-verified-shield--compact/)
 })
