@@ -224,7 +224,7 @@ function List() {
                   <p className="dim" style={{ marginTop: 'auto' }}>{a.canManageCommunity(c.id) ? `${m} member${m === 1 ? '' : 's'}, ` : ''}{n} idea{n === 1 ? '' : 's'}</p>
                   <div className="acts" style={{ margin: 0 }}>
                     <button className="btn p" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id)}>Open</button>
-                    {a.canManageCommunity(c.id) && <button className="btn" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id + '?tab=join-requests')}><Icon name="member" size={16} />Member applications ({data.joinRequests.filter(r => r.cid === c.id && r.status === 'pending').length})</button>}
+                    {a.canManageCommunity(c.id) && <button className="btn" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id + '?tab=join-requests')}><Icon name="member" size={16} />Join requests ({data.joinRequests.filter(r => r.cid === c.id && r.status === 'pending').length})</button>}
                     {a.canManageCommunity(c.id) && <button className="btn" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id + '?preview=member')}><Icon name="eye2" size={16} />View community</button>}
                   </div>
                 </div>
@@ -263,7 +263,7 @@ function List() {
           <Pick label="Icon" value={f.icon} onChange={v => setF({ ...f, icon: v })} opts={ICONS.map(i => [i, <Icon key={i} name={i} size={18} />])} />
           <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={() => setF({ ...f, cover: key })}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
           <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
-          <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people apply to you before they can join.' : 'OFF — anyone can join this community immediately.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
+          <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people must request approval before they can join.' : 'OFF — anyone can join this community immediately.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
           <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner / moderators only']]} />
           <div className="acts"><button type="button" className="btn p" disabled={communitySubmitting} onClick={async () => {
             if (communitySubmitting) return
@@ -354,7 +354,7 @@ function Detail({ cid }: { cid: string }) {
   list = [...list].sort(sort === 1 ? (x, y) => a.votesOf(y.id) - a.votesOf(x.id) : sort === 2 ? (x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1) : (x, y) => y.at - x.at)
   const pin = c.pinned ? data.ideas.find(i => i.id === c.pinned) : null
   const tags = Object.entries(list.reduce((o: Record<string, number>, i) => { (i.tags || []).forEach(t => (o[t] = (o[t] || 0) + 1)); return o }, {})).sort((x, y) => y[1] - x[1]).slice(0, 10).map(x => x[0])
-  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Member applications', 'AI organizer requests', 'Insights', 'Settings'] : [])]
+  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'AI organizer requests', 'Insights', 'Settings'] : [])]
 
   async function organizeIdeaWithAI() {
     if (!c) return a.toast('Community not found. Refresh and try again.')
@@ -406,10 +406,7 @@ function Detail({ cid }: { cid: string }) {
   async function joinToShareIdeas() {
     if (preview) return a.toast('This is a preview. Nothing is saved.')
     if (!a.me) {
-      const destination = c?.joinApproval
-        ? '/access?community=' + encodeURIComponent(cid)
-        : '/communities/' + cid
-      nav('/signin?next=' + encodeURIComponent(destination))
+      nav('/signin?next=' + encodeURIComponent('/communities/' + cid))
       return
     }
     if (joined || own) return
@@ -489,13 +486,6 @@ function Detail({ cid }: { cid: string }) {
             </>}
             {!own && <button className={cn('btn', !joined && 'p')} style={{ marginLeft: 'auto' }} disabled={!joined && !!c.joinApproval && myJoinRequest?.status === 'pending'} onClick={() => {
               if (preview) return a.toast('This is a preview. Nothing is saved.')
-              if (!a.me) {
-                const destination = c.joinApproval
-                  ? '/access?community=' + encodeURIComponent(cid)
-                  : '/communities/' + cid
-                nav('/signin?next=' + encodeURIComponent(destination))
-                return
-              }
               if (joined) return void a.join(cid, false)
               if (c.joinApproval) return void a.requestCommunityJoin(cid)
               return void a.join(cid, true)
@@ -503,7 +493,7 @@ function Detail({ cid }: { cid: string }) {
           </div>
         </div>
       </div>
-      <div className="ctabs">{tabs.map((t, i) => <Chip key={t} on={tab === i} onClick={() => setTab(i)}>{t}{t === 'Member applications' && data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length > 0 ? ' (' + data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length + ')' : t === 'AI organizer requests' && data.aiOrganizerRequests.filter(r => r.cid === cid && r.status === 'pending').length > 0 ? ' (' + data.aiOrganizerRequests.filter(r => r.cid === cid && r.status === 'pending').length + ')' : ''}</Chip>)}</div>
+      <div className="ctabs">{tabs.map((t, i) => <Chip key={t} on={tab === i} onClick={() => setTab(i)}>{t}{t === 'Join requests' && data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length > 0 ? ' (' + data.joinRequests.filter(r => r.cid === cid && r.status === 'pending').length + ')' : t === 'AI organizer requests' && data.aiOrganizerRequests.filter(r => r.cid === cid && r.status === 'pending').length > 0 ? ' (' + data.aiOrganizerRequests.filter(r => r.cid === cid && r.status === 'pending').length + ')' : ''}</Chip>)}</div>
       {shareOpen && <ShareCard title={"Share " + c.name} url={window.location.origin + "/communities/" + c.id} sub="Copy the community link or let people scan the QR code. Unlisted communities still require access." />}
 
       {tab === 0 && (
@@ -582,7 +572,7 @@ function Detail({ cid }: { cid: string }) {
                 </div>
                 <button type="button" className="btn p" disabled={!!a.me && !!c.joinApproval && myJoinRequest?.status === 'pending' || !!preview} onClick={() => void joinToShareIdeas()}>
                   <Icon name={!a.me ? 'lock' : c.joinApproval ? 'status' : 'community'} size={15} />
-                  {!a.me ? c.joinApproval ? 'Sign in to apply' : 'Sign in to join' : c.joinApproval ? myJoinRequest?.status === 'pending' ? 'Request pending' : myJoinRequest?.status === 'declined' ? 'Request again' : 'Request to join' : 'Join community'}
+                  {!a.me ? 'Sign in to join' : c.joinApproval ? myJoinRequest?.status === 'pending' ? 'Request pending' : myJoinRequest?.status === 'declined' ? 'Request again' : 'Request to join' : 'Join community'}
                 </button>
               </div>
             ) : (
@@ -700,7 +690,7 @@ function JoinRequests({ cid }: { cid: string }) {
   }
 
   return <div className="glass pad">
-    <div className="profile-section-heading"><div><p className="dim">COMMUNITY MANAGEMENT</p><h3 style={{ marginBottom: 4 }}>Member applications</h3><p className="mut">Review applications for this community only. Platform access is managed separately. {pendingCount ? pendingCount + ' awaiting review.' : 'No requests are waiting for review.'}</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
+    <div className="profile-section-heading"><div><p className="dim">COMMUNITY MANAGEMENT</p><h3 style={{ marginBottom: 4 }}>Join requests</h3><p className="mut">Review requests for this community only. Platform access is managed separately. {pendingCount ? pendingCount + ' awaiting review.' : 'No requests are waiting for review.'}</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
     {requests.length ? requests.map(r => <div key={r.id} className="set" style={{ alignItems: 'flex-start' }}>
       <div style={{ display: 'flex', gap: 12, minWidth: 0 }}><Av id={r.userId} size={38} /><div><h3 style={{ fontSize: 15 }}>{a.nm(r.userId)}</h3><p className="dim">{when(r.at)}</p>{r.message && <p className="mut q-writeup" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.message}</p>}</div></div>
       <div className="acts" style={{ margin: 0, flexShrink: 0 }}>{r.status === 'pending' ? <><button className="btn p" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(r.userId, 'approved')}>{workingUserId === r.userId ? 'Saving…' : 'Approve'}</button><button className="btn" style={{ padding: '9px 18px' }} disabled={workingUserId !== null} onClick={() => void review(r.userId, 'declined')}>{workingUserId === r.userId ? 'Saving…' : 'Decline'}</button></> : <span className="chip">{r.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
@@ -832,7 +822,7 @@ function CommunitySettings({ c, memberIds }: { c: Community; memberIds: string[]
           }
         }}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
       <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v as any })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
-      <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people apply to you before they can join.' : 'OFF — anyone can join immediately. Saving this change will approve existing pending requests.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
+      <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people must request approval before they can join.' : 'OFF — anyone can join immediately. Saving this change will approve existing pending requests.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
       <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v as any })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner / moderators only']]} />
       {f.post === 'owner' && <section className="glass pad" style={{ display: 'grid', gap: 10, margin: '10px 0 16px' }}>
         <div>
