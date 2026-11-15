@@ -545,10 +545,7 @@ body {
 }
 
 #root #main .idea-feed-card .idea-feed-writeup {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 6;
-  overflow: hidden;
+  display: block;
   margin: 0;
   color: #000000 !important;
   font-size: 14px !important;
@@ -556,6 +553,7 @@ body {
   line-height: 1.7 !important;
   letter-spacing: 0 !important;
   white-space: pre-wrap !important;
+  overflow: visible;
   overflow-wrap: anywhere;
 }
 
