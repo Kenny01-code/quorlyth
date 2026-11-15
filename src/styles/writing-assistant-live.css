@@ -15,3 +15,70 @@
 .q-writing-option:disabled .q-writing-option-use { opacity:.4; }
 @keyframes qWritingStreamPulse { 0%,100% { opacity:.45; transform:scale(.85); } 50% { opacity:1; transform:scale(1.1); } }
 @media(prefers-reduced-motion:reduce) { .q-writing-stream-hint::before { animation:none; } }
+
+
+/* The writing helper lives inside the textarea, not as a detached floating action. */
+.q-writing-assistant-anchor-layer {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 35 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+}
+.q-writing-assistant-anchor {
+  z-index: 36 !important;
+  display: block;
+  width: max-content;
+  max-width: calc(100% - 12px);
+  line-height: 1;
+  pointer-events: none !important;
+}
+.q-writing-robot-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 30px !important;
+  padding: 6px 10px !important;
+  border: 1px solid rgba(239,120,75,.62) !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg,rgba(239,120,75,.18),rgba(239,120,75,.08)) !important;
+  color: #EF784B !important;
+  box-shadow: 0 3px 12px rgba(32,20,14,.11), inset 0 1px 0 rgba(255,255,255,.14) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(130%) !important;
+  backdrop-filter: blur(12px) saturate(130%) !important;
+  font: 700 11px/1.1 Inter, ui-sans-serif, system-ui, sans-serif !important;
+  letter-spacing: -.01em;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease !important;
+}
+.q-writing-robot-button > svg {
+  display: block;
+  flex: 0 0 18px;
+  width: 18px !important;
+  height: 18px !important;
+}
+.q-writing-robot-label { display: inline-block; }
+.q-writing-robot-button:hover {
+  border-color: rgba(239,120,75,.92) !important;
+  background: linear-gradient(135deg,rgba(239,120,75,.26),rgba(239,120,75,.13)) !important;
+  box-shadow: 0 5px 16px rgba(32,20,14,.16), 0 0 0 2px rgba(239,120,75,.08) !important;
+  transform: translateY(-1px);
+}
+.q-writing-robot-button.is-open {
+  background: linear-gradient(145deg,#FFA16F 0%,#EF784B 48%,#D85F37 100%) !important;
+  color: #211A17 !important;
+  border-color: rgba(255,220,190,.9) !important;
+}
+.q-writing-robot-button.is-thinking { cursor: progress !important; }
+@media (max-width: 520px) {
+  .q-writing-robot-button { min-height: 28px !important; padding: 5px 8px !important; font-size: 10px !important; gap: 5px !important; }
+  .q-writing-robot-button > svg { width: 16px !important; height: 16px !important; flex-basis: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .q-writing-robot-button { transition: none !important; }
+}
