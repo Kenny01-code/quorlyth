@@ -1,0 +1,208 @@
+/* Quorlyth's shared motion language: quiet by default, expressive on intent. */
+:root {
+  --qth-motion-fast: 150ms;
+  --qth-motion-base: 220ms;
+  --qth-motion-smooth: cubic-bezier(.2,.75,.25,1);
+  --qth-motion-spring: cubic-bezier(.2,1.35,.4,1);
+}
+
+@keyframes qth-card-in {
+  from { opacity: 0; transform: translate3d(0,9px,0) scale(.994); }
+  to { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+}
+@keyframes qth-icon-arrive {
+  from { opacity: .35; transform: scale(.86); }
+  72% { opacity: 1; transform: scale(1.07); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes qth-icon-ring {
+  0%,100% { transform: rotate(0); }
+  18% { transform: rotate(-15deg); }
+  38% { transform: rotate(12deg); }
+  58% { transform: rotate(-8deg); }
+  78% { transform: rotate(4deg); }
+}
+@keyframes qth-icon-pop {
+  0% { transform: scale(.82); }
+  65% { transform: scale(1.17); }
+  100% { transform: scale(1); }
+}
+@keyframes qth-icon-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes qth-overlay-in {
+  from { opacity: 0; transform: translate3d(0,7px,0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+}
+
+/* Every control gets the same responsive timing, without changing its layout. */
+#root #main :is(button,a,[role="button"],summary,.btn,.chip),
+#nav :is(button,a,[role="button"]) {
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--qth-motion-fast) var(--qth-motion-smooth),
+    color var(--qth-motion-fast) ease,
+    background-color var(--qth-motion-fast) ease,
+    border-color var(--qth-motion-fast) ease,
+    box-shadow var(--qth-motion-fast) ease,
+    opacity var(--qth-motion-fast) ease;
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):not(:disabled):active,
+#nav :is(button,a,[role="button"]):not(:disabled):active {
+  transform: scale(.985);
+}
+
+/* Semantic icon classes let the same Quorlyth glyph family react in context. */
+#root :is(.qth-glyph,.ic,.q-brand-svg),
+#nav :is(.qth-glyph,.ic,.q-brand-svg) {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 240ms var(--qth-motion-smooth),
+    filter 200ms ease,
+    opacity 180ms ease;
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .qth-glyph,
+#nav :is(button,a,[role="button"]):is(:hover,:focus-visible) .qth-glyph {
+  filter: drop-shadow(0 2px 5px currentColor);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):active .qth-glyph,
+#nav :is(button,a,[role="button"]):active .qth-glyph {
+  transform: scale(.91);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-arrow,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-arrow-up-right,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-open,
+#nav :is(button,a,[role="button"]):is(:hover,:focus-visible) .q-glyph-arrow,
+#nav :is(button,a,[role="button"]):is(:hover,:focus-visible) .q-glyph-arrow-up-right {
+  transform: translate(2px,-1px);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-back,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-arrow-up {
+  transform: translateX(-2px);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-bell,
+#nav :is(button,a,[role="button"]):is(:hover,:focus-visible) .q-glyph-bell {
+  animation: qth-icon-ring 620ms var(--qth-motion-smooth);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-search,
+#nav :is(button,a,[role="button"]):is(:hover,:focus-visible) .q-glyph-search {
+  transform: scale(1.13);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-settings,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-sliders {
+  transform: rotate(24deg);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-rotate,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-redo {
+  transform: rotate(75deg);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-add {
+  transform: rotate(90deg) scale(1.06);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-close {
+  transform: rotate(90deg) scale(1.04);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-send,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-share {
+  transform: translate(1px,-2px) scale(1.06);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-brand,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-idea,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-star {
+  transform: translateY(-1px) rotate(5deg) scale(1.08);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-check,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-complete {
+  animation: qth-icon-pop 360ms var(--qth-motion-spring);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-mail,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-message {
+  transform: translateY(-1px) scale(1.07);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-trash {
+  transform: translateY(-1px) rotate(-6deg);
+}
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-phone,
+#root #main :is(button,a,[role="button"],summary,.btn,.chip):is(:hover,:focus-visible) .q-glyph-phone-off {
+  transform: rotate(-8deg);
+}
+
+/* Loading controls animate only while their owner explicitly reports a busy state. */
+#root #main :is(button,a,[role="button"],.btn)[aria-busy="true"] .qth-glyph,
+#root #main :is(button,a,[role="button"],.btn).is-loading .qth-glyph {
+  animation: qth-icon-spin 900ms linear infinite;
+}
+
+/* Branded social marks and non-button icon tiles respond to their own surface. */
+#root #main :is(.q-social-connection,.q-social-provider-card,.wa-connected-service):is(:hover,:focus-within) .q-brand-svg {
+  transform: scale(1.09);
+}
+#root #main :is(.wa-icon-btn,.q-backup-card__icon,.wa-preview-node-icon,.q-social-provider-mark) {
+  transition: transform 220ms var(--qth-motion-smooth), border-color 180ms ease, box-shadow 180ms ease;
+}
+@media (hover:hover) {
+  #root #main :is(.wa-icon-btn,.q-backup-card__icon,.wa-preview-node-icon,.q-social-provider-mark):hover {
+    transform: translateY(-2px) scale(1.035);
+    border-color: rgba(239,120,75,.55);
+    box-shadow: 0 7px 18px -12px rgba(239,120,75,.5);
+  }
+}
+
+/* Data cards enter as a short, ordered sequence when a list is mounted. */
+#root #main :is(.sw-project-card,.sw-task,.sw-artifact,.wa-workflow-card,.wa-template-card,.q-social-provider-card,.q-social-connection) {
+  animation: qth-card-in 360ms var(--qth-motion-smooth) both;
+}
+#root #main :is(.sw-project-card,.sw-task,.sw-artifact,.wa-workflow-card,.wa-template-card,.q-social-provider-card,.q-social-connection):nth-child(2) {
+  animation-delay: 35ms;
+}
+#root #main :is(.sw-project-card,.sw-task,.sw-artifact,.wa-workflow-card,.wa-template-card,.q-social-provider-card,.q-social-connection):nth-child(3) {
+  animation-delay: 70ms;
+}
+#root #main :is(.sw-project-card,.sw-task,.sw-artifact,.wa-workflow-card,.wa-template-card,.q-social-provider-card,.q-social-connection):nth-child(4) {
+  animation-delay: 105ms;
+}
+#root #main :is(.sw-project-card,.sw-task,.sw-artifact,.wa-workflow-card,.wa-template-card,.q-social-provider-card,.q-social-connection):focus-within {
+  border-color: rgba(239,120,75,.42);
+  box-shadow: 0 0 0 3px rgba(239,120,75,.08);
+}
+
+/* Inputs and overlays use the same easing as buttons and route changes. */
+#root #main :is(input,textarea,select,[contenteditable="true"]) {
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+#root :is(.modal,.dialog,[role="dialog"],.popover,.dropdown) {
+  animation: qth-overlay-in 220ms var(--qth-motion-smooth) both;
+}
+#root #main a:not(.btn):not(.nav-item) {
+  text-underline-offset: .2em;
+  transition: color 160ms ease, text-decoration-color 160ms ease;
+}
+html { scroll-behavior: smooth; }
+
+/* Motion remains functional, but never essential, for users who reduce animation. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  #root *,
+  #root *::before,
+  #root *::after,
+  #nav *,
+  #nav *::before,
+  #nav *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  #root :is(button,a,[role="button"],summary,.btn,.chip):active,
+  #nav :is(button,a,[role="button"]):active {
+    transform: none !important;
+  }
+  #root .qth-glyph,
+  #root .ic,
+  #root .q-brand-svg {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
