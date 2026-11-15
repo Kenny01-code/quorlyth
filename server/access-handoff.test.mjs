@@ -30,7 +30,7 @@ test('signup and Google OAuth return to the exact community application after au
     source('src/backend.ts'),
   ])
   assert.match(access, /const destination = '\/access\?tab=community'/)
-  assert.match(access, /'next=' \+ encodeURIComponent\(destination\)/)
+  assert.match(access, /&next=' \+ encodeURIComponent\(destination\)/)
   assert.match(signin, /authRedirectUrl = \(\) => new URL\('\/signin\?next=' \+ encodeURIComponent\(next\), window\.location\.origin\)\.toString\(\)/)
   assert.match(signin, /signUpEmail\(email\.trim\(\), password, authRedirectUrl\(\)\)/)
   assert.match(signin, /signInGoogle\(authRedirectUrl\(\)\)/)
