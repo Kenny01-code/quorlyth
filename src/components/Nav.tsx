@@ -150,7 +150,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
   }, [loc.pathname, owner])
 
   return (
-    <nav className="glass" id="nav" aria-label="Main navigation" data-auth-state={loading ? "loading" : me ? "signed-in" : "signed-out"} data-loading={loading ? "true" : "false"} aria-busy={loading || (!!me && (!app.dataReady || !app.platformRolesReady))}>
+    <nav className="glass" id="nav" aria-label="Main navigation" data-auth-state={me ? "signed-in" : "signed-out"} data-loading={loading ? "true" : "false"} aria-busy={loading || (!!me && (!app.dataReady || !app.platformRolesReady))}>
       <button className="lgb" onClick={onReplay} disabled={loading} title="Replay intro" aria-label="Replay Quorlyth introduction"><Logo size={26} breathe /></button>
       <b className="nav-wordmark">{'QUORLYTH'.split('').map((c, i) => <span key={i} style={{ ['--word-index' as any]: i }}>{c}</span>)}</b>
       <div className="navwrap" ref={wrap}>
