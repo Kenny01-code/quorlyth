@@ -377,11 +377,12 @@ export async function createBackend(): Promise<Backend> {
     },
     async getPlatformAccessStatus() {
       const current = await auth.current()
-      if (!current?.email) return null
+      const currentEmail = current?.email?.trim().toLowerCase()
+      if (!currentEmail) return null
       const records = await store.exportAll()
       const request = records.find(record =>
         record.path.startsWith('platformAccessRequests/')
-        && record.data?.email?.toLowerCase() === current.email.toLowerCase()
+        && record.data?.email?.toLowerCase() === currentEmail
       )?.data
       return request?.status === 'pending' || request?.status === 'approved' || request?.status === 'declined'
         ? request.status
