@@ -525,7 +525,7 @@ test('QuorlythBot uses the exact uploaded #D06A40 swatch for its 3D shell', asyn
   assert.match(robot, /shell\.color\.setHex\(T\.p\)/)
   assert.match(robot, /arm\.color\.setHex\(T\.p\)/)
   assert.ok(!theme.includes('p: 0xef784b'))
-  assert.ok(!theme.includes('g1: '# + 'EF784B''))
+  assert.ok(!theme.includes("g1: '#EF784B'"))
 })
 
 
