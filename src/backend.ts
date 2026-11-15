@@ -35,6 +35,7 @@ export interface Backend {
   submitPlatformAccessRequest?(input: { fullName: string; email: string; message: string }): Promise<void>
   listPlatformAccessRequests?(): Promise<PlatformAccessRequestRecord[]>
   reviewPlatformAccessRequest?(id: string, status: 'approved' | 'declined'): Promise<void>
+  getPlatformAccessStatus?(): Promise<'pending' | 'approved' | 'declined' | null>
   uploadIdeaFile?(cid: string, ideaId: string, file: File): Promise<string>
   getIdeaFileUrl?(path: string): Promise<string>
   deleteIdeaFile?(path: string): Promise<void>
@@ -322,6 +323,15 @@ export async function createBackend(): Promise<Backend> {
         const { error } = await sb.rpc('review_quorlyth_access_request', { request_id: id, next_status: status })
         if (error) throw new Error(error.message || 'Could not review this visitor access request.')
       },
+      async getPlatformAccessStatus() {
+        const { data: userData, error: userError } = await sb.auth.getUser()
+        if (userError) throw userError
+        const email = userData.user?.email?.trim().toLowerCase()
+        if (!email) return null
+        const { data, error } = await sb.from('workspace_members').select('status').eq('email', email).maybeSingle()
+        if (error) throw new Error(error.message || 'Could not check your platform access status.')
+        return data?.status === 'pending' || data?.status === 'approved' || data?.status === 'declined' ? data.status : null
+      },
       async reviewCommunityJoinRequest(cid, userId, status) {
         const { error } = await sb.rpc('review_community_join_request', { p_cid: cid, p_user_id: userId, p_status: status })
         if (error) throw error
@@ -378,6 +388,18 @@ export async function createBackend(): Promise<Backend> {
       if (request.user_id) {
         await store.set('decisions/' + request.user_id, { status, at: Date.now() })
       }
+    },
+    async getPlatformAccessStatus() {
+      const current = await auth.current()
+      if (!current?.email) return null
+      const records = await store.exportAll()
+      const request = records.find(record =>
+        record.path.startsWith('platformAccessRequests/')
+        && record.data?.email?.toLowerCase() === current.email.toLowerCase()
+      )?.data
+      return request?.status === 'pending' || request?.status === 'approved' || request?.status === 'declined'
+        ? request.status
+        : null
     },
     async reviewCommunityJoinRequest(cid, userId, status) {
       const path = 'communityJoinRequests/' + cid + '__' + userId
