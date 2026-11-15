@@ -1,0 +1,319 @@
+/* Hard overrides for surfaces that require consistently black, high-contrast copy. */
+#root #main .idea-feed-card {
+  background: linear-gradient(145deg, #fffdf7 0%, #f4eedf 100%) !important;
+  border-color: rgba(28, 21, 17, .2) !important;
+  color: #000000 !important;
+}
+#root #main .idea-feed-card .idea-card-title,
+#root #main .idea-feed-card .idea-feed-writeup,
+#root #main .idea-feed-card .idea-feed-writeup :where(*) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+#root #main .idea-feed-card .idea-card-title { font-weight: 600 !important; line-height: 1.3 !important; }
+#root #main .idea-feed-card .idea-feed-writeup {
+  display: block !important; margin: 0 !important;
+  font-family: Inter, "Avenir Next", Avenir, "Segoe UI", sans-serif !important;
+  font-size: 14px !important; font-weight: 450 !important; line-height: 1.7 !important;
+  letter-spacing: 0 !important; white-space: pre-wrap !important;
+  overflow: visible !important; overflow-wrap: anywhere !important;
+}
+#root #main .ql-workspace-brief .q-writeup,
+#root #main .ql-workspace-brief .ql-project-deadline,
+#root #main .ql-workspace-brief .ql-project-deadline :is(svg, .quorlyth-glyph) {
+  color: #000000 !important; -webkit-text-fill-color: #000000 !important; opacity: 1 !important;
+}
+
+
+/* Project workspace copy: pale surfaces must use ink-dark typography. */
+#root #main .ql-workspace-brief .q-writeup,
+#root #main .ql-workspace-brief .ql-project-deadline,
+#root #main .ql-workspace-brief .ql-project-deadline :is(svg, .quorlyth-glyph) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+/* Project Pulse is deliberately a warm, light card; every label and write-up is true black. */
+#root #main .ql-workspace-pulse {
+  color: #000000 !important;
+  background: linear-gradient(145deg, #fffdf8 0%, #f3eadc 100%) !important;
+  border: 1px solid rgba(28, 21, 17, .2) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .96), 0 18px 42px -34px rgba(28, 21, 17, .48) !important;
+}
+
+#root #main .ql-workspace-pulse :is(h3, p, strong, span, small, label, output, .ql-eyebrow) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+#root #main .ql-workspace-pulse :is(svg, .quorlyth-glyph, .ic) {
+  color: #000000 !important;
+  stroke: currentColor !important;
+  opacity: 1 !important;
+}
+
+#root #main .ql-workspace-pulse__heading h3 {
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+}
+
+#root #main .ql-workspace-pulse__heading .ql-workspace-state {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  border: 1px solid rgba(28, 21, 17, .22) !important;
+  background: #f0dfcc !important;
+  font-weight: 650 !important;
+}
+
+#root #main .ql-workspace-pulse__heading .ql-workspace-state.is-complete {
+  color: #000000 !important;
+  background: #e6eadc !important;
+  border-color: rgba(34, 75, 45, .3) !important;
+}
+
+#root #main .ql-workspace-pulse .ql-workspace-stat-grid > div {
+  background: linear-gradient(145deg, #fffefa 0%, #f7f0e6 100%) !important;
+  border: 1px solid rgba(28, 21, 17, .16) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .92), 0 8px 22px -20px rgba(28, 21, 17, .5) !important;
+}
+
+#root #main .ql-workspace-pulse .ql-workspace-stat-grid strong {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 25px !important;
+  font-weight: 650 !important;
+}
+
+#root #main .ql-workspace-pulse .ql-workspace-stat-grid span {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 12px !important;
+  font-weight: 550 !important;
+  line-height: 1.5 !important;
+}
+
+#root #main .ql-workspace-pulse .ql-workspace-next {
+  background: linear-gradient(145deg, #f8efe3 0%, #f1e4d4 100%) !important;
+  border: 1px solid rgba(28, 21, 17, .18) !important;
+}
+
+#root #main .ql-workspace-pulse .ql-workspace-next__mark {
+  color: #000000 !important;
+  border: 1px solid rgba(160, 75, 43, .35) !important;
+  background: #f1d6c4 !important;
+}
+
+#root #main .ql-workspace-pulse .ql-workspace-next :is(strong, p) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+#root #main .ql-workspace-pulse .ql-workspace-next strong {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+#root #main .ql-workspace-pulse .ql-workspace-next p {
+  font-size: 12px !important;
+  font-weight: 450 !important;
+  line-height: 1.7 !important;
+}
+
+/* Keep the pulse actions legible and visibly interactive on the light card. */
+#root #main .ql-workspace-pulse .ql-primary-action,
+#root #main .ql-workspace-pulse .ql-quiet-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 13px;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+#root #main .ql-workspace-pulse .ql-primary-action {
+  color: #000000 !important;
+  border: 1px solid #a64f32 !important;
+  background: #d97755 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 5px 14px -10px rgba(28, 21, 17, .65) !important;
+}
+
+#root #main .ql-workspace-pulse .ql-quiet-action {
+  color: #000000 !important;
+  border: 1px solid rgba(28, 21, 17, .22) !important;
+  background: #fffaf2 !important;
+  box-shadow: none !important;
+}
+
+#root #main .ql-workspace-pulse .ql-primary-action :is(svg, .quorlyth-glyph),
+#root #main .ql-workspace-pulse .ql-quiet-action :is(svg, .quorlyth-glyph) {
+  color: #000000 !important;
+  stroke: currentColor !important;
+}
+
+#root #main .ql-workspace-pulse .ql-primary-action:hover,
+#root #main .ql-workspace-pulse .ql-quiet-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(28, 21, 17, .5) !important;
+  box-shadow: 0 8px 18px -14px rgba(28, 21, 17, .75) !important;
+}
+
+#root #main .ql-workspace-pulse :is(.ql-primary-action, .ql-quiet-action):focus-visible {
+  outline: 2px solid #a64f32 !important;
+  outline-offset: 3px !important;
+}
+
+/* Evidence & reviews: make the trust notice, submission write-ups and reviewer notes readable. */
+#root #main .ql-evidence-ledger__heading :is(h3, p, .ql-muted, .ql-eyebrow),
+#root #main .ql-evidence-ledger__count {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+#root #main .ql-evidence-ledger__count {
+  border: 1px solid rgba(28, 21, 17, .2) !important;
+  background: #f3e8da !important;
+  font-weight: 650 !important;
+}
+
+#root #main .ql-evidence-ledger__notice {
+  color: #000000 !important;
+  border: 1px solid rgba(28, 21, 17, .2) !important;
+  background: linear-gradient(145deg, #fffdf8 0%, #f3eadc 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9) !important;
+}
+
+#root #main .ql-evidence-ledger__notice p,
+#root #main .ql-evidence-ledger__notice :is(svg, .quorlyth-glyph) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  stroke: currentColor !important;
+  opacity: 1 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.7 !important;
+}
+
+#root #main .ql-evidence-record {
+  color: #000000 !important;
+  border: 1px solid rgba(28, 21, 17, .17) !important;
+  background: linear-gradient(145deg, #fffdf8 0%, #f5ecdf 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 12px 28px -26px rgba(28, 21, 17, .5) !important;
+}
+
+#root #main .ql-evidence-record :is(h4, p, li, strong, small, .ql-eyebrow, .ql-muted, .ql-evidence-record__summary) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+#root #main .ql-evidence-record__mark {
+  color: #000000 !important;
+  border-color: rgba(28, 21, 17, .18) !important;
+  background: #f1e1d0 !important;
+}
+
+#root #main .ql-evidence-decision {
+  color: #000000 !important;
+  border: 1px solid rgba(28, 21, 17, .22) !important;
+  background: #f1e7da !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 650 !important;
+}
+
+#root #main .ql-evidence-decision.status-approved {
+  color: #17452b !important;
+  -webkit-text-fill-color: #17452b !important;
+  border-color: rgba(23, 69, 43, .25) !important;
+  background: #e1efdf !important;
+}
+
+#root #main .ql-evidence-decision.status-changes_requested {
+  color: #7c2d12 !important;
+  -webkit-text-fill-color: #7c2d12 !important;
+  border-color: rgba(124, 45, 18, .26) !important;
+  background: #fff0df !important;
+}
+
+#root #main .ql-evidence-review-note {
+  color: #000000 !important;
+  border-left: 3px solid #c65f3a !important;
+  background: #f6ecdf !important;
+}
+
+#root #main .ql-evidence-review-note :is(strong, p, li, small, .ql-muted, .ql-eyebrow) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+#root #main .ql-evidence-file {
+  color: #000000 !important;
+  border-color: rgba(28, 21, 17, .16) !important;
+  background: #f8f0e6 !important;
+}
+
+#root #main .ql-evidence-file__mark {
+  color: #000000 !important;
+  border-color: rgba(28, 21, 17, .16) !important;
+  background: #efe0d0 !important;
+}
+
+#root #main .ql-evidence-file__copy :is(strong, small),
+#root #main .ql-evidence-file__state {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+#root #main .ql-evidence-file__open {
+  color: #000000 !important;
+  border-color: rgba(28, 21, 17, .24) !important;
+  background: #fffaf2 !important;
+}
+
+#root #main .ql-evidence-ledger__empty :is(h4, p) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root #main .ql-workspace-pulse .ql-primary-action,
+  #root #main .ql-workspace-pulse .ql-quiet-action {
+    transition: none !important;
+  }
+}
+
+/* Milestone filter contrast stays aligned with the light warm surfaces. */
+#root #main .ql-milestone-board .ql-milestone-filters button.ql-filter {
+  color: #000000 !important; border: 1px solid rgba(0, 0, 0, .2) !important;
+  background: #f4ecdf !important; box-shadow: none !important; font-weight: 650 !important;
+}
+#root #main .ql-milestone-board .ql-milestone-filters button.ql-filter:hover,
+#root #main .ql-milestone-board .ql-milestone-filters button.ql-filter:focus-visible {
+  color: #000000 !important; border-color: rgba(0, 0, 0, .42) !important; background: #e9dcc9 !important;
+}
+#root #main .ql-milestone-board .ql-milestone-filters button.ql-filter.is-active {
+  color: #000000 !important; border-color: #a64f32 !important; background: #d97755 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45) !important;
+}
+#root #main .ql-milestone-board .ql-milestone-filters button.ql-filter :is(svg, .quorlyth-glyph, span) { color: #000000 !important; }
+#root #main .ql-milestone-board .ql-milestone-filters button.ql-filter > span {
+  border: 1px solid rgba(0, 0, 0, .14) !important; background: rgba(0, 0, 0, .07) !important; color: #000000 !important;
+}
+#root #main .ql-milestone-board .ql-milestone-filters button.ql-filter:focus-visible {
+  outline: 2px solid #a64f32 !important; outline-offset: 2px !important;
+}
