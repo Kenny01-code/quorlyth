@@ -582,7 +582,7 @@ test('Improve text opens the robot-headed writing action chooser without auto-ru
   assert.match(styles, /\.q-writing-panel\s*\{/)
   assert.match(styles, /\.q-writing-mode\s*\{/)
   assert.match(styles, /\.q-writing-panel-close/)
-  assert.match(styles, /pointer-events: auto !important/)
+  assert.match(styles, /pointer-events:\s*auto !important/)
   assert.match(head, /useId\(\)/)
   assert.match(head, /id=\{shell\}/)
   assert.match(head, /fill=\{\`url\(#\$\{shell\}\)\`\}/)
