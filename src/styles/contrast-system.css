@@ -467,3 +467,46 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .qbot-robot-loading-glow, .qbot-robot-loading-glow::before, .qbot-robot-loading-glow::after { animation: none !important; }
 }
+
+
+/* Request Access titles must override the global ivory heading treatment.
+   The brand mark keeps the same orange breathing animation as the homepage. */
+#root .q-access-page .q-access-title {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: none !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+}
+
+#root .q-access-page .q-access-orb {
+  isolation: isolate;
+}
+
+#root .q-access-page .q-access-orb .hh {
+  position: absolute !important;
+  inset: -10px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, rgba(239,120,75,.34), transparent 65%) !important;
+  animation: hb2 6.5s cubic-bezier(.45,0,.55,1) infinite !important;
+}
+
+#root .q-access-page .q-access-orb svg.q-logo-mark {
+  display: block !important;
+  width: min(84px, 78%) !important;
+  height: min(84px, 78%) !important;
+  overflow: visible !important;
+  color: #C9562E !important;
+  stroke: #C9562E !important;
+  stroke-width: 3 !important;
+  stroke-opacity: 1 !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 2px 2px rgba(110,40,16,.22)) drop-shadow(0 0 12px rgba(239,120,75,.38)) !important;
+  animation: br2 6.5s cubic-bezier(.45,0,.55,1) infinite !important;
+}
+
+#root .q-access-page .q-access-orb svg.q-logo-mark .lp {
+  stroke: currentColor !important;
+  stroke-opacity: 1 !important;
+  opacity: 1 !important;
+}
