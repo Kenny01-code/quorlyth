@@ -111,7 +111,7 @@ test('privileged pages have direct route-level gates, not just hidden navigation
   assert.match(settings, /a\.platformAdmin \? \['Space'/)
   assert.match(app, /<Route path="\/queue" element=\{<Queue \/>\} \/>/)
   assert.match(app, /<Route path="\/database" element=\{<Database \/>\} \/>/)
-  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin'\]\.includes\(i\.path\)/)
+  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin', '\/access'\]\.includes\(i\.path\)/)
 })
 
 test('community, profile, and messaging views respect membership and privacy boundaries', async () => {
