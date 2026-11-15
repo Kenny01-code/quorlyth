@@ -544,6 +544,11 @@ test('Request Access uses the two-panel platform and community application flow'
   assert.match(css, /\.q-access-card\s*\{[\s\S]*?color:\s*#171411\s*!important/)
   assert.match(css, /\.q-access-switch button\s*\{[\s\S]*?color:\s*#211A17\s*!important/)
   assert.match(css, /width:\s*min\(1240px/)
+  assert.match(css, /\.q-access-intro-copy h1,[\s\S]*?\.q-access-platform-form > h2[\s\S]*?color:\s*#000000\s*!important/)
+  assert.match(css, /\.q-access-community-form > h2/)
+  assert.match(css, /\.q-access-platform-form > h2/)
+  assert.match(css, /\.q-access-orb svg\.q-logo-mark[\s\S]*?stroke-width:\s*2\.5\s*!important/)
+  assert.match(css, /width:\s*min\(84px,\s*78%\)/)
 })
 
 test('visitor platform requests use the existing public access request table and platform admin review RPC', async () => {
