@@ -35,6 +35,12 @@
   to { opacity: 1; transform: translate3d(0,0,0) scale(1); }
 }
 
+/* Icons enter with a short settle; identity-specific hover motion stays interaction-led. */
+#root .qth-glyph:not(.q-logo-mark),
+#nav .qth-glyph:not(.q-logo-mark) {
+  animation: qth-icon-arrive 300ms var(--qth-motion-smooth) 1;
+}
+
 /* Every control gets the same responsive timing, without changing its layout. */
 #root #main :is(button,a,[role="button"],summary,.btn,.chip),
 #nav :is(button,a,[role="button"]) {
