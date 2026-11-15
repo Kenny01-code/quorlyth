@@ -513,19 +513,26 @@ test('QuorlythBot chat frame reduces expensive blur and offscreen transcript ren
   assert.match(robot, /if\(now-lastRender<1000\/30\)/)
 })
 
-test('QuorlythBot uses the exact uploaded #D06A40 swatch for its 3D shell', async () => {
+test('QuorlythBot uses a darker solid burnt-orange 3D shell with the original dark face', async () => {
   const [theme, robot] = await Promise.all([
     readSource('src/bot/robot-themes.ts'),
     readSource('src/bot/robot3d.ts'),
   ])
-  assert.ok(theme.includes('p: 0xd06a40'))
+  assert.ok(theme.includes('p: 0xc9562e'))
   assert.ok(theme.includes('b: 0x211a17'))
-  assert.ok(theme.includes("g1: '#D06A40'"))
-  assert.ok(theme.includes("cr: '208,106,64'"))
+  assert.ok(theme.includes('c: 0xa64829'))
+  assert.ok(theme.includes('e: 0x6f2b1a'))
+  assert.ok(theme.includes("g1: '#C9562E'"))
+  assert.ok(theme.includes("g2: '#6F2B1A'"))
+  assert.ok(theme.includes("cr: '201,86,46'"))
   assert.match(robot, /shell\.color\.setHex\(T\.p\)/)
   assert.match(robot, /arm\.color\.setHex\(T\.p\)/)
+  assert.match(robot, /shell\.roughness=\.46/)
+  assert.match(robot, /arm\.roughness=\.45/)
+  assert.match(robot, /color:0xc9562e/)
+  assert.match(robot, /new DirectionalLight\(0xffddc2,1\.08\)/)
   assert.ok(!theme.includes('p: 0xef784b'))
-  assert.ok(!theme.includes("g1: '#EF784B'"))
+  assert.ok(!theme.includes('p: 0xd06a40'))
 })
 
 
