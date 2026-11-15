@@ -17,11 +17,24 @@ export interface Auth {
   updatePassword(password: string): Promise<void>
   signOut(): Promise<void>
 }
+export interface PlatformAccessRequestRecord {
+  id: string
+  user_id: string | null
+  full_name: string
+  email: string
+  message: string
+  status: 'pending' | 'approved' | 'declined'
+  created_at: string
+}
+
 export interface Backend {
   store: DocStore; auth: Auth
   isPlatformAdmin(): Promise<boolean>
   isPlatformOwner?(): Promise<boolean>
   reviewCommunityJoinRequest(cid: string, userId: string, status: 'approved' | 'declined'): Promise<void>
+  submitPlatformAccessRequest?(input: { fullName: string; email: string; message: string }): Promise<void>
+  listPlatformAccessRequests?(): Promise<PlatformAccessRequestRecord[]>
+  reviewPlatformAccessRequest?(id: string, status: 'approved' | 'declined'): Promise<void>
   uploadIdeaFile?(cid: string, ideaId: string, file: File): Promise<string>
   getIdeaFileUrl?(path: string): Promise<string>
   deleteIdeaFile?(path: string): Promise<void>
@@ -280,6 +293,35 @@ export async function createBackend(): Promise<Backend> {
         if (error) throw error
         return data === true
       },
+      async submitPlatformAccessRequest(input) {
+        const fullName = input.fullName.trim()
+        const email = input.email.trim().toLowerCase()
+        const message = input.message.trim()
+        if (!fullName || fullName.length > 80 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 320 || !message || message.length > 1000) {
+          throw new Error('Check your name, email address, and request message.')
+        }
+        const { data: userData, error: userError } = await sb.auth.getUser()
+        if (userError) throw userError
+        const { error } = await sb.from('access_requests').insert({
+          user_id: userData.user?.id ?? null,
+          full_name: fullName,
+          email,
+          message,
+          status: 'pending',
+        })
+        if (error) throw new Error(error.message || 'Could not submit your platform access request.')
+      },
+      async listPlatformAccessRequests() {
+        const { data, error } = await sb.from('access_requests')
+          .select('id,user_id,full_name,email,message,status,created_at')
+          .order('created_at', { ascending: false })
+        if (error) throw new Error(error.message || 'Could not load visitor platform access requests.')
+        return (data || []) as PlatformAccessRequestRecord[]
+      },
+      async reviewPlatformAccessRequest(id, status) {
+        const { error } = await sb.rpc('review_quorlyth_access_request', { request_id: id, next_status: status })
+        if (error) throw new Error(error.message || 'Could not review this visitor access request.')
+      },
       async reviewCommunityJoinRequest(cid, userId, status) {
         const { error } = await sb.rpc('review_community_join_request', { p_cid: cid, p_user_id: userId, p_status: status })
         if (error) throw error
@@ -303,6 +345,39 @@ export async function createBackend(): Promise<Backend> {
       const current = await auth.current()
       const claim = await store.get('config/owner')
       return !!current && claim?.id === current.id
+    },
+    async submitPlatformAccessRequest(input) {
+      const fullName = input.fullName.trim()
+      const email = input.email.trim().toLowerCase()
+      const message = input.message.trim()
+      if (!fullName || fullName.length > 80 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 320 || !message || message.length > 1000) {
+        throw new Error('Check your name, email address, and request message.')
+      }
+      const current = await auth.current()
+      const id = current?.id || 'visitor_' + crypto.randomUUID()
+      const path = 'platformAccessRequests/' + id
+      const previous = await store.get(path)
+      if (previous?.status === 'pending') throw new Error('A platform access request is already pending for this identity.')
+      await store.set(path, {
+        id, user_id: current?.id || null, full_name: fullName, email, message,
+        status: 'pending', created_at: new Date().toISOString(),
+      })
+    },
+    async listPlatformAccessRequests() {
+      const records = await store.exportAll()
+      return records
+        .filter(record => record.path.startsWith('platformAccessRequests/') && !record.path.slice('platformAccessRequests/'.length).includes('/'))
+        .map(record => ({ ...record.data, id: record.data?.id || record.path.slice('platformAccessRequests/'.length) })) as PlatformAccessRequestRecord[]
+        .sort((left, right) => right.created_at.localeCompare(left.created_at))
+    },
+    async reviewPlatformAccessRequest(id, status) {
+      const path = 'platformAccessRequests/' + id
+      const request = await store.get(path)
+      if (!request || request.status !== 'pending') throw new Error('This visitor request is no longer pending.')
+      await store.set(path, { ...request, status, reviewed_at: new Date().toISOString() })
+      if (request.user_id) {
+        await store.set('decisions/' + request.user_id, { status, at: Date.now() })
+      }
     },
     async reviewCommunityJoinRequest(cid, userId, status) {
       const path = 'communityJoinRequests/' + cid + '__' + userId
