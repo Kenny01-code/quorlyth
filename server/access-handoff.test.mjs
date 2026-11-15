@@ -10,6 +10,8 @@ test('anonymous community handoff keeps its intended community while requesting 
   assert.match(access, /nextParams\.get\('tab'\) === 'community'/)
   assert.match(access, /'&returnCommunity=' \+ encodeURIComponent\(selectedId\)/)
   assert.match(access, /returnCommunityName=\{selected\?\.name \|\| ''\}/)
+  assert.match(access, /platformPending=\{pending\}/)
+  assert.match(access, /Your platform access request is under review/)
 })
 
 test('anonymous request confirmation explains account setup and no longer points to a blocked form', async () => {
@@ -29,7 +31,7 @@ test('signup and Google OAuth return to the exact community application after au
   ])
   assert.match(access, /const destination = '\/access\?tab=community'/)
   assert.match(access, /'next=' \+ encodeURIComponent\(destination\)/)
-  assert.match(signin, /authRedirectUrl = \(\) => new URL\(next, window\.location\.origin\)\.toString\(\)/)
+  assert.match(signin, /authRedirectUrl = \(\) => new URL\('\/signin\?next=' \+ encodeURIComponent\(next\), window\.location\.origin\)\.toString\(\)/)
   assert.match(signin, /signUpEmail\(email\.trim\(\), password, authRedirectUrl\(\)\)/)
   assert.match(signin, /signInGoogle\(authRedirectUrl\(\)\)/)
   assert.match(backend, /emailRedirectTo: redirectTo \|\| window\.location\.origin/)
