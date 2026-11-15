@@ -638,7 +638,7 @@ test('Request Access titles stay true black after the global heading theme, and 
     readSource('src/screens/Access.tsx'),
     readSource('src/styles/contrast-system.css'),
   ])
-  assert.equal((access.match(/className="q-access-title"/g) || []).length, 4)
+  assert.equal((access.match(/className="q-access-title"/g) || []).length, 5)
   assert.match(access, /<h2 className="q-access-title">Your request has been sent\.<\/h2>/)
   assert.match(contrast, /#root \.q-access-page \.q-access-title\s*\{[\s\S]*?color:\s*#000000\s*!important[\s\S]*?-webkit-text-fill-color:\s*#000000\s*!important/)
   assert.match(contrast, /#root \.q-access-page \.q-access-orb svg\.q-logo-mark[\s\S]*?stroke-width:\s*3\s*!important[\s\S]*?animation:\s*br2 6\.5s cubic-bezier\(\.45,0,\.55,1\) infinite !important/)
