@@ -2802,3 +2802,32 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   .q-access-primary { min-height:51px; font-size:13px; }
   .q-access-centered-status > p:not(.q-access-eyebrow) { font-size:14px; }
 }
+
+
+/* Request Access: true-black section titles and a clearer, more legible Quorlyth mark. */
+.q-access-intro-copy h1,
+.q-access-community-form > h2,
+.q-access-platform-form > h2 {
+  color: #000000 !important;
+}
+
+.q-access-orb {
+  border: 1px solid rgba(216,95,55,.28);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #FFFCF7 0%, #F5E9DC 100%);
+  box-shadow: 0 8px 22px rgba(58,30,17,.12), inset 0 1px 0 rgba(255,255,255,.9);
+  filter: none;
+}
+.q-access-orb::before {
+  inset: 7px;
+  border: 1px solid rgba(216,95,55,.2);
+  background: radial-gradient(circle, rgba(239,120,75,.17) 0%, rgba(239,120,75,.035) 72%);
+  filter: none;
+}
+.q-access-orb svg.q-logo-mark {
+  width: min(84px, 78%);
+  height: min(84px, 78%);
+  color: #D85F37 !important;
+  stroke-width: 2.5 !important;
+  filter: drop-shadow(0 1px 1px rgba(110,40,16,.18));
+}
