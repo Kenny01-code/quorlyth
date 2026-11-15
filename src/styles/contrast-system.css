@@ -510,3 +510,16 @@ body {
   stroke-opacity: 1 !important;
   opacity: 1 !important;
 }
+
+
+/* Standalone app error screen: keep copy black on its light card. */
+#root .app-error > section.glass {
+  color: #000000 !important;
+}
+
+#root .app-error > section.glass :is(h1,h2,h3,h4,h5,h6,p,span,label,strong,em,b,small,li,blockquote,a) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+}
