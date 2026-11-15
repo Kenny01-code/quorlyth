@@ -540,6 +540,10 @@ test('Request Access uses the two-panel platform and community application flow'
   assert.match(css, /\.q-access-layout/)
   assert.match(css, /\.q-access-switch/)
   assert.match(css, /\.q-access-primary/)
+  assert.match(css, /\.q-access-card\s*\{[\s\S]*?background:\s*#F2EBDD\s*!important/)
+  assert.match(css, /\.q-access-card\s*\{[\s\S]*?color:\s*#171411\s*!important/)
+  assert.match(css, /\.q-access-switch button\s*\{[\s\S]*?color:\s*#211A17\s*!important/)
+  assert.match(css, /width:\s*min\(1240px/)
 })
 
 test('visitor platform requests use the existing public access request table and platform admin review RPC', async () => {
@@ -557,20 +561,32 @@ test('visitor platform requests use the existing public access request table and
   assert.match(signIn, /params\.get\('email'\)\?\.trim\(\)/)
 })
 
-test('Improve text is a visible orange in-field action with the Quorlyth mark', async () => {
-  const [writing, styles] = await Promise.all([
+test('Improve text opens the robot-headed writing action chooser without auto-running an action', async () => {
+  const [writing, styles, head] = await Promise.all([
     readSource('src/components/WritingAssistant.tsx'),
     readSource('src/styles/writing-assistant-live.css'),
+    readSource('src/bot/QuorlythBotHead.tsx'),
   ])
-  assert.match(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
-  assert.match(writing, /<Logo size=\{18\} breathe \/>/)
-  assert.match(writing, /q-writing-robot-label/)
-  assert.match(writing, /style=\{\{ color: '#EF784B' \}\}/)
+  assert.match(writing, /import \{ QuorlythBotHead \} from '\.\.\/bot\/QuorlythBotHead'/)
+  assert.match(writing, /<QuorlythBotHead size=\{anchorCompact \? 28 : 30\} \/>/)
+  assert.match(writing, /<QuorlythBotHead size=\{36\} \/>/)
+  assert.match(writing, /What would you like to improve\?/)
+  assert.match(writing, /aria-label="Writing actions"/)
+  assert.match(writing, /onClick=\{\(\) => void improve\(item\)\}/)
+  assert.doesNotMatch(writing, /if \(opening\) void improve\(MODES\[0\]\)/)
+  for (const label of ['Suggestions', 'Improve', 'Professional', 'Shorten', 'Friendlier', 'More confident', 'Persuasive', 'Fix grammar', 'Expand']) {
+    assert.ok(writing.includes("label: '" + label + "'"), 'missing writing action: ' + label)
+  }
   assert.match(writing, /target\.style\.setProperty\('padding-bottom'/)
   assert.match(styles, /\.q-writing-robot-button/)
-  assert.match(styles, /background: linear-gradient\(135deg,rgba\(239,120,75/)
+  assert.match(styles, /\.q-writing-panel\s*\{/)
+  assert.match(styles, /\.q-writing-mode\s*\{/)
+  assert.match(styles, /\.q-writing-panel-close/)
   assert.match(styles, /pointer-events: auto !important/)
-  assert.doesNotMatch(writing, /q-writing-robot-head" aria-hidden="true"/)
+  assert.match(head, /useId\(\)/)
+  assert.match(head, /id=\{shell\}/)
+  assert.match(head, /fill=\{\`url\(#\$\{shell\}\)\`\}/)
+  assert.doesNotMatch(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
 })
 
 test('the QuorlythBot launcher uses the compact orange 3D robot-head mark', async () => {
