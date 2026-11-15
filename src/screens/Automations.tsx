@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
+import { SocialBrandIcon } from '../components/SocialBrandIcon'
 import { WorkflowMap } from '../components/WorkflowMap'
 import { WorkflowCanvas } from '../components/WorkflowCanvas'
 import { useApp } from '../data/AppProvider'
@@ -68,6 +69,18 @@ function partialActionTitles(source: string): string[] {
   return [...source.matchAll(/"title"\s*:\s*"((?:\\.|[^"\\])*)"/g)]
     .map(match => match[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').trim())
     .filter(Boolean).slice(0, 5)
+}
+
+function SocialConnectionMark({ provider }: { provider: SocialConnection['provider'] }) {
+  switch (provider) {
+    case 'x': return <SocialBrandIcon name="x" />
+    case 'linkedin': return <SocialBrandIcon name="linkedin" />
+    case 'meta':
+    case 'facebook': return <SocialBrandIcon name="facebook" />
+    case 'instagram': return <SocialBrandIcon name="instagram" />
+    case 'pinterest': return <SocialBrandIcon name="pinterest" />
+    default: return <QuorlythGlyph name="link" size={17} />
+  }
 }
 
 const TEMPLATES: Template[] = [
@@ -840,7 +853,7 @@ function AutomationWorkspace() {
         </div>
         <div className="wa-connected-services-list">
           {socialConnections.length ? socialConnections.map(connection => <div className="wa-connected-service" key={connection.connection_id}>
-            <span className="wa-connected-service-dot" />
+            <span className="wa-connected-service-mark"><SocialConnectionMark provider={connection.provider} /></span>
             <span><b>{connection.provider === 'x' ? 'X' : connection.provider === 'linkedin' ? 'LinkedIn' : connection.provider === 'facebook' ? 'Facebook Page' : connection.provider === 'instagram' ? 'Instagram' : connection.provider === 'pinterest' ? 'Pinterest' : connection.provider}</b><small>{connection.account_name || connection.username || 'Connected account'}</small></span>
             <em>Connected</em>
           </div>) : <div className="wa-connected-empty">{socialConnectionsReady ? 'No social publishing accounts are connected yet.' : 'Checking your connected accounts…'}</div>}
