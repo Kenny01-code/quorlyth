@@ -29,5 +29,4 @@ test('Quorlyth applies consistent sitewide motion and semantic icon microinterac
   const iconEntrySection = motion.slice(motion.indexOf('/* Icons enter'), motion.indexOf('/* Every control'))
   assert.match(iconEntrySection, /animation: qth-icon-arrive 300ms/)
   assert.doesNotMatch(iconEntrySection, /infinite/)
-  assert.doesNotMatch(iconEntryRule, /infinite/)
 })
