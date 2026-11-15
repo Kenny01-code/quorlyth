@@ -297,7 +297,7 @@ export async function createBackend(): Promise<Backend> {
         const fullName = input.fullName.trim()
         const email = input.email.trim().toLowerCase()
         const message = input.message.trim()
-        if (!fullName || fullName.length > 80 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 320 || !message || message.length > 1000) {
+        if (!fullName || fullName.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320 || !message || message.length > 1000) {
           throw new Error('Check your name, email address, and request message.')
         }
         const { data: userData, error: userError } = await sb.auth.getUser()
@@ -350,7 +350,7 @@ export async function createBackend(): Promise<Backend> {
       const fullName = input.fullName.trim()
       const email = input.email.trim().toLowerCase()
       const message = input.message.trim()
-      if (!fullName || fullName.length > 80 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 320 || !message || message.length > 1000) {
+      if (!fullName || fullName.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320 || !message || message.length > 1000) {
         throw new Error('Check your name, email address, and request message.')
       }
       const current = await auth.current()
