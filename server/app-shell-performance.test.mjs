@@ -530,7 +530,7 @@ test('Request Access uses the two-panel platform and community application flow'
   assert.match(access, /role="tablist"/)
   assert.match(access, /Choose a community accepting requests/)
   assert.match(access, /a\.requestCommunityJoin\(selected\.id, message\.trim\(\)\)/)
-  assert.match(access, /community\.ownerId \|\| community\.createdBy/)
+  assert.match(access, /selected\?\.ownerId \|\| selected\?\.createdBy/)
   assert.match(access, /canApplyToCommunity/)
   assert.match(access, /Platform access must be approved before you can apply/)
   assert.match(access, /submitPlatformApplication/)
