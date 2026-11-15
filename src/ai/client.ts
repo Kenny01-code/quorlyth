@@ -536,7 +536,7 @@ export async function speakText(
   voice: string,
   onStart?: () => void,
   onEnd?: () => void,
-  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; allowBrowserFallback?: boolean; browserFallbackTimeoutMs?: number; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; browserFallbackOnly?: boolean; liveTalk?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
+  options: { accent?: VoiceAccent; signal?: AbortSignal; onBrowserFallback?: () => void; onPlaybackError?: (error: Error) => void; allowBrowserFallback?: boolean; browserFallbackTimeoutMs?: number; elevenLabsOnly?: boolean; preferElevenLabsVoice?: boolean; browserFallbackOnly?: boolean; liveTalk?: boolean; /** @deprecated Kept as a backwards-compatible alias for preferElevenLabsVoice. */ preferBrowserVoice?: boolean } = {},
 ): Promise<SpeechPlayback> {
   const accent = detectAccent(options.accent || 'auto')
   const source = text.trim().slice(0, 1500)
@@ -634,27 +634,21 @@ export async function speakText(
       } catch (error) {
         const wasReplaced = isSuperseded() || (error instanceof Error && error.name === 'AbortError')
         if (wasReplaced) throw new DOMException('Speech cancelled', 'AbortError')
-        if (preferElevenLabsVoice && allowBrowserFallback) {
-          // Don't wait through a second network request after the primary voice stalls.
-          // Restore caller cancellation after MediaSource releases its stream ownership.
-          forceBrowserFallback = true
-          response = null
-          externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
-          activeSpeechController = controller
-        } else {
-          // Re-attempt with the same selected persona using the original buffered endpoint.
-          retryBufferedSpeech = true
-          response = null
-          externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
-          activeSpeechController = controller
-        }
+        // MediaSource playback can fail even when the voice provider generated a valid
+        // MP3. Retry the same provider through its buffered endpoint before using device TTS.
+        // This is especially important on mobile browsers that reject streamed media playback.
+        retryBufferedSpeech = true
+        response = null
+        externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
+        activeSpeechController = controller
         if (isSuperseded()) throw new DOMException('Speech cancelled', 'AbortError')
       }
     }
 
     if (!forceBrowserFallback && !response && retryBufferedSpeech) {
       try {
-        response = await fetch(aiApiUrl('/api/speak-eleven'), {
+        const bufferedPath = options.elevenLabsOnly ? '/api/speak-eleven' : '/api/speak'
+        response = await fetch(aiApiUrl(bufferedPath), {
           method: 'POST',
           signal,
           headers: { 'Content-Type': 'application/json' },
@@ -667,13 +661,13 @@ export async function speakText(
     }
 
     if (!forceBrowserFallback && response && !response.ok) {
-      if (preferElevenLabsVoice && allowBrowserFallback) {
-        forceBrowserFallback = true
-      } else if (options.elevenLabsOnly && (response.status === 502 || response.status === 504)) {
-        // Retry only transient streaming failures with the buffered ElevenLabs route.
+      if ((response.status === 502 || response.status === 504) && !retryBufferedSpeech) {
+        // Retry transient stream failures with the matching buffered provider pipeline.
         try { await response.body?.cancel() } catch { /* The stream may already be closed. */ }
         response = null
         retryBufferedSpeech = true
+      } else if (preferElevenLabsVoice && allowBrowserFallback) {
+        forceBrowserFallback = true
       } else {
         throw new Error(await readError(response))
       }
@@ -793,7 +787,18 @@ export async function speakText(
       else onStart?.()
     }
     utterance.onend = finishNative
-    utterance.onerror = finishNative
+    utterance.onerror = event => {
+      const reason = (event as SpeechSynthesisErrorEvent).error || 'synthesis-failed'
+      if (reason !== 'canceled' && reason !== 'interrupted') {
+        const message = reason === 'not-allowed'
+          ? 'Your browser blocked device speech. Tap Hear a hello again and allow audio for this site.'
+          : reason === 'audio-busy'
+            ? 'Your device audio is busy. Close other audio playback and try again.'
+            : 'Device speech could not start. Check your device audio output and try again.'
+        options.onPlaybackError?.(new Error(message))
+      }
+      finishNative()
+    }
     signal.addEventListener('abort', stopNative, { once: true })
 
     ownedPlayback = {
