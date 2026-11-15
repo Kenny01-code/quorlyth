@@ -34,6 +34,7 @@ export function BotViews(p: P) {
   const [hello, setHello] = useState<{ state: 'idle' | 'loading' | 'playing' | 'error'; message: string }>({ state: 'idle', message: '' })
   const helloPlayback = useRef<SpeechPlayback | null>(null)
   const helloRun = useRef(0)
+  const helloStartTimer = useRef<number | null>(null)
 
   function rememberWelcomeVoice(voice: string, accent: string = s.accent || 'auto') {
     // Remember only harmless voice preferences so the sign-in greeting can use
@@ -46,6 +47,10 @@ export function BotViews(p: P) {
 
   function clearHelloPlayback() {
     helloRun.current += 1
+    if (helloStartTimer.current !== null) {
+      window.clearTimeout(helloStartTimer.current)
+      helloStartTimer.current = null
+    }
     helloPlayback.current?.stop()
     helloPlayback.current = null
     stopSpeechPlayback()
@@ -55,6 +60,24 @@ export function BotViews(p: P) {
   async function playNaturalVoicePreview(voice: string) {
     clearHelloPlayback()
     const run = helloRun.current
+    let didStart = false
+    let failureReported = false
+    const clearStartTimer = () => {
+      if (helloStartTimer.current !== null) {
+        window.clearTimeout(helloStartTimer.current)
+        helloStartTimer.current = null
+      }
+    }
+    const reportFailure = (message: string) => {
+      if (run !== helloRun.current || failureReported) return
+      failureReported = true
+      clearStartTimer()
+      helloPlayback.current?.stop()
+      helloPlayback.current = null
+      p.robot.current?.talk(false)
+      setHello({ state: 'error', message })
+      a.toast(message)
+    }
     rememberWelcomeVoice(voice)
     const clean = sample.trim()
     if (!clean) {
@@ -62,43 +85,61 @@ export function BotViews(p: P) {
       return
     }
 
-    setHello({ state: 'loading', message: 'Starting your natural voice…' })
+    setHello({ state: 'loading', message: 'Preparing your selected voice…' })
     try {
       const playback = await speakText(
         clean,
         voice,
         () => {
-          if (run !== helloRun.current) return
+          if (run !== helloRun.current || failureReported) return
+          didStart = true
+          clearStartTimer()
           p.robot.current?.talk(true)
           setHello({ state: 'playing', message: 'QuorlythBot is speaking with your preferred voice.' })
         },
         () => {
-          if (run !== helloRun.current) return
+          if (run !== helloRun.current || failureReported) return
+          clearStartTimer()
           helloPlayback.current = null
           p.robot.current?.talk(false)
-          setHello({ state: 'idle', message: 'Voice preview finished.' })
+          if (!didStart) {
+            reportFailure('Voice playback could not start. Check your device audio and try again.')
+          } else {
+            setHello({ state: 'idle', message: 'Voice preview finished.' })
+          }
         },
         {
           accent: s.accent || 'auto',
-          // Prefer ElevenLabs, then configured cloud TTS providers; use device speech only as a recovery path.
+          // Prefer ElevenLabs. If browser streaming fails, the player retries buffered
+          // audio from the same provider pipeline before falling back to device speech.
           elevenLabsOnly: false,
           browserFallbackTimeoutMs: 3500,
           preferElevenLabsVoice: true,
           allowBrowserFallback: true,
-          liveTalk: true,
+          liveTalk: false,
+          onPlaybackError: error => {
+            reportFailure(error.message || 'Your device could not start voice playback. Check its audio output and try again.')
+          },
         },
       )
-      if (run !== helloRun.current) {
+      if (run !== helloRun.current || failureReported) {
         playback.stop()
         return
       }
       helloPlayback.current = playback
-      setHello({ state: 'playing', message: 'Your selected voice is playing.' })
+      if (!didStart) {
+        setHello({ state: 'loading', message: 'Waiting for your device audio…' })
+        // Some browsers queue SpeechSynthesis without firing onstart. Fail visibly
+        // rather than leaving the button stuck in a false "playing" state.
+        helloStartTimer.current = window.setTimeout(() => {
+          if (run !== helloRun.current || didStart || failureReported) return
+          reportFailure('Voice playback could not start. Check your device audio and try again.')
+        }, 6500)
+      }
     } catch (error) {
       if (run !== helloRun.current) return
       const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
-      setHello({ state: 'error', message })
-      a.toast(message)
+      reportFailure(message)
     }
   }
 
