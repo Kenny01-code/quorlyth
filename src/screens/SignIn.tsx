@@ -119,9 +119,11 @@ export function SignIn() {
   const next = requested.startsWith('/') && !requested.startsWith('//') ? requested : '/dashboard'
   const [email, setEmail] = useState(() => {
     try {
-      return params.get('recovery') === '1' && params.get('otp') === '1'
-        ? sessionStorage.getItem('quorlyth:recovery-email') || ''
-        : ''
+      return params.get('email')?.trim() || (
+        params.get('recovery') === '1' && params.get('otp') === '1'
+          ? sessionStorage.getItem('quorlyth:recovery-email') || ''
+          : ''
+      )
     } catch { return '' }
   })
   const [password, setPassword] = useState('')
