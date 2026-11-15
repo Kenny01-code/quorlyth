@@ -227,6 +227,9 @@ export function Access() {
               selectedIsManager={selectedIsManager}
               selectedIsMember={selectedIsMember}
               canApply={canApplyToCommunity}
+              platformPending={pending}
+              statusRefreshing={statusRefreshing}
+              onRefreshPlatformStatus={() => void refreshPlatformAccessStatus()}
               onCommunityChange={chooseCommunity}
               onMessageChange={(value: string) => { setMessage(value); setError('') }}
               onSubmit={() => void submitCommunityApplication()}
@@ -276,7 +279,7 @@ export function Access() {
   )
 }
 
-function CommunityApplicationPanel({ a, communities, selectedId, selected, message, sending, error, selectedRequest, selectedIsManager, selectedIsMember, canApply, onCommunityChange, onMessageChange, onSubmit, onSwitchPlatform, onOpenCommunity, onManage }: any) {
+function CommunityApplicationPanel({ a, communities, selectedId, selected, message, sending, error, selectedRequest, selectedIsManager, selectedIsMember, canApply, platformPending, statusRefreshing, onRefreshPlatformStatus, onCommunityChange, onMessageChange, onSubmit, onSwitchPlatform, onOpenCommunity, onManage }: any) {
   const ownerId = selected?.ownerId || selected?.createdBy || ''
   const ownerName = ownerId ? a.nm(ownerId) : 'the community owner'
   const messageLength = message.trim().length
@@ -328,8 +331,8 @@ function CommunityApplicationPanel({ a, communities, selectedId, selected, messa
       {!canApply && (
         <div className="q-access-stage-note">
           <Icon name="lock" size={15} />
-          <span>Platform access must be approved first. Submit a Platform access request, then return here to apply.</span>
-          <button type="button" onClick={onSwitchPlatform}>Request platform access</button>
+          <span>{platformPending ? 'Your platform access request is under review. We have kept this community selected; check your status here without sending another request.' : 'Platform access must be approved first. Request access to Quorlyth, then return here to apply.'}</span>
+          <button type="button" disabled={platformPending && statusRefreshing} onClick={platformPending ? onRefreshPlatformStatus : onSwitchPlatform}>{platformPending ? (statusRefreshing ? 'Checking access…' : 'Check access status') : 'Request platform access'}</button>
         </div>
       )}
       {error && <p className="q-access-error" role="alert">{error}</p>}
