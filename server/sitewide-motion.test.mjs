@@ -26,5 +26,7 @@ test('Quorlyth applies consistent sitewide motion and semantic icon microinterac
   assert.match(motion, /@media \(prefers-reduced-motion: reduce\)/)
   assert.match(motion, /animation-duration:\s*\.01ms !important/)
   assert.match(motion, /transform:\s*none !important/)
-  assert.doesNotMatch(motion, /\.qth-glyph\s*\{[^}]*animation:[^}]*infinite/)
+  const iconEntryRule = motion.match(/#root \\.qth-glyph:not\\(\\.q-logo-mark\\),[\\s\\S]*?\\n\\}/)?.[0] || ''
+  assert.match(iconEntryRule, /animation: qth-icon-arrive 300ms/)
+  assert.doesNotMatch(iconEntryRule, /infinite/)
 })
