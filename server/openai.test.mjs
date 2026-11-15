@@ -141,6 +141,7 @@ test('live voice can use multilingual text-only output for ElevenLabs playback',
 })
 
 test('chat uses Gemini server-side and streams text as Quorlyth SSE', async () => {
+  process.env.AI_PROVIDER = 'gemini'
   process.env.GEMINI_API_KEY = 'test-secret'
   let request
   globalThis.fetch = async (url, options) => {
@@ -213,6 +214,7 @@ test('structured JSON requests include relevant retrieved guidance examples', as
 })
 
 test('structured JSON requests use Gemini JSON output mode', async () => {
+  process.env.AI_PROVIDER = 'gemini'
   process.env.GEMINI_API_KEY = 'test-secret'
   let request
   globalThis.fetch = async (url, options) => {
