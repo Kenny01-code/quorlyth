@@ -301,10 +301,10 @@ export async function createBackend(): Promise<Backend> {
         if (!fullName || fullName.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320 || !message || message.length > 1000) {
           throw new Error('Check your name, email address, and request message.')
         }
-        const { data: userData, error: userError } = await sb.auth.getUser()
-        if (userError) throw userError
+        const { data: sessionData, error: sessionError } = await sb.auth.getSession()
+        if (sessionError) throw sessionError
         const { error } = await sb.from('access_requests').insert({
-          user_id: userData.user?.id ?? null,
+          user_id: sessionData.session?.user?.id ?? null,
           full_name: fullName,
           email,
           message,
