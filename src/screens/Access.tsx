@@ -11,8 +11,8 @@ export function Access() {
   const nav = useNavigate()
   const loc = useLocation()
   const params = new URLSearchParams(loc.search)
-  const queryCommunity = params.get('community') || ''
-  const initialMode: AccessMode = queryCommunity || params.get('tab') === 'community' ? 'community' : 'platform'
+  const queryCommunity = params.get('community') || params.get('returnCommunity') || ''
+  const initialMode: AccessMode = params.get('tab') === 'community' || (!params.get('tab') && !!params.get('community')) ? 'community' : 'platform'
   const [mode, setMode] = useState<AccessMode>(initialMode)
   const [selectedId, setSelectedId] = useState(queryCommunity)
   const [message, setMessage] = useState('')
@@ -24,15 +24,17 @@ export function Access() {
   const [guestMessage, setGuestMessage] = useState('')
   const [guestSent, setGuestSent] = useState(false)
   const [platformApprovalStatus, setPlatformApprovalStatus] = useState<'pending' | 'approved' | 'declined' | null>(null)
+  const [statusRefreshing, setStatusRefreshing] = useState(false)
   const [audience, setAudience] = useState('')
   const [platforms, setPlatforms] = useState<string[]>([])
   const [memberNote, setMemberNote] = useState('')
 
   useEffect(() => {
     const nextParams = new URLSearchParams(loc.search)
-    const nextCommunity = nextParams.get('community') || ''
-    setSelectedId(nextCommunity)
-    setMode(nextCommunity || nextParams.get('tab') === 'community' ? 'community' : 'platform')
+    const activeCommunity = nextParams.get('community') || ''
+    const preservedCommunity = activeCommunity || nextParams.get('returnCommunity') || ''
+    setSelectedId(preservedCommunity)
+    setMode(nextParams.get('tab') === 'community' || (!nextParams.get('tab') && !!activeCommunity) ? 'community' : 'platform')
     setMessage('')
     setError('')
   }, [loc.search])
@@ -74,13 +76,28 @@ export function Access() {
   const selectedIsMember = !!selected && !!a.me && (a.joined(selected.id) || selectedRequest?.status === 'approved')
   const canApplyToCommunity = !!a.me && approved && !a.demo
 
+  async function refreshPlatformAccessStatus() {
+    if (!a.me || !a.backend?.getPlatformAccessStatus) return
+    setStatusRefreshing(true)
+    setError('')
+    try {
+      const status = await a.backend.getPlatformAccessStatus()
+      setPlatformApprovalStatus(status)
+      if (status !== 'approved') setError('Your request is still being reviewed. You can check again later; your selected community is saved.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not refresh your access status. Please try again.')
+    } finally {
+      setStatusRefreshing(false)
+    }
+  }
+
   function switchMode(next: AccessMode) {
     setMode(next)
     setPreviewForm(false)
     setError('')
     const query = next === 'community'
       ? '?tab=community' + (selectedId ? '&community=' + encodeURIComponent(selectedId) : '')
-      : '?tab=platform'
+      : '?tab=platform' + (selectedId ? '&returnCommunity=' + encodeURIComponent(selectedId) : '')
     nav('/access' + query, { replace: true })
   }
 
@@ -243,7 +260,13 @@ export function Access() {
               onSubmit={() => void submitPlatformApplication()}
               onOpenRequests={() => nav('/settings?tab=requests')}
               onCommunity={() => switchMode('community')}
-              onCreateAccount={() => nav('/signin?next=%2Faccess&email=' + encodeURIComponent(guestEmail.trim()))}
+              onRefreshStatus={() => void refreshPlatformAccessStatus()}
+              statusRefreshing={statusRefreshing}
+              returnCommunityName={selected?.name || ''}
+              onCreateAccount={() => {
+                const destination = '/access?tab=community' + (selectedId ? '&community=' + encodeURIComponent(selectedId) : '')
+                nav('/signin?mode=signup&next=' + encodeURIComponent(destination) + '&email=' + encodeURIComponent(guestEmail.trim()))
+              }}
               onBrowse={() => nav('/communities')}
             />
           )}
@@ -317,7 +340,7 @@ function CommunityApplicationPanel({ a, communities, selectedId, selected, messa
   )
 }
 
-function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, guestSent, previewForm, guestName, guestEmail, guestMessage, audience, platforms, memberNote, sending, error, onNameChange, onEmailChange, onGuestMessageChange, onAudienceChange, onPlatformsChange, onMemberNoteChange, onSubmit, onOpenRequests, onCommunity, onBrowse, onCreateAccount }: any) {
+function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, guestSent, previewForm, guestName, guestEmail, guestMessage, audience, platforms, memberNote, sending, error, onNameChange, onEmailChange, onGuestMessageChange, onAudienceChange, onPlatformsChange, onMemberNoteChange, onSubmit, onOpenRequests, onCommunity, onRefreshStatus, statusRefreshing, returnCommunityName, onBrowse, onCreateAccount }: any) {
   if (platformAdmin && !previewForm) {
     return (
       <div className="q-access-platform-admin">
@@ -332,8 +355,8 @@ function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, gu
       <div className="q-access-centered-status">
         <p className="q-access-eyebrow">PLATFORM ACCESS APPROVED</p>
         <h2>You can now apply to a community.</h2>
-        <p>Your platform access is approved. Choose a community and send an application directly to its owner.</p>
-        <button type="button" className="q-access-primary" onClick={onCommunity}>Apply to a community</button>
+        <p>{returnCommunityName ? `Your access is approved. Continue your application to ${returnCommunityName}; it will be sent directly to that community's owner.` : 'Your platform access is approved. Choose a community and send an application directly to its owner.'}</p>
+        <button type="button" className="q-access-primary" onClick={onCommunity}>{returnCommunityName ? `Continue to ${returnCommunityName}` : 'Apply to a community'}</button>
         <button type="button" className="q-access-secondary" onClick={onBrowse}>Browse communities</button>
       </div>
     )
@@ -343,7 +366,9 @@ function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, gu
       <div className="q-access-centered-status">
         <p className="q-access-eyebrow">PLATFORM ACCESS</p>
         <h2>Your request is under review.</h2>
-        <p>Authorized platform administrators will review your request. Once approved, you can continue to community applications.</p>
+        <p>Authorized platform administrators will review your request. {returnCommunityName ? `We've kept your place in ${returnCommunityName}. Once approved, you can return here and finish your separate community application.` : 'Once approved, you can continue to community applications.'}</p>
+        {onRefreshStatus && <button type="button" className="q-access-primary" disabled={statusRefreshing} onClick={onRefreshStatus}>{statusRefreshing ? 'Checking access…' : 'Check access status'}</button>}
+        {error && <p className="q-access-error" role="alert">{error}</p>}
       </div>
     )
   }
@@ -352,9 +377,9 @@ function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, gu
       <div className="q-access-centered-status">
         <p className="q-access-eyebrow">REQUEST RECEIVED</p>
         <h2 className="q-access-title">Your request has been sent.</h2>
-        <p>The platform team will review your request. Next, create your Quorlyth account using <strong>{guestEmail}</strong> before the request is reviewed. This lets the platform link approval to the correct account.</p>
+        <p>The platform team will review your request. Create an account or sign in with <strong>{guestEmail}</strong> so Quorlyth can connect the approval to you. {returnCommunityName ? `We've saved ${returnCommunityName} as your intended community. Once platform access is approved, you can complete its separate membership application without starting over.` : 'You can choose a community after your platform access is approved.'}</p>
         <button type="button" className="q-access-primary" onClick={onCreateAccount}>Create account or sign in</button>
-        <button type="button" className="q-access-secondary" onClick={onCommunity}>View community application page</button>
+        <p className="q-access-counter">Your selected community will be kept while you complete account setup.</p>
       </div>
     )
   }
