@@ -122,7 +122,7 @@ test('signed-in and signed-out users share one navigation shell while links rema
     readSource('src/styles/sitewide-bold-fluid.css'),
   ])
   assert.match(nav, /className="glass" id="nav"/)
-  assert.match(nav, /data-auth-state=\{me \? "signed-in" : "signed-out"\}/)
+  assert.match(nav, /data-auth-state=\{(?:loading \? "loading" : )?me \? "signed-in" : "signed-out"\}/)
   assert.match(nav, /if \(me && \(!app\.dataReady \|\| !app\.platformRolesReady\)\) return false/)
   assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin'\]\.includes\(i\.path\)/)
   assert.doesNotMatch(nav, /nav-public/)
