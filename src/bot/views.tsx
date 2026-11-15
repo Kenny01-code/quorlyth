@@ -240,7 +240,7 @@ export function BotViews(p: P) {
           <button key={v.id} className={cn('bvc', cur.id === v.id && 'on')} style={{ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any} aria-pressed={cur.id === v.id} onClick={() => pick(v)}>
             <span className="orb3d"><i /></span><b>{v.n}</b><span className="dim">{v.g === 'f' ? 'Female' : 'Male'}, {v.d}</span></button>) })}</div>
         <div className="glass pad" style={{ padding: '12px 18px', marginBottom: 12 }}>
-          <div className="csr"><span><b style={{ fontWeight: 400 }}>Robot finish</b><br /><span className="dim">Quorlyth orange, consistent across the site</span></span><i className="sw" aria-label="Quorlyth orange robot finish" style={{ background: '#F97316' }} /></div>
+          <div className="csr"><span><b style={{ fontWeight: 400 }}>Robot finish</b><br /><span className="dim">Quorlyth orange, consistent across the site</span></span><i className="sw" aria-label="Quorlyth orange robot finish" style={{ background: '#C9562E' }} /></div>
           <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Uses the same speech pipeline as chat: ElevenLabs first, configured cloud providers next, then device speech when enabled.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
             <div className="acts" style={{ margin: 0 }}>
