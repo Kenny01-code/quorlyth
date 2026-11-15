@@ -44,3 +44,16 @@ test('approved members can continue directly to the community they originally se
   assert.match(access, /onRefreshStatus=\{\(\) => void refreshPlatformAccessStatus\(\)\}/)
   assert.match(access, /Check access status/)
 })
+
+test('all Request Access page write-ups use true black without changing other screens', async () => {
+  const [access, styles] = await Promise.all([
+    source('src/screens/Access.tsx'),
+    source('src/styles/app.css'),
+  ])
+  assert.match(access, /You can now apply to a community\./)
+  assert.match(access, /You already have access\./)
+  const blackInkRule = styles.slice(styles.lastIndexOf('/* Request Access typography: keep every piece of page copy in true black ink. */'))
+  assert.match(blackInkRule, /\.q-access-page\s*\{\s*color:\s*#000000 !important/)
+  assert.match(blackInkRule, /:is\(h1,h2,h3,h4,p,span,label,strong,em,b,small,blockquote,li,legend,dt,dd,a,button\)[\s\S]*?color:\s*#000000 !important/)
+  assert.match(blackInkRule, /:is\(input,select,textarea\)[\s\S]*?color:\s*#000000 !important/)
+})
