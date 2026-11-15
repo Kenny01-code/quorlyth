@@ -103,7 +103,7 @@ export function QuorlythGlyph({ name, size = 20, className }: {
 }) {
   return (
     <svg
-      className={[className || 'quorlyth-glyph', name === 'brand' ? 'q-logo-mark' : ''].filter(Boolean).join(' ')}
+      className={[className || 'quorlyth-glyph', 'qth-glyph', 'q-glyph-' + name, name === 'brand' ? 'q-logo-mark' : ''].filter(Boolean).join(' ')}
       viewBox="0 0 24 24"
       width={size}
       height={size}
