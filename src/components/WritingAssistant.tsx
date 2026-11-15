@@ -25,6 +25,7 @@ export function WritingAssistant() {
   const [anchor, setAnchor] = useState<Point>({ x: 0, y: 0 })
   const [panel, setPanel] = useState<Point>({ x: 12, y: 12 })
   const [anchorVisible, setAnchorVisible] = useState(false)
+  const [anchorCompact, setAnchorCompact] = useState(false)
   const [anchorRoot, setAnchorRoot] = useState<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -94,6 +95,10 @@ export function WritingAssistant() {
     const oldPosition = host.style.getPropertyValue('position')
     const oldPositionPriority = host.style.getPropertyPriority('position')
     const addedPositioning = window.getComputedStyle(host).position === 'static'
+    const oldPaddingBottom = target.style.getPropertyValue('padding-bottom')
+    const oldPaddingBottomPriority = target.style.getPropertyPriority('padding-bottom')
+    const computedPaddingBottom = Number.parseFloat(window.getComputedStyle(target).paddingBottom) || 0
+    target.style.setProperty('padding-bottom', Math.max(computedPaddingBottom, 54) + 'px')
     if (addedPositioning) host.style.setProperty('position', 'relative')
 
     const layer = document.createElement('div')
@@ -155,11 +160,14 @@ export function WritingAssistant() {
       }
 
       const layerRect = layer.getBoundingClientRect()
+      const compact = rect.width < 270
+      const buttonWidth = Math.min(218, Math.max(126, rect.width - 18))
       const nextAnchor = {
-        x: Math.round(rect.right - layerRect.left - 42),
+        x: Math.max(6, Math.round(rect.right - layerRect.left - buttonWidth - 8)),
         y: Math.round(rect.bottom - layerRect.top - 42),
       }
       setAnchor(current => current.x === nextAnchor.x && current.y === nextAnchor.y ? current : nextAnchor)
+      setAnchorCompact(compact)
       setAnchorVisible(true)
 
       // The expanded assistant panel is intentionally a body-level fixed layer
@@ -219,6 +227,8 @@ export function WritingAssistant() {
       observer.disconnect()
       layer.remove()
       if (positionRef.current === position) positionRef.current = null
+      if (oldPaddingBottom) target.style.setProperty('padding-bottom', oldPaddingBottom, oldPaddingBottomPriority)
+      else target.style.removeProperty('padding-bottom')
       if (addedPositioning) {
         if (oldPosition) host.style.setProperty('position', oldPosition, oldPositionPriority)
         else host.style.removeProperty('position')
@@ -338,7 +348,8 @@ export function WritingAssistant() {
     ? createPortal(
       <div className="q-writing-assistant-anchor q-writing-assistant-ui" style={{ left: anchor.x, top: anchor.y, position: 'absolute' }}>
         <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} style={{ color: '#EF784B' }} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else { generation.current?.abort(); generation.current = null; setLoading(false); setOptions([]) } }}>
-          <Logo size={22} breathe />
+          <Logo size={18} breathe />
+          <span className="q-writing-robot-label">{anchorCompact ? 'Improve text' : 'Improve text with QuorlythBot'}</span>
         </button>
       </div>,
       anchorRoot,
