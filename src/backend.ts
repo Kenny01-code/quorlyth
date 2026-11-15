@@ -356,29 +356,15 @@ export async function createBackend(): Promise<Backend> {
       const claim = await store.get('config/owner')
       return !!current && claim?.id === current.id
     },
-    async submitPlatformAccessRequest(input) {
-      const fullName = input.fullName.trim()
-      const email = input.email.trim().toLowerCase()
-      const message = input.message.trim()
-      if (!fullName || fullName.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320 || !message || message.length > 1000) {
-        throw new Error('Check your name, email address, and request message.')
-      }
-      const current = await auth.current()
-      const id = current?.id || 'visitor_' + crypto.randomUUID()
-      const path = 'platformAccessRequests/' + id
-      const previous = await store.get(path)
-      if (previous?.status === 'pending') throw new Error('A platform access request is already pending for this identity.')
-      await store.set(path, {
-        id, user_id: current?.id || null, full_name: fullName, email, message,
-        status: 'pending', created_at: new Date().toISOString(),
-      })
+    async submitPlatformAccessRequest() {
+      throw new Error('Public access requests need the connected Quorlyth service. Please use the live platform and try again.')
     },
     async listPlatformAccessRequests() {
       const records = await store.exportAll()
-      return records
+      const rows = records
         .filter(record => record.path.startsWith('platformAccessRequests/') && !record.path.slice('platformAccessRequests/'.length).includes('/'))
         .map(record => ({ ...record.data, id: record.data?.id || record.path.slice('platformAccessRequests/'.length) })) as PlatformAccessRequestRecord[]
-        .sort((left, right) => right.created_at.localeCompare(left.created_at))
+      return rows.sort((left, right) => right.created_at.localeCompare(left.created_at))
     },
     async reviewPlatformAccessRequest(id, status) {
       const path = 'platformAccessRequests/' + id
