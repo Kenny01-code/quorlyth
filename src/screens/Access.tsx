@@ -23,6 +23,7 @@ export function Access() {
   const [guestEmail, setGuestEmail] = useState(a.me?.email || '')
   const [guestMessage, setGuestMessage] = useState('')
   const [guestSent, setGuestSent] = useState(false)
+  const [platformApprovalStatus, setPlatformApprovalStatus] = useState<'pending' | 'approved' | 'declined' | null>(null)
   const [audience, setAudience] = useState('')
   const [platforms, setPlatforms] = useState<string[]>([])
   const [memberNote, setMemberNote] = useState('')
@@ -41,16 +42,31 @@ export function Access() {
     if (a.me?.email) setGuestEmail(a.me.email)
   }, [a.me?.id, a.me?.name, a.me?.email])
 
+  useEffect(() => {
+    let active = true
+    if (!a.me || !a.backend?.getPlatformAccessStatus) {
+      setPlatformApprovalStatus(null)
+      return
+    }
+    void a.backend.getPlatformAccessStatus()
+      .then(status => { if (active) setPlatformApprovalStatus(status) })
+      .catch(error => {
+        console.warn('Could not refresh platform access status:', error)
+        if (active) setPlatformApprovalStatus(null)
+      })
+    return () => { active = false }
+  }, [a.backend, a.me?.id])
+
   const communities = a.data.communities
     .filter(community => community.vis !== 'unlisted' && !community.arch && community.joinApproval)
     .sort((left, right) => left.name.localeCompare(right.name))
   const selected = communities.find(community => community.id === selectedId)
   const platformAdmin = !!a.platformAdmin
   const decision = a.me ? a.data.decisions[a.me.id] : undefined
-  const approved = platformAdmin || decision?.status === 'approved'
+  const approved = platformAdmin || decision?.status === 'approved' || platformApprovalStatus === 'approved'
   const request = a.me ? a.data.requests.find(item => item.id === a.me!.id) : undefined
   const requestDecision = a.me ? a.data.decisions[a.me.id] : undefined
-  const pending = !!request && !(requestDecision && requestDecision.at > request.at)
+  const pending = (!!request && !(requestDecision && requestDecision.at > request.at)) || platformApprovalStatus === 'pending'
   const selectedRequest = selected && a.me
     ? a.data.joinRequests.find(item => item.cid === selected.id && item.userId === a.me!.id)
     : undefined
@@ -207,7 +223,7 @@ export function Access() {
               platformAdmin={platformAdmin}
               approved={approved}
               pending={pending}
-              declined={requestDecision?.status === 'declined'}
+              declined={requestDecision?.status === 'declined' || platformApprovalStatus === 'declined'}
               guestSent={guestSent}
               previewForm={previewForm}
               guestName={guestName}
@@ -227,6 +243,7 @@ export function Access() {
               onSubmit={() => void submitPlatformApplication()}
               onOpenRequests={() => nav('/settings?tab=requests')}
               onCommunity={() => switchMode('community')}
+              onCreateAccount={() => nav('/signin?next=%2Faccess&email=' + encodeURIComponent(guestEmail.trim()))}
               onBrowse={() => nav('/communities')}
             />
           )}
@@ -300,7 +317,7 @@ function CommunityApplicationPanel({ a, communities, selectedId, selected, messa
   )
 }
 
-function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, guestSent, previewForm, guestName, guestEmail, guestMessage, audience, platforms, memberNote, sending, error, onNameChange, onEmailChange, onGuestMessageChange, onAudienceChange, onPlatformsChange, onMemberNoteChange, onSubmit, onOpenRequests, onCommunity, onBrowse }: any) {
+function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, guestSent, previewForm, guestName, guestEmail, guestMessage, audience, platforms, memberNote, sending, error, onNameChange, onEmailChange, onGuestMessageChange, onAudienceChange, onPlatformsChange, onMemberNoteChange, onSubmit, onOpenRequests, onCommunity, onBrowse, onCreateAccount }: any) {
   if (platformAdmin && !previewForm) {
     return (
       <div className="q-access-platform-admin">
@@ -335,7 +352,8 @@ function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, gu
       <div className="q-access-centered-status">
         <p className="q-access-eyebrow">REQUEST RECEIVED</p>
         <h2>Your request has been sent.</h2>
-        <p>The platform team will review your request. Keep access to the email address you submitted so you can continue after approval.</p>
+        <p>The platform team will review your request. Next, create your Quorlyth account using <strong>{guestEmail}</strong> before the request is reviewed. This lets the platform link approval to the correct account.</p>
+        <button type="button" className="q-access-primary" onClick={onCreateAccount}>Create account or sign in</button>
         <button type="button" className="q-access-secondary" onClick={onCommunity}>View community application page</button>
       </div>
     )
