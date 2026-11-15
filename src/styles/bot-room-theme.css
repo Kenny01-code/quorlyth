@@ -370,3 +370,26 @@
 }
 
 
+
+
+/* The launch greeting sits on a dark pill beside the robot; never inherit the browser's dark button text. */
+#astl.astl .astb {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .55);
+}
+
+/* The bot's charcoal shell is not a light card. Keep assistant writeups warm-white,
+   while the deliberate light sidebar, action cards and orange user bubbles keep ink text. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-log .am.ma {
+  color: #F0EAD9 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma :is(p, li, blockquote, figcaption, span, b, strong, em, small, code, pre),
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-log .am.ma :is(p, li, blockquote, figcaption, span, b, strong, em, small, code, pre) {
+  color: #F0EAD9 !important;
+  -webkit-text-fill-color: #F0EAD9 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bhero :is(h1, h2, h3, h4, p, li, span, b, strong, em, small) {
+  color: #F0EAD9 !important;
+}
