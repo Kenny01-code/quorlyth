@@ -85,7 +85,7 @@ export function IdeaCard({ idea, extra }: { idea: Idea; extra?: React.ReactNode 
           <Av id={idea.authorId} size={28} />
         </div>
         <h3 className="idea-card-title" style={{ fontSize: 20, fontWeight: 500, letterSpacing: '-.02em' }}>{idea.title}</h3>
-        <p className="q-writeup idea-feed-writeup">{previewBody}</p>
+        <p className="idea-feed-writeup" style={{ color: '#000000' }}>{previewBody}</p>
         <IdeaMediaGallery idea={idea} compact />
         <Tags tags={idea.tags} />
         <div className="f"><span><Icon name="support" size={16} />{a.votesOf(idea.id)}</span><span>{a.nm(idea.authorId).split(' ')[0]}, {when(idea.at)}</span></div>
