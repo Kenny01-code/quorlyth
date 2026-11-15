@@ -520,26 +520,56 @@ test('QuorlythBot uses a balanced terracotta shell with deep-ink accents', async
 })
 
 
-test('Request Access is a public application hub with owner-specific community routing and separate platform access', async () => {
-  const access = await readSource('src/screens/Access.tsx')
+test('Request Access uses the two-panel platform and community application flow', async () => {
+  const [access, css] = await Promise.all([
+    readSource('src/screens/Access.tsx'),
+    readSource('src/styles/app.css'),
+  ])
   assert.match(access, /export function Access\(\)/)
-  assert.match(access, /filter\(community => community\.vis !== 'unlisted' && !community\.arch && community\.joinApproval\)/)
+  assert.match(access, /q-access-layout/)
+  assert.match(access, /role="tablist"/)
+  assert.match(access, /Choose a community accepting requests/)
   assert.match(access, /a\.requestCommunityJoin\(selected\.id, message\.trim\(\)\)/)
   assert.match(access, /community\.ownerId \|\| community\.createdBy/)
-  assert.match(access, /\?tab=join-requests/)
-  assert.match(access, /function PlatformAccess\(\)/)
-  assert.match(access, /function GuestPlatformAccess\(\)/)
-  assert.match(access, /a\.sendRequest\(\{ platforms: pl, aud: au, note: note\.trim\(\) \}\)/)
-  assert.match(access, /Sign in first\. You'll return to this exact application after signing in\./)
-  assert.match(access, /Owner-reviewed applications/)
+  assert.match(access, /canApplyToCommunity/)
+  assert.match(access, /Platform access must be approved first/)
+  assert.match(access, /submitPlatformApplication/)
+  assert.match(access, /submitPlatformAccessRequest/)
+  assert.match(access, /Create account or sign in/)
+  assert.match(access, /getPlatformAccessStatus/)
+  assert.match(css, /\.q-access-layout/)
+  assert.match(css, /\.q-access-switch/)
+  assert.match(css, /\.q-access-primary/)
 })
 
-test('Improve text uses the visible orange Quorlyth logo mark in its launcher and panel', async () => {
-  const writing = await readSource('src/components/WritingAssistant.tsx')
+test('visitor platform requests use the existing public access request table and platform admin review RPC', async () => {
+  const [backend, settings, signIn] = await Promise.all([
+    readSource('src/backend.ts'),
+    readSource('src/screens/Settings.tsx'),
+    readSource('src/screens/SignIn.tsx'),
+  ])
+  assert.match(backend, /from\('access_requests'\)\.insert/)
+  assert.match(backend, /review_quorlyth_access_request/)
+  assert.match(backend, /listPlatformAccessRequests/)
+  assert.match(backend, /from\('workspace_members'\).*\.eq\('email', email\)/)
+  assert.match(settings, /Visitor access requests/)
+  assert.match(settings, /reviewVisitorRequest/)
+  assert.match(signIn, /params\.get\('email'\)\?\.trim\(\)/)
+})
+
+test('Improve text is a visible orange in-field action with the Quorlyth mark', async () => {
+  const [writing, styles] = await Promise.all([
+    readSource('src/components/WritingAssistant.tsx'),
+    readSource('src/styles/writing-assistant-live.css'),
+  ])
   assert.match(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
-  assert.match(writing, /<Logo size=\{22\} breathe \/>/)
+  assert.match(writing, /<Logo size=\{18\} breathe \/>/)
+  assert.match(writing, /q-writing-robot-label/)
   assert.match(writing, /style=\{\{ color: '#EF784B' \}\}/)
-  assert.match(writing, /<Logo size=\{20\} breathe \/>/)
+  assert.match(writing, /target\.style\.setProperty\('padding-bottom'/)
+  assert.match(styles, /\.q-writing-robot-button/)
+  assert.match(styles, /Improve text/)
+  assert.match(styles, /pointer-events: auto !important/)
   assert.doesNotMatch(writing, /q-writing-robot-head" aria-hidden="true"/)
 })
 
