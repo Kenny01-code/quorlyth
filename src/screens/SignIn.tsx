@@ -130,8 +130,8 @@ export function SignIn() {
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset' | 'otp' | 'recovery'>(() => {
-    if (params.get('recovery') !== '1') return 'signin'
-    return params.get('otp') === '1' ? 'otp' : 'recovery'
+    if (params.get('recovery') === '1') return params.get('otp') === '1' ? 'otp' : 'recovery'
+    return params.get('mode') === 'signup' ? 'signup' : 'signin'
   })
   const [firstWelcome] = useState(() => {
     try { return localStorage.getItem('qseen') !== '1' } catch { return true }
@@ -146,6 +146,7 @@ export function SignIn() {
     sessionStorage.removeItem('qreturn')
     return target.startsWith('/') && !target.startsWith('//') ? target : '/dashboard'
   }
+  const authRedirectUrl = () => new URL(next, window.location.origin).toString()
 
   useEffect(() => {
     if (requested) sessionStorage.setItem('qreturn', next)
@@ -195,7 +196,7 @@ export function SignIn() {
       } else if (mode === 'signup') {
         if (password.length < 8) throw new Error('Use a password with at least 8 characters.')
         if (password !== confirm) throw new Error('Those passwords do not match.')
-        const r = await backend!.auth.signUpEmail(email.trim(), password)
+        const r = await backend!.auth.signUpEmail(email.trim(), password, authRedirectUrl())
         if (r.sentLink) setNotice('verify')
         else nav(dest(), { replace: true })
       } else if (mode === 'recovery') {
@@ -233,7 +234,7 @@ export function SignIn() {
     }
   }
   async function google() {
-    try { await backend!.auth.signInGoogle() } catch (er: any) { toast(er.message || 'Google sign in is not set up') }
+    try { await backend!.auth.signInGoogle(authRedirectUrl()) } catch (er: any) { toast(er.message || 'Google sign in is not set up') }
   }
   async function copyPageLink() {
     try { await navigator.clipboard.writeText(window.location.href); toast('Page link copied') }
