@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { PlatformAccessRequestRecord } from '../backend'
 import { useSearchParams } from 'react-router-dom'
 import { Icon, GoogleG } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
@@ -37,6 +38,10 @@ function Inner() {
   const initialWeights = [s.wo ?? 40, s.wf ?? 25, s.wr ?? 35]
   const [w, setW, clearWeightsDraft] = useDraftState(`q-draft:${a.me?.id}:settings:weights`, initialWeights)
   const [emails, setEmails, clearInviteDraft] = useDraftState(`q-draft:${a.me?.id}:settings:invite`, '')
+  const [visitorRequests, setVisitorRequests] = useState<PlatformAccessRequestRecord[]>([])
+  const [visitorRequestsLoading, setVisitorRequestsLoading] = useState(false)
+  const [visitorRequestsError, setVisitorRequestsError] = useState('')
+  const [visitorRequestBusyId, setVisitorRequestBusyId] = useState('')
   const url = location.origin
   const inviteMessage = 'Join my space on Quorlyth: ' + url
   const text = encodeURIComponent(inviteMessage)
@@ -58,6 +63,36 @@ function Inner() {
   useEffect(() => {
     if (a.platformAdmin && tab === 2 && unreadRequestKeys.length) void userState.patch({ read: Object.fromEntries(unreadRequestKeys.map(key => [key, true])) })
   }, [tab, unreadRequestKeys.join('|'), a.platformAdmin])
+
+  useEffect(() => {
+    if (!a.platformAdmin || tab !== 2 || !a.backend?.listPlatformAccessRequests) return
+    let active = true
+    setVisitorRequestsLoading(true)
+    setVisitorRequestsError('')
+    void a.backend.listPlatformAccessRequests()
+      .then(rows => { if (active) setVisitorRequests(rows) })
+      .catch(error => {
+        if (active) setVisitorRequestsError(error instanceof Error ? error.message : 'Could not load visitor requests.')
+      })
+      .finally(() => { if (active) setVisitorRequestsLoading(false) })
+    return () => { active = false }
+  }, [a.backend, a.platformAdmin, tab])
+
+  async function reviewVisitorRequest(request: PlatformAccessRequestRecord, status: 'approved' | 'declined') {
+    if (!a.backend?.reviewPlatformAccessRequest) return
+    setVisitorRequestBusyId(request.id)
+    setVisitorRequestsError('')
+    try {
+      await a.backend.reviewPlatformAccessRequest(request.id, status)
+      const refreshed = await a.backend.listPlatformAccessRequests?.()
+      if (refreshed) setVisitorRequests(refreshed)
+      a.toast(status === 'approved' ? 'Visitor access request approved' : 'Visitor access request declined')
+    } catch (error) {
+      setVisitorRequestsError(error instanceof Error ? error.message : 'Could not review this visitor request.')
+    } finally {
+      setVisitorRequestBusyId('')
+    }
+  }
 
   return (
     <>
@@ -94,6 +129,32 @@ function Inner() {
                 </div>
               )
             }) : <p className="mut" style={{ padding: '20px 0' }}>No requests yet.</p>}
+
+            <div className="q-platform-visitor-requests" style={{ marginTop: 30, paddingTop: 22, borderTop: '1px solid var(--line)' }}>
+              <h3>Visitor access requests</h3>
+              <p className="dim" style={{ margin: '5px 0 12px' }}>Requests submitted from the public Request Access page, before creating an account. Approval is linked to the exact email address provided.</p>
+              {visitorRequestsLoading ? <p className="mut" style={{ padding: '12px 0' }}>Loading visitor requests…</p>
+                : visitorRequestsError ? <p className="q-access-error" role="alert">{visitorRequestsError}</p>
+                : visitorRequests.length ? visitorRequests.map(request => {
+                  const open = request.status === 'pending'
+                  return (
+                    <div key={request.id} className="set" style={{ alignItems: 'flex-start' }}>
+                      <div style={{ minWidth: 0, display: 'grid', gap: 4 }}>
+                        <h3 style={{ fontSize: 15 }}>{request.full_name}</h3>
+                        <p className="dim" style={{ overflowWrap: 'anywhere' }}>{request.email} · {new Date(request.created_at).toLocaleString()}</p>
+                        <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{request.message}</p>
+                        {request.user_id ? <span className="dim" style={{ fontSize: 11 }}>Matched to an existing account</span> : <span className="dim" style={{ fontSize: 11 }}>No account was linked at submission</span>}
+                      </div>
+                      <div className="acts" style={{ margin: 0 }}>
+                        {open ? <>
+                          <button className="btn p" disabled={visitorRequestBusyId === request.id} style={{ padding: '9px 18px' }} onClick={() => void reviewVisitorRequest(request, 'approved')}>{visitorRequestBusyId === request.id ? 'Saving…' : 'Approve'}</button>
+                          <button className="btn" disabled={visitorRequestBusyId === request.id} style={{ padding: '9px 18px' }} onClick={() => void reviewVisitorRequest(request, 'declined')}>Decline</button>
+                        </> : <span className="chip">{request.status === 'approved' ? 'Approved' : 'Declined'}</span>}
+                      </div>
+                    </div>
+                  )
+                }) : <p className="mut" style={{ padding: '12px 0' }}>No visitor requests yet.</p>}
+            </div>
           </>}
           {a.platformAdmin && tab === 3 && <>
             <h3>Let people in</h3><p className="dim" style={{ margin: '6px 0 16px' }}>People sign in with Google or their email. Share the link, or approve them yourself under Requests.</p>
