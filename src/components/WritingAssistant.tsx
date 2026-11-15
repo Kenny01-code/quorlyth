@@ -382,7 +382,7 @@ export function WritingAssistant() {
               setPreview('')
               setOptions([])
               setError('')
-              setOpen(true)
+              void improve(MODES[0])
             }
           }}
         >
@@ -407,10 +407,10 @@ export function WritingAssistant() {
           <div className="q-writing-panel-intro">
             <p className="q-writing-panel-kicker">YOUR WRITING, REFINED</p>
             <h2>What would you like to improve?</h2>
-            <p>Choose an action. QuorlythBot will work with the text in your active field.</p>
+            <p>Three tailored suggestions are generated automatically. Choose a draft to use it, or select another writing action.</p>
           </div>
           <div className="q-writing-modes" role="group" aria-label="Writing actions">
-            {MODES.map((item, index) => (
+            {MODES.filter(item => item.kind !== 'suggestions').map((item, index) => (
               <button type="button" key={item.id} className={`q-writing-mode ${mode?.id === item.id ? 'on' : ''}`} aria-pressed={mode?.id === item.id} disabled={loading} onMouseDown={event => event.preventDefault()} onClick={() => void improve(item)}>
                 <span className="q-writing-mode-index">{String(index + 1).padStart(2, '0')}</span>
                 <span className="q-writing-mode-copy"><strong>{item.label}</strong><small>{item.description}</small></span>
