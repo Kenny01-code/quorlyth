@@ -3,14 +3,14 @@ export const THEMES = {
   // Its highlights and shadows stay in the same orange family; the deep-ink faceplate is unchanged.
   terracotta: {
     n: 'Quorlyth Orange',
-    p: 0xd06a40,
+    p: 0xc9562e,
     b: 0x211a17,
-    c: 0xf0ead9,
-    g: 0xf3a17c,
-    e: 0x843a25,
-    ei: 0.24,
-    g1: '#D06A40',
-    g2: '#843A25',
-    cr: '208,106,64',
+    c: 0xa64829,
+    g: 0xffa16f,
+    e: 0x6f2b1a,
+    ei: 0.14,
+    g1: '#C9562E',
+    g2: '#6F2B1A',
+    cr: '201,86,46',
   },
 } as const
