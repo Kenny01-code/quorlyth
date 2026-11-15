@@ -351,7 +351,7 @@ function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, gu
     return (
       <div className="q-access-centered-status">
         <p className="q-access-eyebrow">REQUEST RECEIVED</p>
-        <h2>Your request has been sent.</h2>
+        <h2 className="q-access-title">Your request has been sent.</h2>
         <p>The platform team will review your request. Next, create your Quorlyth account using <strong>{guestEmail}</strong> before the request is reviewed. This lets the platform link approval to the correct account.</p>
         <button type="button" className="q-access-primary" onClick={onCreateAccount}>Create account or sign in</button>
         <button type="button" className="q-access-secondary" onClick={onCommunity}>View community application page</button>
