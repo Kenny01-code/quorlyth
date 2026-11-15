@@ -211,7 +211,7 @@ export function Access() {
               selectedIsMember={selectedIsMember}
               canApply={canApplyToCommunity}
               onCommunityChange={chooseCommunity}
-              onMessageChange={value => { setMessage(value); setError('') }}
+              onMessageChange={(value: string) => { setMessage(value); setError('') }}
               onSubmit={() => void submitCommunityApplication()}
               onSwitchPlatform={() => switchMode('platform')}
               onOpenCommunity={() => selected && nav('/communities/' + selected.id)}
