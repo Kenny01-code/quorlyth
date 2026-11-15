@@ -2848,3 +2848,18 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   fill: currentColor;
   animation: none;
 }
+
+/* Request Access typography: keep every piece of page copy in true black ink. */
+.q-access-page {
+  color: #000000 !important;
+}
+.q-access-page :is(h1,h2,h3,h4,p,span,label,strong,em,b,small,blockquote,li,legend,dt,dd,a,button) {
+  color: #000000 !important;
+}
+.q-access-page :is(input,select,textarea) {
+  color: #000000 !important;
+}
+.q-access-page :is(input,textarea)::placeholder {
+  color: #000000 !important;
+  opacity: .68;
+}
