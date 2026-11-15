@@ -146,7 +146,7 @@ export function SignIn() {
     sessionStorage.removeItem('qreturn')
     return target.startsWith('/') && !target.startsWith('//') ? target : '/dashboard'
   }
-  const authRedirectUrl = () => new URL(next, window.location.origin).toString()
+  const authRedirectUrl = () => new URL('/signin?next=' + encodeURIComponent(next), window.location.origin).toString()
 
   useEffect(() => {
     if (requested) sessionStorage.setItem('qreturn', next)
