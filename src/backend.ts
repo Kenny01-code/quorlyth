@@ -9,9 +9,9 @@ export interface Auth {
   accessToken?(): Promise<string | null>
   current(): Promise<Me | null>
   onChange(cb: (m: Me | null) => void): () => void
-  signInGoogle(): Promise<void>
+  signInGoogle(redirectTo?: string): Promise<void>
   signInEmail(email: string, password: string): Promise<void>
-  signUpEmail(email: string, password: string): Promise<{ sentLink?: boolean }>
+  signUpEmail(email: string, password: string, redirectTo?: string): Promise<{ sentLink?: boolean }>
   resetPassword(email: string): Promise<void>
   verifyRecoveryOtp(email: string, token: string): Promise<void>
   updatePassword(password: string): Promise<void>
@@ -185,10 +185,10 @@ export async function createBackend(): Promise<Backend> {
           })
         },
         onChange(cb) { const { data } = sb.auth.onAuthStateChange((_e, s) => cb(toMe(s?.user))); return () => data.subscription.unsubscribe() },
-        async signInGoogle() { const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } }); if (error) throw error },
+        async signInGoogle(redirectTo) { const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectTo || window.location.origin } }); if (error) throw error },
         async signInEmail(email, password) { const { error } = await sb.auth.signInWithPassword({ email, password }); if (error) throw error },
-        async signUpEmail(email, password) {
-          const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } })
+        async signUpEmail(email, password, redirectTo) {
+          const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo || window.location.origin } })
           if (error) throw error
           return { sentLink: !data.session }
         },
