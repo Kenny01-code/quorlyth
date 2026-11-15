@@ -181,7 +181,7 @@ export default function App() {
     if (us.st.preferences?.sound !== undefined) setSound(us.st.preferences.sound)
   }, [a.me?.id, us.st.preferences?.sound])
   const unread = notifs.filter(n => n.unread).length
-  const pendingRequests = a.platformAdmin ? a.data.requests.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at }).length : 0
+  const pendingRequests = a.platformAdmin ? a.data.requests.filter(r => { const d = a.data.decisions[r.id]; return !d || d.at < r.at }).length + notifs.filter(n => n.target === 'visitor-access-request:pending').length : 0
   const unreadRequests = notifs.filter(n => n.kind === 'settings' && n.unread).length
   const ownRequest = a.me && a.data.requests.find(r => r.id === a.me!.id)
   const ownDecision = a.me && a.data.decisions[a.me.id]
