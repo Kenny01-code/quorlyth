@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { streamChat } from '../ai/client'
-import { Logo } from '../lib/Logo'
+import { QuorlythBotHead } from '../bot/QuorlythBotHead'
 import '../styles/writing-assistant-live.css'
 
 type Point = { x: number; y: number }
-type WritingMode = { id: string; label: string; instruction: string; kind?: 'suggestions' }
+type WritingMode = { id: string; label: string; description: string; instruction: string; kind?: 'suggestions' }
 
 const MODES: WritingMode[] = [
-  { id: 'suggestions', label: 'Suggestions', instruction: 'Generate three distinct, field-specific writing suggestions.', kind: 'suggestions' },
-  { id: 'polish', label: 'Improve', instruction: 'Rewrite this to be clearer, smoother, and more compelling while preserving my meaning and natural voice.' },
-  { id: 'professional', label: 'Professional', instruction: 'Rewrite this in a polished, professional tone without making it stiff or generic.' },
-  { id: 'concise', label: 'Shorten', instruction: 'Make this concise and direct while preserving every essential point.' },
-  { id: 'friendly', label: 'Friendlier', instruction: 'Make this warm, natural, and friendly without sounding forced.' },
-  { id: 'confident', label: 'More confident', instruction: 'Make this sound confident, clear, and self-assured without becoming arrogant.' },
-  { id: 'persuasive', label: 'Persuasive', instruction: 'Strengthen the reasoning and persuasive flow without inventing facts or making unsupported promises.' },
-  { id: 'grammar', label: 'Fix grammar', instruction: 'Correct grammar, spelling, punctuation, and awkward phrasing while changing as little as possible.' },
-  { id: 'expand', label: 'Expand', instruction: 'Develop this into a more complete, useful version with clearer structure. Do not invent facts, names, dates, or commitments.' },
+  { id: 'suggestions', label: 'Suggestions', description: 'Get three distinct drafts for this exact field.', instruction: 'Generate three distinct, field-specific writing suggestions.', kind: 'suggestions' },
+  { id: 'polish', label: 'Improve', description: 'Make it clearer, smoother and more compelling.', instruction: 'Rewrite this to be clearer, smoother, and more compelling while preserving my meaning and natural voice.' },
+  { id: 'professional', label: 'Professional', description: 'Sound polished without becoming stiff.', instruction: 'Rewrite this in a polished, professional tone without making it stiff or generic.' },
+  { id: 'concise', label: 'Shorten', description: 'Keep the essentials. Remove the excess.', instruction: 'Make this concise and direct while preserving every essential point.' },
+  { id: 'friendly', label: 'Friendlier', description: 'Make the wording warmer and more natural.', instruction: 'Make this warm, natural, and friendly without sounding forced.' },
+  { id: 'confident', label: 'More confident', description: 'Give your message a stronger, assured voice.', instruction: 'Make this sound confident, clear, and self-assured without becoming arrogant.' },
+  { id: 'persuasive', label: 'Persuasive', description: 'Strengthen the reasoning and flow.', instruction: 'Strengthen the reasoning and persuasive flow without inventing facts or making unsupported promises.' },
+  { id: 'grammar', label: 'Fix grammar', description: 'Correct spelling, grammar and punctuation.', instruction: 'Correct grammar, spelling, punctuation, and awkward phrasing while changing as little as possible.' },
+  { id: 'expand', label: 'Expand', description: 'Develop the idea without inventing details.', instruction: 'Develop this into a more complete, useful version with clearer structure. Do not invent facts, names, dates, or commitments.' },
 ]
 
 /** Inline writing help that follows the focused textarea and never navigates away. */
@@ -29,7 +29,7 @@ export function WritingAssistant() {
   const [anchorRoot, setAnchorRoot] = useState<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState<WritingMode>(MODES[0])
+  const [mode, setMode] = useState<WritingMode | null>(null)
   const [preview, setPreview] = useState('')
   const [options, setOptions] = useState<string[]>([])
   const [error, setError] = useState('')
@@ -56,6 +56,7 @@ export function WritingAssistant() {
         setOpen(false)
         setPreview('')
         setOptions([])
+        setMode(null)
         setError('')
         return
       }
@@ -68,6 +69,7 @@ export function WritingAssistant() {
       setOpen(false)
       setPreview('')
       setOptions([])
+      setMode(null)
       setError('')
     }
     document.addEventListener('focusin', onFocusIn, true)
@@ -160,8 +162,8 @@ export function WritingAssistant() {
       }
 
       const layerRect = layer.getBoundingClientRect()
-      const compact = rect.width < 270
-      const buttonWidth = Math.min(218, Math.max(126, rect.width - 18))
+      const compact = rect.width < 320
+      const buttonWidth = compact ? Math.min(56, Math.max(48, rect.width - 18)) : Math.min(164, Math.max(142, rect.width - 18))
       const nextAnchor = {
         x: Math.max(6, Math.round(rect.right - layerRect.left - buttonWidth - 8)),
         y: Math.round(rect.bottom - layerRect.top - 42),
@@ -173,9 +175,9 @@ export function WritingAssistant() {
       // The expanded assistant panel is intentionally a body-level fixed layer
       // so ancestor overflow never cuts it off. It still follows the visible
       // textarea, and closes if that field scrolls out of view.
-      const panelWidth = Math.min(336, Math.max(0, window.innerWidth - 24))
-      const panelHeight = Math.min(420, Math.max(0, window.innerHeight * 0.76))
-      const above = visibleTop - 12 >= Math.min(panelHeight, 280)
+      const panelWidth = Math.min(380, Math.max(0, window.innerWidth - 24))
+      const panelHeight = Math.min(560, Math.max(0, window.innerHeight * 0.82))
+      const above = visibleTop - 12 >= Math.min(panelHeight, 340)
       const preferredTop = above ? visibleTop - panelHeight - 10 : visibleBottom + 10
       const nextPanel = {
         x: Math.round(Math.max(12, Math.min(window.innerWidth - panelWidth - 12, visibleRight - panelWidth))),
@@ -249,18 +251,22 @@ export function WritingAssistant() {
 
   async function improve(nextMode: WritingMode) {
     if (!target?.isConnected) return
+    const source = target.value.trim()
+    const field = describeField(target)
+    setMode(nextMode)
+    setOpen(true)
+    if (!source && nextMode.kind !== 'suggestions') {
+      generation.current?.abort()
+      generation.current = null
+      setLoading(false)
+      setPreview('')
+      setOptions([])
+      setError('Add a little text first, or choose Suggestions to get a starting point for this field.')
+      return
+    }
     generation.current?.abort()
     const controller = new AbortController()
     generation.current = controller
-    const source = target.value.trim()
-    const field = describeField(target)
-    if (!source && nextMode.kind !== 'suggestions') {
-      setError('Write a little first, or choose Suggestions to get a starting point for this field.')
-      setOpen(true)
-      return
-    }
-    setMode(nextMode)
-    setOpen(true)
     setLoading(true)
     setPreview('')
     setOptions([])
@@ -341,15 +347,48 @@ export function WritingAssistant() {
 
   if (!target?.isConnected) return null
 
+  const closeAssistant = () => {
+    generation.current?.abort()
+    generation.current = null
+    setLoading(false)
+    setOpen(false)
+    setMode(null)
+    setPreview('')
+    setOptions([])
+    setError('')
+  }
+
   const anchorPortal = anchorRoot
     && anchorRoot.isConnected
     && anchorRoot.parentElement === target.parentElement
     && anchorVisible
     ? createPortal(
       <div className="q-writing-assistant-anchor q-writing-assistant-ui" style={{ left: anchor.x, top: anchor.y, position: 'absolute' }}>
-        <button type="button" className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`} style={{ color: '#EF784B' }} title="Improve this text with QuorlythBot" aria-label="Improve this text with QuorlythBot" aria-expanded={open} onMouseDown={e => e.preventDefault()} onClick={() => { const opening = !open; setOpen(opening); setError(''); setPreview(''); if (opening) void improve(MODES[0]); else { generation.current?.abort(); generation.current = null; setLoading(false); setOptions([]) } }}>
-          <Logo size={18} breathe />
-          <span className="q-writing-robot-label">{anchorCompact ? 'Improve text' : 'Improve text with QuorlythBot'}</span>
+        <button
+          type="button"
+          className={`q-writing-robot-button ${anchorCompact ? 'is-compact' : ''} ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`}
+          title="Improve this text with QuorlythBot"
+          aria-label="Improve this text with QuorlythBot"
+          aria-expanded={open}
+          aria-controls="q-writing-panel"
+          onMouseDown={event => event.preventDefault()}
+          onClick={() => {
+            if (open) closeAssistant()
+            else {
+              generation.current?.abort()
+              generation.current = null
+              setLoading(false)
+              setMode(null)
+              setPreview('')
+              setOptions([])
+              setError('')
+              setOpen(true)
+            }
+          }}
+        >
+          <QuorlythBotHead size={anchorCompact ? 28 : 30} />
+          <span className="q-writing-robot-label">Improve text</span>
+          <span className="q-writing-robot-spark" aria-hidden="true" />
         </button>
       </div>,
       anchorRoot,
@@ -358,20 +397,43 @@ export function WritingAssistant() {
 
   const panelPortal = open && anchorVisible
     ? createPortal(
-      <section className="q-writing-panel q-writing-assistant-ui" style={{ left: panel.x, top: panel.y, position: 'fixed' }} aria-label="QuorlythBot writing assistant">
-        <header className="q-writing-panel-head"><span className="q-writing-panel-symbol" style={{ color: '#EF784B' }}><Logo size={20} breathe /></span><div><b>QuorlythBot</b><small>WRITING ASSISTANT · STAYS HERE</small></div><button type="button" aria-label="Close writing assistant" onClick={() => { generation.current?.abort(); generation.current = null; setLoading(false); setOpen(false) }}>×</button></header>
-        <div className="q-writing-modes">{MODES.map(item => <button type="button" key={item.id} className={mode.id === item.id ? 'on' : ''} disabled={loading} onClick={() => void improve(item)}>{item.label}</button>)}</div>
-        {loading && <div className="q-writing-status"><span className="q-writing-pulse" />Refining your text…</div>}
-        {error && <p className="q-writing-error" role="alert">{error}</p>}
-        {options.length > 0 && <div className="q-writing-options" aria-label="AI writing suggestions">
-          <p className="q-writing-preview-label">SUGGESTED FOR THIS FIELD</p>
-          {options.map((option, index) => <button type="button" key={index} className="q-writing-option" disabled={loading} onMouseDown={e => e.preventDefault()} onClick={() => applyText(option)}>
-            <span className="q-writing-option-number">{String(index + 1).padStart(2, '0')}</span><span className="q-writing-option-text">{option}</span><span className="q-writing-option-use">Use</span>
-          </button>)}
-        </div>}
-        {loading && mode.kind === 'suggestions' && <p className="q-writing-stream-hint">QuorlythBot is drafting the next option in real time…</p>}
-        {preview && <div className="q-writing-preview"><p className="q-writing-preview-label">PREVIEW · {mode.label.toUpperCase()}</p><div>{preview}</div></div>}
-        <footer className="q-writing-panel-footer"><span>{loading ? 'Preparing a focused suggestion' : options.length ? 'Choose one to use it' : preview ? 'Review before applying' : 'AI help adapts to this field'}</span>{preview && !loading && <><button type="button" className="q-writing-secondary" onClick={() => { setPreview(''); setError('') }}>Discard</button><button type="button" className="q-writing-apply" onClick={applyPreview}>Apply text</button></>}</footer>
+      <section id="q-writing-panel" className="q-writing-panel q-writing-assistant-ui" style={{ left: panel.x, top: panel.y, position: 'fixed' }} aria-label="QuorlythBot writing assistant" role="dialog" aria-modal="false">
+        <header className="q-writing-panel-head">
+          <span className="q-writing-panel-symbol"><QuorlythBotHead size={36} /></span>
+          <div className="q-writing-panel-brand-copy"><b>QuorlythBot</b><small>WRITING ASSISTANT</small></div>
+          <button type="button" className="q-writing-panel-close" aria-label="Close writing assistant" onMouseDown={event => event.preventDefault()} onClick={closeAssistant}>×</button>
+        </header>
+        <div className="q-writing-panel-content">
+          <div className="q-writing-panel-intro">
+            <p className="q-writing-panel-kicker">YOUR WRITING, REFINED</p>
+            <h2>What would you like to improve?</h2>
+            <p>Choose an action. QuorlythBot will work with the text in your active field.</p>
+          </div>
+          <div className="q-writing-modes" role="group" aria-label="Writing actions">
+            {MODES.map((item, index) => (
+              <button type="button" key={item.id} className={`q-writing-mode ${mode?.id === item.id ? 'on' : ''}`} aria-pressed={mode?.id === item.id} disabled={loading} onMouseDown={event => event.preventDefault()} onClick={() => void improve(item)}>
+                <span className="q-writing-mode-index">{String(index + 1).padStart(2, '0')}</span>
+                <span className="q-writing-mode-copy"><strong>{item.label}</strong><small>{item.description}</small></span>
+                <span className="q-writing-mode-arrow" aria-hidden="true">↗</span>
+              </button>
+            ))}
+          </div>
+          {!mode && !loading && !error && <p className="q-writing-start">Your original text stays untouched until you choose a result to apply.</p>}
+          {loading && <div className="q-writing-status" role="status" aria-live="polite"><span className="q-writing-pulse" />QuorlythBot is working on your text…</div>}
+          {error && <p className="q-writing-error" role="alert">{error}</p>}
+          {options.length > 0 && <div className="q-writing-options" aria-label="AI writing suggestions">
+            <p className="q-writing-preview-label">SUGGESTED FOR THIS FIELD</p>
+            {options.map((option, index) => <button type="button" key={index} className="q-writing-option" disabled={loading} onMouseDown={event => event.preventDefault()} onClick={() => applyText(option)}>
+              <span className="q-writing-option-number">{String(index + 1).padStart(2, '0')}</span><span className="q-writing-option-text">{option}</span><span className="q-writing-option-use">Use</span>
+            </button>)}
+          </div>}
+          {loading && mode?.kind === 'suggestions' && <p className="q-writing-stream-hint">QuorlythBot is drafting three options for this field…</p>}
+          {preview && mode && <div className="q-writing-preview"><p className="q-writing-preview-label">PREVIEW · {mode.label.toUpperCase()}</p><div>{preview}</div></div>}
+        </div>
+        <footer className="q-writing-panel-footer">
+          <span>{loading ? 'Preparing your result' : options.length ? 'Choose a suggestion to use it' : preview ? 'Review before applying' : mode ? 'Your original text is still unchanged' : 'Choose an action to get started'}</span>
+          {preview && !loading && <><button type="button" className="q-writing-secondary" onMouseDown={event => event.preventDefault()} onClick={() => { setPreview(''); setError('') }}>Discard</button><button type="button" className="q-writing-apply" onMouseDown={event => event.preventDefault()} onClick={applyPreview}>Apply text</button></>}
+        </footer>
       </section>,
       document.body,
     )
