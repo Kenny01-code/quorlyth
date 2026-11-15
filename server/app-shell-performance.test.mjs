@@ -126,7 +126,9 @@ test('signed-in and signed-out users share one navigation shell while links rema
   assert.match(nav, /data-auth-state=\{me \? "signed-in" : "signed-out"\}/)
   assert.match(nav, /data-loading=\{loading \? "true" : "false"\}/)
   assert.match(nav, /if \(me && \(!app\.dataReady \|\| !app\.platformRolesReady\)\) return false/)
-  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin'\]\.includes\(i\.path\)/)
+  assert.match(nav, /\{ path: '\/access', label: 'Request access', icon: 'invite', guest: true \}/)
+  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin', '\/access'\]\.includes\(i\.path\)/)
+  assert.match(nav, /if \(me\) return !i\.guest/)
   assert.doesNotMatch(nav, /nav-public/)
   assert.match(css, /One navigation shell for guests and signed-in accounts/)
   assert.match(css, /#nav \.navmain \.nav-item > span\s*\{\s*display: inline !important/)
@@ -641,4 +643,30 @@ test('Request Access titles stay true black after the global heading theme, and 
   assert.match(contrast, /#root \.q-access-page \.q-access-title\s*\{[\s\S]*?color:\s*#000000\s*!important[\s\S]*?-webkit-text-fill-color:\s*#000000\s*!important/)
   assert.match(contrast, /#root \.q-access-page \.q-access-orb svg\.q-logo-mark[\s\S]*?stroke-width:\s*3\s*!important[\s\S]*?animation:\s*br2 6\.5s cubic-bezier\(\.45,0,\.55,1\) infinite !important/)
   assert.match(contrast, /#root \.q-access-page \.q-access-orb \.hh[\s\S]*?animation:\s*hb2 6\.5s cubic-bezier\(\.45,0,\.55,1\) infinite !important/)
+})
+
+
+test('public visitors see Request Access in the primary nav while signed-in accounts do not', async () => {
+  const nav = await readSource('src/components/Nav.tsx')
+  assert.match(nav, /\{ path: '\/access', label: 'Request access', icon: 'invite', guest: true \}/)
+  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin', '\/access'\]\.includes\(i\.path\)/)
+  assert.match(nav, /if \(me\) return !i\.guest/)
+})
+
+test('visitor platform access submissions feed platform-admin notifications and pending counts', async () => {
+  const [notifs, app, panel, access] = await Promise.all([
+    readSource('src/lib/notifs.ts'),
+    readSource('src/App.tsx'),
+    readSource('src/components/NotifPanel.tsx'),
+    readSource('src/screens/Access.tsx'),
+  ])
+  assert.match(notifs, /a\.backend\?\.listPlatformAccessRequests/)
+  assert.match(notifs, /window\.setInterval\([\s\S]*?15_000\)/)
+  assert.match(notifs, /visitorRequests\.forEach\(request/)
+  assert.match(notifs, /kind: 'settings'/)
+  assert.match(notifs, /visitor-access-request:' \+ request\.status/)
+  assert.match(app, /notifs\.filter\(n => n\.target === 'visitor-access-request:pending'\)/)
+  assert.match(panel, /n\.kind === 'settings' \? '\/settings\?tab=requests'/)
+  assert.match(access, /<h2 className="q-access-title">You manage platform access\.<\/h2>/)
+  assert.match(access, /setPreviewForm\(value => !value\)/)
 })
