@@ -321,7 +321,7 @@ function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, gu
   if (platformAdmin && !previewForm) {
     return (
       <div className="q-access-platform-admin">
-        <h2>You manage platform access.</h2>
+        <h2 className="q-access-title">You manage platform access.</h2>
         <p className="q-access-description">Global requests to enter Quorlyth are reviewed by authorized platform administrators.</p>
         <button type="button" className="q-access-primary q-access-open-requests" onClick={onOpenRequests}><Icon name="settings" size={17} />Open platform requests</button>
       </div>
