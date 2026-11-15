@@ -180,9 +180,9 @@ export function Access() {
     <div className="q-access-page">
       <div className={`q-access-layout ${isCommunity ? 'is-community' : 'is-platform'}`}>
         <section className="q-access-card q-access-intro">
-          <div className="q-access-orb" aria-hidden="true"><Logo size={84} breathe /></div>
+          <div className="q-access-orb" aria-hidden="true"><i className="hh" /><Logo size={84} breathe /></div>
           <div className="q-access-intro-copy">
-            <h1>{leftTitle}</h1>
+            <h1 style={{ color: '#000000' }}>{leftTitle}</h1>
             <p>{leftDescription}</p>
           </div>
           <div className="q-access-switch" role="tablist" aria-label="Choose an access request type">
@@ -291,7 +291,7 @@ function CommunityApplicationPanel({ a, communities, selectedId, selected, messa
 
   return (
     <div className="q-access-community-form">
-      <h2>Tell the owner why you want to join.</h2>
+      <h2 style={{ color: '#000000' }}>Tell the owner why you want to join.</h2>
       <p className="q-access-description">Your application is delivered to the owner of the selected community. They can approve or decline it in Join requests.</p>
       <label className="q-access-tag" htmlFor="q-access-community">Community</label>
       <select id="q-access-community" className="q-access-select" value={selectedId} onChange={event => onCommunityChange(event.target.value)}>
@@ -361,7 +361,7 @@ function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, gu
 
   return (
     <div className="q-access-platform-form">
-      <h2>{previewForm ? 'Preview the platform request form.' : 'Request access to Quorlyth.'}</h2>
+      <h2 style={{ color: '#000000' }}>{previewForm ? 'Preview the platform request form.' : 'Request access to Quorlyth.'}</h2>
       <p className="q-access-description">Global requests to enter Quorlyth are reviewed by authorized platform administrators. You can submit this request as a visitor without signing in.</p>
       {!a.me ? (
         <>
