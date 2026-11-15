@@ -22,12 +22,12 @@ type MilestoneDraft = {
 const PRIORITY_WEIGHT: Record<MilestonePriority, number> = { critical: 0, high: 1, normal: 2, low: 3 }
 const PRIORITY_LABEL: Record<MilestonePriority, string> = { critical: 'Critical', high: 'High', normal: 'Standard', low: 'Low' }
 const STATUS_LABEL: Record<Milestone['status'], string> = { todo: 'Queued', in_progress: 'In progress', done: 'Completed' }
-const FILTERS: { value: FilterKey; label: string; glyph: 'workspace' | 'progress' | 'person' | 'due' | 'blocked' }[] = [
-  { value: 'all', label: 'All milestones', glyph: 'workspace' },
-  { value: 'open', label: 'Open', glyph: 'progress' },
-  { value: 'mine', label: 'Assigned to me', glyph: 'person' },
-  { value: 'overdue', label: 'Overdue', glyph: 'due' },
-  { value: 'blocked', label: 'Blocked', glyph: 'blocked' },
+const FILTERS: { value: FilterKey; label: string; description: string; glyph: 'workspace' | 'progress' | 'person' | 'due' | 'blocked' }[] = [
+  { value: 'all', label: 'All milestones', description: 'See every milestone in this project, including completed ones.', glyph: 'workspace' },
+  { value: 'open', label: 'Open', description: 'See milestones that are still in progress or waiting to start.', glyph: 'progress' },
+  { value: 'mine', label: 'Assigned to me', description: 'See milestones where you are listed as an assignee.', glyph: 'person' },
+  { value: 'overdue', label: 'Overdue', description: 'See unfinished milestones whose due dates have passed.', glyph: 'due' },
+  { value: 'blocked', label: 'Blocked', description: 'See unfinished milestones currently marked as blocked.', glyph: 'blocked' },
 ]
 const blankDraft = (): MilestoneDraft => ({
   title: '', description: '', acceptanceCriteria: '', dueDate: '', assigneeIds: [],
@@ -258,10 +258,13 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
 
       <div className="ql-milestone-toolbar">
         <div className="ql-milestone-filters" role="group" aria-label="Filter milestones">
-          {FILTERS.map(item => <button type="button" key={item.value} className={'ql-filter' + (filter === item.value ? ' is-active' : '')} aria-pressed={filter === item.value} onClick={() => setFilter(item.value)}><QuorlythGlyph name={item.glyph} size={14} />{item.label}{item.value === 'overdue' && overdue ? <span>{overdue}</span> : null}</button>)}
+          {FILTERS.map(item => <button type="button" key={item.value} className={'ql-filter' + (filter === item.value ? ' is-active' : '')} aria-label={item.label + '. ' + item.description} aria-pressed={filter === item.value} title={item.description} onClick={() => setFilter(item.value)}><QuorlythGlyph name={item.glyph} size={14} />{item.label}{item.value === 'overdue' && overdue ? <span>{overdue}</span> : null}</button>)}
         </div>
         {canEdit && <button type="button" className="ql-primary-action" onClick={beginCreate}><QuorlythGlyph name="add" size={17} />New milestone</button>}
       </div>
+      <p className="ql-muted ql-milestone-filter-note" aria-live="polite" style={{ margin: '8px 0 14px', fontSize: 12, lineHeight: 1.5 }}>
+        {FILTERS.find(item => item.value === filter)?.description}
+      </p>
 
       {composerOpen && canEdit && <form id="ql-milestone-editor" className="ql-milestone-editor" onSubmit={saveMilestone}>
         <div className="ql-milestone-editor__head">
