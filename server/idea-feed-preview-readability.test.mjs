@@ -44,28 +44,6 @@ test('all milestone filter states use black text, icons and count labels', async
   assert.ok(hardening.includes('background: #f4ecdf !important'))
 })
 
-import test from 'node:test'
-import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-
-const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
-
-test('Idea Feed previews retain full excerpts and hard true-black typography', async () => {
-  const [card, main, hardening] = await Promise.all([
-    source('src/components/IdeaCard.tsx'),
-    source('src/main.tsx'),
-    source('src/styles/contrast-hardening.css'),
-  ])
-
-  assert.ok(card.includes('idea-feed-card'), 'Idea Feed card must have its own styling scope')
-  assert.ok(card.includes('idea-feed-writeup'), 'Idea Feed copy must not depend on global muted text')
-  assert.ok(card.includes('previewBody'), 'Idea Feed must use the full readable excerpt')
-  assert.ok(main.includes("import './styles/contrast-hardening.css'"), 'Final contrast layer must be imported')
-  assert.ok(hardening.includes('#root #main .idea-feed-card .idea-feed-writeup'))
-  assert.ok(hardening.includes('-webkit-text-fill-color: #000000 !important'))
-  assert.ok(hardening.includes('white-space: pre-wrap !important'))
-  assert.ok(hardening.includes('overflow-wrap: anywhere !important'))
-})
 
 test('Project Pulse labels, write-ups, and actions stay black on light surfaces', async () => {
   const [workspace, hardening] = await Promise.all([
