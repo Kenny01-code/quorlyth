@@ -55,7 +55,7 @@ export function Access() {
         if (active) setPlatformApprovalStatus(null)
       })
     return () => { active = false }
-  }, [a.backend, a.me?.id])
+  }, [a.backend, a.me?.id, loc.search])
 
   const communities = a.data.communities
     .filter(community => community.vis !== 'unlisted' && !community.arch && community.joinApproval)
@@ -177,7 +177,7 @@ export function Access() {
         : 'Start here. Visitors can request platform access without creating an account or signing in.'
 
   return (
-    <main className="q-access-page">
+    <div className="q-access-page">
       <div className={`q-access-layout ${isCommunity ? 'is-community' : 'is-platform'}`}>
         <section className="q-access-card q-access-intro">
           <div className="q-access-orb" aria-hidden="true"><Logo size={84} breathe /></div>
@@ -249,7 +249,7 @@ export function Access() {
           )}
         </section>
       </div>
-    </main>
+    </div>
   )
 }
 
