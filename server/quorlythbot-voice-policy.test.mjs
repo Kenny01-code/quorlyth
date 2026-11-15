@@ -108,7 +108,7 @@ test('Signed-out navigation remains visible and scrollable on narrow screens', a
   ])
   assert.match(nav, /className="glass" id="nav"/)
   assert.match(nav, /data-auth-state=\{me \? "signed-in" : "signed-out"\}/)
-  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin'\]\.includes\(i\.path\)/)
+  assert.match(nav, /return \['\/', '\/architecture', '\/demo', '\/signin', '\/access'\]\.includes\(i\.path\)/)
   assert.doesNotMatch(nav, /nav-public/)
   assert.match(css, /One navigation shell for guests and signed-in accounts/)
   assert.match(css, /#nav \.navmain[\s\S]*?overflow-x: auto !important/)
