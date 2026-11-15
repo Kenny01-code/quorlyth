@@ -2,282 +2,376 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
-import { Chip } from '../components/ui'
 import { useApp } from '../data/AppProvider'
-import { when } from '../lib/util'
-import { useDraftState } from '../lib/useDraftState'
+
+type AccessMode = 'community' | 'platform'
 
 export function Access() {
   const a = useApp()
   const nav = useNavigate()
   const loc = useLocation()
-  const communityId = new URLSearchParams(loc.search).get('community') || ''
+  const params = new URLSearchParams(loc.search)
+  const queryCommunity = params.get('community') || ''
+  const initialMode: AccessMode = queryCommunity || params.get('tab') === 'community' ? 'community' : 'platform'
+  const [mode, setMode] = useState<AccessMode>(initialMode)
+  const [selectedId, setSelectedId] = useState(queryCommunity)
+  const [message, setMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const [previewForm, setPreviewForm] = useState(false)
+  const [guestName, setGuestName] = useState(a.me?.name || '')
+  const [guestEmail, setGuestEmail] = useState(a.me?.email || '')
+  const [guestMessage, setGuestMessage] = useState('')
+  const [guestSent, setGuestSent] = useState(false)
+  const [audience, setAudience] = useState('')
+  const [platforms, setPlatforms] = useState<string[]>([])
+  const [memberNote, setMemberNote] = useState('')
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(loc.search)
+    const nextCommunity = nextParams.get('community') || ''
+    setSelectedId(nextCommunity)
+    setMode(nextCommunity || nextParams.get('tab') === 'community' ? 'community' : 'platform')
+    setMessage('')
+    setError('')
+  }, [loc.search])
+
+  useEffect(() => {
+    if (a.me?.name) setGuestName(a.me.name)
+    if (a.me?.email) setGuestEmail(a.me.email)
+  }, [a.me?.id, a.me?.name, a.me?.email])
+
   const communities = a.data.communities
     .filter(community => community.vis !== 'unlisted' && !community.arch && community.joinApproval)
     .sort((left, right) => left.name.localeCompare(right.name))
-  const selected = communities.find(community => community.id === communityId)
-  const [message, setMessage] = useState('')
-  const [sending, setSending] = useState(false)
+  const selected = communities.find(community => community.id === selectedId)
+  const platformAdmin = !!a.platformAdmin
+  const decision = a.me ? a.data.decisions[a.me.id] : undefined
+  const approved = platformAdmin || decision?.status === 'approved'
+  const request = a.me ? a.data.requests.find(item => item.id === a.me!.id) : undefined
+  const requestDecision = a.me ? a.data.decisions[a.me.id] : undefined
+  const pending = !!request && !(requestDecision && requestDecision.at > request.at)
+  const selectedRequest = selected && a.me
+    ? a.data.joinRequests.find(item => item.cid === selected.id && item.userId === a.me!.id)
+    : undefined
+  const selectedIsManager = !!selected && !!a.me && a.canManageCommunity(selected.id)
+  const selectedIsMember = !!selected && !!a.me && (a.joined(selected.id) || selectedRequest?.status === 'approved')
+  const canApplyToCommunity = !!a.me && approved && !a.demo
 
-  useEffect(() => {
+  function switchMode(next: AccessMode) {
+    setMode(next)
+    setPreviewForm(false)
+    setError('')
+    const query = next === 'community'
+      ? '?tab=community' + (selectedId ? '&community=' + encodeURIComponent(selectedId) : '')
+      : '?tab=platform'
+    nav('/access' + query, { replace: true })
+  }
+
+  function chooseCommunity(id: string) {
+    setSelectedId(id)
     setMessage('')
-    setSending(false)
-  }, [communityId])
-
-  function openApplication(communityId: string) {
-    const destination = '/access?community=' + encodeURIComponent(communityId)
-    if (!a.me && !a.demo) {
-      nav('/signin?next=' + encodeURIComponent(destination))
-      return
-    }
-    nav(destination)
+    setError('')
+    nav('/access?tab=community' + (id ? '&community=' + encodeURIComponent(id) : ''), { replace: true })
   }
 
   async function submitCommunityApplication() {
-    if (!selected) return
-    if (!a.me) {
-      openApplication(selected.id)
+    if (!selected) {
+      setError('Choose a community first.')
       return
     }
-    if (a.canManageCommunity(selected.id) || a.joined(selected.id)) return
+    if (!canApplyToCommunity) {
+      setError('Platform access must be approved before you can apply to a community. Start with Platform access.')
+      return
+    }
+    if (message.trim().length < 30) {
+      setError('Please write at least 30 characters so the owner has enough context.')
+      return
+    }
+    if (message.trim().length > 500) {
+      setError('Your message must be 500 characters or fewer.')
+      return
+    }
     setSending(true)
+    setError('')
     try {
       const sent = await a.requestCommunityJoin(selected.id, message.trim())
       if (sent) setMessage('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Your application could not be sent. Please try again.')
     } finally {
       setSending(false)
     }
   }
 
-  const selectedOwnerId = selected?.ownerId || selected?.createdBy || ''
-  const selectedOwnerName = selectedOwnerId ? a.nm(selectedOwnerId) : 'Community owner'
-  const selectedRequest = selected && a.me
-    ? a.data.joinRequests.find(request => request.cid === selected.id && request.userId === a.me!.id)
-    : undefined
-  const selectedIsManager = !!selected && !!a.me && a.canManageCommunity(selected.id)
-  const selectedIsMember = !!selected && !!a.me && (a.joined(selected.id) || selectedRequest?.status === 'approved')
+  async function submitPlatformApplication() {
+    setError('')
+    if (!guestName.trim() || guestName.trim().length > 80) {
+      setError('Enter your name (up to 80 characters).')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) {
+      setError('Enter a valid email address.')
+      return
+    }
+    if (!a.me && !guestMessage.trim()) {
+      setError('Add a short note so the platform team can review your request.')
+      return
+    }
+    setSending(true)
+    try {
+      if (a.me) {
+        if (!audience) {
+          setError('Choose your audience size.')
+          return
+        }
+        await a.sendRequest({ platforms, aud: audience, note: memberNote.trim() })
+      } else {
+        if (!a.backend?.submitPlatformAccessRequest) {
+          throw new Error('Visitor requests are unavailable in this environment. Please try again later.')
+        }
+        await a.backend.submitPlatformAccessRequest({
+          fullName: guestName.trim(),
+          email: guestEmail.trim().toLowerCase(),
+          message: guestMessage.trim(),
+        })
+        setGuestSent(true)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Your request could not be sent. Please try again.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const isCommunity = mode === 'community'
+  const leftTitle = isCommunity
+    ? 'Apply to a community.'
+    : platformAdmin
+      ? 'You manage platform access.'
+      : approved
+        ? 'Your platform access is approved.'
+        : 'Request access to Quorlyth.'
+  const leftDescription = isCommunity
+    ? 'This is a direct application to the selected community owner. It does not go to the platform administrator unless they also own that community.'
+    : platformAdmin
+      ? 'Global requests to enter Quorlyth are reviewed by authorized platform administrators.'
+      : approved
+        ? 'Your platform access is approved. You can now apply to the communities you want to join.'
+        : 'Start here. Visitors can request platform access without creating an account or signing in.'
 
   return (
-    <div style={{ display: 'grid', gap: 18 }}>
-      <section className="glass pad" style={{ display: 'grid', gap: 10 }}>
-        <p className="dim" style={{ fontSize: 11, letterSpacing: '.1em' }}>ACCESS / APPLICATIONS</p>
-        <h2 style={{ fontSize: 32, lineHeight: 1.15 }}>Choose the community you want to join.</h2>
-        <p className="mut" style={{ maxWidth: 720 }}>
-          Some communities are open to everyone. Others ask people to apply first. Those applications go directly to the owner of the community you choose, not to the platform-wide access queue.
-        </p>
-        <div className="acts" style={{ marginTop: 4 }}>
-          <button className="btn" onClick={() => nav('/communities')}><Icon name="community" size={16} />Browse all communities</button>
-          <span className="chip"><Icon name="lock" size={13} />Owner-reviewed applications</span>
-        </div>
-      </section>
-
-      <section className="glass pad" style={{ display: 'grid', gap: 14 }}>
-        <div className="profile-section-heading">
-          <div>
-            <p className="dim">COMMUNITY ACCESS</p>
-            <h3 style={{ marginBottom: 4 }}>Communities accepting applications</h3>
-            <p className="mut">Each application is delivered to that community's owner for review.</p>
+    <main className="q-access-page">
+      <div className={`q-access-layout ${isCommunity ? 'is-community' : 'is-platform'}`}>
+        <section className="q-access-card q-access-intro">
+          <div className="q-access-orb" aria-hidden="true"><Logo size={84} breathe /></div>
+          <div className="q-access-intro-copy">
+            <h1>{leftTitle}</h1>
+            <p>{leftDescription}</p>
           </div>
-          <span className="profile-section-mark"><Icon name="invite" size={19} /></span>
-        </div>
-
-        {communities.length ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 12 }}>
-            {communities.map(community => {
-              const ownerId = community.ownerId || community.createdBy || ''
-              const ownerName = ownerId ? a.nm(ownerId) : 'Community owner'
-              const request = a.me
-                ? a.data.joinRequests.find(item => item.cid === community.id && item.userId === a.me!.id)
-                : undefined
-              const manager = !!a.me && a.canManageCommunity(community.id)
-              const member = !!a.me && (a.joined(community.id) || request?.status === 'approved')
-              const pending = request?.status === 'pending'
-              const declined = request?.status === 'declined'
-              return (
-                <article key={community.id} className="glass pad" style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
-                    <span className="score" style={{ flex: '0 0 auto' }}><Icon name={community.icon || 'community'} size={21} /></span>
-                    <div style={{ minWidth: 0 }}>
-                      <h3 style={{ fontSize: 17, lineHeight: 1.3 }}>{community.name}</h3>
-                      <p className="dim" style={{ fontSize: 12, marginTop: 3 }}>Owned by {ownerName}</p>
-                    </div>
-                  </div>
-                  {community.purpose && <p className="mut" style={{ fontSize: 13, lineHeight: 1.55 }}>{community.purpose}</p>}
-                  <div className="row" style={{ gap: 7, alignItems: 'center' }}>
-                    <Icon name="shield" size={14} />
-                    <span className="dim" style={{ fontSize: 12 }}>The owner reviews every application</span>
-                  </div>
-                  <div className="acts" style={{ marginTop: 'auto' }}>
-                    {manager ? (
-                      <button className="btn p" onClick={() => nav('/communities/' + community.id + '?tab=join-requests')}>
-                        <Icon name="member" size={15} />Manage applications
-                      </button>
-                    ) : member ? (
-                      <button className="btn p" onClick={() => nav('/communities/' + community.id)}>
-                        <Icon name="approve" size={15} />Open community
-                      </button>
-                    ) : pending ? (
-                      <button className="btn" onClick={() => openApplication(community.id)}>
-                        <Icon name="status" size={15} />Application pending
-                      </button>
-                    ) : (
-                      <button className="btn p" onClick={() => openApplication(community.id)}>
-                        <Icon name="invite" size={15} />{declined ? 'Apply again' : 'Apply to join'}
-                      </button>
-                    )}
-                    <button className="btn" onClick={() => nav('/communities/' + community.id)}>View</button>
-                  </div>
-                </article>
-              )
-            })}
+          <div className="q-access-switch" role="tablist" aria-label="Choose an access request type">
+            <button type="button" role="tab" aria-selected={isCommunity} className={isCommunity ? 'active' : ''} onClick={() => switchMode('community')}>Apply to a community</button>
+            <button type="button" role="tab" aria-selected={!isCommunity} className={!isCommunity ? 'active' : ''} onClick={() => switchMode('platform')}>Platform access</button>
           </div>
-        ) : (
-          <div className="glass pad" style={{ textAlign: 'center' }}>
-            <Icon name="community" size={26} />
-            <h3 style={{ marginTop: 10 }}>No communities are taking applications right now.</h3>
-            <p className="mut" style={{ marginTop: 6 }}>Browse listed communities to find open spaces. Owners can turn on "Approve new members" in their community settings to receive applications here.</p>
-            <button className="btn p" style={{ marginTop: 14 }} onClick={() => nav('/communities')}>Explore communities</button>
-          </div>
-        )}
-      </section>
-
-      {selected && (
-        <section id="community-application" className="glass pad" style={{ display: 'grid', gap: 12, scrollMarginTop: 24 }}>
-          <div className="profile-section-heading">
-            <div>
-              <p className="dim">APPLICATION TO {selected.name.toUpperCase()}</p>
-              <h3 style={{ marginBottom: 4 }}>Request to join {selected.name}</h3>
-              <p className="mut">Your application will be reviewed by {selectedOwnerName}.</p>
-            </div>
-            <span className="profile-section-mark"><Icon name="invite" size={19} /></span>
-          </div>
-          {selectedIsManager ? (
-            <>
-              <p className="mut">You manage this community. Review applications from your community's member-application queue.</p>
-              <div className="acts"><button className="btn p" onClick={() => nav('/communities/' + selected.id + '?tab=join-requests')}><Icon name="member" />Open applications</button></div>
-            </>
-          ) : selectedIsMember ? (
-            <>
-              <p className="mut">Your application was approved, or you are already a member of this community.</p>
-              <div className="acts"><button className="btn p" onClick={() => nav('/communities/' + selected.id)}>Open community</button></div>
-            </>
-          ) : !a.me && !a.demo ? (
-            <>
-              <p className="mut">Sign in first. You'll return to this exact application after signing in.</p>
-              <button className="btn p" onClick={() => openApplication(selected.id)}>Sign in to apply</button>
-            </>
-          ) : selectedRequest?.status === 'pending' ? (
-            <div className="row" style={{ alignItems: 'flex-start' }}>
-              <Icon name="status" size={18} />
-              <div className="t">
-                <h3 style={{ fontSize: 15 }}>Application sent</h3>
-                <p className="dim">Your request is waiting for {selectedOwnerName} to approve or decline it.</p>
-                {selectedRequest.message && <p className="mut q-writeup" style={{ marginTop: 8 }}>{selectedRequest.message}</p>}
-              </div>
-            </div>
-          ) : (
-            <>
-              {selectedRequest?.status === 'declined' && <p className="chip"><Icon name="alert" size={13} />Your previous application was declined. You can send an updated one.</p>}
-              <label className="field">
-                <span>Why would you like to join? <small>Optional</small></span>
-                <textarea value={message} maxLength={500} onChange={event => setMessage(event.target.value)} placeholder="Introduce yourself or tell the owner what interests you about this community." />
-              </label>
-              <p className="dim" style={{ fontSize: 12 }}>Only this community's owner and authorized managers can review your application.</p>
-              <div className="acts">
-                <button className="btn p" disabled={sending} onClick={() => void submitCommunityApplication()}>
-                  <Icon name="send" size={15} />{sending ? 'Sending application…' : selectedRequest?.status === 'declined' ? 'Send updated application' : 'Send application'}
-                </button>
-                <button className="btn" onClick={() => nav('/access')}>Cancel</button>
-              </div>
-            </>
+          {platformAdmin && !isCommunity && (
+            <button type="button" className="q-access-preview" onClick={() => setPreviewForm(value => !value)}>
+              {previewForm ? 'Exit request form preview' : 'Preview request form'}
+            </button>
           )}
         </section>
-      )}
 
-      {a.me ? <PlatformAccess /> : <GuestPlatformAccess />}
+        <section className="q-access-card q-access-form">
+          {isCommunity ? (
+            <CommunityApplicationPanel
+              a={a}
+              communities={communities}
+              selectedId={selectedId}
+              selected={selected}
+              message={message}
+              sending={sending}
+              error={error}
+              selectedRequest={selectedRequest}
+              selectedIsManager={selectedIsManager}
+              selectedIsMember={selectedIsMember}
+              canApply={canApplyToCommunity}
+              onCommunityChange={chooseCommunity}
+              onMessageChange={value => { setMessage(value); setError('') }}
+              onSubmit={() => void submitCommunityApplication()}
+              onSwitchPlatform={() => switchMode('platform')}
+              onOpenCommunity={() => selected && nav('/communities/' + selected.id)}
+              onManage={() => selected && nav('/communities/' + selected.id + '?tab=join-requests')}
+            />
+          ) : (
+            <PlatformAccessPanel
+              a={a}
+              platformAdmin={platformAdmin}
+              approved={approved}
+              pending={pending}
+              declined={requestDecision?.status === 'declined'}
+              guestSent={guestSent}
+              previewForm={previewForm}
+              guestName={guestName}
+              guestEmail={guestEmail}
+              guestMessage={guestMessage}
+              audience={audience}
+              platforms={platforms}
+              memberNote={memberNote}
+              sending={sending}
+              error={error}
+              onNameChange={setGuestName}
+              onEmailChange={setGuestEmail}
+              onGuestMessageChange={setGuestMessage}
+              onAudienceChange={setAudience}
+              onPlatformsChange={setPlatforms}
+              onMemberNoteChange={setMemberNote}
+              onSubmit={() => void submitPlatformApplication()}
+              onOpenRequests={() => nav('/settings?tab=requests')}
+              onCommunity={() => switchMode('community')}
+              onBrowse={() => nav('/communities')}
+            />
+          )}
+        </section>
+      </div>
+    </main>
+  )
+}
+
+function CommunityApplicationPanel({ a, communities, selectedId, selected, message, sending, error, selectedRequest, selectedIsManager, selectedIsMember, canApply, onCommunityChange, onMessageChange, onSubmit, onSwitchPlatform, onOpenCommunity, onManage }: any) {
+  const ownerId = selected?.ownerId || selected?.createdBy || ''
+  const ownerName = ownerId ? a.nm(ownerId) : 'the community owner'
+  const messageLength = message.trim().length
+
+  if (selectedIsManager) {
+    return (
+      <div className="q-access-centered-status">
+        <p className="q-access-eyebrow">COMMUNITY MANAGEMENT</p>
+        <h2>You manage this community.</h2>
+        <p>Applications for this community are reviewed in your existing Join requests queue.</p>
+        <button type="button" className="q-access-primary" onClick={onManage}>Open join requests</button>
+      </div>
+    )
+  }
+  if (selectedIsMember) {
+    return (
+      <div className="q-access-centered-status">
+        <p className="q-access-eyebrow">COMMUNITY ACCESS</p>
+        <h2>You already have access.</h2>
+        <p>Your membership is active or your application has been approved.</p>
+        <button type="button" className="q-access-primary" onClick={onOpenCommunity}>Open community</button>
+      </div>
+    )
+  }
+  if (selectedRequest?.status === 'pending') {
+    return (
+      <div className="q-access-centered-status">
+        <p className="q-access-eyebrow">APPLICATION SENT</p>
+        <h2>Your application is with the owner.</h2>
+        <p>{ownerName} can approve or decline your request from the community's Join requests area.</p>
+        {selectedRequest.message && <blockquote>{selectedRequest.message}</blockquote>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="q-access-community-form">
+      <h2>Tell the owner why you want to join.</h2>
+      <p className="q-access-description">Your application is delivered to the owner of the selected community. They can approve or decline it in Join requests.</p>
+      <label className="q-access-tag" htmlFor="q-access-community">Community</label>
+      <select id="q-access-community" className="q-access-select" value={selectedId} onChange={event => onCommunityChange(event.target.value)}>
+        <option value="">Choose a community accepting requests</option>
+        {communities.map((community: any) => <option key={community.id} value={community.id}>{community.name}</option>)}
+      </select>
+      <label className="q-access-tag q-access-message-tag" htmlFor="q-access-message">Why should the community welcome you?</label>
+      <textarea id="q-access-message" className="q-access-textarea" value={message} maxLength={500} onChange={event => onMessageChange(event.target.value)} placeholder="Share what interests you, what you could contribute, or how you hope to take part." />
+      <p className="q-access-counter">{messageLength}/500 characters · At least 30 characters required</p>
+      {selected && <p className="q-access-owner-note">This request goes directly to {ownerName}, not to the platform-wide queue.</p>}
+      {!canApply && (
+        <div className="q-access-stage-note">
+          <Icon name="lock" size={15} />
+          <span>Platform access must be approved first. Submit a Platform access request, then return here to apply.</span>
+          <button type="button" onClick={onSwitchPlatform}>Request platform access</button>
+        </div>
+      )}
+      {error && <p className="q-access-error" role="alert">{error}</p>}
+      <button type="button" className="q-access-primary q-access-submit" disabled={!canApply || !selected || messageLength < 30 || sending} onClick={onSubmit}>
+        {sending ? 'Sending application…' : 'Send to community owner'}
+      </button>
     </div>
   )
 }
 
-function GuestPlatformAccess() {
-  const a = useApp()
-  const nav = useNavigate()
-  return (
-    <section className="glass pad" style={{ display: 'grid', gap: 10 }}>
-      <p className="dim" style={{ fontSize: 11, letterSpacing: '.1em' }}>PLATFORM ACCESS</p>
-      <h3>Request access to Quorlyth itself.</h3>
-      <p className="mut">This is separate from joining a community. Platform-wide requests are reviewed by the platform owner or an authorized platform administrator.</p>
-      <div className="acts">
-        <button className="btn p" onClick={() => nav('/signin?next=%2Faccess')}>Sign in to request platform access</button>
-        <button className="btn" onClick={() => { a.enterDemo(); nav('/dashboard') }}><Icon name="spark" size={15} />Try Demo</button>
+function PlatformAccessPanel({ a, platformAdmin, approved, pending, declined, guestSent, previewForm, guestName, guestEmail, guestMessage, audience, platforms, memberNote, sending, error, onNameChange, onEmailChange, onGuestMessageChange, onAudienceChange, onPlatformsChange, onMemberNoteChange, onSubmit, onOpenRequests, onCommunity, onBrowse }: any) {
+  if (platformAdmin && !previewForm) {
+    return (
+      <div className="q-access-platform-admin">
+        <h2>You manage platform access.</h2>
+        <p className="q-access-description">Global requests to enter Quorlyth are reviewed by authorized platform administrators.</p>
+        <button type="button" className="q-access-primary q-access-open-requests" onClick={onOpenRequests}><Icon name="settings" size={17} />Open platform requests</button>
       </div>
-    </section>
-  )
-}
+    )
+  }
+  if (approved && !previewForm) {
+    return (
+      <div className="q-access-centered-status">
+        <p className="q-access-eyebrow">PLATFORM ACCESS APPROVED</p>
+        <h2>You can now apply to a community.</h2>
+        <p>Your platform access is approved. Choose a community and send an application directly to its owner.</p>
+        <button type="button" className="q-access-primary" onClick={onCommunity}>Apply to a community</button>
+        <button type="button" className="q-access-secondary" onClick={onBrowse}>Browse communities</button>
+      </div>
+    )
+  }
+  if (pending && !previewForm) {
+    return (
+      <div className="q-access-centered-status">
+        <p className="q-access-eyebrow">PLATFORM ACCESS</p>
+        <h2>Your request is under review.</h2>
+        <p>Authorized platform administrators will review your request. Once approved, you can continue to community applications.</p>
+      </div>
+    )
+  }
+  if (guestSent && !previewForm) {
+    return (
+      <div className="q-access-centered-status">
+        <p className="q-access-eyebrow">REQUEST RECEIVED</p>
+        <h2>Your request has been sent.</h2>
+        <p>The platform team will review your request. Keep access to the email address you submitted so you can continue after approval.</p>
+        <button type="button" className="q-access-secondary" onClick={onCommunity}>View community application page</button>
+      </div>
+    )
+  }
 
-function PlatformAccess() {
-  const a = useApp()
-  const nav = useNavigate()
-  const me = a.me!
-  const rq = a.data.requests.find(r => r.id === me.id)
-  const dc = a.data.decisions[me.id]
-  const blankRequest = { platforms: [] as string[], audience: '', note: '' }
-  const [requestDraft, setRequestDraft, clearRequestDraft] = useDraftState(`q-draft:${me.id}:access-request`, blankRequest)
-  const { platforms: pl, audience: au, note } = requestDraft
-  const setPl = (platforms: string[]) => setRequestDraft(d => ({ ...d, platforms }))
-  const setAu = (audience: string) => setRequestDraft(d => ({ ...d, audience }))
-  const setNote = (value: string) => setRequestDraft(d => ({ ...d, note: value }))
-  const [err, setErr] = useState('')
-  const [preview, setPreview] = useState(false)
-  const approved = dc?.status === 'approved'
-  const pending = !!rq && !(dc && dc.at > rq.at) && !approved
-  const declined = !!dc && dc.status === 'declined' && (!rq || dc.at > rq.at)
-  const panelTitle = preview
-    ? 'Previewing the platform access form.'
-    : a.platformAdmin
-      ? 'You manage platform access.'
-      : approved
-        ? 'Your platform access is approved.'
-        : pending
-          ? 'Your platform request is under review.'
-          : declined
-            ? 'Your last platform request was declined.'
-            : 'Request platform access.'
-  const panelDescription = preview
-    ? 'This is how a signed-in member can request platform access. Preview mode does not submit a real request.'
-    : a.platformAdmin
-      ? 'Global requests to enter Quorlyth are reviewed by authorized platform administrators.'
-      : approved
-        ? 'Your platform approval is saved. You can browse communities and use the features available to your role.'
-        : pending
-          ? 'Your request is waiting for a platform administrator to review it.'
-          : declined
-            ? 'You can send a new platform request with updated details.'
-            : 'Tell the platform owner a little about yourself so they can review your request.'
-  let body
-  if (a.platformAdmin && !preview) body = <><h2 style={{ fontSize: 34 }}>You manage platform access.</h2><p className="mut" style={{ marginTop: 10 }}>Global requests to enter Quorlyth are reviewed by authorized platform administrators.</p><div className="acts"><button className="btn p" onClick={() => nav('/settings?tab=requests')}><Icon name="settings" />Open platform requests</button></div></>
-  else if (!preview && dc?.status === 'approved') body = <div className="done"><div className="score"><Icon name="approve" size={34} /></div><h2>You are in.</h2><p className="mut" style={{ marginTop: 12 }}>The platform approved your request.</p><div className="acts" style={{ justifyContent: 'center' }}><button className="btn p" onClick={() => nav('/communities')}>Browse communities</button></div></div>
-  else if (!preview && rq && !(dc && dc.at > rq.at)) body = <><h2 style={{ fontSize: 34 }}>Request sent.</h2><p className="mut" style={{ marginTop: 10 }}>Waiting for a platform administrator to review it. Sent {when(rq.at)}.</p><div className="row" style={{ cursor: 'default', marginTop: 20 }}><Icon name="status" /><div className="t"><h3 style={{ fontSize: 15 }}>Pending platform review</h3><p className="dim">{(rq.platforms || []).join(', ')}{rq.aud ? ' with an audience of ' + rq.aud : ''}</p></div></div><div className="acts"><button className="btn" onClick={() => a.backend!.store.delete('requests/' + me.id)}>Withdraw request</button></div></>
-  else body = <>
-    {dc && <p className="chip" style={{ marginBottom: 16 }}><Icon name="alert" size={12} />Your last platform request was declined. You can send a new one.</p>}
-    <h2 style={{ fontSize: 34 }}>Request platform access.</h2><p className="mut" style={{ marginTop: 10 }}>A few details help the platform team decide.</p>
-    <p className="dim" style={{ marginTop: 12 }}>Your unfinished request is saved as a draft on this device.</p>
-    <div className="field"><span>Where is your audience</span><div className="acts" style={{ margin: 0 }}>{['Instagram', 'YouTube', 'TikTok', 'X', 'Twitch', 'Other'].map(c => <Chip key={c} on={pl.includes(c)} onClick={() => setPl(pl.includes(c) ? pl.filter(x => x !== c) : [...pl, c])}>{c}</Chip>)}</div></div>
-    <div className="field"><span>Audience size</span><div className="acts" style={{ margin: 0 }}>{['Under 10k', '10k to 100k', '100k to 1M', 'Over 1M'].map(c => <Chip key={c} on={au === c} onClick={() => setAu(c)}>{c}</Chip>)}</div></div>
-    <label className="field"><span>Why do you want to access Quorlyth?</span><textarea value={note} onChange={e => setNote(e.target.value)} placeholder="A few words are enough" /></label>
-    <div id="rer" style={{ opacity: err ? 1 : 0 }}>{err && <><Icon name="alert" size={14} />{err}</>}</div>
-    <button className="btn p wide" onClick={async () => { if (preview) return a.toast('Preview only. Sign in as a member to send a request.'); if (!au) return setErr('Choose your audience size.'); if (await a.sendRequest({ platforms: pl, aud: au, note: note.trim() })) clearRequestDraft(blankRequest) }}>Send platform request</button>
-  </>
   return (
-    <div className="lg">
-      <div className="glass stage" style={{ minHeight: 340, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: 40 }}>
-        <div className="fmk xl"><i className="hh" /><Logo size={84} breathe /></div>
-        <p className="dim" style={{ fontSize: 11, letterSpacing: '.1em' }}>PLATFORM ACCESS</p>
-        <h2 style={{ fontSize: 34 }}>{panelTitle}</h2>
-        <p className="mut" style={{ margin: '14px auto 0', maxWidth: 340 }}>{panelDescription}</p>
-        {a.platformAdmin && <button className="btn" style={{ marginTop: 20 }} onClick={() => setPreview(p => !p)}>{preview ? 'Exit form preview' : 'Preview request form'}</button>}
-      </div>
-      <div className="glass fm"><div>{body}</div></div>
+    <div className="q-access-platform-form">
+      <h2>{previewForm ? 'Preview the platform request form.' : 'Request access to Quorlyth.'}</h2>
+      <p className="q-access-description">Global requests to enter Quorlyth are reviewed by authorized platform administrators. You can submit this request as a visitor without signing in.</p>
+      {!a.me ? (
+        <>
+          <label className="q-access-tag" htmlFor="q-access-name">Your name</label>
+          <input id="q-access-name" className="q-access-input" value={guestName} maxLength={80} onChange={event => onNameChange(event.target.value)} placeholder="Enter your name" />
+          <label className="q-access-tag q-access-message-tag" htmlFor="q-access-email">Email address</label>
+          <input id="q-access-email" className="q-access-input" type="email" value={guestEmail} maxLength={320} onChange={event => onEmailChange(event.target.value)} placeholder="you@example.com" />
+          <label className="q-access-tag q-access-message-tag" htmlFor="q-access-platform-message">Why would you like to join Quorlyth?</label>
+          <textarea id="q-access-platform-message" className="q-access-textarea q-access-platform-textarea" value={guestMessage} maxLength={1000} onChange={event => onGuestMessageChange(event.target.value)} placeholder="Tell the platform team a little about yourself and what you hope to do on Quorlyth." />
+        </>
+      ) : (
+        <>
+          <label className="q-access-tag">Community or audience platforms</label>
+          <div className="q-access-chip-grid">{['Instagram', 'YouTube', 'TikTok', 'X', 'Twitch', 'Other'].map((item: string) => <button key={item} type="button" className={platforms.includes(item) ? 'selected' : ''} onClick={() => onPlatformsChange(platforms.includes(item) ? platforms.filter((value: string) => value !== item) : [...platforms, item])}>{item}</button>)}</div>
+          <label className="q-access-tag q-access-message-tag" htmlFor="q-access-audience">Audience size</label>
+          <select id="q-access-audience" className="q-access-select" value={audience} onChange={event => onAudienceChange(event.target.value)}>
+            <option value="">Choose your audience size</option>
+            {['Under 10k', '10k to 100k', '100k to 1M', 'Over 1M'].map(item => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <label className="q-access-tag q-access-message-tag" htmlFor="q-access-member-note">Why would you like to access Quorlyth?</label>
+          <textarea id="q-access-member-note" className="q-access-textarea q-access-platform-textarea" value={memberNote} maxLength={1000} onChange={event => onMemberNoteChange(event.target.value)} placeholder="A few words are enough." />
+        </>
+      )}
+      {error && <p className="q-access-error" role="alert">{error}</p>}
+      <button type="button" className="q-access-primary q-access-submit" disabled={sending || (a.me ? !audience : !guestName.trim() || !guestEmail.trim() || !guestMessage.trim()) || previewForm} onClick={onSubmit}>
+        {previewForm ? 'Preview only' : sending ? 'Sending request…' : 'Send platform access request'}
+      </button>
+      {previewForm && <p className="q-access-counter">Preview mode only. This will not submit a real request.</p>}
     </div>
   )
 }
