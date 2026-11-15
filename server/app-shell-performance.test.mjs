@@ -686,3 +686,18 @@ test('visitor platform access submissions feed platform-admin notifications and 
   assert.match(access, /<h2 className="q-access-title">You manage platform access\.<\/h2>/)
   assert.match(access, /setPreviewForm\(value => !value\)/)
 })
+
+
+test('QuorlythBot launcher greeting and dark-surface writeups stay white without recolouring light cards', async () => {
+  const [contrast, botTheme] = await Promise.all([
+    readSource('src/styles/contrast-system.css'),
+    readSource('src/styles/bot-room-theme.css'),
+  ])
+  assert.match(contrast, /\.glass:not\(\.bot\)/)
+  assert.doesNotMatch(contrast, /:is\(\.glass, \.card/)
+  assert.match(botTheme, /#astl\.astl \.astb[\\s\\S]*?color: #FFFFFF !important/)
+  assert.match(botTheme, /\.qbot-conversation \.am\.ma[\\s\\S]*?color: #F0EAD9 !important/)
+  assert.match(botTheme, /\.bhero :is\(h1, h2, h3, h4, p, li, span, b, strong, em, small\)/)
+  assert.match(botTheme, /\.bs \.bsb[\\s\\S]*?color: var\(--qbot-ink\) !important/)
+  assert.match(botTheme, /\.am\.mu[\\s\\S]*?color: #211A17 !important/)
+})
