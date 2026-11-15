@@ -623,7 +623,9 @@ test('the QuorlythBot launcher uses the compact orange 3D robot-head mark', asyn
   assert.match(bot, /QuorlythBotHead size=\{38\}/)
   assert.match(head, /qbhead-shell/)
   assert.match(head, /qbhead-face/)
-  assert.match(head, /#D06A40/)\n  assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)\n  assert.match(css, /rgba\(208,106,64,\.34\)/)
+  assert.match(head, /#D06A40/)
+  assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)
+  assert.match(css, /rgba\(208,106,64,\.34\)/)
   assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
 })
 
