@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { App } from '../data/AppProvider'
 import { UserState } from './userState'
+import type { PlatformAccessRequestRecord } from '../backend'
 
 export type NotifKind = 'idea' | 'promo' | 'access' | 'settings' | 'join' | 'ai-organizer' | 'collaboration' | 'collab-request' | 'comment' | 'vote' | 'community' | 'project' | 'milestone' | 'workspace' | 'task' | 'message' | 'announcement' | 'call'
 export interface Notif { key: string; at: number; icon: string; text: string; kind: NotifKind; id?: string; target?: string; unread: boolean }
@@ -31,6 +32,54 @@ export function useNotifs(a: App, st: UserState): Notif[] {
   const stored = storedState.memberId === (memberId || null)
     ? storedState.docs
     : (readCachedNotifications(memberId) || [])
+
+  const [visitorRequestState, setVisitorRequestState] = useState<{
+    memberId: string | null
+    requests: PlatformAccessRequestRecord[]
+  }>({ memberId: null, requests: [] })
+  const visitorRequests = visitorRequestState.memberId === (memberId || null)
+    ? visitorRequestState.requests
+    : []
+
+  // Visitor requests are stored in a separate, admin-only Supabase table rather
+  // than the member activity feed. Refresh that queue for platform admins so a
+  // new public request reaches the existing bell/desktop notification pipeline.
+  // A focus refresh complements the short poll after a tab has been backgrounded.
+  useEffect(() => {
+    const uid = memberId || null
+    const listRequests = a.backend?.listPlatformAccessRequests
+    if (!uid || !a.platformAdmin || a.demo || !listRequests) {
+      setVisitorRequestState({ memberId: uid, requests: [] })
+      return
+    }
+
+    let active = true
+    let inFlight = false
+    const refresh = async () => {
+      if (inFlight) return
+      inFlight = true
+      try {
+        const requests = await listRequests()
+        if (active) setVisitorRequestState({ memberId: uid, requests })
+      } catch (error) {
+        console.warn('Could not refresh visitor access request notifications:', error)
+      } finally {
+        inFlight = false
+      }
+    }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+
+    void refresh()
+    const interval = window.setInterval(() => { void refresh() }, 15_000)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [a.backend, a.platformAdmin, a.demo, memberId])
 
   // These durable events live under the recipient's private user-vault path. Supabase
   // persists them across devices and Realtime updates the panel without polling.
@@ -72,6 +121,18 @@ export function useNotifs(a: App, st: UserState): Notif[] {
     const dc = d.decisions[m]
     if (dc?.at) out.push({ at: dc.at, icon: dc.status === 'approved' ? 'approve' : 'alert', text: `Your access request was ${dc.status}`, kind: 'access' })
     if (a.platformAdmin) d.requests.forEach(r => { const x = d.decisions[r.id]; if (r.at && (!x || x.at < r.at)) out.push({ at: r.at, icon: 'invite', text: `${a.nm(r.id)} requested access`, kind: 'settings', id: r.id }) })
+    visitorRequests.forEach(request => {
+      const at = Date.parse(request.created_at)
+      if (!Number.isFinite(at)) return
+      out.push({
+        at,
+        icon: 'invite',
+        text: `${request.full_name || 'Someone'} requested platform access`,
+        kind: 'settings',
+        id: request.id,
+        target: 'visitor-access-request:' + request.status,
+      })
+    })
     d.joinRequests.forEach(r => {
       if (r.status !== 'pending' || (!a.owner && !a.canManageCommunity(r.cid))) return
       const community = d.communities.find(c => c.id === r.cid)
@@ -134,7 +195,7 @@ export function useNotifs(a: App, st: UserState): Notif[] {
       .sort((x, y) => y.at - x.at)
       .slice(0, 100)
       .map(n => ({ ...n, unread: st.loaded !== false && n.at > seen && !rd[n.key] }))
-  }, [a.data, a.me?.id, a.owner, a.platformAdmin, a.nm, a.joined, a.canManageCommunity, st, memberId, stored])
+  }, [a.data, a.me?.id, a.owner, a.platformAdmin, a.nm, a.joined, a.canManageCommunity, st, memberId, stored, visitorRequests])
 }
 
 let ac: AudioContext | null = null
