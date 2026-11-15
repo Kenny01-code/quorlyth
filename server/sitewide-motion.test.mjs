@@ -16,6 +16,7 @@ test('Quorlyth applies consistent sitewide motion and semantic icon microinterac
   assert.match(motion, /@keyframes qth-card-in/)
   assert.match(motion, /@keyframes qth-overlay-in/)
   assert.match(motion, /@keyframes qth-icon-ring/)
+  assert.match(motion, /\.qth-glyph:not\(\.q-logo-mark\)[\s\S]*?animation: qth-icon-arrive/)
   assert.match(motion, /q-glyph-bell/)
   assert.match(motion, /q-glyph-search/)
   assert.match(motion, /q-glyph-settings/)
