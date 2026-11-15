@@ -523,3 +523,46 @@ body {
   text-shadow: none !important;
   opacity: 1 !important;
 }
+
+
+/* Idea feed previews: keep the original write-up and hashtags crisp on the bone cards. */
+#root #main .idea-feed-card {
+  background: linear-gradient(145deg, #fffdf7 0%, #f4eedf 100%) !important;
+  border-color: rgba(28, 21, 17, .16) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .96), 0 18px 42px -34px rgba(28, 21, 17, .48) !important;
+  color: #000000 !important;
+}
+
+#root #main .idea-feed-card .idea-card-title,
+#root #main .idea-feed-card .idea-feed-writeup {
+  color: #000000 !important;
+  opacity: 1 !important;
+}
+
+#root #main .idea-feed-card .idea-card-title {
+  font-weight: 560 !important;
+  line-height: 1.3 !important;
+}
+
+#root #main .idea-feed-card .idea-feed-writeup {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  overflow: hidden;
+  margin: 0;
+  color: #000000 !important;
+  font-size: 14px !important;
+  font-weight: 450 !important;
+  line-height: 1.7 !important;
+  letter-spacing: 0 !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere;
+}
+
+#root #main .idea-feed-card .f {
+  color: #514338 !important;
+}
+
+#root #main .idea-feed-card .f .ic {
+  color: #514338 !important;
+}
