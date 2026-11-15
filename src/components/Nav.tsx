@@ -12,7 +12,7 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/demo', label: 'Try demo', icon: 'spark', guest: true },
   { path: '/signin', label: 'Sign in', icon: 'private', guest: true },
   { path: '/dashboard', label: 'Dashboard', icon: 'home' },
-  { path: '/access', label: 'Request access', icon: 'invite' },
+  { path: '/access', label: 'Request access', icon: 'invite', guest: true },
   { path: '/analytics', label: 'Analytics', icon: 'insight' },
   { path: '/growth', label: 'Growth', icon: 'timeline', platformAdminOnly: true },
   { path: '/communities', label: 'Communities', icon: 'community' },
@@ -167,7 +167,7 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
             if (i.path === '/access' && me && app.data.decisions[me.id]?.status === 'approved' && !accessSent) return false
             if (demo) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             if (me) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
-            return ['/', '/architecture', '/demo', '/signin'].includes(i.path)
+            return ['/', '/architecture', '/demo', '/signin', '/access'].includes(i.path)
           }).map(i => {
             const navLabel = i.label
             return (
