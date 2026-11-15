@@ -23,6 +23,7 @@ test('community idea feed previews keep write-ups legible and preserve useful co
   assert.match(contrast, /font-size: 14px !important/)
   assert.match(contrast, /line-height: 1\.7 !important/)
   assert.match(contrast, /white-space: pre-wrap !important/)
-  assert.match(contrast, /display: block;[\\s\\S]*?overflow: visible;/)
+  assert.ok(contrast.includes('display: block;'))
+  assert.ok(contrast.includes('overflow: visible;'))
   assert.doesNotMatch(contrast, /-webkit-line-clamp: 6/)
 })
