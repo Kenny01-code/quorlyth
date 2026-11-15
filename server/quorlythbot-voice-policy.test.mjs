@@ -26,6 +26,22 @@ test('Live Talk prefers ElevenLabs and falls back quickly if first audio is dela
   assert.match(client, /const transcript = String\(m\.transcript \|\| userText \|\| ''\)/)
 })
 
+test('Voice Studio retries buffered cloud speech and reports device playback rejection', async () => {
+  const [client, views] = await Promise.all([
+    readSource('src/ai/client.ts'),
+    readSource('src/bot/views.tsx'),
+  ])
+  assert.match(client, /onPlaybackError\?: \(error: Error\) => void/)
+  assert.match(client, /retryBufferedSpeech = true/)
+  assert.match(client, /const bufferedPath = options\.elevenLabsOnly \? '\/api\/speak-eleven' : '\/api\/speak'/)
+  assert.match(client, /Your browser blocked device speech/)
+  assert.match(client, /Device speech could not start/)
+  assert.match(views, /helloStartTimer/)
+  assert.match(views, /onPlaybackError: error =>/)
+  assert.match(views, /Voice playback could not start\. Check your device audio and try again\./)
+  assert.match(views, /Waiting for your device audio/)
+})
+
 test('ElevenLabs-only mode cannot be overridden by a browser fallback option', async () => {
   const client = await readSource('src/ai/client.ts')
   assert.match(client, /const allowBrowserFallback = options\.elevenLabsOnly !== true && options\.allowBrowserFallback === true/)
