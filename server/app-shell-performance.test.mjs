@@ -628,3 +628,15 @@ test('platform admins keep the solid orange role badge in My Space and public co
   assert.match(css, /background:linear-gradient\(145deg,#FFA16F 0%,#EF784B 48%,#D85F37 100%\)/)
   assert.match(css, /\.platform-verified-shield--compact/)
 })
+
+
+test('Request Access titles stay true black after the global heading theme, and its logo keeps homepage breathing motion', async () => {
+  const [access, contrast] = await Promise.all([
+    readSource('src/screens/Access.tsx'),
+    readSource('src/styles/contrast-system.css'),
+  ])
+  assert.equal((access.match(/className="q-access-title"/g) || []).length, 3)
+  assert.match(contrast, /#root \.q-access-page \.q-access-title\s*\{[\s\S]*?color:\s*#000000\s*!important[\s\S]*?-webkit-text-fill-color:\s*#000000\s*!important/)
+  assert.match(contrast, /#root \.q-access-page \.q-access-orb svg\.q-logo-mark[\s\S]*?stroke-width:\s*3\s*!important[\s\S]*?animation:\s*br2 6\.5s cubic-bezier\(\.45,0,\.55,1\) infinite !important/)
+  assert.match(contrast, /#root \.q-access-page \.q-access-orb \.hh[\s\S]*?animation:\s*hb2 6\.5s cubic-bezier\(\.45,0,\.55,1\) infinite !important/)
+})
