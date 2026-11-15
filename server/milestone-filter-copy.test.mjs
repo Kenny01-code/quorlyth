@@ -18,7 +18,7 @@ test('milestone filters explain exactly which milestones they show', async () =>
   }
 
   assert.match(board, /aria-live="polite"[\s\S]*?FILTERS\.find\(item => item\.value === filter\)\?\.description/)
-  assert.match(board, /aria-label=\{item\.label \+ '\\. ' \+ item\.description\}/)
+  assert.ok(board.includes("aria-label={item.label + '. ' + item.description}"))
   assert.match(board, /title=\{item\.description\}/)
 
   // Keep the underlying filter semantics aligned with the explanations.
