@@ -513,12 +513,19 @@ test('QuorlythBot chat frame reduces expensive blur and offscreen transcript ren
   assert.match(robot, /if\(now-lastRender<1000\/30\)/)
 })
 
-test('QuorlythBot uses a balanced terracotta shell with deep-ink accents', async () => {
-  const theme = await readSource('src/bot/robot-themes.ts')
-  assert.ok(theme.includes('p: 0xef784b'))
+test('QuorlythBot uses the exact uploaded #D06A40 swatch for its 3D shell', async () => {
+  const [theme, robot] = await Promise.all([
+    readSource('src/bot/robot-themes.ts'),
+    readSource('src/bot/robot3d.ts'),
+  ])
+  assert.ok(theme.includes('p: 0xd06a40'))
   assert.ok(theme.includes('b: 0x211a17'))
-  assert.ok(theme.includes("g1: '#EF784B'"))
-  assert.ok(!theme.includes('p: 0xff833b'))
+  assert.ok(theme.includes("g1: '#D06A40'"))
+  assert.ok(theme.includes("cr: '208,106,64'"))
+  assert.match(robot, /shell\.color\.setHex\(T\.p\)/)
+  assert.match(robot, /arm\.color\.setHex\(T\.p\)/)
+  assert.ok(!theme.includes('p: 0xef784b'))
+  assert.ok(!theme.includes('g1: '# + 'EF784B''))
 })
 
 
@@ -616,8 +623,15 @@ test('the QuorlythBot launcher uses the compact orange 3D robot-head mark', asyn
   assert.match(bot, /QuorlythBotHead size=\{38\}/)
   assert.match(head, /qbhead-shell/)
   assert.match(head, /qbhead-face/)
-  assert.match(head, /#EF784B/)
+  assert.match(head, /#D06A40/)\n  assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)\n  assert.match(css, /rgba\(208,106,64,\.34\)/)
   assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
+})
+
+test('QuorlythBot loading and restore glows use the uploaded orange swatch', async () => {
+  const contrast = await readSource('src/styles/contrast-system.css')
+  assert.match(contrast, /background: linear-gradient\(180deg, #F3A17C, #D06A40 60%, #843A25\)/)
+  assert.match(contrast, /border-top-color: #D06A40/)
+  assert.match(contrast, /rgba\(208, 106, 64, \.12\)/)
 })
 
 test('platform admins keep the solid orange role badge in My Space and public community cards', async () => {
