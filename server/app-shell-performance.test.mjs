@@ -186,10 +186,11 @@ test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the 
 
 test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', async () => {
   const robot3d = await readSource('src/bot/robot3d.ts')
-  assert.ok(robot3d.includes('1000/30'))
+  assert.ok(robot3d.includes('1000/(lowPower?24:30)'))
   assert.match(robot3d, /document\.visibilityState/)
   assert.match(robot3d, /document\.removeEventListener\(["']visibilitychange["']/)
-  assert.ok(robot3d.includes('window.devicePixelRatio||1,1.0'))
+  assert.ok(robot3d.includes('window.devicePixelRatio||1,lowPower?0.9:1.0'))
+  assert.match(robot3d, /powerPreference:lowPower\?'low-power':'high-performance'/)
 })
 
 test('the top navigation uses one active-state surface, not a duplicate animated pill', async () => {
@@ -302,8 +303,8 @@ test('QuorlythBot keeps a readable sidebar width and a lower GPU pixel ratio', a
     readSource('src/bot/robot3d.ts'),
   ])
   assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
-  assert.ok(renderer.includes('window.devicePixelRatio||1,1.0'))
-  assert.ok(renderer.includes('1000/30'))
+  assert.ok(renderer.includes('window.devicePixelRatio||1,lowPower?0.9:1.0'))
+  assert.ok(renderer.includes('1000/(lowPower?24:30)'))
 })
 
 test('top navigation retains the compact 50px shell rather than an oversized header', async () => {
@@ -509,8 +510,9 @@ test('QuorlythBot chat frame reduces expensive blur and offscreen transcript ren
   ])
   assert.match(styles, /\.bot \.ast-log > \.am[\s\S]{0,180}content-visibility: auto/)
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]{0,240}backdrop-filter: none !important/)
-  assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,1\.0\)\)/)
-  assert.match(robot, /if\(now-lastRender<1000\/30\)/)
+  assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,lowPower\?0\.9:1\.0\)\)/)
+  assert.match(robot, /if\(now-lastRender<1000\/\(lowPower\?24:30\)\)/)
+  assert.match(robot, /if\(!lowPower\)addEventListener\(["']pointermove["']/)
 })
 
 test('QuorlythBot uses a darker solid burnt-orange 3D shell with the original dark face', async () => {
