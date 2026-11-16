@@ -649,13 +649,13 @@ test('platform admins use the shared layered orange role badge in My Space and p
     readSource('src/components/RoleBadges.tsx'),
     readSource('src/styles/role-badges.css'),
   ])
-  assert.match(me, /a\\.platformAdmin \\|\\| a\\.owner \\? <PlatformAdminBadge compact \\/>/)
-  assert.match(me, /isPlatformAdmin \\? <PlatformAdminBadge compact \\/>/)
-  assert.match(me, /import \\{ CommunityCreatorBadge, PlatformAdminBadge \\}/)
-  assert.match(badges, /export function PlatformAdminBadge\\(/)
-  assert.match(css, /background: linear-gradient\\(138deg, #ffc18f 0%, #f29360 34%, #de6942 72%, #bf4b2a 100%\\)/)
-  assert.match(css, /\\.platform-verified-shield--compact/)
-  assert.match(css, /@keyframes platformAdminBreath/)
+  assert.ok(me.includes('a.platformAdmin || a.owner ? <PlatformAdminBadge compact />'))
+  assert.ok(me.includes('isPlatformAdmin ? <PlatformAdminBadge compact />'))
+  assert.ok(me.includes("import { CommunityCreatorBadge, PlatformAdminBadge }"))
+  assert.ok(badges.includes('export function PlatformAdminBadge('))
+  assert.ok(css.includes('background: linear-gradient(138deg, #ffc18f 0%, #f29360 34%, #de6942 72%, #bf4b2a 100%)'))
+  assert.ok(css.includes('.platform-verified-shield--compact'))
+  assert.ok(css.includes('@keyframes platformAdminBreath'))
 })
 
 
