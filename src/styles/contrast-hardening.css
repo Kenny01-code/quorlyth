@@ -416,3 +416,110 @@
     flex: 1 1 100%;
   }
 }
+
+
+/* IDEA FEED PREVIEW: final black-ink contract. */
+/* The card is a light reading surface; every nested text node must stay true black. */
+#root .idea-feed-card {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: linear-gradient(145deg, #fffefa 0%, #f3eadc 100%) !important;
+  border: 1px solid rgba(28, 21, 17, .22) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .96),
+    0 18px 42px -34px rgba(28, 21, 17, .5) !important;
+}
+
+/* Universal descendant coverage beats nested .mut/.dim and browser text-fill inheritance. */
+#root .idea-feed-card :where(*) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+/* Give the actual idea copy enough size, weight and line-height to read comfortably. */
+#root .idea-feed-card .idea-card-title {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 20px !important;
+  font-weight: 650 !important;
+  line-height: 1.32 !important;
+  letter-spacing: -.025em !important;
+  overflow-wrap: anywhere !important;
+}
+
+#root .idea-feed-card .idea-feed-writeup {
+  display: block !important;
+  margin: 0 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-family: Inter, "Avenir Next", Avenir, "Segoe UI", sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 480 !important;
+  line-height: 1.78 !important;
+  letter-spacing: 0 !important;
+  white-space: pre-wrap !important;
+  overflow: visible !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+  text-wrap: pretty;
+}
+
+/* Status chips and topic tags remain light, with ink-dark labels and icons. */
+#root .idea-feed-card > .chip,
+#root .idea-feed-card .acts > .chip {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  border: 1px solid rgba(28, 21, 17, .18) !important;
+  background: rgba(28, 21, 17, .045) !important;
+  font-weight: 600 !important;
+}
+
+#root .idea-feed-card .chip :is(svg, .ic, .quorlyth-glyph) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  stroke: currentColor !important;
+}
+
+/* The lower author/date row and attachment names are part of the preview too. */
+#root .idea-feed-card .f,
+#root .idea-feed-card .f :where(*) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+#root .idea-feed-card .f {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+}
+
+#root .idea-feed-card .idea-media-item {
+  border: 1px solid rgba(28, 21, 17, .14) !important;
+  background: #f6efe4 !important;
+}
+
+#root .idea-feed-card :is(.idea-media-name, .idea-media-state, .idea-media-more) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+}
+
+#root .idea-feed-card :is(.idea-media-name, .idea-media-state) {
+  overflow-wrap: anywhere !important;
+}
+
+#root .idea-feed-card:focus-visible {
+  outline: 2px solid #a64f32 !important;
+  outline-offset: 3px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .idea-feed-card {
+    transition: none !important;
+  }
+}
