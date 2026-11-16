@@ -221,7 +221,7 @@ function List() {
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{c.vis === 'unlisted' && <span className="chip">Unlisted</span>}{c.arch && <span className="chip on">Archived</span>}{a.ownsCommunity(c.id) && <span className="chip">Created by you</span>}</div>
                   <h3 style={{ fontSize: 20, fontWeight: 300 }}>{c.name}</h3>
                   <p className="mut q-writeup">{c.purpose}</p>
-                  <div className="community-creator-identity"><Av id={creatorId(c) || c.ownerId || c.createdBy || ''} size={34} /><div className="community-creator-copy"><p className="dim" style={{ fontSize: 10 }}>CREATED BY</p><div className="community-creator-name"><button className="lk" onClick={() => creatorId(c) && nav('/me/' + creatorId(c))}>{creatorId(c) ? (a.nm(creatorId(c)) === 'Member' ? 'Community creator' : a.nm(creatorId(c))) : 'Community creator'}</button>{creatorId(c) && creatorId(c) !== data.ownerId && <CommunityCreatorBadge />}</div></div></div>
+                  <div className="community-creator-identity"><Av id={creatorId(c) || c.ownerId || c.createdBy || ''} size={34} /><div className="community-creator-copy"><p className="dim" style={{ fontSize: 10 }}>CREATED BY</p><div className="community-creator-name"><button className="lk community-creator-name__link" onClick={() => creatorId(c) && nav('/me/' + creatorId(c))}>{creatorId(c) ? (a.nm(creatorId(c)) === 'Member' ? 'Community creator' : a.nm(creatorId(c))) : 'Community creator'}</button>{creatorId(c) && creatorId(c) !== data.ownerId && <CommunityCreatorBadge />}</div></div></div>
                   <p className="dim" style={{ marginTop: 'auto' }}>{a.canManageCommunity(c.id) ? `${m} member${m === 1 ? '' : 's'}, ` : ''}{n} idea{n === 1 ? '' : 's'}</p>
                   <div className="acts" style={{ margin: 0 }}>
                     <button className="btn p" style={{ padding: '10px 20px' }} onClick={() => nav('/communities/' + c.id)}>Open</button>
@@ -480,7 +480,7 @@ function Detail({ cid }: { cid: string }) {
           <h2>{c.name}</h2>
           <p className="mut q-writeup" style={{ marginTop: 8, maxWidth: 620 }}>{c.purpose}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}><Av id={communityCreatorId} size={36} /><div><p className="dim" style={{ fontSize: 10, letterSpacing: '.08em' }}>CREATED BY</p><button className="lk" onClick={() => communityCreatorId && nav('/me/' + communityCreatorId)}>{communityCreatorId && a.nm(communityCreatorId) !== 'Member' ? a.nm(communityCreatorId) : 'Community creator'}</button></div></div>
+            <div className="community-creator-detail"><Av id={communityCreatorId} size={36} /><div className="community-creator-detail__copy"><p className="dim" style={{ fontSize: 10, letterSpacing: '.08em' }}>CREATED BY</p><button className="lk community-creator-name__link" onClick={() => communityCreatorId && nav('/me/' + communityCreatorId)}>{communityCreatorId && a.nm(communityCreatorId) !== 'Member' ? a.nm(communityCreatorId) : 'Community creator'}</button></div></div>
             {own && <>
               <span style={{ display: 'flex', marginLeft: 8 }}>{mem.filter(u => u !== communityCreatorId).slice(0, 5).map(u => <Av key={u} id={u} size={28} />)}</span>
               <span className="dim">{mem.length} member{mem.length === 1 ? '' : 's'}</span>
