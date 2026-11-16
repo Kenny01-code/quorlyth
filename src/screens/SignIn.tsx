@@ -66,6 +66,7 @@ function Stage({ greeting }: { greeting: string }) {
     const controller = new AbortController()
     helloController.current = controller
     let usedBrowserFallback = false
+    let didStart = false
     let failureReported = false
     const reportFailure = (message: string) => {
       if (run !== helloRun.current || controller.signal.aborted || failureReported) return
@@ -88,6 +89,7 @@ function Stage({ greeting }: { greeting: string }) {
         preferredVoice(),
         () => {
           if (run !== helloRun.current || controller.signal.aborted || failureReported) return
+          didStart = true
           clearHelloTimer()
           r.current?.talk(true)
           setHelloState('playing')
@@ -123,7 +125,7 @@ function Stage({ greeting }: { greeting: string }) {
         return
       }
       helloPlayback.current = playback
-      if (helloState === 'loading') {
+      if (!didStart) {
         setHelloStatus('Waiting for audio…')
         helloStartTimer.current = window.setTimeout(() => {
           if (run === helloRun.current && !controller.signal.aborted && !failureReported) {
