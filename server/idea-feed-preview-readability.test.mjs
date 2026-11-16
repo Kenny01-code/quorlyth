@@ -153,6 +153,61 @@ test('Idea Feed preview forces true black through every nested write-up and meta
 })
 
 
+test('Community discovery headline and supporting copy stay true black and readable', async () => {
+  const [communities, styles, main] = await Promise.all([
+    source('src/screens/Communities.tsx'),
+    source('src/styles/precision-contrast-polish.css'),
+    source('src/main.tsx'),
+  ])
+
+  assert.ok(communities.includes('Find your people.'))
+  assert.ok(communities.includes('community-explorer__title'))
+  assert.ok(styles.includes('#root #main .community-explorer__title'))
+  assert.ok(styles.includes('color: #000000 !important'))
+  assert.ok(styles.includes('font-weight: 650 !important'))
+  assert.ok(styles.includes('#root #main .community-explorer__subtitle'))
+  assert.ok(main.endsWith("import './styles/precision-contrast-polish.css'\n" + "import { AppProvider }"))
+})
+
+test('Project task assignment and due-date controls use clear black ink on a light form surface', async () => {
+  const [workspace, styles, main] = await Promise.all([
+    source('src/screens/StandaloneWorkspaces.tsx'),
+    source('src/styles/precision-contrast-polish.css'),
+    source('src/main.tsx'),
+  ])
+
+  for (const label of [
+    'Assign to everyone you select',
+    'Select everyone (',
+    'Clear selection',
+    'Due date',
+    'type="date"',
+    'taskAssigneeDraft.includes(member.userId)',
+  ]) {
+    assert.ok(workspace.includes(label), 'Missing task assignment/date control: ' + label)
+  }
+
+  assert.ok(styles.includes('#root #main .sw-task-form :where(*)'))
+  assert.ok(styles.includes('background:') && styles.includes('#fffdf8 0%, #f4ecdf 100%'))
+  assert.ok(styles.includes('.sw-assignee-picker__actions .sw-link-button'))
+  assert.ok(styles.includes('.sw-assignee-option > span small'))
+  assert.ok(styles.includes('::-webkit-datetime-edit-month-field'))
+  assert.ok(styles.includes('::-webkit-calendar-picker-indicator'))
+  assert.ok(styles.includes('@media (max-width: 720px)'))
+  assert.ok(styles.includes('@media (max-width: 390px)'))
+  assert.ok(main.indexOf("import './styles/precision-contrast-polish.css'") > main.indexOf("import './styles/contrast-hardening.css'"))
+})
+
+test('Calendar glyphs and native calendar controls remain visible across light and dark surfaces', async () => {
+  const styles = await source('src/styles/precision-contrast-polish.css')
+  assert.ok(styles.includes('#root #main .q-glyph-calendar'))
+  assert.ok(styles.includes('color: #ff9b62 !important'))
+  assert.ok(styles.includes('.sw-task-form) .q-glyph-calendar'))
+  assert.ok(styles.includes('color: #9d3a10 !important'))
+  assert.ok(styles.includes('#root #main input[type="date"]::-webkit-calendar-picker-indicator'))
+  assert.ok(styles.includes('opacity: 1 !important'))
+})
+
 test('Promotion studio live post placeholder stays black on its light preview surface', async () => {
   const [screen, styles] = await Promise.all([
     source('src/screens/Promote.tsx'),
