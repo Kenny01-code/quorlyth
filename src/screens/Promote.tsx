@@ -309,7 +309,7 @@ function Inner() {
             <div className="q-promo-preview-top"><div className="q-promo-brand-mark"><Icon name="spark" size={16} /></div><div><strong>Quorlyth</strong><small>Idea feed preview</small></div><span className="q-promo-preview-platform">Quorlyth</span></div>
             <div className="q-promo-preview-copy">
               <p className="q-promo-preview-idea">{idea.title}</p>
-              <p className="q-writeup">{draft.trim() || 'Your post preview will appear here as you write.'}</p>
+              <p className={draft.trim() ? 'q-writeup' : 'q-writeup q-promo-preview-placeholder'}>{draft.trim() || 'Your post preview will appear here as you write.'}</p>
               {ht.length > 0 && <div className="q-promo-preview-tags">{ht.map(tag => <span key={tag}>#{tag}</span>)}</div>}
             </div>
             <div className="q-promo-preview-footer"><span><Icon name="community" size={16} /> Community idea</span><span><Icon name="edit" size={16} /> Draft preview</span></div>
