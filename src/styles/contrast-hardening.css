@@ -339,3 +339,80 @@
     transition: none !important;
   }
 }
+
+
+/* Final Project Pulse and evidence ledger contrast contract. */
+/* Give the evidence panel itself a light surface so black headings never sit on dark glass. */
+#root #main .ql-evidence-ledger {
+  color: #000000 !important;
+  background: linear-gradient(145deg, #fffdf8 0%, #f3eadc 100%) !important;
+  border: 1px solid rgba(28, 21, 17, .2) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .96), 0 18px 42px -34px rgba(28, 21, 17, .48) !important;
+}
+
+/* Keep every visible copy element black while preserving dark text entry controls. */
+#root #main .ql-workspace-pulse :where(*) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+#root #main .ql-evidence-ledger :where(*):not(input):not(textarea):not(select):not(option) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+/* Retain a clear warm surface behind the empty-state mark and keep reviewer actions legible. */
+#root #main .ql-evidence-ledger__empty > span {
+  color: #000000 !important;
+  border-color: rgba(28, 21, 17, .18) !important;
+  background: #f7f0e6 !important;
+}
+
+#root #main .ql-evidence-ledger .acts .btn {
+  color: #000000 !important;
+  border: 1px solid rgba(28, 21, 17, .22) !important;
+  background: #fffaf2 !important;
+  box-shadow: none !important;
+}
+
+#root #main .ql-evidence-ledger .acts .btn.p {
+  color: #000000 !important;
+  border-color: #a64f32 !important;
+  background: #d97755 !important;
+}
+
+#root #main .ql-evidence-ledger .acts .btn:focus-visible {
+  outline: 2px solid #a64f32 !important;
+  outline-offset: 3px !important;
+}
+
+#root #main .ql-evidence-ledger__notice p {
+  font-size: 12px !important;
+  line-height: 1.7 !important;
+}
+
+#root #main .ql-evidence-file__copy small,
+#root #main .ql-evidence-file__state,
+#root #main .ql-evidence-decision,
+#root #main .ql-evidence-ledger__count {
+  font-size: 11px !important;
+}
+
+#root #main .ql-evidence-record :is(p, li) {
+  line-height: 1.65 !important;
+}
+
+@media (max-width: 560px) {
+  #root #main .ql-workspace-pulse__actions > button {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  #root #main .ql-evidence-ledger .acts > button {
+    flex: 1 1 100%;
+  }
+}
