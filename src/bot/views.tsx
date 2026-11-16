@@ -7,6 +7,7 @@ import { speakText, stopSpeechPlayback, type SpeechPlayback } from '../ai/client
 import { RobotApi } from './Robot'
 import { SKILLS, THEMES, VOICES, VOICE_ACCENTS } from './config'
 import { useBotData } from './useBotData'
+import '../styles/voice-studio-responsive.css'
 
 interface P {
   view: string; bd: ReturnType<typeof useBotData>; role: string; skill: (id: string) => void
@@ -93,6 +94,7 @@ export function BotViews(p: P) {
     rememberWelcomeVoice(voice)
     const clean = sample.trim()
     if (!clean) {
+      helloController.current = null
       setHello({ state: 'error', message: 'Enter something to preview first.' })
       return
     }
