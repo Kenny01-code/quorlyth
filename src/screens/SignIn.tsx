@@ -72,6 +72,7 @@ function Stage({ greeting }: { greeting: string }) {
       if (run !== helloRun.current || controller.signal.aborted || failureReported) return
       failureReported = true
       clearHelloTimer()
+      controller.abort()
       helloPlayback.current?.stop()
       helloPlayback.current = null
       r.current?.talk(false)
@@ -83,6 +84,12 @@ function Stage({ greeting }: { greeting: string }) {
     setHelloState('loading')
     setHelloStatus('Preparing QuorlythBot’s voice…')
     r.current?.welcome()
+    // Start the hard deadline before any provider request so a stuck buffered retry cannot leave the control loading forever.
+    helloStartTimer.current = window.setTimeout(() => {
+      if (run === helloRun.current && !failureReported) {
+        reportFailure('Voice playback timed out before audio started. Tap Hear a hello to retry, and check your device audio.')
+      }
+    }, 10_000)
     try {
       const playback = await speakText(
         greeting,
@@ -125,14 +132,7 @@ function Stage({ greeting }: { greeting: string }) {
         return
       }
       helloPlayback.current = playback
-      if (!didStart) {
-        setHelloStatus('Waiting for audio…')
-        helloStartTimer.current = window.setTimeout(() => {
-          if (run === helloRun.current && !controller.signal.aborted && !failureReported) {
-            reportFailure('Voice playback did not start. Tap Hear a hello to retry, and check your device audio.')
-          }
-        }, 9000)
-      }
+      if (!didStart) setHelloStatus('Waiting for audio…')
     } catch (error) {
       if (run !== helloRun.current || controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
       reportFailure(error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.')
