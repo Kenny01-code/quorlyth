@@ -48,6 +48,53 @@ test('ElevenLabs-only mode cannot be overridden by a browser fallback option', a
   assert.match(client, /if \(!allowBrowserFallback\)/)
 })
 
+test('Sign-in Hear a hello keeps the cloud preference without disabling its fallback routes', async () => {
+  const [signIn, server, elevenStream, cloudStream] = await Promise.all([
+    readSource('src/screens/SignIn.tsx'),
+    readSource('server/openai.mjs'),
+    readSource('api/speak-eleven-stream.js'),
+    readSource('api/speak-stream.js'),
+  ])
+  const stage = signIn.slice(signIn.indexOf('function Stage('), signIn.indexOf('export function SignIn'))
+  assert.match(stage, /elevenLabsOnly:\s*false/)
+  assert.match(stage, /preferElevenLabsVoice:\s*true/)
+  assert.match(stage, /allowBrowserFallback:\s*true/)
+  assert.match(stage, /browserFallbackTimeoutMs:\s*1800/)
+  assert.match(stage, /onPlaybackError:\s*error\s*=>/)
+  assert.match(stage, /helloState === 'playing' \? 'Stop hello'/)
+  assert.doesNotMatch(stage, /elevenLabsOnly:\s*true/)
+  assert.match(server, /Voice fallback chain: ElevenLabs by default, then Grok, Gemini, and OpenAI/)
+  assert.match(elevenStream, /speakElevenLabsStream/)
+  assert.match(cloudStream, /speakStream/)
+})
+
+test('Voice Studio cancels pending speech when its view unmounts and exposes a stop action', async () => {
+  const views = await readSource('src/bot/views.tsx')
+  assert.match(views, /const helloController = useRef<AbortController \| null>\(null\)/)
+  assert.match(views, /helloController\.current\?\.abort\(\)/)
+  assert.match(views, /useEffect\(\(\) => \(\) => clearHelloPlayback\(\), \[\]\)/)
+  assert.match(views, /stopNaturalVoicePreview\(\)/)
+  assert.match(views, /signal: controller\.signal/)
+})
+
+test('Sign-in and Voice Studio use phone-specific layout and lower mobile WebGL costs', async () => {
+  const [signInCss, voiceCss, orb, robot] = await Promise.all([
+    readSource('src/styles/signin-performance.css'),
+    readSource('src/styles/voice-studio-responsive.css'),
+    readSource('src/bot/orb3d.ts'),
+    readSource('src/bot/robot3d.ts'),
+  ])
+  assert.match(signInCss, /@media \(max-width: 540px\)/)
+  assert.match(signInCss, /env\(safe-area-inset-bottom/)
+  assert.match(signInCss, /\.q-signin-hello-status\.is-error/)
+  assert.match(voiceCss, /@media \(max-width: 390px\)/)
+  assert.match(voiceCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(orb, /lowPowerDevice/)
+  assert.match(orb, /1000 \/ 30/)
+  assert.match(robot, /lowPower/)
+  assert.match(robot, /1000\/\(lowPower\?24:30\)/)
+})
+
 test('Nigerian accent never silently uses an American voice when no matching ID is configured', async () => {
   const server = await readSource('server/openai.mjs')
   assert.match(server, /if\s*\(accent\s*===\s*'nigerian'\)\s*return\s+null/)
