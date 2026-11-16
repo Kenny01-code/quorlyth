@@ -643,16 +643,19 @@ test('QuorlythBot loading and restore glows use the uploaded orange swatch', asy
   assert.match(contrast, /rgba\(208, 106, 64, \.12\)/)
 })
 
-test('platform admins keep the solid orange role badge in My Space and public community cards', async () => {
-  const [me, css] = await Promise.all([
+test('platform admins use the shared layered orange role badge in My Space and public community cards', async () => {
+  const [me, badges, css] = await Promise.all([
     readSource('src/screens/Me.tsx'),
-    readSource('src/styles/app.css'),
+    readSource('src/components/RoleBadges.tsx'),
+    readSource('src/styles/role-badges.css'),
   ])
-  assert.match(me, /a\.platformAdmin \|\| a\.owner \? <PlatformAdminBadge compact \/>/)
-  assert.match(me, /isPlatformAdmin \? <PlatformAdminBadge compact \/>/)
-  assert.match(me, /function PlatformAdminBadge\(/)
-  assert.match(css, /background:linear-gradient\(145deg,#FFA16F 0%,#EF784B 48%,#D85F37 100%\)/)
-  assert.match(css, /\.platform-verified-shield--compact/)
+  assert.match(me, /a\\.platformAdmin \\|\\| a\\.owner \\? <PlatformAdminBadge compact \\/>/)
+  assert.match(me, /isPlatformAdmin \\? <PlatformAdminBadge compact \\/>/)
+  assert.match(me, /import \\{ CommunityCreatorBadge, PlatformAdminBadge \\}/)
+  assert.match(badges, /export function PlatformAdminBadge\\(/)
+  assert.match(css, /background: linear-gradient\\(138deg, #ffc18f 0%, #f29360 34%, #de6942 72%, #bf4b2a 100%\\)/)
+  assert.match(css, /\\.platform-verified-shield--compact/)
+  assert.match(css, /@keyframes platformAdminBreath/)
 })
 
 
