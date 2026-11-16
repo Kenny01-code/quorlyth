@@ -66,6 +66,18 @@ export function BotViews(p: P) {
     setHello({ state: 'idle', message: 'Voice preview stopped.' })
   }
 
+  useEffect(() => {
+    if (p.view !== 'voice' && (
+      helloController.current ||
+      helloPlayback.current ||
+      hello.state === 'loading' ||
+      hello.state === 'playing'
+    )) {
+      clearHelloPlayback()
+      setHello({ state: 'idle', message: '' })
+    }
+  }, [p.view, hello.state])
+
   useEffect(() => () => clearHelloPlayback(), [])
 
   async function playNaturalVoicePreview(voice: string) {
