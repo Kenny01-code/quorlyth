@@ -1,0 +1,332 @@
+/* Focused black-ink contrast pass for community discovery and project task assignment. */
+
+/* Community discovery: retain the warm editorial surface, but make the headline and supporting copy unequivocally readable. */
+#root #main .community-explorer__title {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 650 !important;
+  letter-spacing: -.04em !important;
+  text-shadow: none !important;
+}
+#root #main .community-explorer__subtitle {
+  color: #17120e !important;
+  -webkit-text-fill-color: #17120e !important;
+  font-size: 13px !important;
+  font-weight: 520 !important;
+  line-height: 1.65 !important;
+  opacity: 1 !important;
+}
+#root #main .community-explorer__eyebrow {
+  color: #5b2a18 !important;
+  -webkit-text-fill-color: #5b2a18 !important;
+  font-weight: 800 !important;
+  opacity: 1 !important;
+}
+#root #main .community-explorer :is(.community-filter-tab, .community-filter-tab__count, .community-search__hint, .community-explorer__footer, .community-explorer__footer-muted, .community-explorer__footer-note) {
+  opacity: 1 !important;
+}
+#root #main .community-explorer :is(.community-filter-tab, .community-filter-tab__count) {
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* Task creation becomes a deliberate light workspace surface instead of faint copy on a dark inset. */
+#root #main .sw-task-form {
+  min-width: 0;
+  padding: clamp(14px, 2vw, 20px) !important;
+  border: 1px solid rgba(28, 21, 17, .2) !important;
+  border-radius: 18px !important;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(217, 119, 85, .11), transparent 48%),
+    linear-gradient(145deg, #fffdf8 0%, #f4ecdf 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.96),
+    0 18px 42px -34px rgba(28,21,17,.55) !important;
+  color: #000000 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#root #main .sw-task-form :where(*) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+#root #main .sw-task-form > .ql-eyebrow {
+  color: #24160f !important;
+  -webkit-text-fill-color: #24160f !important;
+  font-weight: 800 !important;
+  letter-spacing: .13em !important;
+}
+#root #main .sw-task-form .sw-field {
+  min-width: 0;
+  margin-bottom: 13px;
+}
+#root #main .sw-task-form .sw-field > span {
+  color: #080604 !important;
+  -webkit-text-fill-color: #080604 !important;
+  font-size: 12px !important;
+  font-weight: 720 !important;
+  line-height: 1.45 !important;
+}
+#root #main .sw-task-form .sw-field > span small {
+  color: #514338 !important;
+  -webkit-text-fill-color: #514338 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+#root #main .sw-task-form .sw-muted,
+#root #main .sw-task-form small.sw-muted {
+  color: #342a21 !important;
+  -webkit-text-fill-color: #342a21 !important;
+  font-size: 11px !important;
+  font-weight: 520 !important;
+  line-height: 1.55 !important;
+  opacity: 1 !important;
+}
+#root #main .sw-task-form .sw-field :is(input, textarea, select) {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 45px;
+  border: 1px solid rgba(37, 28, 21, .27) !important;
+  border-radius: 12px !important;
+  background: #fffefa !important;
+  color: #050403 !important;
+  -webkit-text-fill-color: #050403 !important;
+  box-shadow: inset 0 1px 2px rgba(28,21,17,.045) !important;
+  font-size: 13px !important;
+  font-weight: 520 !important;
+  opacity: 1 !important;
+}
+#root #main .sw-task-form .sw-field textarea {
+  min-height: 76px;
+  line-height: 1.55 !important;
+}
+#root #main .sw-task-form .sw-field :is(input, textarea, select)::placeholder {
+  color: #675b4f !important;
+  -webkit-text-fill-color: #675b4f !important;
+  opacity: 1 !important;
+}
+#root #main .sw-task-form .sw-field :is(input, textarea, select):focus-visible {
+  outline: 2px solid #b34d24 !important;
+  outline-offset: 2px !important;
+  border-color: #a94a25 !important;
+  box-shadow: 0 0 0 3px rgba(217, 119, 85, .15) !important;
+}
+#root #main .sw-task-form .sw-field select option {
+  background: #fffefa !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* Native date entry: keep both the mm/dd/yyyy fields and picker glyph dark and visible. */
+#root #main .sw-task-form .sw-field input[type="date"] {
+  color-scheme: light !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 650 !important;
+  min-height: 47px;
+}
+#root #main .sw-task-form .sw-field input[type="date"]::-webkit-datetime-edit,
+#root #main .sw-task-form .sw-field input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+#root #main .sw-task-form .sw-field input[type="date"]::-webkit-datetime-edit-text,
+#root #main .sw-task-form .sw-field input[type="date"]::-webkit-datetime-edit-month-field,
+#root #main .sw-task-form .sw-field input[type="date"]::-webkit-datetime-edit-day-field,
+#root #main .sw-task-form .sw-field input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+#root #main .sw-task-form .sw-field input[type="date"]::-webkit-calendar-picker-indicator {
+  width: 19px;
+  height: 19px;
+  margin-left: 7px;
+  opacity: 1 !important;
+  filter: none !important;
+  cursor: pointer;
+}
+
+/* Multi-assignee area: the instruction, quick actions, member names, and "(you)" metadata all use solid ink. */
+#root #main .sw-task-form .sw-assignee-picker > span {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+}
+#root #main .sw-task-form .sw-assignee-picker__actions {
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 7px 0 10px;
+}
+#root #main .sw-task-form .sw-assignee-picker__actions .sw-link-button {
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 1px solid rgba(28,21,17,.2);
+  border-radius: 10px;
+  background: rgba(255,255,255,.76);
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 12px !important;
+  font-weight: 720 !important;
+  opacity: 1 !important;
+  text-decoration: none;
+  cursor: pointer;
+}
+#root #main .sw-task-form .sw-assignee-picker__actions .sw-link-button:hover {
+  border-color: rgba(184, 72, 34, .55);
+  background: #fff6ed;
+}
+#root #main .sw-task-form .sw-assignee-picker__list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 8px;
+  max-height: 250px;
+  padding: 9px;
+  border: 1px solid rgba(28,21,17,.2);
+  border-radius: 13px;
+  background: #ece3d6 !important;
+  overscroll-behavior: contain;
+}
+#root #main .sw-task-form .sw-assignee-option {
+  min-width: 0;
+  min-height: 54px;
+  padding: 10px;
+  gap: 10px;
+  border: 1px solid rgba(28,21,17,.2);
+  border-radius: 11px;
+  background: #fffdf8 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  opacity: 1 !important;
+}
+#root #main .sw-task-form .sw-assignee-option:hover {
+  border-color: rgba(184,72,34,.5);
+  background: #fff8f0 !important;
+}
+#root #main .sw-task-form .sw-assignee-option.is-selected {
+  border-color: #b84d27 !important;
+  background: #fbe5d7 !important;
+  box-shadow: inset 0 0 0 1px rgba(184,72,34,.13) !important;
+}
+#root #main .sw-task-form .sw-assignee-option > span {
+  min-width: 0;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 12px !important;
+  font-weight: 720 !important;
+  line-height: 1.4 !important;
+  overflow-wrap: anywhere;
+}
+#root #main .sw-task-form .sw-assignee-option > span small {
+  color: #33271e !important;
+  -webkit-text-fill-color: #33271e !important;
+  font-size: 10px !important;
+  font-weight: 560 !important;
+  line-height: 1.45 !important;
+}
+#root #main .sw-task-form .sw-assignee-option .sw-assignee-selected-label {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+#root #main .sw-task-form .sw-assignee-option input[type="checkbox"] {
+  appearance: none;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  border: 1.5px solid #55473b !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  cursor: pointer;
+}
+#root #main .sw-task-form .sw-assignee-option input[type="checkbox"]:checked {
+  border-color: #a9431f !important;
+  background: #e87949 !important;
+}
+#root #main .sw-task-form .sw-assignee-option input[type="checkbox"]:checked::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 9px;
+  margin: 2px auto 0;
+  border: solid #000000;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+#root #main .sw-task-form .sw-assignee-option input[type="checkbox"]:focus-visible {
+  outline: 2px solid #a9431f !important;
+  outline-offset: 3px;
+}
+#root #main .sw-task-form .sw-form-row {
+  grid-template-columns: minmax(0, 1.2fr) minmax(180px, .8fr);
+  align-items: start;
+  gap: 14px;
+}
+
+/* General calendar glyphs stay crisp on charcoal, with ink-dark glyphs on light work cards. */
+#root #main .q-glyph-calendar {
+  flex: none;
+  color: #ff9b62 !important;
+  stroke: currentColor !important;
+  stroke-width: 2px !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 3px rgba(255, 132, 76, .2));
+}
+#root #main :is(.glass:not(.bot), .card, .panel, .sheet, .dialog, .popover, .dropdown, .community-explorer, .sw-task-form) .q-glyph-calendar {
+  color: #9d3a10 !important;
+  filter: none !important;
+  stroke-width: 2.05px !important;
+}
+
+/* Other date fields sit on the app's charcoal surfaces; prevent a barely visible native picker. */
+#root #main input[type="date"] {
+  color-scheme: dark;
+}
+#root #main input[type="date"]::-webkit-calendar-picker-indicator {
+  min-width: 18px;
+  min-height: 18px;
+  opacity: 1 !important;
+  filter: invert(1) brightness(1.35) sepia(.12) saturate(1.2);
+  cursor: pointer;
+}
+
+/* Smaller screens keep the entire assignment/date row within the viewport. */
+@media (max-width: 720px) {
+  #root #main .sw-task-form .sw-form-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  #root #main .sw-task-form .sw-assignee-picker__list {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: min(240px, 35svh);
+  }
+  #root #main .sw-task-form .sw-assignee-option {
+    min-height: 52px;
+  }
+  #root #main .sw-task-form .sw-assignee-picker__actions .sw-link-button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+@media (max-width: 390px) {
+  #root #main .sw-task-form {
+    padding: 13px !important;
+    border-radius: 15px !important;
+  }
+  #root #main .sw-task-form .sw-assignee-picker__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #root #main .sw-task-form .sw-assignee-picker__actions .sw-link-button {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root #main .sw-task-form *,
+  #root #main .community-explorer * {
+    transition-duration: .01ms !important;
+  }
+}
