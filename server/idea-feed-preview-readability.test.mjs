@@ -87,3 +87,35 @@ test('evidence disclaimer and contributor write-ups have dark, readable contrast
   assert.ok(hardening.includes('.ql-evidence-file__copy'))
   assert.ok(hardening.includes('-webkit-text-fill-color: #000000 !important'))
 })
+
+
+test('Project Pulse and evidence ledger keep black copy on light surfaces at every nesting level', async () => {
+  const [workspace, hardening] = await Promise.all([
+    source('src/screens/Collaborations.tsx'),
+    source('src/styles/contrast-hardening.css'),
+  ])
+
+  for (const copy of [
+    'PROJECT PULSE',
+    'Where things stand',
+    'In progress',
+    'Planned outcomes',
+    'Approved complete',
+    'Awaiting review',
+    'Approved submissions',
+    'Create your first outcome',
+    'Break the idea into clear outcomes with owners, dates and acceptance criteria.',
+    'Open plan',
+    'Go to team room',
+    'Files here are contributor-submitted evidence.',
+  ]) {
+    assert.ok(workspace.includes(copy), 'Missing workspace copy: ' + copy)
+  }
+
+  assert.ok(hardening.includes('.ql-workspace-pulse :where(*)'))
+  assert.ok(hardening.includes('#root #main .ql-evidence-ledger {'))
+  assert.ok(hardening.includes('.ql-evidence-ledger :where(*):not(input):not(textarea):not(select):not(option)'))
+  assert.ok(hardening.includes('background: linear-gradient(145deg, #fffdf8 0%, #f3eadc 100%) !important'))
+  assert.ok(hardening.includes('.ql-evidence-ledger .acts .btn.p'))
+  assert.ok(hardening.includes('.ql-evidence-file__copy small'))
+})
