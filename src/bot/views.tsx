@@ -1,4 +1,4 @@
-import { RefObject, useRef, useState } from 'react'
+import { RefObject, useEffect, useRef, useState } from 'react'
 import { BotIcon as Icon } from './BotIcon'
 import { Chip } from '../components/ui'
 import { useApp } from '../data/AppProvider'
@@ -33,6 +33,7 @@ export function BotViews(p: P) {
   const [vm, setVm] = useState<{ state: 'idle' | 'rec' | 'done' | 'err'; msg: string }>({ state: 'idle', msg: '' })
   const [hello, setHello] = useState<{ state: 'idle' | 'loading' | 'playing' | 'error'; message: string }>({ state: 'idle', message: '' })
   const helloPlayback = useRef<SpeechPlayback | null>(null)
+  const helloController = useRef<AbortController | null>(null)
   const helloRun = useRef(0)
   const helloStartTimer = useRef<number | null>(null)
 
@@ -47,6 +48,8 @@ export function BotViews(p: P) {
 
   function clearHelloPlayback() {
     helloRun.current += 1
+    helloController.current?.abort()
+    helloController.current = null
     if (helloStartTimer.current !== null) {
       window.clearTimeout(helloStartTimer.current)
       helloStartTimer.current = null
@@ -57,9 +60,18 @@ export function BotViews(p: P) {
     p.robot.current?.talk(false)
   }
 
+  function stopNaturalVoicePreview() {
+    clearHelloPlayback()
+    setHello({ state: 'idle', message: 'Voice preview stopped.' })
+  }
+
+  useEffect(() => () => clearHelloPlayback(), [])
+
   async function playNaturalVoicePreview(voice: string) {
     clearHelloPlayback()
     const run = helloRun.current
+    const controller = new AbortController()
+    helloController.current = controller
     let didStart = false
     let failureReported = false
     const clearStartTimer = () => {
@@ -69,7 +81,7 @@ export function BotViews(p: P) {
       }
     }
     const reportFailure = (message: string) => {
-      if (run !== helloRun.current || failureReported) return
+      if (run !== helloRun.current || controller.signal.aborted || failureReported) return
       failureReported = true
       clearStartTimer()
       helloPlayback.current?.stop()
@@ -110,6 +122,7 @@ export function BotViews(p: P) {
         },
         {
           accent: s.accent || 'auto',
+          signal: controller.signal,
           // Prefer ElevenLabs. If browser streaming fails, the player retries buffered
           // audio from the same provider pipeline before falling back to device speech.
           elevenLabsOnly: false,
@@ -117,6 +130,9 @@ export function BotViews(p: P) {
           preferElevenLabsVoice: true,
           allowBrowserFallback: true,
           liveTalk: false,
+          onBrowserFallback: () => {
+            if (run === helloRun.current && !controller.signal.aborted) setHello({ state: 'loading', message: 'Switching to your device voice…' })
+          },
           onPlaybackError: error => {
             reportFailure(error.message || 'Your device could not start voice playback. Check its audio output and try again.')
           },
@@ -137,9 +153,11 @@ export function BotViews(p: P) {
         }, 6500)
       }
     } catch (error) {
-      if (run !== helloRun.current) return
+      if (run !== helloRun.current || controller.signal.aborted) return
       const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
       reportFailure(message)
+    } finally {
+      if (helloController.current === controller) helloController.current = null
     }
   }
 
@@ -231,7 +249,7 @@ export function BotViews(p: P) {
     const cur = VOICES.find(v => v.id === s.vid) || VOICES[0]
     const pick = (v: typeof VOICES[number]) => { rememberWelcomeVoice(v.ai); bd.saveSettings({ vid: v.id }); p.robot.current?.theme('terracotta'); p.robot.current?.spin() }
     return (
-      <><h3 className="bvt">Voice studio</h3><p className="mut" style={{ margin: '6px 0 4px' }}>Choose how QuorlythBot sounds. Its Quorlyth Orange finish stays consistent across the site.</p>
+      <div className="qbot-voice-studio"><h3 className="bvt">Voice studio</h3><p className="mut" style={{ margin: '6px 0 4px' }}>Choose how QuorlythBot sounds. Its Quorlyth Orange finish stays consistent across the site.</p>
         <div className="glass pad qbot-accent-picker" style={{ padding: '6px 18px', margin: '12px 0 14px' }}>
           <Chips label="Speech accent" desc="Auto-detect uses your browser language. You can choose a style any time." value={s.accent || 'auto'} onPick={value => { rememberWelcomeVoice(cur.ai, value); bd.saveSettings({ accent: value as any }) }} list={VOICE_ACCENTS.map(accent => [accent.id, accent.name])} />
           <p className="dim" style={{ fontSize: 11, lineHeight: 1.5, margin: '0 0 8px' }}>Auto uses a neutral international voice. Live Talk detects your spoken language. ElevenLabs is preferred, followed by configured cloud speech providers; device speech is used only when the quick fallback is enabled.</p>
@@ -244,7 +262,7 @@ export function BotViews(p: P) {
           <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Uses the same speech pipeline as chat: ElevenLabs first, configured cloud providers next, then device speech when enabled.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
             <div className="acts" style={{ margin: 0 }}>
-              <button className="btn p" disabled={hello.state === 'loading'} onClick={() => void playNaturalVoicePreview(cur.ai)}><Icon name="voice" size={16} />{hello.state === 'loading' ? 'Starting voice…' : hello.state === 'playing' ? 'Playing voice' : 'Hear a hello'}</button>
+              <button className="btn p" disabled={hello.state === 'loading'} onClick={() => hello.state === 'playing' ? stopNaturalVoicePreview() : void playNaturalVoicePreview(cur.ai)}><Icon name="voice" size={16} />{hello.state === 'loading' ? 'Starting voice…' : hello.state === 'playing' ? 'Stop voice' : 'Hear a hello'}</button>
               {hello.message && <p role="status" aria-live="polite" className={hello.state === 'error' ? 'err' : 'dim'} style={{ margin: 0, fontSize: 12, lineHeight: 1.5 }}>{hello.message}</p>}
               <button className="btn" onClick={p.startLive}><Icon name="live" size={16} />Talk to Quorlyth</button>
             </div></div>
@@ -257,7 +275,7 @@ export function BotViews(p: P) {
           <div className="acts"><button className="btn" disabled={vm.state === 'rec'} onClick={matchVoice}><Icon name="mic" size={16} />{vm.state === 'rec' ? 'Listening' : 'Start'}</button></div>
           <p className="dim" style={{ marginTop: 12, fontSize: 12 }}>This tunes a studio voice to feel like yours. It is not a clone. Cloning a real voice needs a dedicated voice service and that person's consent.</p>
         </div>
-        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Live Talk is activated by the Talk live button, shows a listening status while the microphone is active, and responds in the language you speak where supported. QuorlythBot prefers ElevenLabs. If it is unavailable, configured cloud speech providers are tried next; device speech is used only when the quick fallback is enabled. If no speech route is available, the written reply remains available. Voice cloning is not included.</p></>
+        <p className="dim" style={{ fontSize: 12 }}>Audio is AI-generated, not a human recording. Live Talk is activated by the Talk live button, shows a listening status while the microphone is active, and responds in the language you speak where supported. QuorlythBot prefers ElevenLabs. If it is unavailable, configured cloud speech providers are tried next; device speech is used only when the quick fallback is enabled. If no speech route is available, the written reply remains available. Voice cloning is not included.</p></div>
     )
   }
 
