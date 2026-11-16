@@ -267,3 +267,157 @@
   min-height: 82px !important;
   display: block !important;
 }
+
+
+/* Promotion step rail: lock number markers into complete circles and separate neutral, hover and active states. */
+#root #main nav.q-promo-steps > a {
+  position: relative !important;
+  min-width: 0 !important;
+  color: #e8dfd3 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  text-decoration: none !important;
+  clip-path: none !important;
+  -webkit-clip-path: none !important;
+  overflow: visible !important;
+  transform: none !important;
+  transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, box-shadow 220ms ease !important;
+}
+
+#root #main nav.q-promo-steps > a::before,
+#root #main nav.q-promo-steps > a::after,
+#root #main nav.q-promo-steps > a > span:first-child::before,
+#root #main nav.q-promo-steps > a > span:first-child::after {
+  content: none !important;
+  display: none !important;
+}
+
+#root #main nav.q-promo-steps > a > span:first-child {
+  position: relative !important;
+  z-index: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  aspect-ratio: 1 / 1 !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  border: 1px solid rgba(240, 234, 217, .24) !important;
+  border-radius: 50% !important;
+  background: #39332d !important;
+  background-image: none !important;
+  color: #f5eee5 !important;
+  -webkit-text-fill-color: #f5eee5 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  overflow: hidden !important;
+  clip-path: circle(50% at 50% 50%) !important;
+  -webkit-clip-path: circle(50% at 50% 50%) !important;
+  mask: none !important;
+  -webkit-mask: none !important;
+  transform: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 7px rgba(0,0,0,.16) !important;
+}
+
+#root #main nav.q-promo-steps > a > span:last-child {
+  display: grid !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  color: inherit !important;
+}
+
+#root #main nav.q-promo-steps > a b {
+  color: #e8dfd3 !important;
+  -webkit-text-fill-color: #e8dfd3 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  letter-spacing: .08em !important;
+  transition: color 180ms ease !important;
+}
+
+#root #main nav.q-promo-steps > a small {
+  color: #c9bdae !important;
+  -webkit-text-fill-color: #c9bdae !important;
+  font-size: 10px !important;
+  line-height: 1.4 !important;
+}
+
+#root #main nav.q-promo-steps > a:hover {
+  border-color: rgba(240,234,217,.22) !important;
+  background: rgba(240,234,217,.07) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+
+#root #main nav.q-promo-steps > a:hover b,
+#root #main nav.q-promo-steps > a:focus-visible b {
+  color: #ffad83 !important;
+  -webkit-text-fill-color: #ffad83 !important;
+}
+
+#root #main nav.q-promo-steps > a:hover > span:first-child {
+  border-color: rgba(255,173,131,.52) !important;
+  background: #44362e !important;
+}
+
+#root #main nav.q-promo-steps > a.is-current {
+  border-color: rgba(239,120,75,.48) !important;
+  background: rgba(239,120,75,.17) !important;
+  color: #fff4eb !important;
+}
+
+#root #main nav.q-promo-steps > a.is-current b {
+  color: #ffad83 !important;
+  -webkit-text-fill-color: #ffad83 !important;
+}
+
+#root #main nav.q-promo-steps > a.is-current small {
+  color: #ead7c9 !important;
+  -webkit-text-fill-color: #ead7c9 !important;
+}
+
+#root #main nav.q-promo-steps > a.is-current > span:first-child {
+  border-color: #ef784b !important;
+  background: linear-gradient(145deg, #f69a6d, #d9653e) !important;
+  color: #211a17 !important;
+  -webkit-text-fill-color: #211a17 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 3px 12px rgba(239,120,75,.18) !important;
+}
+
+#root #main nav.q-promo-steps > a:focus-visible {
+  outline: 2px solid rgba(255,173,131,.88) !important;
+  outline-offset: 3px !important;
+}
+
+@media (max-width: 1100px) {
+  #root #main nav.q-promo-steps > a { gap: 7px !important; padding: 7px 5px !important; }
+  #root #main nav.q-promo-steps > a > span:first-child {
+    flex-basis: 33px !important;
+    width: 33px !important;
+    min-width: 33px !important;
+    height: 33px !important;
+    min-height: 33px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  #root #main nav.q-promo-steps > a { gap: 6px !important; padding: 7px 4px !important; }
+  #root #main nav.q-promo-steps > a > span:first-child {
+    flex-basis: 31px !important;
+    width: 31px !important;
+    min-width: 31px !important;
+    height: 31px !important;
+    min-height: 31px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root #main nav.q-promo-steps > a,
+  #root #main nav.q-promo-steps > a b { transition: none !important; }
+}
