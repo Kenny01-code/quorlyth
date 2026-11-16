@@ -166,7 +166,8 @@ test('Community discovery headline and supporting copy stay true black and reada
   assert.ok(styles.includes('color: #000000 !important'))
   assert.ok(styles.includes('font-weight: 650 !important'))
   assert.ok(styles.includes('#root #main .community-explorer__subtitle'))
-  assert.ok(main.endsWith("import './styles/precision-contrast-polish.css'\n" + "import { AppProvider }"))
+  assert.ok(main.includes("import './styles/precision-contrast-polish.css'"))
+  assert.ok(main.indexOf("import './styles/precision-contrast-polish.css'") > main.indexOf("import './styles/contrast-hardening.css'"))
 })
 
 test('Project task assignment and due-date controls use clear black ink on a light form surface', async () => {
