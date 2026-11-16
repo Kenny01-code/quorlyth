@@ -6,6 +6,7 @@ import { useApp } from '../data/AppProvider'
 import { Robot, RobotApi } from '../bot/Robot'
 import { speakText, type SpeechPlayback } from '../ai/client'
 import { useRef } from 'react'
+import '../styles/signin-performance.css'
 
 function Stage({ greeting }: { greeting: string }) {
   const r = useRef<RobotApi | null>(null)
@@ -13,9 +14,11 @@ function Stage({ greeting }: { greeting: string }) {
   const [first] = useState(() => {
     try { return localStorage.getItem('qseen') !== '1' } catch { return true }
   })
+  const [helloState, setHelloState] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle')
   const [helloStatus, setHelloStatus] = useState('')
   const helloController = useRef<AbortController | null>(null)
   const helloPlayback = useRef<SpeechPlayback | null>(null)
+  const helloStartTimer = useRef<number | null>(null)
   const helloRun = useRef(0)
 
   function preferredVoice() {
@@ -34,7 +37,27 @@ function Stage({ greeting }: { greeting: string }) {
     } catch { return 'auto' }
   }
 
+  function clearHelloTimer() {
+    if (helloStartTimer.current !== null) {
+      window.clearTimeout(helloStartTimer.current)
+      helloStartTimer.current = null
+    }
+  }
+
+  function stopHello() {
+    helloRun.current += 1
+    clearHelloTimer()
+    helloController.current?.abort()
+    helloController.current = null
+    helloPlayback.current?.stop()
+    helloPlayback.current = null
+    r.current?.talk(false)
+    setHelloState('idle')
+    setHelloStatus('Voice preview stopped.')
+  }
+
   async function hello() {
+    clearHelloTimer()
     helloController.current?.abort()
     helloController.current = null
     helloPlayback.current?.stop()
@@ -43,49 +66,76 @@ function Stage({ greeting }: { greeting: string }) {
     const controller = new AbortController()
     helloController.current = controller
     let usedBrowserFallback = false
-    setHelloStatus('Starting voice…')
+    let failureReported = false
+    const reportFailure = (message: string) => {
+      if (run !== helloRun.current || controller.signal.aborted || failureReported) return
+      failureReported = true
+      clearHelloTimer()
+      helloPlayback.current?.stop()
+      helloPlayback.current = null
+      r.current?.talk(false)
+      setHelloState('error')
+      setHelloStatus(message)
+      toast(message)
+    }
+
+    setHelloState('loading')
+    setHelloStatus('Preparing QuorlythBot’s voice…')
     r.current?.welcome()
     try {
       const playback = await speakText(
         greeting,
         preferredVoice(),
         () => {
-          if (run !== helloRun.current || controller.signal.aborted) return
+          if (run !== helloRun.current || controller.signal.aborted || failureReported) return
+          clearHelloTimer()
           r.current?.talk(true)
-          setHelloStatus(usedBrowserFallback ? 'Speaking with your device voice.' : 'Your selected expressive voice is speaking.')
+          setHelloState('playing')
+          setHelloStatus(usedBrowserFallback ? 'Speaking with your device voice.' : 'QuorlythBot is speaking.')
           try { localStorage.setItem('qseen', '1') } catch {}
         },
         () => {
-          if (run !== helloRun.current) return
+          if (run !== helloRun.current || failureReported) return
+          clearHelloTimer()
           helloPlayback.current = null
           r.current?.talk(false)
-          setHelloStatus('')
+          setHelloState('idle')
+          setHelloStatus('Voice preview finished.')
         },
         {
           accent: preferredAccent(),
           signal: controller.signal,
-          // Prefer the natural voice, but never leave this button stuck on a failed provider.
-          elevenLabsOnly: true,
+          // ElevenLabs remains preferred, but configured cloud and device fallbacks stay enabled.
+          elevenLabsOnly: false,
           allowBrowserFallback: true,
-          browserFallbackTimeoutMs: 850,
+          browserFallbackTimeoutMs: 1800,
           preferElevenLabsVoice: true,
-          liveTalk: true,
+          liveTalk: false,
           onBrowserFallback: () => {
             usedBrowserFallback = true
-            if (run === helloRun.current) setHelloStatus('ElevenLabs is unavailable; switching to your device voice.')
+            if (run === helloRun.current) setHelloStatus('Switching to your device voice…')
           },
+          onPlaybackError: error => reportFailure(error.message || 'Your device could not start voice playback. Check its audio output and try again.'),
         },
       )
-      if (run !== helloRun.current || controller.signal.aborted) {
+      if (run !== helloRun.current || controller.signal.aborted || failureReported) {
         playback.stop()
         return
       }
       helloPlayback.current = playback
+      if (helloState === 'loading') {
+        setHelloStatus('Waiting for audio…')
+        helloStartTimer.current = window.setTimeout(() => {
+          if (run === helloRun.current && !controller.signal.aborted && !failureReported) {
+            reportFailure('Voice playback did not start. Tap Hear a hello to retry, and check your device audio.')
+          }
+        }, 9000)
+      }
     } catch (error) {
       if (run !== helloRun.current || controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
-      const message = 'Voice playback could not start. Check your device audio and try again.'
-      setHelloStatus(message)
-      toast(message)
+      reportFailure(error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.')
+    } finally {
+      if (helloController.current === controller) helloController.current = null
     }
   }
 
@@ -93,6 +143,7 @@ function Stage({ greeting }: { greeting: string }) {
   // The visitor's explicit click starts voice playback and can fall back to device speech.
   useEffect(() => () => {
     helloRun.current += 1
+    clearHelloTimer()
     helloController.current?.abort()
     helloController.current = null
     helloPlayback.current?.stop()
@@ -104,13 +155,21 @@ function Stage({ greeting }: { greeting: string }) {
     <div className="glass stage ok" id="stg">
       <Robot ref={r} defer onReady={() => { setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400) }} />
       <div className="c1 glass"><span className="chip"><Icon name="private" size={12} />Private session</span></div>
-      <button className="chip hello" onClick={() => void hello()}><Icon name="voice" size={14} />Hear a hello</button>
-      {helloStatus && <p className="dim" role="status" aria-live="polite" style={{ position: 'absolute', left: 12, right: 12, bottom: 48, fontSize: 11, textAlign: 'center' }}>{helloStatus}</p>}
+      <button
+        type="button"
+        className="chip hello"
+        disabled={helloState === 'loading'}
+        aria-label={helloState === 'playing' ? 'Stop voice preview' : helloState === 'loading' ? 'Starting voice preview' : 'Hear a hello'}
+        onClick={() => helloState === 'playing' ? stopHello() : void hello()}
+      >
+        <Icon name="voice" size={14} />
+        {helloState === 'loading' ? 'Starting voice…' : helloState === 'playing' ? 'Stop hello' : 'Hear a hello'}
+      </button>
+      {helloStatus && <p className={helloState === 'error' ? 'q-signin-hello-status is-error' : 'q-signin-hello-status'} role="status" aria-live="polite">{helloStatus}</p>}
       <div className="cap"><p className="dim">QuorlythBot</p><h3 style={{ fontSize: 22, fontWeight: 200, marginTop: 4 }}>{first ? 'Your room is ready.' : 'Welcome back to your room.'}</h3></div>
     </div>
   )
 }
-
 export function SignIn() {
   const { backend, me, toast, enterDemo, signOut } = useApp()
   const nav = useNavigate()
