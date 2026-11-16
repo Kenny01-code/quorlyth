@@ -421,3 +421,217 @@
   #root #main nav.q-promo-steps > a,
   #root #main nav.q-promo-steps > a b { transition: none !important; }
 }
+
+
+/* Final Promotion Studio correction: inset complete hover cards and isolate the number disc from inherited masks. */
+/* Keep the first and last row away from the scroll rail's clipping edge. */
+#root #main nav.q-promo-steps {
+  box-sizing: border-box !important;
+  display: grid !important;
+  min-width: 0 !important;
+  padding: 5px 6px !important;
+  margin: -5px -6px !important;
+  gap: 6px !important;
+  overflow: visible !important;
+}
+
+/* Every step owns a complete rounded hover surface, including the two outer rows. */
+#root #main nav.q-promo-steps > a.q-promo-step {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 56px !important;
+  margin: 0 !important;
+  padding: 9px 10px !important;
+  gap: 10px !important;
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  background: transparent !important;
+  background-clip: border-box !important;
+  color: #e8dfd3 !important;
+  text-decoration: none !important;
+  clip-path: none !important;
+  -webkit-clip-path: none !important;
+  overflow: visible !important;
+  transform: none !important;
+  outline-offset: 2px !important;
+  transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, color 180ms ease !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step:hover {
+  border-color: rgba(240,234,217,.24) !important;
+  border-radius: 14px !important;
+  background: rgba(240,234,217,.085) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.065), 0 5px 14px -12px rgba(0,0,0,.7) !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step:focus-visible {
+  border-color: rgba(255,173,131,.48) !important;
+  border-radius: 14px !important;
+  background: rgba(240,234,217,.085) !important;
+  outline: 2px solid rgba(255,173,131,.88) !important;
+  outline-offset: 2px !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step.is-current {
+  border-color: rgba(239,120,75,.5) !important;
+  border-radius: 14px !important;
+  background: rgba(239,120,75,.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+
+/* Draw the badge ring on a fresh pseudo-disc, not on the text span that inherited the diagonal mask. */
+#root #main nav.q-promo-steps > a.q-promo-step > .q-promo-step-number {
+  position: relative !important;
+  isolation: isolate !important;
+  z-index: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  aspect-ratio: 1 / 1 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  overflow: visible !important;
+  clip-path: none !important;
+  -webkit-clip-path: none !important;
+  mask: none !important;
+  mask-image: none !important;
+  -webkit-mask: none !important;
+  -webkit-mask-image: none !important;
+  transform: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step > .q-promo-step-number::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  z-index: -1 !important;
+  inset: 0 !important;
+  border: 1px solid rgba(240,234,217,.28) !important;
+  border-radius: 50% !important;
+  background: #39332d !important;
+  background-image: none !important;
+  clip-path: none !important;
+  -webkit-clip-path: none !important;
+  mask: none !important;
+  -webkit-mask: none !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 2px 7px rgba(0,0,0,.16) !important;
+  pointer-events: none !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step .q-promo-step-number__value {
+  position: relative !important;
+  z-index: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  color: #f5eee5 !important;
+  -webkit-text-fill-color: #f5eee5 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  line-height: 1 !important;
+  opacity: 1 !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step:hover .q-promo-step-number::before,
+#root #main nav.q-promo-steps > a.q-promo-step:focus-visible .q-promo-step-number::before {
+  border-color: rgba(255,173,131,.56) !important;
+  background: #44362e !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step.is-current .q-promo-step-number::before {
+  border-color: #ef784b !important;
+  background: linear-gradient(145deg, #f69a6d, #d9653e) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 3px 12px rgba(239,120,75,.18) !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step.is-current .q-promo-step-number__value {
+  color: #211a17 !important;
+  -webkit-text-fill-color: #211a17 !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step .q-promo-step-copy {
+  display: grid !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  color: inherit !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step .q-promo-step-copy b {
+  color: #e8dfd3 !important;
+  -webkit-text-fill-color: #e8dfd3 !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  letter-spacing: .08em !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step .q-promo-step-copy small {
+  color: #c9bdae !important;
+  -webkit-text-fill-color: #c9bdae !important;
+  font-size: 10px !important;
+  line-height: 1.4 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step:hover .q-promo-step-copy b,
+#root #main nav.q-promo-steps > a.q-promo-step:focus-visible .q-promo-step-copy b {
+  color: #ffad83 !important;
+  -webkit-text-fill-color: #ffad83 !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step.is-current .q-promo-step-copy b {
+  color: #ffad83 !important;
+  -webkit-text-fill-color: #ffad83 !important;
+}
+
+#root #main nav.q-promo-steps > a.q-promo-step.is-current .q-promo-step-copy small {
+  color: #ead7c9 !important;
+  -webkit-text-fill-color: #ead7c9 !important;
+}
+
+@media (max-width: 1100px) {
+  #root #main nav.q-promo-steps > a.q-promo-step { gap: 7px !important; padding: 7px 6px !important; }
+  #root #main nav.q-promo-steps > a.q-promo-step > .q-promo-step-number {
+    flex-basis: 33px !important;
+    width: 33px !important;
+    min-width: 33px !important;
+    height: 33px !important;
+    min-height: 33px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  #root #main nav.q-promo-steps > a.q-promo-step { gap: 6px !important; padding: 7px 5px !important; }
+  #root #main nav.q-promo-steps > a.q-promo-step > .q-promo-step-number {
+    flex-basis: 31px !important;
+    width: 31px !important;
+    min-width: 31px !important;
+    height: 31px !important;
+    min-height: 31px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root #main nav.q-promo-steps > a.q-promo-step,
+  #root #main nav.q-promo-steps > a.q-promo-step .q-promo-step-copy b {
+    transition: none !important;
+  }
+}
