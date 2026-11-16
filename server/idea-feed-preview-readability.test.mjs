@@ -119,3 +119,35 @@ test('Project Pulse and evidence ledger keep black copy on light surfaces at eve
   assert.ok(hardening.includes('.ql-evidence-ledger .acts .btn.p'))
   assert.ok(hardening.includes('.ql-evidence-file__copy small'))
 })
+
+
+test('Idea Feed preview forces true black through every nested write-up and metadata node', async () => {
+  const [card, hardening, main] = await Promise.all([
+    source('src/components/IdeaCard.tsx'),
+    source('src/styles/contrast-hardening.css'),
+    source('src/main.tsx'),
+  ])
+
+  for (const requiredClass of [
+    'idea-feed-card',
+    'idea-card-title',
+    'idea-feed-writeup',
+    'idea-media-name',
+    'idea-media-state',
+    'idea-media-more',
+  ]) {
+    assert.ok(card.includes(requiredClass), 'Missing Idea Feed preview element: ' + requiredClass)
+  }
+
+  assert.ok(card.includes("const previewBody = body.length > 240 ? body.slice(0, 240).trimEnd() + '…' : body"))
+  assert.ok(main.indexOf("import './styles/contrast-hardening.css'") > main.indexOf("import './styles/contrast-system.css'"))
+
+  assert.ok(hardening.includes('/* IDEA FEED PREVIEW: final black-ink contract. */'))
+  assert.ok(hardening.includes('#root .idea-feed-card :where(*)'))
+  assert.ok(hardening.includes('-webkit-text-fill-color: #000000 !important'))
+  assert.ok(hardening.includes('#root .idea-feed-card .idea-feed-writeup'))
+  assert.ok(hardening.includes('font-size: 15px !important'))
+  assert.ok(hardening.includes('#root .idea-feed-card .f :where(*)'))
+  assert.ok(hardening.includes('#root .idea-feed-card :is(.idea-media-name, .idea-media-state, .idea-media-more)'))
+  assert.ok(hardening.includes('#root .idea-feed-card:focus-visible'))
+})
