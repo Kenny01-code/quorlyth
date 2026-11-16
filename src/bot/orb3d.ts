@@ -206,8 +206,15 @@ function makeOrbitPoints(count: number) {
 export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbApi {
   const width = Math.max(1, canvas.clientWidth || 320)
   const height = Math.max(1, canvas.clientHeight || 220)
-  const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5))
+  const lowPowerDevice = window.matchMedia('(max-width: 760px)').matches
+    || Number((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4
+  const renderer = new WebGLRenderer({
+    canvas,
+    antialias: !lowPowerDevice,
+    alpha: true,
+    powerPreference: lowPowerDevice ? 'low-power' : 'high-performance',
+  })
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPowerDevice ? 1 : 1.35))
   renderer.setSize(width, height, false)
   renderer.outputEncoding = sRGBEncoding
   renderer.toneMapping = ACESFilmicToneMapping
@@ -408,7 +415,7 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
   function frame(now: number) {
     raf = 0
     if (!alive || !active || document.visibilityState === 'hidden') return
-    if (!reducedMotion && now - lastRender < 1000 / 60) {
+    if (!reducedMotion && now - lastRender < (lowPowerDevice ? 1000 / 30 : 1000 / 60)) {
       schedule()
       return
     }
