@@ -238,3 +238,32 @@
 @media (prefers-reduced-motion: reduce) {
   .q-promo-steps a { scroll-behavior: auto; }
 }
+
+
+/* The live social post preview is a light surface; override the global ivory .q-writeup rule. */
+#root #main .q-promo-live-preview {
+  color: #000000 !important;
+  background: #f0ead9 !important;
+}
+
+#root #main .q-promo-live-preview .q-promo-preview-copy > .q-writeup,
+#root #main .q-promo-live-preview .q-promo-preview-copy > .q-promo-preview-placeholder,
+#root #main .q-promo-live-preview .q-promo-preview-copy > .q-promo-preview-placeholder :where(*) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+  font-family: Inter, "Avenir Next", Avenir, "Segoe UI", sans-serif !important;
+  font-size: 14.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.75 !important;
+  letter-spacing: 0 !important;
+  text-wrap: pretty;
+  overflow-wrap: anywhere !important;
+  white-space: pre-wrap !important;
+}
+
+#root #main .q-promo-live-preview .q-promo-preview-copy > .q-promo-preview-placeholder {
+  min-height: 82px !important;
+  display: block !important;
+}
