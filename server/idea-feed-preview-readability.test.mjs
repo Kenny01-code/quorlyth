@@ -151,3 +151,22 @@ test('Idea Feed preview forces true black through every nested write-up and meta
   assert.ok(hardening.includes('#root .idea-feed-card :is(.idea-media-name, .idea-media-state, .idea-media-more)'))
   assert.ok(hardening.includes('#root .idea-feed-card:focus-visible'))
 })
+
+
+test('Promotion studio live post placeholder stays black on its light preview surface', async () => {
+  const [screen, styles] = await Promise.all([
+    source('src/screens/Promote.tsx'),
+    source('src/styles/promotion-studio.css'),
+  ])
+
+  assert.ok(screen.includes("Your post preview will appear here as you write."))
+  assert.ok(screen.includes("q-writeup q-promo-preview-placeholder"))
+  assert.ok(screen.includes("import '../styles/promotion-studio.css'"))
+
+  assert.ok(styles.includes('#root #main .q-promo-live-preview .q-promo-preview-copy > .q-writeup'))
+  assert.ok(styles.includes('.q-promo-preview-placeholder'))
+  assert.ok(styles.includes('color: #000000 !important'))
+  assert.ok(styles.includes('-webkit-text-fill-color: #000000 !important'))
+  assert.ok(styles.includes('font-size: 14.5px !important'))
+  assert.ok(styles.includes('font-weight: 500 !important'))
+})
