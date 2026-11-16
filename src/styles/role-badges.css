@@ -1,0 +1,351 @@
+/* Quorlyth role identities: a living verification shield and a separate creator-origin seal. */
+
+/* Platform administration is a trusted platform-level role: warm metal, shield geometry and layered motion. */
+#root #main .platform-verified-shield {
+  position: relative !important;
+  isolation: isolate !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 7px !important;
+  min-height: 35px !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 5px 11px 5px 7px !important;
+  border: 1px solid rgba(153, 61, 31, .78) !important;
+  border-radius: 999px !important;
+  background: linear-gradient(138deg, #ffc18f 0%, #f29360 34%, #de6942 72%, #bf4b2a 100%) !important;
+  color: #24150f !important;
+  -webkit-text-fill-color: #24150f !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  box-shadow: inset 0 1px 0 rgba(255,245,232,.78), inset 0 -2px 5px rgba(103,39,18,.18), 0 5px 17px rgba(218,96,55,.2) !important;
+  transform-origin: 50% 50%;
+  animation: platformAdminPresence 7.6s cubic-bezier(.44,0,.56,1) infinite, platformAdminBreath 6.2s ease-in-out infinite !important;
+}
+
+#root #main .platform-verified-shield::before {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  inset: -25% -45% !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+  background: linear-gradient(108deg, transparent 36%, rgba(255,255,255,.52) 49%, transparent 61%) !important;
+  transform: translateX(-120%) !important;
+  animation: platformAdminSheen 9.4s cubic-bezier(.42,0,.58,1) infinite !important;
+}
+
+#root #main .platform-verified-shield::after {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  inset: 1px !important;
+  border: 1px solid rgba(255,248,237,.28) !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+  opacity: .42 !important;
+  animation: platformAdminRim 5.8s ease-in-out infinite !important;
+}
+
+#root #main .platform-verified-shield__icon {
+  position: relative !important;
+  z-index: 1 !important;
+  display: block !important;
+  flex: 0 0 25px !important;
+  width: 25px !important;
+  height: 28px !important;
+  fill: rgba(55,25,13,.12) !important;
+  stroke: #2c160d !important;
+  stroke-width: 1.65 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,.34)) !important;
+  transform-origin: 50% 55% !important;
+  animation: platformAdminGlyph 7.1s cubic-bezier(.45,0,.55,1) infinite !important;
+}
+
+#root #main .platform-verified-shield__outline {
+  stroke-dasharray: 104;
+  stroke-dashoffset: 0;
+  animation: platformAdminShieldPulse 7.8s ease-in-out infinite;
+}
+
+#root #main .platform-verified-shield__check {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 0;
+  animation: platformAdminCheck 8.6s ease-in-out infinite;
+}
+
+#root #main .platform-verified-shield__label {
+  position: relative !important;
+  z-index: 1 !important;
+  display: inline-block !important;
+  color: #24150f !important;
+  -webkit-text-fill-color: #24150f !important;
+  font-size: 8px !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  letter-spacing: .12em !important;
+}
+
+#root #main .platform-verified-shield__glint {
+  position: absolute !important;
+  z-index: 1 !important;
+  right: 7px !important;
+  top: 6px !important;
+  width: 3px !important;
+  height: 3px !important;
+  border-radius: 50% !important;
+  background: #fff9e8 !important;
+  box-shadow: 0 0 7px 2px rgba(255,250,231,.45) !important;
+  pointer-events: none !important;
+  animation: platformAdminGlint 4.8s ease-in-out infinite !important;
+}
+
+#root #main .platform-verified-shield--compact {
+  gap: 5px !important;
+  min-height: 24px !important;
+  padding: 3px 8px 3px 5px !important;
+}
+
+#root #main .platform-verified-shield--compact .platform-verified-shield__icon {
+  flex-basis: 16px !important;
+  width: 16px !important;
+  height: 18px !important;
+}
+
+#root #main .platform-verified-shield--compact .platform-verified-shield__label {
+  font-size: 7px !important;
+  letter-spacing: .09em !important;
+}
+
+/* Community creators are the origin of a space: a branching-node sigil, not a sparkle. */
+#root #main .community-creator-seal {
+  position: relative !important;
+  isolation: isolate !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  min-height: 27px !important;
+  max-width: 100% !important;
+  width: max-content !important;
+  box-sizing: border-box !important;
+  padding: 4px 9px 4px 7px !important;
+  border: 1px solid rgba(195,145,93,.52) !important;
+  border-radius: 999px !important;
+  background: linear-gradient(138deg, #493a2d 0%, #372b22 54%, #2c231d 100%) !important;
+  color: #f4d5ad !important;
+  -webkit-text-fill-color: #f4d5ad !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  box-shadow: inset 0 1px 0 rgba(255,237,208,.13), inset 0 -1px 0 rgba(0,0,0,.28), 0 4px 15px rgba(0,0,0,.2) !important;
+  transform-origin: 50% 50%;
+  animation: communityCreatorPresence 8.2s ease-in-out infinite, communityCreatorBreath 7.1s ease-in-out infinite !important;
+}
+
+#root #main .community-creator-seal::before {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  inset: -30% -50% !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+  background: linear-gradient(108deg, transparent 36%, rgba(255,224,181,.24) 49%, transparent 62%) !important;
+  transform: translateX(120%) !important;
+  animation: communityCreatorSweep 11.2s cubic-bezier(.4,0,.6,1) infinite !important;
+}
+
+#root #main .community-creator-seal::after {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  inset: 1px !important;
+  border: 1px solid rgba(238,194,140,.17) !important;
+  border-radius: inherit !important;
+  opacity: .35 !important;
+  pointer-events: none !important;
+  animation: communityCreatorRim 6.8s ease-in-out infinite !important;
+}
+
+#root #main .community-creator-seal__icon {
+  position: relative !important;
+  z-index: 1 !important;
+  display: block !important;
+  flex: 0 0 17px !important;
+  width: 17px !important;
+  height: 17px !important;
+  fill: rgba(241,195,135,.1) !important;
+  stroke: #f0c48f !important;
+  stroke-width: 1.55 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: drop-shadow(0 1px 2px rgba(245,190,123,.2)) !important;
+  transform-origin: 50% 50% !important;
+  animation: communityCreatorMark 8.7s cubic-bezier(.45,0,.55,1) infinite !important;
+}
+
+#root #main .community-creator-seal__branches,
+#root #main .community-creator-seal__base {
+  stroke-dasharray: 38;
+  stroke-dashoffset: 0;
+  animation: communityCreatorDraw 9.6s ease-in-out infinite;
+}
+
+#root #main .community-creator-seal__origin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: communityCreatorOrigin 5.4s ease-in-out infinite;
+}
+
+#root #main .community-creator-seal__node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: communityCreatorNodes 6.6s ease-in-out infinite;
+}
+
+#root #main .community-creator-seal__label {
+  position: relative !important;
+  z-index: 1 !important;
+  display: inline-block !important;
+  color: #f4d5ad !important;
+  -webkit-text-fill-color: #f4d5ad !important;
+  font-size: 8px !important;
+  font-weight: 750 !important;
+  line-height: 1 !important;
+  letter-spacing: .095em !important;
+}
+
+#root #main .community-creator-seal__glint {
+  position: absolute !important;
+  z-index: 1 !important;
+  right: 7px !important;
+  bottom: 6px !important;
+  width: 3px !important;
+  height: 3px !important;
+  border-radius: 50% !important;
+  background: #f5d9b5 !important;
+  box-shadow: 0 0 6px 2px rgba(245,205,157,.25) !important;
+  pointer-events: none !important;
+  animation: communityCreatorGlint 5.7s ease-in-out infinite !important;
+}
+
+#root #main .community-creator-seal--compact {
+  gap: 5px !important;
+  min-height: 22px !important;
+  padding: 3px 7px 3px 5px !important;
+}
+
+#root #main .community-creator-seal--compact .community-creator-seal__icon {
+  flex-basis: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+#root #main .community-creator-seal--compact .community-creator-seal__label {
+  font-size: 7px !important;
+  letter-spacing: .075em !important;
+}
+
+@keyframes platformAdminPresence {
+  0%,100% { transform: translateY(0) scale(1); }
+  28% { transform: translateY(-1px) scale(1.012); }
+  56% { transform: translateY(0) scale(1); }
+  78% { transform: translateY(-.45px) scale(1.006); }
+}
+@keyframes platformAdminBreath {
+  0%,100% { box-shadow: inset 0 1px 0 rgba(255,245,232,.68), inset 0 -2px 5px rgba(103,39,18,.18), 0 5px 15px rgba(218,96,55,.15); }
+  50% { box-shadow: inset 0 1px 0 rgba(255,250,238,.86), inset 0 -2px 5px rgba(103,39,18,.14), 0 7px 23px rgba(239,120,75,.31); }
+}
+@keyframes platformAdminSheen {
+  0%,62% { transform: translateX(-120%); }
+  84%,100% { transform: translateX(120%); }
+}
+@keyframes platformAdminRim {
+  0%,100% { opacity: .25; transform: scale(.985); }
+  48% { opacity: .7; transform: scale(1); }
+}
+@keyframes platformAdminGlyph {
+  0%,100% { transform: translateY(0) rotate(0) scale(1); }
+  34% { transform: translateY(-1px) rotate(-2deg) scale(1.045); }
+  68% { transform: translateY(0) rotate(1deg) scale(1); }
+}
+@keyframes platformAdminShieldPulse {
+  0%,100% { stroke-opacity: .88; }
+  50% { stroke-opacity: 1; }
+}
+@keyframes platformAdminCheck {
+  0%,14%,100% { stroke-dashoffset: 24; opacity: .45; }
+  30%,74% { stroke-dashoffset: 0; opacity: 1; }
+}
+@keyframes platformAdminGlint {
+  0%,100% { opacity: .25; transform: scale(.7); }
+  50% { opacity: 1; transform: scale(1.35); }
+}
+@keyframes communityCreatorPresence {
+  0%,100% { transform: translateY(0); }
+  36% { transform: translateY(-.8px); }
+  72% { transform: translateY(0); }
+}
+@keyframes communityCreatorBreath {
+  0%,100% { box-shadow: inset 0 1px 0 rgba(255,237,208,.1), inset 0 -1px 0 rgba(0,0,0,.28), 0 4px 12px rgba(0,0,0,.16); }
+  50% { box-shadow: inset 0 1px 0 rgba(255,237,208,.2), inset 0 -1px 0 rgba(0,0,0,.2), 0 6px 18px rgba(188,130,74,.18); }
+}
+@keyframes communityCreatorSweep {
+  0%,70% { transform: translateX(120%); }
+  88%,100% { transform: translateX(-120%); }
+}
+@keyframes communityCreatorRim {
+  0%,100% { opacity: .24; }
+  52% { opacity: .62; }
+}
+@keyframes communityCreatorMark {
+  0%,100% { transform: translateY(0) rotate(0) scale(1); }
+  42% { transform: translateY(-.7px) rotate(2deg) scale(1.06); }
+  76% { transform: translateY(0) rotate(-1deg) scale(1); }
+}
+@keyframes communityCreatorDraw {
+  0%,20%,100% { stroke-dashoffset: 38; }
+  36%,82% { stroke-dashoffset: 0; }
+}
+@keyframes communityCreatorOrigin {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+@keyframes communityCreatorNodes {
+  0%,100% { transform: scale(1); }
+  42% { transform: scale(.9); }
+  70% { transform: scale(1.08); }
+}
+@keyframes communityCreatorGlint {
+  0%,100% { opacity: .22; transform: scale(.75); }
+  48% { opacity: .9; transform: scale(1.3); }
+}
+
+@media (max-width: 760px) {
+  #root #main .platform-verified-shield__label,
+  #root #main .community-creator-seal__label { font-size: 7px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root #main .platform-verified-shield,
+  #root #main .platform-verified-shield::before,
+  #root #main .platform-verified-shield::after,
+  #root #main .platform-verified-shield__icon,
+  #root #main .platform-verified-shield__outline,
+  #root #main .platform-verified-shield__check,
+  #root #main .platform-verified-shield__glint,
+  #root #main .community-creator-seal,
+  #root #main .community-creator-seal::before,
+  #root #main .community-creator-seal::after,
+  #root #main .community-creator-seal__icon,
+  #root #main .community-creator-seal__branches,
+  #root #main .community-creator-seal__base,
+  #root #main .community-creator-seal__origin,
+  #root #main .community-creator-seal__node,
+  #root #main .community-creator-seal__glint {
+    animation: none !important;
+    transition: none !important;
+  }
+}
