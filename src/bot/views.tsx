@@ -97,6 +97,7 @@ export function BotViews(p: P) {
       if (run !== helloRun.current || controller.signal.aborted || failureReported) return
       failureReported = true
       clearStartTimer()
+      controller.abort()
       helloPlayback.current?.stop()
       helloPlayback.current = null
       p.robot.current?.talk(false)
@@ -112,6 +113,12 @@ export function BotViews(p: P) {
     }
 
     setHello({ state: 'loading', message: 'Preparing your selected voice…' })
+    // Bound the entire request, including buffered retries, not just the playback handoff.
+    helloStartTimer.current = window.setTimeout(() => {
+      if (run === helloRun.current && !failureReported) {
+        reportFailure('Voice playback timed out before audio started. Please retry and check your device audio.')
+      }
+    }, 10_000)
     try {
       const playback = await speakText(
         clean,
@@ -157,15 +164,7 @@ export function BotViews(p: P) {
         return
       }
       helloPlayback.current = playback
-      if (!didStart) {
-        setHello({ state: 'loading', message: 'Waiting for your device audio…' })
-        // Some browsers queue SpeechSynthesis without firing onstart. Fail visibly
-        // rather than leaving the button stuck in a false "playing" state.
-        helloStartTimer.current = window.setTimeout(() => {
-          if (run !== helloRun.current || didStart || failureReported) return
-          reportFailure('Voice playback could not start. Check your device audio and try again.')
-        }, 6500)
-      }
+      if (!didStart) setHello({ state: 'loading', message: 'Waiting for your device audio…' })
     } catch (error) {
       if (run !== helloRun.current || controller.signal.aborted) return
       const message = error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
