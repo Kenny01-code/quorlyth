@@ -216,11 +216,14 @@ function Inner() {
           <nav className="q-promo-steps" aria-label="Promotion steps">
             {workflowSteps.map(step => <a
               key={step.id}
-              className={activeStep === step.id ? 'is-current' : undefined}
+              className={activeStep === step.id ? 'q-promo-step is-current' : 'q-promo-step'}
               href={'#' + step.target}
               aria-current={activeStep === step.id ? 'step' : undefined}
               onClick={() => setActiveStep(step.id)}
-            ><span>{step.number}</span><span><b>{step.title}</b><small>{step.detail}</small></span></a>)}
+            >
+              <span className="q-promo-step-number" aria-hidden="true"><span className="q-promo-step-number__value">{step.number}</span></span>
+              <span className="q-promo-step-copy"><b>{step.title}</b><small>{step.detail}</small></span>
+            </a>)}
           </nav>
           <div id="q-promo-audience" className="q-promo-audience">
             <span className="q-promo-audience-mark"><Icon name="community" size={17} /></span>
