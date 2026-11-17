@@ -1,0 +1,36 @@
+/* Settings request queues: contained scroll with invisible scrollbar. */
+.q-settings-requests-scroll {
+  max-height: min(52vh, 520px);
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1px 5px 1px 0;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+}
+.q-settings-requests-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.q-settings-requests-scroll > .set {
+  margin-right: 2px;
+}
+.q-settings-requests-scroll:focus-visible {
+  outline: 2px solid #ff572b;
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+.q-platform-visitor-requests .q-settings-visitor-requests-scroll {
+  max-height: min(48vh, 460px);
+}
+@media (max-width: 700px) {
+  .q-settings-requests-scroll { max-height: 56vh; padding-right: 2px; }
+  .q-settings-requests-scroll > .set { align-items: stretch !important; }
+  .q-settings-requests-scroll > .set .acts { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .q-settings-requests-scroll { scroll-behavior: auto; }
+}
