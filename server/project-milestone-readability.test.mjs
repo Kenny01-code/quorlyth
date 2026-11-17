@@ -45,17 +45,17 @@ test('project milestone cards and linked workspace tasks use true-black readable
 })
 
 test('assignee lists remain scrollable while their scrollbar chrome stays hidden', async () => {
-  const [milestoneStyles, workspaceStyles, hiddenScrollbars, baseStyles] = await Promise.all([
+  const [milestoneStyles, workspaceStyles, hiddenScrollbars, workspaceShell] = await Promise.all([
     source('src/styles/precision-contrast-polish.css'),
     source('src/styles/standalone-workspaces.css'),
     source('src/styles/hidden-scrollbars.css'),
-    source('src/styles/app.css'),
+    source('src/styles/workspace-shell.css'),
   ])
 
   assert.match(milestoneStyles, /\.ql-assignee-picker__list[\s\S]*?overflow-y: auto !important/)
   assert.match(workspaceStyles, /\.sw-assignee-picker__list[\s\S]*?overflow-y: auto !important/)
-  assert.match(baseStyles, /\.ql-assignee-picker__list\{[^}]*max-height:220px;overflow:auto/)
-  assert.match(baseStyles, /\.sw-assignee-picker__list\{[^}]*max-height:220px;overflow:auto/)
+  assert.match(workspaceShell, /\.ql-assignee-picker__list\{[^}]*max-height:220px;overflow:auto/)
+  assert.match(workspaceStyles, /\.sw-assignee-picker__list\{[^}]*max-height:220px;overflow:auto/)
   assert.match(hiddenScrollbars, /#root \*\s*\{[\s\S]*?scrollbar-width: none/)
   assert.match(hiddenScrollbars, /#root \*::-webkit-scrollbar\s*\{[\s\S]*?display: none/)
 })
