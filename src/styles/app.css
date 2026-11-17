@@ -2167,7 +2167,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 #astl.astl:disabled { cursor: progress; opacity: .88 !important; }
 #astl.astl .astm { display: grid; place-items: center; width: 100%; height: 100%; pointer-events: none; }
 #astl.astl .astm svg { display: block; width: 30px; height: 30px; max-width: 30px; max-height: 30px; }
-#astl.astl .astm .qbot-head-mark { display:block; width:38px!important; height:38px!important; max-width:38px!important; max-height:38px!important; filter:drop-shadow(0 3px 5px rgba(208,106,64,.34)) drop-shadow(0 0 9px rgba(208,106,64,.18)); }
+#astl.astl .astm .q-logo-mark { display:block; width:38px!important; height:38px!important; max-width:38px!important; max-height:38px!important; color:#211A17!important; stroke:currentColor!important; filter:drop-shadow(0 3px 5px rgba(208,106,64,.34)) drop-shadow(0 0 9px rgba(208,106,64,.18)); }
 #astl.astl .astl-hint {
   position: absolute;
   right: calc(100% + 12px);
@@ -2624,7 +2624,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   border-color: rgba(255,225,190,.62) !important;
   box-shadow: 0 0 22px rgba(239,120,75,.35) !important;
 }
-#astl.astl .astm .qbot-head-mark {
+#astl.astl .astm .q-logo-mark {
   filter: drop-shadow(0 3px 5px rgba(105,39,17,.22)) drop-shadow(0 0 10px rgba(255,226,201,.38)) !important;
 }
 
