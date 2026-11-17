@@ -15,6 +15,7 @@ import { BackupRestore } from '../components/BackupRestore'
 import { socialShareUrl } from '../lib/socialShare'
 import { SocialAccountsSettings } from '../components/SocialAccountsSettings'
 import '../styles/social-sharing.css'
+import '../styles/settings-request-scroll.css'
 
 export function Settings() {
   return <Gate><Inner /></Gate>
@@ -120,40 +121,44 @@ function Inner() {
           </>}
           {a.platformAdmin && tab === 2 && <>
             <h3>Platform access requests</h3><p className="dim" style={{ marginTop: 4 }}>Only platform administrators can review requests to enter Quorlyth. Community join requests are managed inside each community.</p>
-            {reqs.length ? reqs.map(r => {
-              const d = a.data.decisions[r.id]; const open = !d || d.at < r.at
-              return (
-                <div key={r.id} className="set" style={{ alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', gap: 12 }}><div><Av id={r.id} size={38} /></div><div><h3 style={{ fontSize: 15 }}>{a.nm(r.id)}</h3><p className="dim">{(r.platforms || []).join(', ')}{r.aud ? ', ' + r.aud : ''}, {when(r.at)}</p>{r.note && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.note}</p>}</div></div>
-                  <div className="acts" style={{ margin: 0 }}>{open ? <><button className="btn p" style={{ padding: '9px 18px' }} onClick={() => a.decide(r.id, 'approved')}>Approve</button><button className="btn" style={{ padding: '9px 18px' }} onClick={() => a.decide(r.id, 'declined')}>Decline</button></> : <span className="chip">{d!.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
-                </div>
-              )
-            }) : <p className="mut" style={{ padding: '20px 0' }}>No requests yet.</p>}
+            <div className="q-settings-requests-scroll" role="region" aria-label="Platform access requests" tabIndex={0}>
+              {reqs.length ? reqs.map(r => {
+                const d = a.data.decisions[r.id]; const open = !d || d.at < r.at
+                return (
+                  <div key={r.id} className="set" style={{ alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: 12 }}><div><Av id={r.id} size={38} /></div><div><h3 style={{ fontSize: 15 }}>{a.nm(r.id)}</h3><p className="dim">{(r.platforms || []).join(', ')}{r.aud ? ', ' + r.aud : ''}, {when(r.at)}</p>{r.note && <p className="mut" style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{r.note}</p>}</div></div>
+                    <div className="acts" style={{ margin: 0 }}>{open ? <><button className="btn p" style={{ padding: '9px 18px' }} onClick={() => a.decide(r.id, 'approved')}>Approve</button><button className="btn" style={{ padding: '9px 18px' }} onClick={() => a.decide(r.id, 'declined')}>Decline</button></> : <span className="chip">{d!.status === 'approved' ? 'Approved' : 'Declined'}</span>}</div>
+                  </div>
+                )
+              }) : <p className="mut" style={{ padding: '20px 0' }}>No requests yet.</p>}
+            </div>
 
             <div className="q-platform-visitor-requests" style={{ marginTop: 30, paddingTop: 22, borderTop: '1px solid var(--line)' }}>
               <h3>Visitor access requests</h3>
               <p className="dim" style={{ margin: '5px 0 12px' }}>Requests submitted from the public Request Access page, before creating an account. Approval is linked to the exact email address provided.</p>
-              {visitorRequestsLoading ? <p className="mut" style={{ padding: '12px 0' }}>Loading visitor requests…</p>
-                : visitorRequestsError ? <p className="q-access-error" role="alert">{visitorRequestsError}</p>
-                : visitorRequests.length ? visitorRequests.map(request => {
-                  const open = request.status === 'pending'
-                  return (
-                    <div key={request.id} className="set" style={{ alignItems: 'flex-start' }}>
-                      <div style={{ minWidth: 0, display: 'grid', gap: 4 }}>
-                        <h3 style={{ fontSize: 15 }}>{request.full_name}</h3>
-                        <p className="dim" style={{ overflowWrap: 'anywhere' }}>{request.email} · {new Date(request.created_at).toLocaleString()}</p>
-                        <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{request.message}</p>
-                        {request.user_id ? <span className="dim" style={{ fontSize: 11 }}>Matched to an existing account</span> : <span className="dim" style={{ fontSize: 11 }}>No account was linked at submission</span>}
+              <div className="q-settings-requests-scroll q-settings-visitor-requests-scroll" role="region" aria-label="Visitor access requests" tabIndex={0}>
+                {visitorRequestsLoading ? <p className="mut" style={{ padding: '12px 0' }}>Loading visitor requests…</p>
+                  : visitorRequestsError ? <p className="q-access-error" role="alert">{visitorRequestsError}</p>
+                  : visitorRequests.length ? visitorRequests.map(request => {
+                    const open = request.status === 'pending'
+                    return (
+                      <div key={request.id} className="set" style={{ alignItems: 'flex-start' }}>
+                        <div style={{ minWidth: 0, display: 'grid', gap: 4 }}>
+                          <h3 style={{ fontSize: 15 }}>{request.full_name}</h3>
+                          <p className="dim" style={{ overflowWrap: 'anywhere' }}>{request.email} · {new Date(request.created_at).toLocaleString()}</p>
+                          <p className="mut" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{request.message}</p>
+                          {request.user_id ? <span className="dim" style={{ fontSize: 11 }}>Matched to an existing account</span> : <span className="dim" style={{ fontSize: 11 }}>No account was linked at submission</span>}
+                        </div>
+                        <div className="acts" style={{ margin: 0 }}>
+                          {open ? <>
+                            <button className="btn p" disabled={visitorRequestBusyId === request.id} style={{ padding: '9px 18px' }} onClick={() => void reviewVisitorRequest(request, 'approved')}>{visitorRequestBusyId === request.id ? 'Saving…' : 'Approve'}</button>
+                            <button className="btn" disabled={visitorRequestBusyId === request.id} style={{ padding: '9px 18px' }} onClick={() => void reviewVisitorRequest(request, 'declined')}>Decline</button>
+                          </> : <span className="chip">{request.status === 'approved' ? 'Approved' : 'Declined'}</span>}
+                        </div>
                       </div>
-                      <div className="acts" style={{ margin: 0 }}>
-                        {open ? <>
-                          <button className="btn p" disabled={visitorRequestBusyId === request.id} style={{ padding: '9px 18px' }} onClick={() => void reviewVisitorRequest(request, 'approved')}>{visitorRequestBusyId === request.id ? 'Saving…' : 'Approve'}</button>
-                          <button className="btn" disabled={visitorRequestBusyId === request.id} style={{ padding: '9px 18px' }} onClick={() => void reviewVisitorRequest(request, 'declined')}>Decline</button>
-                        </> : <span className="chip">{request.status === 'approved' ? 'Approved' : 'Declined'}</span>}
-                      </div>
-                    </div>
-                  )
-                }) : <p className="mut" style={{ padding: '12px 0' }}>No visitor requests yet.</p>}
+                    )
+                  }) : <p className="mut" style={{ padding: '12px 0' }}>No visitor requests yet.</p>}
+              </div>
             </div>
           </>}
           {a.platformAdmin && tab === 3 && <>
