@@ -330,3 +330,59 @@
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Milestone assignee quick actions appear in both the create/edit composer and
+   each milestone's reassign panel. Keep the bulk-select and clear controls ink-black. */
+#root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 37px;
+  padding: 8px 12px;
+  border: 1px solid rgba(28, 21, 17, .22) !important;
+  border-radius: 10px;
+  background: #fffdf8 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-size: 12px !important;
+  font-weight: 680 !important;
+  line-height: 1.35;
+  opacity: 1 !important;
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 3px 10px -8px rgba(0, 0, 0, .45);
+}
+#root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action :where(*) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+#root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action:hover:not(:disabled),
+#root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action:focus-visible {
+  border-color: rgba(166, 79, 50, .62) !important;
+  background: #f1e3d2 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+#root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action:focus-visible {
+  outline: 2px solid #a64f32 !important;
+  outline-offset: 2px;
+}
+#root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action:disabled {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: #eee8df !important;
+  cursor: wait;
+}
+@media (max-width: 560px) {
+  #root #main .ql-milestone-board .ql-assignee-picker__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+  #root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+}
