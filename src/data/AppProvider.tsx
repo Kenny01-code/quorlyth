@@ -696,6 +696,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       let ideaId = ''
       let ideaCreated = false
+      let uploadingMediaFile: string | null = null
       const uploaded: IdeaAttachment[] = []
       try {
         ideaId = slug()
@@ -703,6 +704,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await st.create('ideas/' + ideaId, { title: i.title.trim(), body: i.body || '', cid: i.cid, authorId: me.id, tags: i.tags || [], at })
         ideaCreated = true
         for (const file of mediaFiles) {
+          uploadingMediaFile = file.name
           const path = await backend!.uploadIdeaFile!(i.cid, ideaId, file)
           uploaded.push({
             path,
@@ -711,6 +713,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             size: file.size,
             uploadedAt: Date.now(),
           })
+          uploadingMediaFile = null
         }
         if (uploaded.length) await st.update('ideas/' + ideaId, { attachments: uploaded })
         emitWorkflowEvent('idea.created', { id: ideaId, title: i.title.trim(), body: i.body || '', communityId: i.cid, at })
@@ -742,7 +745,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
         console.error('Quorlyth idea submission failed:', e)
-        const error = userFacingMutationError(e, 'share this idea')
+        const baseError = userFacingMutationError(e, uploadingMediaFile ? 'upload idea media' : 'share this idea')
+        const error = uploadingMediaFile
+          ? 'The image or video "' + uploadingMediaFile + '" could not be uploaded, so your idea was not published. ' + baseError
+          : baseError
         const cleanupNote = cleanupFailures.length
           ? ' Some incomplete upload data could not be removed; retry after checking your connection.'
           : ''
