@@ -286,11 +286,21 @@ function CommunityApplicationPanel({ a, communities, selectedId, selected, messa
 
   if (selectedIsManager) {
     return (
-      <div className="q-access-centered-status">
-        <p className="q-access-eyebrow">COMMUNITY MANAGEMENT</p>
-        <h2>You manage this community.</h2>
+      <div className="q-access-centered-status q-access-manager-status">
+        <div className="q-access-manager-topline">
+          <p className="q-access-eyebrow">COMMUNITY MANAGEMENT</p>
+          <span>OWNER ACCESS / 01</span>
+        </div>
+        <div className="q-access-manager-heading">
+          <h2>You manage this community<span>.</span></h2>
+          <div className="q-access-manager-stamp" aria-hidden="true">
+            <b>Q</b>
+            <small>COMMUNITY<br />OWNER</small>
+          </div>
+        </div>
         <p>Applications for this community are reviewed in your existing Join requests queue.</p>
-        <button type="button" className="q-access-primary" onClick={onManage}>Open join requests</button>
+        <div className="q-access-manager-rail"><span>REQUEST REVIEW</span><span>COMMUNITY OWNER</span><span>01 / ACCESS</span></div>
+        <button type="button" className="q-access-primary" onClick={onManage}><span>Open join requests</span><span className="q-access-manager-arrow" aria-hidden="true">↗</span></button>
       </div>
     )
   }
