@@ -6,7 +6,6 @@ import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
 import { Landing } from './screens/Landing'
 import { Logo } from './lib/Logo'
-import { QuorlythBotHead } from './bot/QuorlythBotHead'
 const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
 const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
@@ -492,7 +491,7 @@ export default function App() {
                   setBotLauncherHidden(true)
                 }}
               >
-                <span className="astm"><QuorlythBotHead size={38} /></span>
+                <span className="astm"><Logo size={38} /></span>
                 <span className="astl-hint" aria-hidden="true">Ask Quorlyth</span>
               </button>
               {botLoading && <span className="qbot-launcher-status" role="status">Opening QuorlythBot…</span>}
