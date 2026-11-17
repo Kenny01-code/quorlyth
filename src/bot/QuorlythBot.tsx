@@ -1,12 +1,12 @@
 import '../styles/bot.css'
 import '../styles/bot-room-theme.css'
 import '../styles/bot-liquid-glass.css'
-import '../styles/bot-editorial-glass.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
+import { QuorlythBotHead } from './QuorlythBotHead'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
@@ -16,7 +16,7 @@ import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTr
 import { cn, slug, when } from '../lib/util'
 import { askJson, prefetchElevenLabsSpeech, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
-import type { RobotApi } from './Robot'
+import { Robot, RobotApi } from './Robot'
 import { Orb } from './Orb'
 import { ChatMenu } from './ChatMenu'
 import { BotViews } from './views'
@@ -299,6 +299,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const role = !a.me ? 'visitor' : a.owner ? 'owner' : 'member'
   const communityOwner = !!a.me && a.data.communities.some(c => a.ownsCommunity(c.id))
   const robot = useRef<RobotApi | null>(null)
+  const robotReadyRef = useRef(false)
+  const pendingRobotPoseRef = useRef<'welcome' | 'wave' | null>(null)
   const log = useRef<HTMLDivElement>(null)
   const ctl = useRef<AbortController | null>(null)
   const rt = useRef<{ stop: () => void; respond?: () => void; interrupt?: () => void } | null>(null)
@@ -480,11 +482,23 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     })
     if (greeting.kind === 'quiet') {
       setCaption('')
+      pendingRobotPoseRef.current = 'wave'
+      if (robotReadyRef.current) {
+        pendingRobotPoseRef.current = null
+        robot.current?.wave()
+      }
       return
     }
 
     setCaption(greeting.text)
-    // The welcome stays voice-first and editorial: no character animation or robot stage.
+    const openingPose = greeting.kind === 'first' ? 'welcome' : 'wave'
+    pendingRobotPoseRef.current = openingPose
+    if (robotReadyRef.current) {
+      pendingRobotPoseRef.current = null
+      if (openingPose === 'welcome') robot.current?.welcome()
+      else robot.current?.wave()
+    }
+    // Speak the greeting automatically when the chat frame opens; the preview button is only for voice testing.
     say(greeting.text)
     window.setTimeout(() => setCaption(''), 6500)
   }
@@ -3937,7 +3951,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             setLauncherHidden(true)
           }}
         >
-          <span className="astm"><Logo size={38} /></span>{greet && <span className="astb">{greet}</span>}
+          <span className="astm"><QuorlythBotHead size={38} /></span>{greet && <span className="astb">{greet}</span>}
         </button>
       )}
       {open && (
@@ -4007,19 +4021,32 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 <button className="bib" aria-label="Sidebar" onClick={e => { e.stopPropagation(); setSide(!side) }}><Icon name="menu" size={18} /></button>
                 <div className="bht"><b className="bwm big">{wm('QuorlythBot')}</b><span className="bst"><i />{live ? ({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live' : status}</span></div>
                 <div className="bha">
+                  <button className="bib" aria-label="Robot size" title="Robot size" onClick={() => setStage(stage === 'std' ? 'big' : stage === 'big' ? 'off' : 'std')}><Icon name="stage" size={18} /></button>
                   <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>
                   <button className="bib" aria-label="Minimize QuorlythBot" title="Minimize to launcher" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
                   <button className="bib" aria-label="Resize" title="Expand" onClick={() => { const next = mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact'; setSize(null); setPosition(null); setMode(next) }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
                   <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); stopVoice(); setOpen(false) }}><Icon name="decline" size={18} /></button>
                 </div>
               </header>
-              {(view === 'voice' || !!live) && (
-                <div className="bstage studio qbot-voice-stage" aria-label="QuorlythBot live voice activity">
-                  <Orb ref={robot} theme={theme} calm={bs.calm} drag defer active={!minimized && (view === 'voice' || !!live)} />
-                  <div className={cn('ast-cap', caption && 'on')}>{caption}</div>
-                  <div className="bnm">LIVE VOICE / QUORLYTH</div>
-                </div>
-              )}
+              <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
+                {view === 'voice' || !!live
+                  ? <Orb ref={robot} theme={theme} calm={bs.calm} drag defer active={!minimized && (view === 'voice' || !!live)} />
+                  : <Robot
+                      ref={robot}
+                      theme={theme}
+                      calm={bs.calm}
+                      drag
+                      active={!minimized && view === 'chat' && bs.robot && stage !== 'off'}
+                      onReady={() => {
+                        robotReadyRef.current = true
+                        const pose = pendingRobotPoseRef.current
+                        pendingRobotPoseRef.current = null
+                        if (pose === 'welcome') robot.current?.welcome()
+                        else if (pose === 'wave') robot.current?.wave()
+                      }}
+                    />}
+                <div className={cn('ast-cap', caption && 'on')}>{caption}</div><div className="bnm">QuorlythBot</div>
+              </div>
               {live && (
                 <div className="blive" aria-live="polite">
                   <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
@@ -4059,27 +4086,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               >
                 {view === 'chat' ? (
                   !msgs.length ? (
-                    <div className="bhero qbot-editorial-hero">
-                      <div className="qbot-editorial-meta">
-                        <span>QUORLYTH / INTELLIGENCE STUDIO</span>
-                        <span className="qbot-editorial-live"><i /> LIVE / READY</span>
-                      </div>
-                      <div className="qbot-editorial-main">
-                        <div className="qbot-editorial-copy">
-                          <p className="qbot-editorial-role">{role === 'owner' ? 'PLATFORM OWNER' : communityOwner ? 'COMMUNITY OWNER' : role === 'member' ? 'COMMUNITY MEMBER' : 'GUEST ACCESS'}</p>
-                          <h3>{project ? project.name : <>Ideas into <em>momentum.</em></>}</h3>
-                          <p className="qbot-editorial-subtitle">Ask your space anything. Turn community signals into clear next steps.</p>
-                        </div>
-                        <div className="qbot-editorial-art" aria-hidden="true">
-                          <span className="qbot-editorial-art-index">Q / 01</span>
-                          <div className="qbot-editorial-orbit"><i /><i /><i /></div>
-                          <span className="qbot-editorial-art-number">01</span>
-                          <span className="qbot-editorial-art-caption">COMMUNITY<br />INTELLIGENCE</span>
-                        </div>
-                      </div>
-                      <div className="qbot-editorial-tags"><span>01 / ASK</span><span>02 / ORGANIZE</span><span>03 / CREATE</span></div>
-                      <div className="bgrid sm qbot-editorial-grid">{SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map((s, index) => <button key={s.id} className="bsk" onClick={() => skill(s.id)}><span className="bski"><Icon name={s.icon} size={19} /></span><b>{s.n}</b><span className="qbot-editorial-card-index">0{index + 1}</span></button>)}</div>
-                    </div>
+                    <div className="bhero"><p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p><h3>{project ? project.name : 'How can I help?'}</h3><p className="mut">Ask anything about your space, or pick a skill.</p>
+                      <div className="bgrid sm">{SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map(s => <button key={s.id} className="bsk" onClick={() => skill(s.id)}><span className="bski"><Icon name={s.icon} size={20} /></span><b>{s.n}</b></button>)}</div></div>
                   ) : (
                     <div className="ast-log" aria-live="polite">
                       {msgs.map((m, i) => {
