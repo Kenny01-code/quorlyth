@@ -672,7 +672,7 @@ test('Automation starter cards render every label and trigger in high-contrast e
   assert.match(styles, /@keyframes wa-template-surface-sheen/)
   assert.match(styles, /animation: wa-template-surface-drift 26s/)
   assert.match(styles, /animation: wa-template-surface-sheen 18s/)
-  assert.match(styles, /prefers-reduced-motion:[\\s\\S]*?animation: none !important/)
+  assert.match(styles, /prefers-reduced-motion:[\s\S]*?animation: none !important/)
 })
 
 test('Settings access-request queues scroll independently with no visible scrollbar', async () => {
