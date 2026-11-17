@@ -462,3 +462,185 @@
     white-space: normal;
   }
 }
+
+
+/* Milestone cards: high-contrast editorial paper with true-black writeups. */
+#root .ql-milestone-board .ql-milestone-card__body {
+  color: #080807 !important;
+  background: linear-gradient(145deg, #F8F3EA 0%, #EFE5D6 100%) !important;
+  border-color: rgba(25, 18, 12, .18) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92), 0 12px 28px rgba(0,0,0,.12) !important;
+}
+#root .ql-milestone-board .ql-milestone-card:hover .ql-milestone-card__body {
+  background: linear-gradient(145deg, #FCF8F0 0%, #F2E8DA 100%) !important;
+  border-color: rgba(25, 18, 12, .28) !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-eyebrow,
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-card__title h4,
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-description,
+#root .ql-milestone-board .ql-milestone-card__body .ql-muted,
+#root .ql-milestone-board .ql-milestone-card__body .ql-status-chip,
+#root .ql-milestone-board .ql-milestone-card__body .ql-priority-chip,
+#root .ql-milestone-board .ql-milestone-card__body .ql-meta-chip,
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-chip,
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-reassign,
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-reassign > summary,
+#root .ql-milestone-board .ql-milestone-card__body .ql-acceptance strong,
+#root .ql-milestone-board .ql-milestone-card__body .ql-acceptance p,
+#root .ql-milestone-board .ql-milestone-card__body .ql-blocker-note strong,
+#root .ql-milestone-board .ql-milestone-card__body .ql-blocker-note p {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  opacity: 1 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-card__title h4 {
+  font-weight: 700 !important;
+  letter-spacing: -.025em !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-description {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 1.7 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-status-chip,
+#root .ql-milestone-board .ql-milestone-card__body .ql-priority-chip,
+#root .ql-milestone-board .ql-milestone-card__body .ql-meta-chip,
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-chip {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  background: #FFFCF6 !important;
+  border-color: rgba(25, 18, 12, .2) !important;
+  font-weight: 650 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-status-chip.status-in_progress {
+  background: #F9DEC9 !important;
+  border-color: #C65A31 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-status-chip.status-done {
+  background: #E2EBDD !important;
+  border-color: #819778 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-meta-chip.is-alert {
+  background: #FBE3D8 !important;
+  border-color: #B84D27 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-reassign > summary {
+  display: inline-flex;
+  align-items: center;
+  background: #FFFCF6 !important;
+  border: 1px solid rgba(25,18,12,.28) !important;
+  border-radius: 9px;
+  padding: 8px 10px;
+  font-weight: 700 !important;
+  cursor: pointer;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-reassign > summary:hover,
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-reassign > summary:focus-visible {
+  background: #F3E6D7 !important;
+  outline: 2px solid rgba(184,77,39,.28);
+  outline-offset: 2px;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-picker__list {
+  max-height: 220px;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  background: #F0E7DA !important;
+  border-color: rgba(28,21,17,.2) !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__list::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-option,
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-option > span,
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-option > span small {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  opacity: 1 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-option {
+  background: #FFFCF6 !important;
+  border-color: rgba(28,21,17,.18) !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-option:has(input:checked) {
+  background: #FBE5D7 !important;
+  border-color: #B84D27 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-assignee-option input {
+  accent-color: #A9431F !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-acceptance {
+  background: #FFFCF6 !important;
+  border-color: rgba(25,18,12,.15) !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-acceptance > .quorlyth-glyph {
+  color: #171411 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-blocker-note {
+  background: #FBE9DF !important;
+  border-color: rgba(151,57,28,.28) !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-blocker-note > .quorlyth-glyph {
+  color: #8C351C !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-actions {
+  border-top-color: rgba(25,18,12,.16) !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-actions .ql-quiet-action {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  background: #FFFCF6 !important;
+  border: 1px solid rgba(25,18,12,.24) !important;
+  font-weight: 700 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-actions .ql-quiet-action:hover:not(:disabled),
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-actions .ql-quiet-action:focus-visible {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  background: #F1E3D2 !important;
+}
+#root .ql-milestone-board .ql-milestone-card__body .ql-milestone-actions .ql-danger-action {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  background: #FBE9E2 !important;
+  border-color: rgba(151,57,28,.3) !important;
+}
+#root .ql-milestone-board .ql-workspace-evidence-notice {
+  background: linear-gradient(135deg, #F4EBDD 0%, #E9DECE 100%) !important;
+  border-color: rgba(25,18,12,.17) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.82);
+}
+#root .ql-milestone-board .ql-workspace-evidence-notice__mark {
+  color: #080807 !important;
+  background: rgba(255,255,255,.62) !important;
+  border-color: rgba(25,18,12,.15) !important;
+}
+#root .ql-milestone-board .ql-workspace-evidence-notice__mark .quorlyth-glyph,
+#root .ql-milestone-board .ql-workspace-evidence-notice__copy strong,
+#root .ql-milestone-board .ql-workspace-evidence-notice__copy p,
+#root .ql-milestone-board .ql-workspace-evidence-notice__hint {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  opacity: 1 !important;
+}
+#root .ql-milestone-board .ql-workspace-evidence-notice__copy strong {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+#root .ql-milestone-board .ql-workspace-evidence-notice__copy p {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.7 !important;
+}
+#root .ql-milestone-board .ql-workspace-evidence-notice__hint {
+  font-weight: 600 !important;
+}
+#root .ql-milestone-board .ql-workspace-evidence-notice > .btn {
+  background: #171411 !important;
+  border: 1px solid #171411 !important;
+  color: #FFFCF6 !important;
+  -webkit-text-fill-color: #FFFCF6 !important;
+}
