@@ -18,23 +18,46 @@
   content: "";
   position: absolute;
   z-index: 0;
-  inset: -32%;
+  inset: 0;
   border-radius: inherit;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 36% 42% at 12% 18%, rgba(217,255,56,.24), transparent 78%),
-    radial-gradient(ellipse 34% 42% at 88% 78%, rgba(199,184,235,.22), transparent 78%),
-    radial-gradient(ellipse 34% 38% at 58% 4%, rgba(255,87,43,.12), transparent 78%);
-  background-repeat: no-repeat;
-  background-size: 54% 58%, 56% 62%, 48% 54%;
-  background-position: 0% 0%, 100% 100%, 50% 0%;
-  filter: blur(25px);
-  opacity: .68;
-  transform: translate3d(-1%, -1%, 0) scale(1.04);
-  animation: wa-template-atmosphere 19s ease-in-out infinite alternate;
-  will-change: transform, background-position;
+    radial-gradient(ellipse 48% 64% at 14% 18%, rgba(217,255,56,.34), transparent 76%),
+    radial-gradient(ellipse 54% 68% at 88% 82%, rgba(199,184,235,.32), transparent 77%),
+    radial-gradient(ellipse 44% 56% at 68% 8%, rgba(255,87,43,.2), transparent 76%),
+    linear-gradient(118deg,
+      rgba(255,255,255,.68) 0%,
+      rgba(245,242,232,.48) 18%,
+      rgba(217,255,56,.15) 37%,
+      rgba(199,184,235,.2) 59%,
+      rgba(255,87,43,.12) 78%,
+      rgba(255,255,255,.62) 100%);
+  background-size: 170% 170%, 180% 180%, 160% 160%, 280% 280%;
+  background-position: 0% 12%, 100% 88%, 75% 0%, 0% 50%;
+  opacity: .92;
+  transform: translate3d(0,0,0) scale(1.015);
+  animation: wa-template-surface-drift 26s cubic-bezier(.45,0,.25,1) infinite alternate;
+  will-change: background-position, transform;
 }
-.wa-screen .wa-template-section > * {
+.wa-screen .wa-template-section::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -35% -28%;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(112deg,
+    transparent 34%,
+    rgba(255,255,255,0) 42%,
+    rgba(255,255,255,.34) 49%,
+    rgba(255,255,255,.12) 53%,
+    rgba(255,255,255,0) 61%,
+    transparent 68%);
+  transform: translate3d(-34%,0,0) rotate(-5deg);
+  opacity: .62;
+  animation: wa-template-surface-sheen 18s cubic-bezier(.42,0,.28,1) infinite;
+  will-change: transform, opacity;
+}.wa-screen .wa-template-section > * {
   position: relative;
   z-index: 1;
 }
@@ -169,21 +192,28 @@
   .wa-screen .wa-template-section .wa-template-card h4 { font-size: 16px !important; }
   .wa-screen .wa-template-section .wa-template-card > p { font-size: 11px !important; }
 }
-@keyframes wa-template-atmosphere {
+@keyframes wa-template-surface-drift {
   0% {
-    background-position: 0% 0%, 100% 100%, 50% 0%;
-    transform: translate3d(-1.2%, -1%, 0) rotate(-.6deg) scale(1.04);
+    background-position: 0% 12%, 100% 88%, 75% 0%, 0% 50%;
+    transform: translate3d(0,0,0) scale(1.015);
   }
   50% {
-    background-position: 72% 62%, 24% 34%, 88% 42%;
-    transform: translate3d(1.1%, 1.3%, 0) rotate(.4deg) scale(1.08);
+    background-position: 74% 76%, 18% 24%, 24% 88%, 58% 44%;
+    transform: translate3d(0,-.4%,0) scale(1.035);
   }
   100% {
-    background-position: 100% 24%, 0% 92%, 10% 78%;
-    transform: translate3d(-.4%, .5%, 0) rotate(1deg) scale(1.05);
+    background-position: 100% 28%, 0% 72%, 100% 16%, 100% 52%;
+    transform: translate3d(0,.35%,0) scale(1.02);
   }
 }
+@keyframes wa-template-surface-sheen {
+  0%, 16% { transform: translate3d(-42%,0,0) rotate(-5deg); opacity: 0; }
+  28% { opacity: .54; }
+  62% { opacity: .42; }
+  84%, 100% { transform: translate3d(42%,0,0) rotate(-5deg); opacity: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .wa-screen .wa-template-section::before { animation: none !important; }
+  .wa-screen .wa-template-section::before,
+  .wa-screen .wa-template-section::after { animation: none !important; transform: none !important; }
   .wa-screen .wa-template-section .wa-template-card { transition-duration: .01ms !important; }
 }
