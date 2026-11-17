@@ -1,5 +1,6 @@
 import '../styles/bot.css'
 import '../styles/bot-room-theme.css'
+import '../styles/bot-liquid-glass.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -4067,7 +4068,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 </div>
               )}
               <div
-                className="qbot-conversation"
+                className={cn('qbot-conversation', view === 'chat' && 'qbot-chat-surface')}
                 ref={log}
                 onWheel={event => {
                   // The transcript has one scroll owner; handle mouse wheels directly
