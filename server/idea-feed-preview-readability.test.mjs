@@ -274,3 +274,23 @@ test('milestone creation renders black bulk actions and black teammate names dir
   assert.ok(styles.includes('#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option > span'))
   assert.ok(styles.includes('#root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action'))
 })
+
+
+test('idea discussion author names use clear black ink on a light, keyboard-accessible name surface', async () => {
+  const [page, styles, main] = await Promise.all([
+    source('src/screens/IdeaPage.tsx'),
+    source('src/styles/idea-discussion-author.css'),
+    source('src/main.tsx'),
+  ])
+
+  assert.ok(page.includes('className="idea-discussion-comment"'))
+  assert.ok(page.includes('className="lk idea-discussion-author"'))
+  assert.ok(page.includes('{a.nm(comment.authorId)}'), 'Discussion author names must remain dynamically sourced for every member')
+  assert.ok(styles.includes('#root .idea-discussion-comment .idea-discussion-author'))
+  assert.ok(styles.includes('color: #000000 !important'))
+  assert.ok(styles.includes('-webkit-text-fill-color: #000000 !important'))
+  assert.ok(styles.includes('background: linear-gradient(145deg, #fffefa 0%, #f2e8db 100%) !important'))
+  assert.ok(styles.includes(':focus-visible'))
+  assert.ok(main.includes("import './styles/idea-discussion-author.css'"))
+  assert.ok(main.indexOf("import './styles/idea-discussion-author.css'") > main.indexOf("import './styles/precision-contrast-polish.css'"))
+})
