@@ -1,0 +1,147 @@
+/* Editorial starter cards for the Automation studio.
+   Paper surfaces + sharp black type make all template labels, descriptions and triggers readable. */
+.wa-screen .wa-template-section {
+  position: relative;
+  margin-top: 30px;
+  padding: clamp(16px, 2.2vw, 26px);
+  overflow: hidden;
+  border: 1px solid rgba(17,17,15,.14);
+  border-radius: 21px;
+  background:
+    radial-gradient(ellipse 48% 38% at 100% 0%, rgba(217,255,56,.12), transparent 76%),
+    linear-gradient(145deg, rgba(255,255,255,.9), rgba(242,239,230,.88));
+  color: #11110f !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.98), 0 24px 58px -45px rgba(0,0,0,.4);
+}
+.wa-screen .wa-template-section .wa-section-title {
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 17px;
+}
+.wa-screen .wa-template-section .wa-eyebrow,
+.wa-screen .wa-template-section .wa-section-title .wa-eyebrow {
+  color: #3a3932 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px !important;
+  font-weight: 850 !important;
+  letter-spacing: .18em;
+}
+.wa-screen .wa-template-section .wa-section-title h3 {
+  color: #080807 !important;
+  font-size: clamp(22px, 2.5vw, 30px) !important;
+  font-weight: 900 !important;
+  letter-spacing: -.055em;
+  line-height: .98;
+}
+.wa-screen .wa-template-section .wa-section-title > div > p:last-child {
+  margin-top: 8px;
+  color: #393830 !important;
+  font-size: 12px !important;
+  font-weight: 540;
+  line-height: 1.65;
+}
+.wa-screen .wa-template-section .wa-template-count {
+  border: 1px solid rgba(17,17,15,.2);
+  border-radius: 999px;
+  background: #11110f;
+  color: #f8f6ed !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+.wa-screen .wa-template-section .wa-templates {
+  gap: 11px;
+}
+.wa-screen .wa-template-section .wa-template-card {
+  position: relative;
+  min-height: 208px;
+  padding: 16px !important;
+  overflow: hidden;
+  border: 1px solid rgba(17,17,15,.22) !important;
+  border-radius: 14px !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(244,241,232,.91)) !important;
+  color: #11110f !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.98), 0 15px 32px -27px rgba(17,17,15,.5) !important;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease !important;
+}
+.wa-screen .wa-template-section .wa-template-card:nth-child(3n + 2) {
+  background: linear-gradient(145deg, #e7ff55, #d9ff38 74%) !important;
+}
+.wa-screen .wa-template-section .wa-template-card:nth-child(3n + 3) {
+  background: linear-gradient(145deg, #d5c8f2, #c7b8eb 76%) !important;
+}
+.wa-screen .wa-template-section .wa-template-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(17,17,15,.52) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.82), 0 21px 36px -27px rgba(17,17,15,.54) !important;
+}
+.wa-screen .wa-template-section .wa-template-top {
+  margin-bottom: 19px;
+}
+.wa-screen .wa-template-section .wa-template-top > span:last-child {
+  color: #11110f !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px !important;
+  font-weight: 850 !important;
+  letter-spacing: .15em;
+}
+.wa-screen .wa-template-section .wa-template-icon {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(17,17,15,.2) !important;
+  border-radius: 10px !important;
+  background: rgba(255,255,255,.56) !important;
+  color: #ff572b !important;
+}
+.wa-screen .wa-template-section .wa-template-card h4 {
+  color: #080807 !important;
+  font-size: 17px !important;
+  font-weight: 880 !important;
+  letter-spacing: -.045em;
+  line-height: 1.08;
+}
+.wa-screen .wa-template-section .wa-template-card > p {
+  min-height: 49px;
+  margin: 8px 0 13px !important;
+  color: #24231f !important;
+  font-size: 12px !important;
+  font-weight: 560 !important;
+  line-height: 1.65 !important;
+}
+.wa-screen .wa-template-section .wa-template-trigger {
+  color: #171713 !important;
+  font-size: 10px !important;
+  font-weight: 760 !important;
+  line-height: 1.4;
+}
+.wa-screen .wa-template-section .wa-template-trigger svg {
+  color: #ff572b !important;
+}
+.wa-screen .wa-template-section .wa-template-card > button {
+  min-height: 37px;
+  margin-top: auto;
+  padding: 10px 10px 0 !important;
+  border-top: 1px solid rgba(17,17,15,.2) !important;
+  color: #11110f !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+.wa-screen .wa-template-section .wa-template-card > button:hover {
+  color: #a73519 !important;
+}
+.wa-screen .wa-template-section .wa-template-card > button svg {
+  color: #ff572b !important;
+}
+.wa-screen .wa-template-section :is(.wa-template-card, .wa-template-card *) {
+  -webkit-text-fill-color: currentColor;
+}
+@media (max-width: 760px) {
+  .wa-screen .wa-template-section { padding: 15px; border-radius: 18px; }
+  .wa-screen .wa-template-section .wa-template-card { min-height: 190px; padding: 14px !important; }
+  .wa-screen .wa-template-section .wa-template-card h4 { font-size: 16px !important; }
+  .wa-screen .wa-template-section .wa-template-card > p { font-size: 11px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wa-screen .wa-template-section .wa-template-card { transition-duration: .01ms !important; }
+}
