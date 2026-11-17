@@ -235,7 +235,7 @@
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in::before {
   content: "";
   position: absolute;
-  z-index: -1;
+  z-index: 0;
   inset: 1px;
   border-radius: inherit;
   pointer-events: none;
