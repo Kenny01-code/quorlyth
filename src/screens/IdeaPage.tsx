@@ -170,10 +170,10 @@ function Inner() {
   const topLevelComments = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
   const renderComment = (comment: (typeof comments)[number], nested = false): import('react').ReactNode => {
     const replies = comments.filter(item => item.parentId === comment.id)
-    return <div key={comment.id} style={{ marginLeft: nested ? 18 : 0, marginTop: 12, paddingLeft: nested ? 12 : 0, borderLeft: nested ? '1px solid var(--line, rgba(255,255,255,.12))' : undefined }}>
+    return <div key={comment.id} className="idea-discussion-comment" style={{ marginLeft: nested ? 18 : 0, marginTop: 12, paddingLeft: nested ? 12 : 0, borderLeft: nested ? '1px solid var(--line, rgba(255,255,255,.12))' : undefined }}>
       <div className="msg" style={{ alignItems: 'flex-start' }}><Av id={comment.authorId} size={30} />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <h3 style={{ fontSize: 15 }}><button className="lk" onClick={() => nav('/me/' + comment.authorId)}>{a.nm(comment.authorId)}</button> <span className="dim">{when(comment.at)}</span></h3>
+          <h3 style={{ fontSize: 15 }}><button className="lk idea-discussion-author" onClick={() => nav('/me/' + comment.authorId)}>{a.nm(comment.authorId)}</button> <span className="dim">{when(comment.at)}</span></h3>
           <p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{comment.text}</p>
           {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 12, marginTop: 5 }}>Tagged: {comment.mentionedUserIds.map(uid => a.nm(uid)).join(', ')}</p> : null}
           <div className="acts" style={{ marginTop: 7, gap: 8 }}>
