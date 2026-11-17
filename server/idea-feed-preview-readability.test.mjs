@@ -240,6 +240,12 @@ test('milestone bulk assignee actions use black text in create, edit, and per-mi
   assert.ok(board.includes('onClick={() => void changeAssignees(milestone, people.map(person => person.id))}'))
   assert.ok(board.includes('onClick={() => void changeAssignees(milestone, [])}'))
   assert.ok(board.includes('className="ql-assignee-picker__actions"'))
+  assert.ok(board.includes("WebkitTextFillColor: '#000000'"))
+  assert.ok(board.includes("background: '#fffdf8'"))
+  assert.ok(board.includes("background: '#f0e7da'"))
+  assert.ok(board.includes("background: selected ? '#fbe5d7' : '#fffdf8'"))
+  assert.ok(board.includes("{person.name}{person.id === a.me?.id ? ' (you)' : ''}"))
+  assert.ok(board.includes('className="ql-quiet-action ql-milestone-assignee-action"'))
 
   assert.ok(styles.includes('#root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action'))
   assert.ok(styles.includes('color: #000000 !important'))
@@ -249,4 +255,21 @@ test('milestone bulk assignee actions use black text in create, edit, and per-mi
   assert.ok(styles.includes('.ql-assignee-picker__actions .ql-quiet-action:disabled'))
   assert.ok(styles.includes('@media (max-width: 560px)'))
   assert.ok(main.indexOf("import './styles/precision-contrast-polish.css'") > main.indexOf("import './styles/contrast-hardening.css'"))
+})
+
+test('milestone creation renders black bulk actions and black teammate names directly in the form', async () => {
+  const [board, styles] = await Promise.all([
+    source('src/components/MilestoneBoard.tsx'),
+    source('src/styles/precision-contrast-polish.css'),
+  ])
+
+  for (const text of ['Select everyone ({people.length})', 'Clear selection', '(you)']) {
+    assert.ok(board.includes(text), 'Missing milestone assignee text: ' + text)
+  }
+  assert.ok(board.includes("style={{ color: '#000000', WebkitTextFillColor: '#000000'"))
+  assert.ok(board.includes("background: '#fffdf8'"))
+  assert.ok(board.includes("background: '#f0e7da'"))
+  assert.ok(board.includes("color: '#000000', WebkitTextFillColor: '#000000', fontWeight: 700"))
+  assert.ok(board.includes("background: selected ? '#fbe5d7' : '#fffdf8'"))
+  assert.ok(styles.includes('.ql-milestone-assignee-action'))
 })
