@@ -168,7 +168,7 @@ test('heavy feature styles are split from the initial global stylesheet', async 
   assert.match(automations, /styles\/automations\.css/)
 })
 
-test('QuorlythBot keeps the editorial chat robot-free and the optional 3D renderer isolated', async () => {
+test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the bot chunk', async () => {
   const [config, themes, robot3d, robot, bot] = await Promise.all([
     readSource('src/bot/config.ts'),
     readSource('src/bot/robot-themes.ts'),
@@ -181,10 +181,7 @@ test('QuorlythBot keeps the editorial chat robot-free and the optional 3D render
   assert.match(themes, /export const THEMES/)
   assert.match(robot3d, /from ["']three["']/)
   assert.match(robot, /import\('\.\/robot3d'\)/)
-  assert.match(bot, /import type \{ RobotApi \} from '\.\/Robot'/)
-  assert.doesNotMatch(bot, /<Robot\s/)
-  assert.doesNotMatch(bot, /QuorlythBotHead/)
-  assert.match(bot, /<Orb\s+ref=\{robot\}\s+theme=\{theme\}/)
+  assert.match(bot, /<Robot\s+ref=\{robot\}\s+theme=\{theme\}/)
 })
 
 test('community manager access keeps its editorial black-ink glass treatment', async () => {
