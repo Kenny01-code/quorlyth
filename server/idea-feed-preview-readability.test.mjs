@@ -226,3 +226,27 @@ test('Promotion studio live post placeholder stays black on its light preview su
   assert.ok(styles.includes('font-size: 14.5px !important'))
   assert.ok(styles.includes('font-weight: 500 !important'))
 })
+
+
+test('milestone bulk assignee actions use black text in create, edit, and per-milestone reassign controls', async () => {
+  const [board, styles, main] = await Promise.all([
+    source('src/components/MilestoneBoard.tsx'),
+    source('src/styles/precision-contrast-polish.css'),
+    source('src/main.tsx'),
+  ])
+
+  assert.ok(board.includes('Select everyone ({people.length})'))
+  assert.ok(board.includes('Clear selection'))
+  assert.ok(board.includes('onClick={() => void changeAssignees(milestone, people.map(person => person.id))}'))
+  assert.ok(board.includes('onClick={() => void changeAssignees(milestone, [])}'))
+  assert.ok(board.includes('className="ql-assignee-picker__actions"'))
+
+  assert.ok(styles.includes('#root #main .ql-milestone-board .ql-assignee-picker__actions .ql-quiet-action'))
+  assert.ok(styles.includes('color: #000000 !important'))
+  assert.ok(styles.includes('-webkit-text-fill-color: #000000 !important'))
+  assert.ok(styles.includes('background: #fffdf8 !important'))
+  assert.ok(styles.includes('.ql-assignee-picker__actions .ql-quiet-action:hover:not(:disabled)'))
+  assert.ok(styles.includes('.ql-assignee-picker__actions .ql-quiet-action:disabled'))
+  assert.ok(styles.includes('@media (max-width: 560px)'))
+  assert.ok(main.indexOf("import './styles/precision-contrast-polish.css'") > main.indexOf("import './styles/contrast-hardening.css'"))
+})
