@@ -25,7 +25,6 @@ export function WritingAssistant() {
   const [anchor, setAnchor] = useState<Point>({ x: 0, y: 0 })
   const [panel, setPanel] = useState<Point>({ x: 12, y: 12 })
   const [anchorVisible, setAnchorVisible] = useState(false)
-  const [anchorCompact, setAnchorCompact] = useState(false)
   const [anchorRoot, setAnchorRoot] = useState<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -162,14 +161,12 @@ export function WritingAssistant() {
       }
 
       const layerRect = layer.getBoundingClientRect()
-      const compact = rect.width < 320
-      const buttonWidth = compact ? Math.min(56, Math.max(48, rect.width - 18)) : Math.min(164, Math.max(142, rect.width - 18))
+      const buttonWidth = 54
       const nextAnchor = {
         x: Math.max(6, Math.round(rect.right - layerRect.left - buttonWidth - 8)),
         y: Math.round(rect.bottom - layerRect.top - 42),
       }
       setAnchor(current => current.x === nextAnchor.x && current.y === nextAnchor.y ? current : nextAnchor)
-      setAnchorCompact(compact)
       setAnchorVisible(true)
 
       // The expanded assistant panel is intentionally a body-level fixed layer
@@ -366,9 +363,9 @@ export function WritingAssistant() {
       <div className="q-writing-assistant-anchor q-writing-assistant-ui" style={{ left: anchor.x, top: anchor.y, position: 'absolute' }}>
         <button
           type="button"
-          className={`q-writing-robot-button ${anchorCompact ? 'is-compact' : ''} ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`}
-          title="Improve this text with QuorlythBot"
-          aria-label="Improve this text with QuorlythBot"
+          className={`q-writing-robot-button ${open ? 'is-open' : ''} ${loading ? 'is-thinking' : ''}`}
+          title="Open QuorlythBot writing assistant"
+          aria-label="Open QuorlythBot writing assistant"
           aria-expanded={open}
           aria-controls="q-writing-panel"
           onMouseDown={event => event.preventDefault()}
@@ -386,9 +383,7 @@ export function WritingAssistant() {
             }
           }}
         >
-          <QuorlythBotHead size={anchorCompact ? 28 : 30} />
-          <span className="q-writing-robot-label">Improve text</span>
-          <span className="q-writing-robot-spark" aria-hidden="true" />
+          <QuorlythBotHead size={28} />
         </button>
       </div>,
       anchorRoot,
