@@ -11,7 +11,7 @@ test('idea media storage is provisioned as private with author-scoped upload and
   ])
 
   assert.ok(backend.includes("sb.storage.from('quorlyth-idea-media').upload(path, file"))
-  assert.ok(backend.includes('const path = [cid, userData.user.id, ideaId, crypto.randomUUID()].join(\'/\')'))
+  assert.ok(backend.includes("const path = [cid, userData.user.id, ideaId, crypto.randomUUID()].join('/')"))
 
   assert.ok(migration.includes("'quorlyth-idea-media'"))
   assert.ok(migration.includes('public = false'))
