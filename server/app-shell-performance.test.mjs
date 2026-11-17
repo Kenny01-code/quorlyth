@@ -645,21 +645,50 @@ test('Improve text automatically generates writing suggestions when QuorlythBot 
   assert.match(head, /fill=\{\`url\(#\$\{shell\}\)\`\}/)
   assert.doesNotMatch(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
 })
-test('the QuorlythBot launcher uses the compact orange 3D robot-head mark', async () => {
-  const [app, bot, head, css] = await Promise.all([
+test('QuorlythBot app and chat launchers use the Quorlyth brand mark, never the robot character', async () => {
+  const [app, bot, css] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
-    readSource('src/bot/QuorlythBotHead.tsx'),
     readSource('src/styles/app.css'),
   ])
-  assert.match(app, /QuorlythBotHead size=\{38\}/)
-  assert.match(bot, /QuorlythBotHead size=\{38\}/)
-  assert.match(head, /qbhead-shell/)
-  assert.match(head, /qbhead-face/)
-  assert.match(head, /#D06A40/)
-  assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)
+  assert.match(app, /<span className="astm"><Logo size=\{38\} \/><\/span>/)
+  assert.match(bot, /<span className="astm"><Logo size=\{38\} \/><\/span>/)
+  assert.doesNotMatch(app, /QuorlythBotHead/)
+  assert.doesNotMatch(bot, /QuorlythBotHead/)
   assert.match(css, /rgba\(208,106,64,\.34\)/)
-  assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
+  assert.match(css, /#astl\.astl \.astm \.q-logo-mark/)
+  assert.doesNotMatch(css, /#astl\.astl \.astm \.qbot-head-mark/)
+})
+
+test('Automation starter cards render every label and trigger in high-contrast editorial ink', async () => {
+  const [automation, styles] = await Promise.all([
+    readSource('src/screens/Automations.tsx'),
+    readSource('src/styles/automation-editorial-cards.css'),
+  ])
+  assert.match(automation, /name: 'New idea alert'/)
+  assert.match(automation, /description: 'Notify your team when a fresh community idea enters the system\.'/)
+  assert.match(automation, /trigger: 'idea\.created'/)
+  assert.match(automation, /STARTER \{String\(index \+ 1\)\.padStart\(2, '0'\)\}/)
+  assert.match(automation, /TRIGGER_INFO\[template\.trigger\]\.title/)
+  assert.match(automation, /Use template/)
+  assert.match(styles, /\.wa-template-card h4[\s\S]*?color: #080807 !important/)
+  assert.match(styles, /\.wa-template-card > p[\s\S]*?color: #24231f !important/)
+  assert.match(styles, /\.wa-template-trigger[\s\S]*?color: #171713 !important/)
+  assert.match(styles, /\.wa-template-card > button[\s\S]*?color: #11110f !important/)
+})
+
+test('Settings access-request queues scroll independently with no visible scrollbar', async () => {
+  const [settings, styles] = await Promise.all([
+    readSource('src/screens/Settings.tsx'),
+    readSource('src/styles/settings-request-scroll.css'),
+  ])
+  assert.match(settings, /q-settings-requests-scroll/)
+  assert.match(settings, /aria-label="Platform access requests"/)
+  assert.match(settings, /aria-label="Visitor access requests"/)
+  assert.match(styles, /overflow-y: auto/)
+  assert.match(styles, /scrollbar-width: none/)
+  assert.match(styles, /::-webkit-scrollbar/)
+  assert.match(styles, /display: none/)
 })
 
 test('QuorlythBot loading and restore glows use the uploaded orange swatch', async () => {
