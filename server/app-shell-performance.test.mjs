@@ -168,7 +168,7 @@ test('heavy feature styles are split from the initial global stylesheet', async 
   assert.match(automations, /styles\/automations\.css/)
 })
 
-test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the bot chunk', async () => {
+test('QuorlythBot keeps the editorial chat robot-free and the optional 3D renderer isolated', async () => {
   const [config, themes, robot3d, robot, bot] = await Promise.all([
     readSource('src/bot/config.ts'),
     readSource('src/bot/robot-themes.ts'),
@@ -181,7 +181,31 @@ test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the 
   assert.match(themes, /export const THEMES/)
   assert.match(robot3d, /from ["']three["']/)
   assert.match(robot, /import\('\.\/robot3d'\)/)
-  assert.match(bot, /<Robot\s+ref=\{robot\}\s+theme=\{theme\}/)
+  assert.match(bot, /import type \{ RobotApi \} from '\.\/Robot'/)
+  assert.doesNotMatch(bot, /<Robot\s/)
+  assert.doesNotMatch(bot, /QuorlythBotHead/)
+  assert.match(bot, /<Orb\s+ref=\{robot\}\s+theme=\{theme\}/)
+})
+
+test('QuorlythBot and community manager access use the editorial glass design system', async () => {
+  const [bot, access, botCss, accessCss, main] = await Promise.all([
+    readSource('src/bot/QuorlythBot.tsx'),
+    readSource('src/screens/Access.tsx'),
+    readSource('src/styles/bot-editorial-glass.css'),
+    readSource('src/styles/request-access-editorial.css'),
+    readSource('src/main.tsx'),
+  ])
+  assert.match(bot, /qbot-editorial-hero/)
+  assert.match(bot, /qbot-editorial-grid/)
+  assert.match(bot, /qbot-voice-stage/)
+  assert.match(botCss, /--qbot-lime:\s*#d9ff38/)
+  assert.match(botCss, /--qbot-orange:\s*#ff572b/)
+  assert.match(botCss, /--qbot-lilac:\s*#c7b8eb/)
+  assert.match(access, /q-access-manager-status/)
+  assert.match(access, /COMMUNITY MANAGEMENT/)
+  assert.match(access, /You manage this community/)
+  assert.match(accessCss, /color:\s*#080807\s*!important/)
+  assert.match(main, /styles\/request-access-editorial\.css/)
 })
 
 test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', async () => {
