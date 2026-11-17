@@ -386,3 +386,79 @@
     padding-inline: 8px;
   }
 }
+
+
+/* Hard guarantee for the actual milestone editor and each card's assignee panel.
+   This selector is intentionally independent of #main and overrides the dark
+   quiet-action defaults used by the original milestone skin. */
+#root .ql-milestone-board .ql-assignee-picker {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+#root .ql-milestone-board .ql-assignee-picker > span,
+#root .ql-milestone-board .ql-assignee-picker > .ql-muted {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action,
+#root .ql-milestone-board .ql-milestone-reassign .ql-assignee-picker__actions .ql-milestone-assignee-action {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: #fffdf8 !important;
+  border: 1px solid rgba(28, 21, 17, .24) !important;
+  opacity: 1 !important;
+  font-weight: 750 !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action:hover:not(:disabled),
+#root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action:focus-visible {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: #f1e3d2 !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action:disabled {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: #eee8df !important;
+  opacity: .82 !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__list {
+  background: #f0e7da !important;
+  border-color: rgba(28, 21, 17, .2) !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: #fffdf8 !important;
+  border-color: rgba(28, 21, 17, .2) !important;
+  opacity: 1 !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option.is-selected,
+#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option:has(input:checked) {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background: #fbe5d7 !important;
+  border-color: #b84d27 !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option > span,
+#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option > span small {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option input[type="checkbox"] {
+  accent-color: #a9431f !important;
+}
+@media (max-width: 560px) {
+  #root .ql-milestone-board .ql-assignee-picker__actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+  #root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+}
