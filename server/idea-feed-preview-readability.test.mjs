@@ -271,5 +271,6 @@ test('milestone creation renders black bulk actions and black teammate names dir
   assert.ok(board.includes("background: '#f0e7da'"))
   assert.ok(board.includes("color: '#000000', WebkitTextFillColor: '#000000', fontWeight: 700"))
   assert.ok(board.includes("background: selected ? '#fbe5d7' : '#fffdf8'"))
-  assert.ok(styles.includes('.ql-milestone-assignee-action'))
+  assert.ok(styles.includes('#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option > span'))
+  assert.ok(styles.includes('#root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action'))
 })
