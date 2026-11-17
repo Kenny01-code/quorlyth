@@ -458,3 +458,499 @@
     transition-duration: .01ms !important;
   }
 }
+
+
+/* --------------------------------------------------------------------------
+   FULL-FRONTEND LIQUID GLASS SYSTEM
+   One material language for sidebar, every Bot view, cards, menus and controls.
+   Structural classes and content layout are preserved; only the finish changes.
+   -------------------------------------------------------------------------- */
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+  --qbot-glass-text: #f0fbfc;
+  --qbot-glass-text-soft: rgba(222, 242, 245, .74);
+  --qbot-glass-text-dim: rgba(208, 232, 236, .58);
+  --qbot-glass-edge: rgba(190, 234, 240, .17);
+  --qbot-glass-edge-strong: rgba(112, 220, 231, .32);
+  --qbot-glass-panel: rgba(219, 249, 252, .055);
+  --qbot-glass-panel-strong: rgba(219, 249, 252, .09);
+}
+
+/* Sidebar is now an inset glass collage, not a cream wall joined by a hard seam. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs {
+  position: relative;
+  z-index: 4;
+  align-self: stretch;
+  flex: 0 0 244px !important;
+  width: 244px !important;
+  min-width: 0;
+  min-height: 0;
+  height: calc(100% - 20px) !important;
+  margin: 10px 0 10px 10px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid rgba(190, 234, 240, .2) !important;
+  border-right: 1px solid rgba(190, 234, 240, .2) !important;
+  border-radius: 25px !important;
+  background:
+    radial-gradient(ellipse 90% 40% at 0% 0%, rgba(49, 192, 211, .17), transparent 72%),
+    radial-gradient(ellipse 72% 38% at 100% 100%, rgba(231, 112, 75, .055), transparent 75%),
+    linear-gradient(155deg, rgba(28, 51, 60, .83), rgba(12, 25, 32, .88) 58%, rgba(8, 17, 24, .9)) !important;
+  color: var(--qbot-glass-text) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .15),
+    inset 0 0 34px rgba(70, 207, 221, .045),
+    0 18px 44px -34px rgba(0, 0, 0, .9) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(152%) !important;
+  backdrop-filter: blur(32px) saturate(152%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: 23px;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(244, 255, 255, .075), transparent 24%, transparent 74%, rgba(54, 202, 218, .045));
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs > * {
+  position: relative;
+  z-index: 1;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(.bs-t, .bs-s, .bs-f) {
+  border-color: rgba(198, 237, 241, .105) !important;
+  background: transparent !important;
+  color: var(--qbot-glass-text) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-t {
+  min-height: 64px;
+  padding: 13px 12px 11px !important;
+  border-bottom: 1px solid rgba(198, 237, 241, .12) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-t .bib {
+  border: 1px solid rgba(202, 239, 243, .16) !important;
+  border-radius: 11px !important;
+  background: rgba(223, 249, 251, .065) !important;
+  color: #e9fafd !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n {
+  display: grid;
+  gap: 5px;
+  padding: 12px 10px 10px !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb {
+  min-width: 0;
+  min-height: 43px !important;
+  padding: 0 12px !important;
+  border: 1px solid transparent !important;
+  border-radius: 13px !important;
+  background: transparent !important;
+  color: rgba(232, 248, 250, .82) !important;
+  box-shadow: none !important;
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb .ic,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb svg {
+  color: #83dce5 !important;
+  opacity: 1 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb:is(:hover, :focus-visible, .on) {
+  border-color: rgba(95, 213, 226, .23) !important;
+  background: linear-gradient(110deg, rgba(54, 190, 208, .17), rgba(213, 246, 249, .055)) !important;
+  color: #f4feff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb:is(:hover, :focus-visible) {
+  transform: translateX(1px);
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb.p {
+  border-color: rgba(255, 202, 174, .25) !important;
+  background: linear-gradient(135deg, rgba(255, 157, 109, .94), rgba(225, 104, 65, .94)) !important;
+  color: #241914 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), 0 8px 22px -17px rgba(238, 119, 79, .9) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb.p .ic,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb.p svg {
+  color: #241914 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-s {
+  padding: 8px 10px 9px !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw {
+  min-height: 40px;
+  border: 1px solid rgba(202, 239, 243, .16) !important;
+  border-radius: 13px !important;
+  background: rgba(2, 13, 19, .31) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .065) !important;
+  color: rgba(220, 242, 245, .75) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw .ic,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw svg {
+  color: #75d7e1 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw input {
+  min-width: 0;
+  background: transparent !important;
+  color: #f2fcfd !important;
+  -webkit-text-fill-color: #f2fcfd !important;
+  box-shadow: none !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw input::placeholder {
+  color: rgba(216, 238, 241, .54) !important;
+  -webkit-text-fill-color: rgba(216, 238, 241, .54) !important;
+  opacity: 1 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-l {
+  min-height: 0;
+  padding: 7px 9px 11px !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(75, 194, 210, .35) transparent;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bgh {
+  padding-inline: 9px;
+  color: rgba(193, 226, 231, .55) !important;
+  font-size: 10px !important;
+  font-weight: 760 !important;
+  letter-spacing: .12em;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci {
+  min-width: 0;
+  margin: 2px 0;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  background: rgba(224, 249, 251, .025) !important;
+  color: rgba(233, 249, 251, .83) !important;
+  box-shadow: none !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci:is(:hover, :focus-visible, .on) {
+  border-color: rgba(100, 213, 226, .21) !important;
+  background: rgba(67, 189, 205, .12) !important;
+  color: #f5feff !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci .ic,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci svg {
+  color: #79dbe4 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bpj {
+  border: 1px solid rgba(105, 216, 228, .2) !important;
+  border-radius: 12px !important;
+  background: rgba(41, 161, 179, .12) !important;
+  color: #ecfbfc !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-f {
+  padding: 10px !important;
+  border-top: 1px solid rgba(198, 237, 241, .12) !important;
+  background: linear-gradient(180deg, rgba(224, 249, 251, .018), rgba(224, 249, 251, .045)) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsu {
+  min-width: 0;
+  margin-top: 6px;
+  padding: 9px !important;
+  border: 1px solid rgba(198, 237, 241, .14) !important;
+  border-radius: 14px !important;
+  background: rgba(2, 13, 19, .24) !important;
+  color: #f0fbfc !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsu :is(b, span) {
+  color: #f0fbfc !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsu i {
+  color: rgba(207, 235, 238, .57) !important;
+}
+
+/* Give the main pane an uninterrupted inner edge and balanced breathing room. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bm {
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 0 10px 0 12px !important;
+  background: transparent !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh {
+  border-radius: 22px !important;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) {
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 110px;
+  margin: 12px 0 0 !important;
+  padding: clamp(15px, 1.7vw, 23px) !important;
+  border: 1px solid rgba(199, 238, 243, .14) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(ellipse 65% 38% at 0% 0%, rgba(45, 193, 211, .065), transparent 72%),
+    linear-gradient(145deg, rgba(235, 251, 252, .04), rgba(235, 251, 252, .012) 56%, rgba(7, 15, 21, .18)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .075) !important;
+}
+
+/* Shared glass cards across Projects, Library, Customize, Voice Studio and Settings.
+   Keep their existing padding, grid, dimensions and hierarchy. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .glass {
+  border: 1px solid rgba(193, 235, 240, .15) !important;
+  border-radius: 19px !important;
+  background:
+    linear-gradient(145deg, rgba(226, 249, 251, .075), rgba(226, 249, 251, .025)),
+    rgba(8, 22, 30, .36) !important;
+  color: #effbfc !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .095),
+    0 13px 34px -29px rgba(0, 0, 0, .92) !important;
+  -webkit-backdrop-filter: blur(23px) saturate(145%) !important;
+  backdrop-filter: blur(23px) saturate(145%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .glass :is(h1, h2, h3, h4, p, label, span, b, strong, em, small, time, summary, li) {
+  color: #edf9fa !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .glass :is(.dim, .mut, .hint, .helper, .caption) {
+  color: rgba(211, 236, 239, .7) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .glass .ic,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .glass svg {
+  color: #83dce5;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .glass :is(.chip, button:not(.btn)) {
+  border-color: rgba(193, 235, 240, .16) !important;
+  border-radius: 11px !important;
+  background: rgba(219, 249, 252, .055) !important;
+  color: #edf9fa !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .glass :is(.chip, button:not(.btn)):is(:hover, :focus-visible, .on) {
+  border-color: rgba(93, 214, 228, .33) !important;
+  background: rgba(55, 183, 201, .16) !important;
+  color: #ffffff !important;
+}
+
+/* Skill tiles and voice selections preserve their shape but inherit the same fluid material. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation :is(.bsk, .bvc) {
+  border: 1px solid rgba(194, 235, 240, .16) !important;
+  border-radius: 17px !important;
+  background:
+    linear-gradient(145deg, rgba(229, 250, 252, .085), rgba(229, 250, 252, .026)),
+    rgba(7, 20, 27, .3) !important;
+  color: #f0fbfc !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .095), 0 12px 30px -27px rgba(0, 0, 0, .9) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  backdrop-filter: blur(18px) saturate(145%);
+  transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation :is(.bsk, .bvc):is(:hover, :focus-visible, .on) {
+  transform: translateY(-2px);
+  border-color: rgba(96, 218, 230, .4) !important;
+  background:
+    linear-gradient(145deg, rgba(65, 193, 209, .18), rgba(229, 250, 252, .045)),
+    rgba(7, 20, 27, .44) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .13), 0 16px 34px -26px rgba(45, 199, 215, .32) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .bsk .bski {
+  border: 1px solid rgba(105, 217, 229, .19) !important;
+  border-radius: 12px !important;
+  background: rgba(49, 177, 195, .13) !important;
+  color: #91e6ed !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation :is(.bvt, .csr b, .field > span) {
+  color: #f2fbfc !important;
+}
+
+/* Inputs, selects, toggles and inline controls now share the same glass family. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation :is(input, textarea, select) {
+  min-width: 0;
+  border: 1px solid rgba(191, 234, 240, .2) !important;
+  border-radius: 13px !important;
+  background:
+    linear-gradient(145deg, rgba(227, 250, 252, .055), rgba(227, 250, 252, .018)),
+    rgba(2, 13, 19, .42) !important;
+  color: #f0fbfc !important;
+  -webkit-text-fill-color: #f0fbfc !important;
+  caret-color: #77e1e9 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .055) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation :is(input, textarea, select)::placeholder {
+  color: rgba(216, 238, 241, .55) !important;
+  -webkit-text-fill-color: rgba(216, 238, 241, .55) !important;
+  opacity: 1 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation :is(input, textarea, select):focus {
+  border-color: rgba(96, 218, 230, .48) !important;
+  box-shadow: 0 0 0 3px rgba(57, 192, 209, .09), inset 0 1px 0 rgba(255, 255, 255, .075) !important;
+  outline: 0 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation select option {
+  background: #10242c !important;
+  color: #f0fbfc !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .csr {
+  border-color: rgba(194, 235, 240, .12) !important;
+  color: #edf9fa !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .tg {
+  border: 1px solid rgba(193, 235, 240, .2) !important;
+  border-radius: 999px !important;
+  background: rgba(2, 13, 19, .45) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .22) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .tg.on {
+  border-color: rgba(93, 214, 228, .52) !important;
+  background: rgba(46, 174, 193, .5) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .tg i {
+  background: #eafcfd !important;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, .28) !important;
+}
+
+/* Popovers and menus match the same deep glass, rather than switching to a cream sheet. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx {
+  border: 1px solid rgba(135, 221, 231, .3) !important;
+  border-radius: 19px !important;
+  background:
+    radial-gradient(ellipse 70% 35% at 0% 0%, rgba(54, 187, 205, .14), transparent 72%),
+    linear-gradient(145deg, rgba(24, 47, 57, .97), rgba(8, 20, 28, .98)) !important;
+  color: #f0fbfc !important;
+  box-shadow: 0 26px 62px rgba(0, 0, 0, .62), inset 0 1px 0 rgba(255, 255, 255, .13) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(155%) !important;
+  backdrop-filter: blur(30px) saturate(155%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .cmh {
+  border-color: rgba(206, 239, 242, .13) !important;
+  color: rgba(221, 243, 245, .68) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx :is(button[role="menuitem"], .cmsub button) {
+  border-color: transparent !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  color: #effbfd !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx :is(button[role="menuitem"], .cmsub button) .ic {
+  color: #83dce5 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx :is(button[role="menuitem"], .cmsub button):is(:hover, :focus-visible, .on) {
+  border-color: rgba(98, 212, 226, .22) !important;
+  background: rgba(64, 184, 202, .15) !important;
+  color: #ffffff !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .danger {
+  color: #ffb3a8 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .cmx .danger .ic {
+  color: #ff9b8c !important;
+}
+
+/* Narrow screens keep the sidebar as a rounded floating glass collage over the same shell. */
+@media (max-width: 980px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs {
+    position: absolute !important;
+    inset: 8px auto 8px 8px !important;
+    width: min(84%, 310px) !important;
+    max-width: calc(100% - 30px) !important;
+    height: auto !important;
+    margin: 0 !important;
+    border: 1px solid rgba(132, 220, 230, .28) !important;
+    border-radius: 24px !important;
+    background:
+      radial-gradient(ellipse 80% 42% at 0% 0%, rgba(43, 194, 212, .2), transparent 72%),
+      linear-gradient(150deg, rgba(23, 48, 58, .98), rgba(7, 20, 28, .985)) !important;
+    box-shadow: 28px 0 65px rgba(0, 0, 0, .46), inset 0 1px 0 rgba(255, 255, 255, .14) !important;
+  }
+
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).side-on .bs {
+    transform: translateX(0) !important;
+  }
+
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bm {
+    padding-inline: 9px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bm {
+    padding-inline: 8px !important;
+  }
+
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh {
+    margin-top: 8px;
+    border-radius: 18px !important;
+  }
+
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) {
+    margin-top: 10px !important;
+    padding: 13px !important;
+    border-radius: 20px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs {
+    inset: 7px auto 7px 7px !important;
+    border-radius: 21px !important;
+  }
+
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs::before {
+    border-radius: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs *,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation * {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
