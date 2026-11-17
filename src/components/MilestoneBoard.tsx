@@ -276,25 +276,26 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
         <div className="ql-field-grid">
           <label className="ql-field"><span>Priority</span><select value={draft.priority} onChange={event => setDraft(current => ({ ...current, priority: event.target.value as MilestonePriority }))}><option value="low">Low</option><option value="normal">Standard</option><option value="high">High</option><option value="critical">Critical</option></select></label>
           <label className="ql-field"><span>Due date</span><input type="date" min={minimumDateInput(editingId ? asDateInput(milestones.find(item => item.id === editingId)?.dueAt) : '')} value={draft.dueDate} onChange={event => setDraft(current => ({ ...current, dueDate: event.target.value }))} /></label>
-          <div className="ql-field ql-assignee-picker">
-            <span>Assign to everyone you select</span>
+          <div className="ql-field ql-assignee-picker" style={{ color: '#000000', WebkitTextFillColor: '#000000' }}>
+            <span style={{ color: '#000000', WebkitTextFillColor: '#000000', fontWeight: 700 }}>Assign to everyone you select</span>
             <div className="ql-assignee-picker__actions">
-              <button type="button" className="ql-quiet-action" onClick={() => setDraft(current => ({ ...current, assigneeIds: people.map(person => person.id) }))}>Select everyone ({people.length})</button>
-              <button type="button" className="ql-quiet-action" onClick={() => setDraft(current => ({ ...current, assigneeIds: [] }))}>Clear selection</button>
+              <button type="button" className="ql-quiet-action ql-milestone-assignee-action" style={{ color: '#000000', WebkitTextFillColor: '#000000', background: '#fffdf8', borderColor: 'rgba(28, 21, 17, .24)' }} onClick={() => setDraft(current => ({ ...current, assigneeIds: people.map(person => person.id) }))}>Select everyone ({people.length})</button>
+              <button type="button" className="ql-quiet-action ql-milestone-assignee-action" style={{ color: '#000000', WebkitTextFillColor: '#000000', background: '#fffdf8', borderColor: 'rgba(28, 21, 17, .24)' }} onClick={() => setDraft(current => ({ ...current, assigneeIds: [] }))}>Clear selection</button>
             </div>
-            <div className="ql-assignee-picker__list">
+            <div className="ql-assignee-picker__list" style={{ background: '#f0e7da', borderColor: 'rgba(28, 21, 17, .2)' }}>
               {[
                 ...people,
                 ...draft.assigneeIds.filter(id => !people.some(person => person.id === id)).map(id => ({ id, name: a.nm(id) || 'Former team member' })),
               ].map(person => {
                 const eligible = people.some(candidate => candidate.id === person.id)
-                return <label className="ql-assignee-option" key={person.id}>
-                  <input type="checkbox" checked={draft.assigneeIds.includes(person.id)} disabled={!eligible && !draft.assigneeIds.includes(person.id)} onChange={event => toggleDraftAssignee(person.id, event.target.checked)} />
-                  <span>{person.name}{person.id === a.me?.id ? ' (you)' : ''}{!eligible && <small> · no longer eligible</small>}</span>
+                const selected = draft.assigneeIds.includes(person.id)
+                return <label className="ql-assignee-option" key={person.id} style={{ background: selected ? '#fbe5d7' : '#fffdf8', borderColor: selected ? '#b84d27' : 'rgba(28, 21, 17, .2)', color: '#000000' }}>
+                  <input type="checkbox" checked={selected} disabled={!eligible && !selected} onChange={event => toggleDraftAssignee(person.id, event.target.checked)} />
+                  <span style={{ color: '#000000', WebkitTextFillColor: '#000000', fontWeight: 700 }}>{person.name}{person.id === a.me?.id ? ' (you)' : ''}{!eligible && <small style={{ color: '#000000', WebkitTextFillColor: '#000000' }}> · no longer eligible</small>}</span>
                 </label>
               })}
             </div>
-            <small className="ql-muted">{draft.assigneeIds.length} selected · select everyone to assign this milestone to the whole collaboration team.</small>
+            <small className="ql-muted" style={{ color: '#000000', WebkitTextFillColor: '#000000', fontWeight: 600, opacity: 1 }}>{draft.assigneeIds.length} selected · select everyone to assign this milestone to the whole collaboration team.</small>
           </div>
         </div>
         <label className="ql-field"><span>Acceptance criteria <small>How the team knows it is done</small></span><textarea value={draft.acceptanceCriteria} onChange={event => setDraft(current => ({ ...current, acceptanceCriteria: event.target.value }))} rows={2} maxLength={800} placeholder="A reviewer can sign in, complete the flow, and see a persisted result…" /></label>
@@ -332,10 +333,10 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
               {canEdit && milestone.status !== 'done' && <details className="ql-milestone-reassign">
                 <summary>{'Assign to teammates · ' + (getMilestoneAssigneeIds(milestone).length || 'none') + ' selected'}</summary>
                 <div className="ql-assignee-picker__actions">
-                  <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeAssignees(milestone, people.map(person => person.id))}>Select everyone</button>
-                  <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => void changeAssignees(milestone, [])}>Clear</button>
+                  <button type="button" className="ql-quiet-action ql-milestone-assignee-action" style={{ color: '#000000', WebkitTextFillColor: '#000000', background: '#fffdf8', borderColor: 'rgba(28, 21, 17, .24)' }} disabled={!!busyId} onClick={() => void changeAssignees(milestone, people.map(person => person.id))}>Select everyone</button>
+                  <button type="button" className="ql-quiet-action ql-milestone-assignee-action" style={{ color: '#000000', WebkitTextFillColor: '#000000', background: '#fffdf8', borderColor: 'rgba(28, 21, 17, .24)' }} disabled={!!busyId} onClick={() => void changeAssignees(milestone, [])}>Clear</button>
                 </div>
-                <div className="ql-assignee-picker__list">
+                <div className="ql-assignee-picker__list" style={{ background: '#f0e7da', borderColor: 'rgba(28, 21, 17, .2)' }}>
                   {[
                     ...people,
                     ...getMilestoneAssigneeIds(milestone).filter(id => !people.some(person => person.id === id)).map(id => ({ id, name: a.nm(id) || 'Former team member' })),
@@ -343,12 +344,12 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                     const assignedIds = getMilestoneAssigneeIds(milestone)
                     const checked = assignedIds.includes(person.id)
                     const eligible = people.some(candidate => candidate.id === person.id)
-                    return <label className="ql-assignee-option" key={person.id}>
+                    return <label className="ql-assignee-option" key={person.id} style={{ background: checked ? '#fbe5d7' : '#fffdf8', borderColor: checked ? '#b84d27' : 'rgba(28, 21, 17, .2)', color: '#000000' }}>
                       <input type="checkbox" checked={checked} disabled={!!busyId || (!eligible && !checked)} onChange={event => {
                         const next = event.target.checked ? [...assignedIds, person.id] : assignedIds.filter(id => id !== person.id)
                         void changeAssignees(milestone, next)
                       }} />
-                      <span>{person.name}{person.id === a.me?.id ? ' (you)' : ''}{!eligible && <small> · no longer eligible</small>}</span>
+                      <span style={{ color: '#000000', WebkitTextFillColor: '#000000', fontWeight: 700 }}>{person.name}{person.id === a.me?.id ? ' (you)' : ''}{!eligible && <small style={{ color: '#000000', WebkitTextFillColor: '#000000' }}> · no longer eligible</small>}</span>
                     </label>
                   })}
                 </div>
