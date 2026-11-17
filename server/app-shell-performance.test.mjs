@@ -605,15 +605,28 @@ test('visitor platform requests use the existing public access request table and
   assert.match(signIn, /params\.get\('email'\)\?\.trim\(\)/)
 })
 
-test('Improve text automatically generates writing suggestions when QuorlythBot opens', async () => {
+test('project workspace empty-state guidance uses black high-contrast writeups', async () => {
+  const [workspace, styles] = await Promise.all([
+    readSource('src/screens/StandaloneWorkspaces.tsx'),
+    readSource('src/styles/standalone-workspaces.css'),
+  ])
+  assert.match(workspace, /className="sw-empty-inline-copy">Submit work under a milestone on the Project page\./)
+  assert.match(workspace, /className="sw-empty-inline-copy">Connect GitHub for source-checked commits and pull requests/)
+  assert.match(styles, /\.sw-empty-inline p\.sw-empty-inline-copy[\s\S]*?color:#080807 !important/)
+  assert.match(styles, /background:linear-gradient\(135deg,#F3EBDD 0%,#E9E0D1 100%\)/)
+})
+
+test('QuorlythBot typing helper displays only the compact robot head', async () => {
   const [writing, styles, head] = await Promise.all([
     readSource('src/components/WritingAssistant.tsx'),
     readSource('src/styles/writing-assistant-live.css'),
     readSource('src/bot/QuorlythBotHead.tsx'),
   ])
   assert.match(writing, /import \{ QuorlythBotHead \} from '\.\.\/bot\/QuorlythBotHead'/)
-  assert.match(writing, /<QuorlythBotHead size=\{anchorCompact \? 28 : 30\} \/>/)
-  assert.match(writing, /<QuorlythBotHead size=\{36\} \/>/)
+  assert.match(writing, /<QuorlythBotHead size=\{28\} \/>/)
+  assert.match(writing, /title="Open QuorlythBot writing assistant"/)
+  assert.match(writing, /aria-label="Open QuorlythBot writing assistant"/)
+  assert.doesNotMatch(writing, /q-writing-robot-label|q-writing-robot-spark|Improve text/)
   assert.match(writing, /What would you like to improve\?/)
   assert.match(writing, /Three tailored suggestions are generated automatically/)
   assert.match(writing, /void improve\(MODES\[0\]\)/)
@@ -625,13 +638,15 @@ test('Improve text automatically generates writing suggestions when QuorlythBot 
   }
   assert.match(writing, /target\.style\.setProperty\('padding-bottom'/)
   assert.match(styles, /\.q-writing-robot-button/)
+  assert.match(styles, /width:54px !important/)
   assert.match(styles, /\.q-writing-panel\s*\{/)
   assert.match(styles, /\.q-writing-mode\s*\{/)
   assert.match(styles, /\.q-writing-panel-close/)
   assert.match(styles, /pointer-events:\s*auto !important/)
+  assert.doesNotMatch(styles, /q-writing-robot-label|q-writing-robot-spark|is-compact/)
   assert.match(head, /useId\(\)/)
   assert.match(head, /id=\{shell\}/)
-  assert.match(head, /fill=\{\`url\(#\$\{shell\}\)\`\}/)
+  assert.ok(head.includes('url(#'))
   assert.doesNotMatch(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
 })
 test('QuorlythBot launchers retain the compact orange robot-head mark', async () => {
