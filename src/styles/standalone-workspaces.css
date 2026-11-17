@@ -347,3 +347,160 @@ details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7
   .sw-room-progress-footer{flex-wrap:wrap}
   .sw-project-room>.sw-team-discussion{min-height:420px}
 }
+
+
+/* Connected workspace task cards: make milestone-linked work read cleanly in black. */
+#root .sw-task {
+  color: #080807 !important;
+  background: linear-gradient(145deg, #F8F3EA 0%, #EFE5D6 100%) !important;
+  border: 1px solid rgba(25,18,12,.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 12px 28px rgba(0,0,0,.12) !important;
+}
+#root .sw-task__title h4,
+#root .sw-task__title .ql-eyebrow,
+#root .sw-task__description,
+#root .sw-task__meta > span,
+#root .sw-task__actions .sw-muted,
+#root .sw-task-reassign,
+#root .sw-task-reassign > summary,
+#root .sw-criteria strong,
+#root .sw-criteria p,
+#root .sw-link-button {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  opacity: 1 !important;
+}
+#root .sw-task__title h4 {
+  font-size: 15px !important;
+  font-weight: 750 !important;
+  letter-spacing: -.025em !important;
+}
+#root .sw-task__title .ql-eyebrow {
+  font-weight: 800 !important;
+  letter-spacing: .12em !important;
+}
+#root .sw-task-status {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  background: #FFFCF6 !important;
+  border-color: rgba(25,18,12,.22) !important;
+  font-weight: 750 !important;
+}
+#root .sw-task-status.is-done {
+  background: #E2EBDD !important;
+  border-color: #819778 !important;
+}
+#root .sw-task-check {
+  color: #080807 !important;
+  background: #FFFCF6 !important;
+  border-color: rgba(25,18,12,.25) !important;
+}
+#root .sw-task-check.is-done {
+  color: #080807 !important;
+  background: #E2EBDD !important;
+  border-color: #819778 !important;
+}
+#root .sw-task__description {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.75 !important;
+}
+#root .sw-task__description .quorlyth-glyph {
+  color: #080807 !important;
+}
+#root .sw-criteria {
+  background: #FFFCF6 !important;
+  border: 1px solid rgba(25,18,12,.15) !important;
+}
+#root .sw-criteria > span {
+  color: #080807 !important;
+  background: #F2E8DA !important;
+  border-color: rgba(25,18,12,.18) !important;
+}
+#root .sw-task__meta {
+  border-top: 1px solid rgba(25,18,12,.12);
+  padding-top: 10px !important;
+}
+#root .sw-task__meta .quorlyth-glyph,
+#root .sw-task__meta > span,
+#root .sw-task__meta .sw-link-button {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+}
+#root .sw-task__meta .sw-link-button {
+  font-weight: 750 !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(8,8,7,.28);
+  text-underline-offset: 3px;
+}
+#root .sw-task-reassign > summary {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 11px;
+  border: 1px solid rgba(25,18,12,.24);
+  border-radius: 9px;
+  background: #FFFCF6;
+  font-weight: 750 !important;
+  cursor: pointer;
+}
+#root .sw-task-reassign > summary:hover,
+#root .sw-task-reassign > summary:focus-visible {
+  background: #F1E3D2;
+  outline: 2px solid rgba(184,77,39,.24);
+  outline-offset: 2px;
+}
+#root .sw-task-reassign .sw-assignee-picker__actions .sw-link-button {
+  font-weight: 750 !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#root .sw-assignee-picker__list {
+  max-height: 220px;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  background: #F0E7DA !important;
+  border-color: rgba(28,21,17,.2) !important;
+}
+#root .sw-assignee-picker__list::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+#root .sw-assignee-option {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  background: #FFFCF6 !important;
+  border-color: rgba(25,18,12,.18) !important;
+}
+#root .sw-assignee-option small,
+#root .sw-assignee-option .sw-assignee-selected-label {
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+  opacity: 1 !important;
+}
+#root .sw-assignee-option.is-selected {
+  background: #FBE5D7 !important;
+  border-color: #B84D27 !important;
+}
+#root .sw-assignee-option input {
+  accent-color: #A9431F !important;
+}
+#root .sw-task__actions {
+  border-top-color: rgba(25,18,12,.15) !important;
+}
+#root .sw-task__actions .btn {
+  background: #171411 !important;
+  border: 1px solid #171411 !important;
+  color: #FFFCF6 !important;
+  -webkit-text-fill-color: #FFFCF6 !important;
+}
+#root .sw-task__actions .sw-danger-button {
+  background: #FBE9E2 !important;
+  border-color: rgba(151,57,28,.3) !important;
+  color: #080807 !important;
+  -webkit-text-fill-color: #080807 !important;
+}
