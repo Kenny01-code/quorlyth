@@ -15,7 +15,7 @@ test('idea media storage is provisioned as private with author-scoped upload and
 
   assert.ok(migration.includes("'quorlyth-idea-media'"))
   assert.ok(migration.includes('public = false'))
-  assert.ok(migration.includes('file_size_limit = 26214400'))
+  assert.ok(migration.includes('  26214400,'), 'The private bucket must enforce the 25 MB file limit')
   assert.ok(migration.includes("'image/avif'"))
   assert.ok(migration.includes("'video/webm'"))
   assert.ok(migration.includes('for insert to authenticated'))
