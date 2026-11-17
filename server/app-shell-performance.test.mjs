@@ -187,20 +187,12 @@ test('QuorlythBot keeps the editorial chat robot-free and the optional 3D render
   assert.match(bot, /<Orb\s+ref=\{robot\}\s+theme=\{theme\}/)
 })
 
-test('QuorlythBot and community manager access use the editorial glass design system', async () => {
-  const [bot, access, botCss, accessCss, main] = await Promise.all([
-    readSource('src/bot/QuorlythBot.tsx'),
+test('community manager access keeps its editorial black-ink glass treatment', async () => {
+  const [access, accessCss, main] = await Promise.all([
     readSource('src/screens/Access.tsx'),
-    readSource('src/styles/bot-editorial-glass.css'),
     readSource('src/styles/request-access-editorial.css'),
     readSource('src/main.tsx'),
   ])
-  assert.match(bot, /qbot-editorial-hero/)
-  assert.match(bot, /qbot-editorial-grid/)
-  assert.match(bot, /qbot-voice-stage/)
-  assert.match(botCss, /--qbot-lime:\s*#d9ff38/)
-  assert.match(botCss, /--qbot-orange:\s*#ff572b/)
-  assert.match(botCss, /--qbot-lilac:\s*#c7b8eb/)
   assert.match(access, /q-access-manager-status/)
   assert.match(access, /COMMUNITY MANAGEMENT/)
   assert.match(access, /You manage this community/)
@@ -645,19 +637,21 @@ test('Improve text automatically generates writing suggestions when QuorlythBot 
   assert.match(head, /fill=\{\`url\(#\$\{shell\}\)\`\}/)
   assert.doesNotMatch(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
 })
-test('QuorlythBot app and chat launchers use the Quorlyth brand mark, never the robot character', async () => {
-  const [app, bot, css] = await Promise.all([
+test('QuorlythBot launchers retain the compact orange robot-head mark', async () => {
+  const [app, bot, head, css] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
+    readSource('src/bot/QuorlythBotHead.tsx'),
     readSource('src/styles/app.css'),
   ])
-  assert.match(app, /<span className="astm"><Logo size=\{38\} \/><\/span>/)
-  assert.match(bot, /<span className="astm"><Logo size=\{38\} \/><\/span>/)
-  assert.doesNotMatch(app, /QuorlythBotHead/)
-  assert.doesNotMatch(bot, /QuorlythBotHead/)
+  assert.match(app, /QuorlythBotHead size=\{38\}/)
+  assert.match(bot, /QuorlythBotHead size=\{38\}/)
+  assert.match(head, /qbhead-shell/)
+  assert.match(head, /qbhead-face/)
+  assert.match(head, /#D06A40/)
+  assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)
   assert.match(css, /rgba\(208,106,64,\.34\)/)
-  assert.match(css, /#astl\.astl \.astm \.q-logo-mark/)
-  assert.doesNotMatch(css, /#astl\.astl \.astm \.qbot-head-mark/)
+  assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
 })
 
 test('Automation starter cards render every label and trigger in high-contrast editorial ink', async () => {
