@@ -666,6 +666,13 @@ test('Automation starter cards render every label and trigger in high-contrast e
   assert.match(styles, /\.wa-template-card > p[\s\S]*?color: #24231f !important/)
   assert.match(styles, /\.wa-template-trigger[\s\S]*?color: #171713 !important/)
   assert.match(styles, /\.wa-template-card > button[\s\S]*?color: #11110f !important/)
+  assert.match(styles, /\.wa-template-section::before/)
+  assert.match(styles, /\.wa-template-section::after/)
+  assert.match(styles, /@keyframes wa-template-surface-drift/)
+  assert.match(styles, /@keyframes wa-template-surface-sheen/)
+  assert.match(styles, /animation: wa-template-surface-drift 26s/)
+  assert.match(styles, /animation: wa-template-surface-sheen 18s/)
+  assert.match(styles, /prefers-reduced-motion:[\\s\\S]*?animation: none !important/)
 })
 
 test('Settings access-request queues scroll independently with no visible scrollbar', async () => {
