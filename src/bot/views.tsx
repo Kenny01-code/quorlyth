@@ -14,6 +14,7 @@ interface P {
   pj: string; setPj: (id: string) => void; theme: string; robot: RefObject<RobotApi | null>
   startLive: () => void
   stage: string; setStage: (s: any) => void; mode: string; setMode: (m: any) => void
+  onVoicePlaybackChange?: (speaking: boolean) => void
 }
 
 function Tgl({ on, label, desc, onClick }: { on: boolean; label: string; desc?: string; onClick: () => void }) {
@@ -59,6 +60,7 @@ export function BotViews(p: P) {
     helloPlayback.current = null
     stopSpeechPlayback()
     p.robot.current?.talk(false)
+    p.onVoicePlaybackChange?.(false)
   }
 
   function stopNaturalVoicePreview() {
@@ -101,6 +103,7 @@ export function BotViews(p: P) {
       helloPlayback.current?.stop()
       helloPlayback.current = null
       p.robot.current?.talk(false)
+      p.onVoicePlaybackChange?.(false)
       setHello({ state: 'error', message })
       a.toast(message)
     }
@@ -128,6 +131,7 @@ export function BotViews(p: P) {
           didStart = true
           clearStartTimer()
           p.robot.current?.talk(true)
+          p.onVoicePlaybackChange?.(true)
           setHello({ state: 'playing', message: 'QuorlythBot is speaking with your preferred voice.' })
         },
         () => {
@@ -135,6 +139,7 @@ export function BotViews(p: P) {
           clearStartTimer()
           helloPlayback.current = null
           p.robot.current?.talk(false)
+          p.onVoicePlaybackChange?.(false)
           if (!didStart) {
             reportFailure('Voice playback could not start. Check your device audio and try again.')
           } else {
@@ -198,7 +203,7 @@ export function BotViews(p: P) {
       rememberWelcomeVoice(v.ai)
       bd.saveSettings({ vid: v.id }); p.robot.current?.theme('terracotta'); p.robot.current?.spin()
       setVm({ state: 'done', msg: `Your voice sits around ${Math.round(m)} Hz. I chose ${v.n} to feel close to yours.` })
-      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => p.robot.current?.talk(true), () => p.robot.current?.talk(false), { accent: s.accent || 'auto', elevenLabsOnly: false, preferElevenLabsVoice: true, allowBrowserFallback: true, browserFallbackTimeoutMs: 3500 }).catch(error => a.toast(error instanceof Error ? error.message : 'Voice playback is unavailable right now. Your matched voice preference has been saved.'))
+      speakText(`Hi, I am ${v.n}. I tuned myself to sound like you.`, v.ai, () => { p.robot.current?.talk(true); p.onVoicePlaybackChange?.(true) }, () => { p.robot.current?.talk(false); p.onVoicePlaybackChange?.(false) }, { accent: s.accent || 'auto', elevenLabsOnly: false, preferElevenLabsVoice: true, allowBrowserFallback: true, browserFallbackTimeoutMs: 3500 }).catch(error => { p.onVoicePlaybackChange?.(false); a.toast(error instanceof Error ? error.message : 'Voice playback is unavailable right now. Your matched voice preference has been saved.') })
     } catch (e: any) { setVm({ state: 'err', msg: /NotAllowed|Permission/i.test(e.name + e.message) ? 'The microphone is blocked. Allow it in your browser settings.' : 'The microphone could not start.' }) }
   }
 
