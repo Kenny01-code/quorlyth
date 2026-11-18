@@ -1,6 +1,7 @@
 import '../styles/bot.css'
 import '../styles/bot-room-theme.css'
 import '../styles/bot-liquid-glass.css'
+import '../styles/bot-obsidian-glass.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -16,7 +17,7 @@ import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTr
 import { cn, slug, when } from '../lib/util'
 import { askJson, prefetchElevenLabsSpeech, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
-import { Robot, RobotApi } from './Robot'
+import type { RobotApi } from './Robot'
 import { Orb } from './Orb'
 import { ChatMenu } from './ChatMenu'
 import { BotViews } from './views'
@@ -335,8 +336,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const [pj, setPj] = useState('')
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
-  const [stage, setStage] = useState<'std' | 'big' | 'off'>('std')
-  const [caption, setCaption] = useState('')
+  const [stage, setStage] = useState<'std' | 'big'>('std')
   const [status, setStatus] = useState('Online')
   const [thinkingTask, setThinkingTask] = useState('')
   const [q, setQ] = useState('')
@@ -362,7 +362,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const initialPromptHandled = useRef(0)
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
-  const theme = 'terracotta'
+  const theme = 'pearl'
   const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
   const wide = !narrow
 
@@ -444,7 +444,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     return () => window.clearTimeout(timer)
   }, [voiceRequest])
 
-  const accent = THEMES.terracotta
+  const accent = THEMES.pearl
   const style = { ['--ac1' as any]: accent.g1, ['--ac2' as any]: accent.g2, ['--acr' as any]: accent.cr } as React.CSSProperties
 
   function openPanel() {
@@ -481,7 +481,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       now,
     })
     if (greeting.kind === 'quiet') {
-      setCaption('')
       pendingRobotPoseRef.current = 'wave'
       if (robotReadyRef.current) {
         pendingRobotPoseRef.current = null
@@ -489,8 +488,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       }
       return
     }
-
-    setCaption(greeting.text)
     const openingPose = greeting.kind === 'first' ? 'welcome' : 'wave'
     pendingRobotPoseRef.current = openingPose
     if (robotReadyRef.current) {
@@ -500,7 +497,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     }
     // Speak the greeting automatically when the chat frame opens; the preview button is only for voice testing.
     say(greeting.text)
-    window.setTimeout(() => setCaption(''), 6500)
   }
 
   // The app defers loading this module until the lightweight launcher is clicked.
@@ -1112,7 +1108,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       robot.current?.think(true)
       setStatus('Thinking')
       setThinkingTask(taskPreview(t))
-      setCaption('')
     })
     ctl.current = new AbortController()
     let renderTimer: number | null = null
@@ -1295,7 +1290,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           if (renderTimer === null) {
             renderTimer = window.setTimeout(() => {
               renderTimer = null
-              setCaption(latestClean.slice(-140))
               setCur(prev => prev ? { ...prev, msgs: prev.msgs.filter(m => !(m as any).live).concat([{ r: 'a', t: latestClean, live: true } as any]) } : prev)
             }, 40)
           }
@@ -1311,7 +1305,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       persist(c)
       if (bs.voice) finishReplySpeech(clean)
       else robot.current?.talk(false)
-      setTimeout(() => setCaption(''), 1500)
     } catch (e: any) {
       if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
       replySpeechController.abort()
@@ -1400,7 +1393,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   function step(steps: [string, string][], i: number) {
     const s = steps[i]
     if (!s) { setTour(-1); setCur(c => add(c, { r: 'a', t: 'That is the tour. Ask me anything whenever you like.' })); robot.current?.cheer(); return }
-    nav(s[0]); setCur(c => add(c, { r: 'a', t: s[1] })); setCaption(s[1]); robot.current?.set('point'); setTimeout(() => robot.current?.set('explain'), 900); say(s[1])
+    nav(s[0]); setCur(c => add(c, { r: 'a', t: s[1] })); robot.current?.set('point'); setTimeout(() => robot.current?.set('explain'), 900); say(s[1])
   }
 
   function isExplicitVoiceTaskRequest(text: string): boolean {
@@ -2067,7 +2060,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     stopSpeechPlayback()
     try { window.speechSynthesis?.cancel() } catch {}
     setLive(null)
-    setCaption('')
     robot.current?.talk(false)
   }
   useEffect(() => () => {
@@ -4019,54 +4011,30 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 window.addEventListener('pointercancel', end)
               }}>
                 <button className="bib" aria-label="Sidebar" onClick={e => { e.stopPropagation(); setSide(!side) }}><Icon name="menu" size={18} /></button>
-                <div className="bht"><b className="bwm big">{wm('QuorlythBot')}</b><span className="bst"><i />{live ? ({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live' : status}</span></div>
+                <div className="bht"><b className="bwm big">{wm('QuorlythBot')}</b></div>
                 <div className="bha">
-                  <button className="bib" aria-label="Robot size" title="Robot size" onClick={() => setStage(stage === 'std' ? 'big' : stage === 'big' ? 'off' : 'std')}><Icon name="stage" size={18} /></button>
+                  <button className="bib" aria-label="Orb scale" title="Orb scale" onClick={() => setStage(stage === 'std' ? 'big' : 'std')}><Icon name="stage" size={18} /></button>
                   <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>
                   <button className="bib" aria-label="Minimize QuorlythBot" title="Minimize to launcher" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
                   <button className="bib" aria-label="Resize" title="Expand" onClick={() => { const next = mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact'; setSize(null); setPosition(null); setMode(next) }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
                   <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); stopVoice(); setOpen(false) }}><Icon name="decline" size={18} /></button>
                 </div>
               </header>
-              <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
-                {view === 'voice' || !!live
-                  ? <Orb ref={robot} theme={theme} calm={bs.calm} drag defer active={!minimized && (view === 'voice' || !!live)} />
-                  : <Robot
-                      ref={robot}
-                      theme={theme}
-                      calm={bs.calm}
-                      drag
-                      active={!minimized && view === 'chat' && bs.robot && stage !== 'off'}
-                      onReady={() => {
-                        robotReadyRef.current = true
-                        const pose = pendingRobotPoseRef.current
-                        pendingRobotPoseRef.current = null
-                        if (pose === 'welcome') robot.current?.welcome()
-                        else if (pose === 'wave') robot.current?.wave()
-                      }}
-                    />}
-                <div className={cn('ast-cap', caption && 'on')}>{caption}</div><div className="bnm">QuorlythBot</div>
+              <div className={cn('bstage bot-orb-dock', stage)}>
+                <Orb
+                  ref={robot}
+                  theme={theme}
+                  calm={bs.calm}
+                  active={!minimized && open}
+                  onReady={() => {
+                    robotReadyRef.current = true
+                    const pose = pendingRobotPoseRef.current
+                    pendingRobotPoseRef.current = null
+                    if (pose === 'welcome') robot.current?.welcome()
+                    else if (pose === 'wave') robot.current?.wave()
+                  }}
+                />
               </div>
-              {live && (
-                <div className="blive" aria-live="polite">
-                  <span className="bls">{({ connecting: 'Connecting', listening: 'Listening', thinking: 'Thinking', speaking: 'Speaking' } as any)[live.state] || 'Live'}</span>
-                  <div className="blc">
-                    {live.user && <div className="blc-line blc-user" style={{ marginBottom: live.bot ? 10 : 0 }}>
-                      <span className="dim">{live.state === 'listening' ? 'You · live transcript' : 'You'}</span><br />
-                      <span>{live.user}</span>
-                    </div>}
-                    {live.bot && <div className="blc-line blc-bot">
-                      <span className="dim">QuorlythBot{live.state === 'speaking' ? ' · speaking' : ''}</span><br />
-                      <span>{live.bot.slice(-360)}</span>
-                    </div>}
-                    {!live.user && !live.bot && <span className="dim">{live.state === 'listening' ? 'Listening to you… start speaking whenever you’re ready.' : live.state === 'thinking' ? 'Thinking…' : 'Connecting your conversation…'}</span>}
-                  </div>
-                  <div className="acts" style={{ justifyContent: 'center', margin: 0, alignItems: 'center' }}>
-                    <span className="dim" style={{ fontSize: 12 }}>Microphone on · natural voice replies · Click Stop listening to end</span>
-                    <button className="chip" onClick={stopLive} aria-label="Stop Live Talk and microphone"><Icon name="stop" size={13} />Stop listening</button>
-                  </div>
-                </div>
-              )}
               <div
                 className={cn('qbot-conversation', view === 'chat' && 'qbot-chat-surface')}
                 ref={log}
@@ -4224,8 +4192,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                                     : pendingAction.type === 'startStandaloneTask'
                                       ? 'This starts the task but does not mark it complete. A completed status requires evidence approval through the existing workflow.'
                                       : 'Review every field above. Nothing has been saved yet. QuorlythBot will recheck your signed-in permissions before applying the action.'}</p></div><div className="acts" style={{ marginTop: 14 }}><button className="btn p" disabled={busy} onClick={() => { void confirmPendingAction() }}>{pendingAction.type === 'batchActions' ? 'Apply all ' + pendingAction.actions.length + ' changes' : pendingAction.type === 'publishSocial' ? 'Publish now' : 'Confirm action'}</button><button className="btn" disabled={busy} onClick={() => setPendingAction(null)}>Cancel</button></div></div>}
+                {live?.user && <div className="ast-log qbot-live-log"><div className="am mu qbot-live-user">{live.user}</div></div>}
+                {live?.bot && <div className="ast-log qbot-live-log"><div className="am ma qbot-live-bot"><div className="mt">{live.bot.slice(-1200)}</div></div></div>}
               </div>
-              {view === 'chat' && !live && (
+              {view === 'chat' && (
                 <div className="bc">
                   {slash.length > 0 && <div className="bsl">{slash.map((s, i) => <button key={s.id} className={cn('bsi', i === slashSel && 'on')} onClick={() => { setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) }}><Icon name={s.icon} size={16} /><b>/{s.id}</b><span className="dim">{s.d}</span></button>)}</div>}
                   <div className="ast-q">
@@ -4235,7 +4205,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                     <textarea rows={1} value={input} placeholder={ph} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
                     <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
-                    <button className={cn('btn', live && 'rec')} aria-label={live ? 'End live talk' : 'Start live talk — microphone active until ended'} title={live ? 'End live talk' : 'Start Live Talk; your microphone stays active until you stop it'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'stop' : 'live'} size={18} /></button>
+                    <button className={cn('btn', live && 'rec')} aria-label={live ? 'End voice conversation' : 'Start voice conversation'} title={live ? 'End voice conversation' : 'Start voice conversation'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'mic' : 'live'} size={18} /></button>
                     <button className="btn p" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
                   </div>
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
