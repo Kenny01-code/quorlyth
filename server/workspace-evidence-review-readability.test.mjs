@@ -29,7 +29,7 @@ test('an unavailable automatic alignment review is not presented as a zero score
   assert.match(screen, /GAPS TO CHECK/)
   assert.match(screen, /SUGGESTED NEXT ACTIONS/)
   assert.match(screen, /artifact\.aiReview\.scopeNote/)
-  assert.match(screen, /An authorised workspace manager can review the deliverable while the AI service is unavailable\./)
+  assert.match(screen, /An authorised workspace manager can review the deliverable and make the decision while the AI service is unavailable\./)
   assert.match(styles, /\.sw-ai-evidence-review__result\.status-unavailable/)
   assert.match(styles, /\.sw-ai-evidence-review__scope/)
 })
