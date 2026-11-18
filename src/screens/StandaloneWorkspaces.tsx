@@ -1028,7 +1028,7 @@ function WorkspaceProjectView() {
                 reviewSource: 'quorlyth_ai' as const,
                 reviewNote: localDecision === 'approved'
                   ? localReview.summary
-                  : [...localReview.gaps, ...localReview.recommendations].join('\\n').slice(0, 1600) || localReview.summary,
+                  : [...localReview.gaps, ...localReview.recommendations].join('\n').slice(0, 1600) || localReview.summary,
               } : {}),
             } : {}),
           }
