@@ -434,7 +434,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       log.current.scrollTo({ top: log.current.scrollHeight, behavior: 'auto' })
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [cur?.msgs.length, latestMessageText, busy])
+  }, [cur?.msgs.length, latestMessageText, busy, live?.user, live?.bot])
   useEffect(() => {
     if (voiceRequest <= 0) return
     setOpen(true)
