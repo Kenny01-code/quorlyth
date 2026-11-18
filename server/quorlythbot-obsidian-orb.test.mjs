@@ -14,7 +14,7 @@ test('QuorlythBot uses the site-matched obsidian pearl glass frame', async () =>
   assert.ok(bot.includes("const theme = 'pearl'"))
   assert.ok(bot.includes("const accent = THEMES.pearl"))
   assert.match(bot, /className=\{cn\('bstage bot-orb-dock', stage\)\}/)
-  assert.match(bot, /active=\{!minimized && open\}/)
+  assert.match(bot, /\{live && \([\s\S]*?className=\{cn\('bstage bot-orb-dock qbot-live-orb-stage'/)\n  assert.match(bot, /active=\{!minimized && open && !!live\}/)\n  assert.match(bot, /aria-label="Live Talk voice visualizer"/)\n  assert.doesNotMatch(bot, /robotReadyRef|pendingRobotPoseRef/)
   assert.match(bot, /view === 'chat' && \(/)
   assert.doesNotMatch(bot, /<Robot(?:\s|>)/)
   assert.doesNotMatch(bot, /className="blive"/)
@@ -37,7 +37,7 @@ test('the existing Three.js orb is a single cobalt-and-pearl sphere without orbi
     source('src/bot/robot-themes.ts'),
   ])
 
-  assert.match(orb, /new SphereGeometry\(1, 144, 112\)/)
+  assert.match(orb, /new SphereGeometry\(1, 176, 144\)/)\n  assert.match(orb, /camera.position.set\(0, 0, 3.72\)/)\n  assert.match(orb, /roughness: 0.042/)\n  assert.match(orb, /clearcoatRoughness: 0.022/)\n  assert.match(orb, /edgeSoftbox/)
   assert.match(orb, /uniform vec3 uPearl/)
   assert.match(orb, /uniform vec3 uCobalt/)
   assert.match(orb, /uniform vec3 uIce/)
@@ -74,4 +74,45 @@ test('voice UI exposes the pearl orb and keeps the chat composer mounted during 
   assert.match(views, /Chips label="Orb scale"/)
   assert.doesNotMatch(views, /Robot finish|Robot size|Hidden/)
   assert.match(config, /theme: 'pearl'/)
+})
+
+
+test('the New chat sidebar action is a refined monochrome pearl-glass control', async () => {
+  const [bot, glass] = await Promise.all([
+    source('src/bot/QuorlythBot.tsx'),
+    source('src/styles/bot-obsidian-glass.css'),
+  ])
+
+  assert.match(bot, /qbot-sidebar-primary-action/)
+  assert.match(bot, /qbot-sidebar-primary-icon/)
+  assert.match(bot, /Start a fresh conversation/)
+  assert.match(glass, /\.bs-n > \.qbot-sidebar-primary-action/)
+  assert.match(glass, /grid-template-columns:38px minmax\(0,1fr\) 22px/)
+  assert.match(glass, /linear-gradient\(145deg,#fff 0%,#f3f4f7 48%,#dfe3eb 100%\)/)
+  assert.match(glass, /qbot-sidebar-primary-icon[\s\S]*?background:linear-gradient\(145deg,#26282d,#08090b 76%\)/)
+})
+
+test('the Live Talk orb is larger, brighter, and never mounted in ordinary chat', async () => {
+  const [bot, glass] = await Promise.all([
+    source('src/bot/QuorlythBot.tsx'),
+    source('src/styles/bot-obsidian-glass.css'),
+  ])
+
+  const orbStage = bot.indexOf("className={cn('bstage bot-orb-dock qbot-live-orb-stage'")
+  assert.ok(orbStage > 0)
+  assert.ok(bot.lastIndexOf('{live && (', orbStage) >= 0, 'Orb stage must be conditionally mounted by Live Talk state.')
+  assert.match(glass, /height:clamp\(204px,25vh,248px\) !important/)
+  assert.match(glass, /qbot-orb-stage-halo/)
+  assert.match(glass, /drop-shadow\(0 0 42px rgba\(225,235,255,.09\)\)/)
+  assert.match(glass, /width:clamp\(142px,18vh,178px\)/)
+})
+
+test('QuorlythBot writeups, code, tables and inline icons use monochrome glass styling', async () => {
+  const glass = await source('src/styles/bot-obsidian-glass.css')
+
+  assert.match(glass, /\.qbot-conversation \.am\.ma a/)
+  assert.match(glass, /\.qbot-conversation \.am\.ma pre/)
+  assert.match(glass, /\.qbot-conversation \.am\.ma table/)
+  assert.match(glass, /\.qbot-conversation \.am\.ma :is\(svg,\.ic,\.quorlyth-glyph\)/)
+  assert.match(glass, /background:linear-gradient\(145deg,rgba\(255,255,255,.055\),rgba\(255,255,255,.018\)\),#050506/)
 })
