@@ -120,7 +120,7 @@ const fragmentShader = /* glsl */ `
     vec3 N = normalize(vNormalView);
     vec3 V = normalize(vViewDirection);
     vec3 spherePoint = normalize(vObjectPosition);
-    vec3 local = spherePoint * 2.65;
+    vec3 local = spherePoint * 2.82;
     float t = uTime * mix(0.085, 0.205, uEnergy);
 
     // Preserve the procedural orb while deepening its slow volumetric liquid current.
@@ -135,28 +135,28 @@ const fragmentShader = /* glsl */ `
     float detail = fbm(flowPoint * 2.08 + warp * 1.7);
     float current = 0.5 + 0.5 * sin((flow * 5.2 + detail * 1.8 + local.y * 0.62) * 6.2831 + t * 1.35);
     float filament = pow(1.0 - abs(current - 0.5) * 2.0, 5.0);
-    filament = smoothstep(0.42, 0.96, filament) * (0.12 + uEnergy * 0.28);
+    filament = smoothstep(0.36, 0.96, filament) * (0.16 + uEnergy * 0.34);
 
     // Cobalt occupies the upper hemisphere; pearl-white clouding rolls through the lower half.
     float boundary = spherePoint.y + (flow - 0.5) * 0.34 + (detail - 0.5) * 0.16;
-    float blueMask = smoothstep(-0.24, 0.37, boundary);
+    float blueMask = smoothstep(-0.28, 0.34, boundary);
     vec3 cobalt = mix(uCobalt, uIce, smoothstep(0.16, 0.86, flow * 0.66 + detail * 0.34));
     vec3 pearl = mix(uPearl, uWhite, smoothstep(0.28, 0.82, detail) * 0.26);
     vec3 color = mix(pearl, cobalt, blueMask);
     float cloud = smoothstep(0.43, 0.82, fbm(flowPoint * 0.72 + warp * 1.35));
-    float lowerCloud = (1.0 - blueMask) * cloud * 0.22;
+    float lowerCloud = (1.0 - blueMask) * cloud * 0.3;
     color = mix(color, uWhite, lowerCloud);
     color = mix(color, uIce, filament * (0.08 + blueMask * 0.18));
 
-    float fresnel = pow(1.0 - max(dot(N, V), 0.0), 2.55);
+    float fresnel = pow(1.0 - max(dot(N, V), 0.0), 2.12);
     vec3 L = normalize(vec3(-0.46, 0.74, 0.88));
     float diffuse = max(dot(N, L), 0.0);
-    float specular = pow(max(dot(reflect(-L, N), V), 0.0), 48.0);
-    float broadSpecular = pow(max(dot(reflect(-L, N), V), 0.0), 10.0);
+    float specular = pow(max(dot(reflect(-L, N), V), 0.0), 68.0);
+    float broadSpecular = pow(max(dot(reflect(-L, N), V), 0.0), 8.0);
     float innerLight = 0.78 + diffuse * 0.23;
     color *= innerLight;
-    color += uWhite * (specular * 0.28 + broadSpecular * 0.035 + fresnel * 0.085);
-    color += uIce * (fresnel * 0.075 + filament * (0.08 + uEnergy * 0.14));
+    color += uWhite * (specular * 0.54 + broadSpecular * 0.058 + fresnel * 0.14);
+    color += uIce * (fresnel * 0.11 + filament * (0.1 + uEnergy * 0.18));
     color *= mix(1.0, 0.94, uCalm);
     gl_FragColor = vec4(color, 1.0);
     #include <tonemapping_fragment>
@@ -196,33 +196,35 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
   renderer.setSize(width, height, false)
   renderer.outputEncoding = sRGBEncoding
   renderer.toneMapping = ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.04
+  renderer.toneMappingExposure = 1.12
   renderer.setClearColor(0x000000, 0)
 
   const scene = new Scene()
   const camera = new PerspectiveCamera(32, width / height, 0.1, 40)
-  camera.position.set(0, 0, 4.15)
+  camera.position.set(0, 0, 3.72)
   camera.lookAt(0, 0, 0)
 
   const root = new Group()
   scene.add(root)
 
-  const key = new DirectionalLight(0xffffff, 1.55)
+  const key = new DirectionalLight(0xffffff, 2.05)
   key.position.set(-3.5, 4.2, 5)
-  const rim = new DirectionalLight(0x85adff, 2.35)
+  const rim = new DirectionalLight(0x9fc2ff, 2.75)
   rim.position.set(4, -1.2, -4)
-  const pearlFill = new DirectionalLight(0xdce8ff, 1.05)
+  const pearlFill = new DirectionalLight(0xf1f5ff, 1.42)
   pearlFill.position.set(0, -4, 4)
-  scene.add(new AmbientLight(0xeaf0ff, 0.78), key, rim, pearlFill)
+  const edgeSoftbox = new DirectionalLight(0xffffff, 0.92)
+  edgeSoftbox.position.set(-4, -1.5, 2.8)
+  scene.add(new AmbientLight(0xeaf0ff, 0.66), key, rim, pearlFill, edgeSoftbox)
 
   const shader = new ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uEnergy: { value: 0.2 },
       uCalm: { value: 0 },
-      uPearl: { value: new Color(0xeaf0ff) },
-      uIce: { value: new Color(0x91b7ff) },
-      uCobalt: { value: new Color(0x285bd8) },
+      uPearl: { value: new Color(0xf0f4ff) },
+      uIce: { value: new Color(0xa8c8ff) },
+      uCobalt: { value: new Color(0x2452c8) },
       uWhite: { value: new Color(0xffffff) },
     },
     vertexShader,
@@ -231,22 +233,22 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
     depthWrite: true,
   })
 
-  const orbGeometry = new SphereGeometry(1, 144, 112)
+  const orbGeometry = new SphereGeometry(1, 176, 144)
   const orb = new Mesh(orbGeometry, shader)
   root.add(orb)
 
   // A clear optical surface gives the same sphere a deeper polished-glass finish.
   const shell = new Mesh(
-    new SphereGeometry(1.014, 144, 112),
+    new SphereGeometry(1.022, 176, 144),
     new MeshPhysicalMaterial({
-      color: 0xeaf0ff,
-      roughness: 0.085,
-      metalness: 0.035,
+      color: 0xf1f5ff,
+      roughness: 0.042,
+      metalness: 0.055,
       clearcoat: 1,
-      clearcoatRoughness: 0.055,
-      reflectivity: 0.82,
+      clearcoatRoughness: 0.022,
+      reflectivity: 0.96,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.2,
       side: BackSide,
       depthWrite: false,
     }),
@@ -302,7 +304,7 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
     const h = Math.max(1, canvas.clientHeight || height)
     renderer.setSize(w, h, false)
     camera.aspect = w / h
-    camera.position.z = w / h < 0.8 ? 4.15 / Math.max(0.65, w / h) : 4.15
+    camera.position.z = w / h < 0.8 ? 3.72 / Math.max(0.65, w / h) : 3.72
     camera.lookAt(0, 0, 0)
     camera.updateProjectionMatrix()
   }
@@ -388,7 +390,7 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
       else rotationY += (1 - Math.pow(1 - elapsed, 3)) * Math.PI * 2 * dt * 1.8
     }
 
-    const breathe = reducedMotion ? 1 : 1 + Math.sin(t * 1.15) * 0.012 + energy * 0.018 + bump * 0.12
+    const breathe = reducedMotion ? 1 : 1.035 + Math.sin(t * 1.15) * 0.014 + energy * 0.022 + bump * 0.12
     root.scale.setScalar(breathe)
     root.rotation.y += (rotationY - root.rotation.y) * Math.min(1, response * 1.7)
     root.rotation.x += ((pointerY * -0.1 + Math.sin(t * 0.32) * 0.018 + shake * 0.08) - root.rotation.x) * response
@@ -398,8 +400,8 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
     shader.uniforms.uEnergy.value = energy
     shader.uniforms.uCalm.value = calm ? 1 : 0
     if (aura) {
-      aura.material.opacity = reducedMotion ? 0.3 : 0.24 + energy * 0.14 + Math.sin(t * 1.1) * 0.018
-      aura.scale.setScalar(reducedMotion ? 3.1 : 3.0 + energy * 0.25)
+      aura.material.opacity = reducedMotion ? 0.34 : 0.31 + energy * 0.17 + Math.sin(t * 1.1) * 0.022
+      aura.scale.setScalar(reducedMotion ? 3.35 : 3.25 + energy * 0.28)
     }
 
     renderer.render(scene, camera)
