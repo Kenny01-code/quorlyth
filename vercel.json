@@ -51,7 +51,7 @@
     }
   ],
   "functions": {
-    "api/*.mjs": {
+    "api/*.js": {
       "maxDuration": 60,
       "includeFiles": "data/ai-training/**/*.jsonl"
     }
