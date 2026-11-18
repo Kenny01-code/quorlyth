@@ -341,6 +341,7 @@ function Detail({ cid }: { cid: string }) {
   if (!c) return <Empty icon="community" title="Community not found" text="It may have been removed."><button className="btn" style={{ marginTop: 12 }} onClick={() => nav('/communities')}>Back</button></Empty>
 
   const own = a.canManageCommunity(cid) && !preview
+  const isCommunityOwner = a.ownsCommunity(cid) && !preview
   const myJoinRequest = a.data.joinRequests.find(r => r.cid === cid && r.userId === a.me?.id)
   // An approved request is itself authoritative membership evidence while the member doc subscription catches up.
   const joined = own ? false : preview === 'visitor' ? false : preview === 'member' ? true : a.joined(cid) || myJoinRequest?.status === 'approved'
@@ -355,7 +356,7 @@ function Detail({ cid }: { cid: string }) {
   list = [...list].sort(sort === 1 ? (x, y) => a.votesOf(y.id) - a.votesOf(x.id) : sort === 2 ? (x, y) => (data.reviews[y.id]?.score ?? -1) - (data.reviews[x.id]?.score ?? -1) : (x, y) => y.at - x.at)
   const pin = c.pinned ? data.ideas.find(i => i.id === c.pinned) : null
   const tags = Object.entries(list.reduce((o: Record<string, number>, i) => { (i.tags || []).forEach(t => (o[t] = (o[t] || 0) + 1)); return o }, {})).sort((x, y) => y[1] - x[1]).slice(0, 10).map(x => x[0])
-  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'AI organizer requests', 'Insights', 'Settings'] : [])]
+  const tabs = ['Feed', 'About', 'Members', ...(own ? ['Join requests', 'AI organizer requests', 'Insights', ...(isCommunityOwner ? ['Settings'] : [])] : [])]
 
   async function organizeIdeaWithAI() {
     if (!c) return a.toast('Community not found. Refresh and try again.')
@@ -611,7 +612,8 @@ function Detail({ cid }: { cid: string }) {
 
       {tab === 2 && (
         <div className="glass pad community-member-panel"><div className="profile-section-heading"><div><p className="dim">YOUR COMMUNITY</p><h3 style={{ marginBottom: 4 }}>Members</h3><p className="mut">Recognize the people helping this community move forward.</p></div><span className="profile-section-mark"><Icon name="member" size={19} /></span></div>
-          {own && <BadgeDesigner community={c} onSave={badges => a.saveCommunity(cid, { badges })} />}
+          {isCommunityOwner && <CommunityManagerPanel community={c} memberIds={mem} onSave={managerIds => a.saveCommunity(cid, { managerIds })} />}
+          {isCommunityOwner && <BadgeDesigner community={c} onSave={badges => a.saveCommunity(cid, { badges })} />}
           {loadingMemberIds ? (
             <p className="mut" style={{ padding: '18px 0' }}>Loading community members…</p>
           ) : !own && !joined ? (
@@ -621,12 +623,14 @@ function Detail({ cid }: { cid: string }) {
           ) : (
             mem.map(u => {
               const badge = c.memberBadges?.[u] || ''
+              const isManager = Array.isArray(c.managerIds) && c.managerIds.includes(u)
               const badgeIcon = c.badges?.find(item => item.label === badge)?.icon || 'star'
               return (
                 <div key={u} className="row community-member-row" style={{ cursor: 'default' }}>
                   <Av id={u} size={42} />
                   <div className="t">
                     <h3 style={{ fontSize: 15 }}>{a.nm(u)}</h3>
+                    {isManager && <span className="community-manager-pill"><Icon name="approve" size={12} />Community manager</span>}
                     <p className="dim">{data.profiles[u]?.head || 'Member'}</p>
                     {badge && <span className="community-member-badge"><Icon name={badgeIcon} size={13} />{badge}</span>}
                   </div>
@@ -644,7 +648,7 @@ function Detail({ cid }: { cid: string }) {
                           {(c.badges || []).map(item => <option key={item.label} value={item.label}>{item.label}</option>)}
                         </select>
                       </label>
-                      <Chip onClick={async () => {
+                      {isCommunityOwner && !isManager && <Chip onClick={async () => {
                         try {
                           await a.backend!.store.update('members/' + u, { c: { [cid]: false } })
                           setMemberIds(await a.backend!.store.listCommunityMembers(cid))
@@ -653,7 +657,7 @@ function Detail({ cid }: { cid: string }) {
                           console.error('Quorlyth member removal failed:', e)
                           a.toast(userFacingMutationError(e, 'remove this member'))
                         }
-                      }}>Remove</Chip>
+                      }}>Remove</Chip>}
                     </div>
                   )}
                 </div>
@@ -665,8 +669,89 @@ function Detail({ cid }: { cid: string }) {
       {tab === 3 && own && <JoinRequests cid={cid} />}
       {tab === 4 && own && <AIOrganizerRequests cid={cid} />}
       {tab === 5 && own && <Insights cid={cid} creatorId={communityCreatorId} memberIds={memberIds} />}
-      {tab === 6 && own && <CommunitySettings c={c} memberIds={mem.filter(userId => userId !== communityCreatorId)} />}
+      {tab === 6 && isCommunityOwner && <CommunitySettings c={c} memberIds={mem.filter(userId => userId !== communityCreatorId)} />}
     </>
+  )
+}
+
+
+function CommunityManagerPanel({
+  community,
+  memberIds,
+  onSave,
+}: {
+  community: Community
+  memberIds: string[]
+  onSave: (managerIds: string[]) => Promise<boolean>
+}) {
+  const a = useApp()
+  const ownerId = community.ownerId || community.createdBy || ''
+  const managerIds = [...new Set(Array.isArray(community.managerIds) ? community.managerIds : [])].filter(id => !!id && id !== ownerId)
+  const eligibleMembers = memberIds.filter(id => id !== ownerId && !managerIds.includes(id))
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function save(next: string[]) {
+    if (saving) return
+    setSaving(true)
+    try {
+      const saved = await onSave([...new Set(next)])
+      if (saved) setSelectedUserId('')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section className="community-manager-panel" aria-label="Community manager assignments">
+      <div className="community-manager-panel__heading">
+        <div>
+          <p className="dim">OWNER CONTROLS</p>
+          <h3>Community managers</h3>
+          <p className="mut">Choose trusted members to help manage this community. Managers can review requests and help manage ideas, but only you can appoint managers or change ownership.</p>
+        </div>
+        <span className="profile-section-mark"><Icon name="approve" size={18} /></span>
+      </div>
+
+      <div className="community-manager-panel__list">
+        {managerIds.length ? managerIds.map(userId => (
+          <div className="community-manager-panel__person" key={userId}>
+            <Av id={userId} size={36} />
+            <div className="t">
+              <strong>{a.nm(userId)}</strong>
+              <span className="community-manager-pill"><Icon name="approve" size={12} />Manager</span>
+            </div>
+            <button
+              type="button"
+              className="btn community-manager-panel__remove"
+              disabled={saving}
+              onClick={() => void save(managerIds.filter(id => id !== userId))}
+            >
+              Remove manager
+            </button>
+          </div>
+        )) : <p className="mut">No managers assigned yet. You remain the only person with owner-level control.</p>}
+      </div>
+
+      <div className="community-manager-panel__assign">
+        <label className="field">
+          <span>Assign an existing member</span>
+          <select value={selectedUserId} onChange={event => setSelectedUserId(event.target.value)} disabled={saving || !eligibleMembers.length}>
+            <option value="">Select a community member</option>
+            {eligibleMembers.map(userId => <option value={userId} key={userId}>{a.nm(userId)}</option>)}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="btn p"
+          disabled={saving || !selectedUserId}
+          onClick={() => void save([...managerIds, selectedUserId])}
+        >
+          <Icon name="approve" size={15} />{saving ? 'Saving…' : 'Assign manager'}
+        </button>
+      </div>
+      {!eligibleMembers.length && <p className="community-manager-panel__note">Every current member is already a manager, or the community has no other members yet.</p>}
+    </section>
   )
 }
 

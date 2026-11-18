@@ -639,7 +639,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (c.createdBy) return c.createdBy === me.id
       return platformOwner
     })
-    const canManageCommunity = (cid: string) => !!me && (platformOwner || platformAdmin || ownsCommunity(cid))
+    const canManageCommunity = (cid: string) => !!me && (platformOwner || platformAdmin || ownsCommunity(cid) || data.communities.some(community => community.id === cid && Array.isArray(community.managerIds) && community.managerIds.includes(me.id) && !!data.members[me.id]?.[cid]))
     const canCollaborateOnIdea = (ideaId: string) => {
       const idea = data.ideas.find(item => item.id === ideaId)
       return !!me && !!idea && (canManageCommunity(idea.cid) || idea.authorId === me.id || data.volunteers.some(item => item.ideaId === ideaId && item.applicantId === me.id && item.status === 'accepted'))

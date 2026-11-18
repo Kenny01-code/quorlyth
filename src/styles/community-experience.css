@@ -369,3 +369,107 @@
 #root #main :is(.creator-badge, .community-member-badge) .ic:not(.google-brand-svg):not(.q-brand-svg) {
   color: #793c2c !important;
 }
+
+
+/* Owner-only manager assignment and visible manager role. */
+#root #main .community-manager-panel {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 18px;
+  padding: 18px;
+  border: 1px solid rgba(220, 132, 77, .24);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+}
+#root #main .community-manager-panel__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+#root #main .community-manager-panel__heading h3 {
+  margin: 3px 0 5px;
+  color: var(--q-bone, #f4eee5);
+  font-size: 17px;
+  font-weight: 650;
+}
+#root #main .community-manager-panel__heading .mut {
+  max-width: 660px;
+  line-height: 1.55;
+}
+#root #main .community-manager-panel__list {
+  display: grid;
+  gap: 8px;
+}
+#root #main .community-manager-panel__person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line, rgba(255,255,255,.1));
+  border-radius: 13px;
+  background: rgba(0,0,0,.14);
+}
+#root #main .community-manager-panel__person .t {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+#root #main .community-manager-panel__person strong {
+  color: var(--q-bone, #f4eee5);
+  font-size: 14px;
+}
+#root #main .community-manager-panel__remove {
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+#root #main .community-manager-panel__assign {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line, rgba(255,255,255,.1));
+  padding-top: 12px;
+}
+#root #main .community-manager-panel__assign .field {
+  flex: 1 1 240px;
+  margin: 0;
+}
+#root #main .community-manager-panel__note {
+  color: var(--muted, #aaa);
+  font-size: 12px;
+}
+#root #main .community-manager-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 3px 8px;
+  border: 1px solid rgba(249,115,22,.35);
+  border-radius: 999px;
+  color: #ffb17b;
+  background: rgba(249,115,22,.1);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .045em;
+  line-height: 1.3;
+}
+@media (max-width: 560px) {
+  #root #main .community-manager-panel__person {
+    flex-wrap: wrap;
+  }
+  #root #main .community-manager-panel__remove {
+    width: 100%;
+  }
+  #root #main .community-manager-panel__assign > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root #main .community-manager-panel * {
+    scroll-behavior: auto !important;
+  }
+}
