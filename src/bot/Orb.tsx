@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import type { RobotApi } from './Robot'
 
 /** High-end Three.js voice orb. It shares RobotApi so live voice actions stay in sync. */
-export const Orb = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; defer?: boolean; active?: boolean; onReady?: () => void }>(function Orb({ theme = 'terracotta', calm, drag, defer = false, active = true, onReady }, ref) {
+export const Orb = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; defer?: boolean; active?: boolean; onReady?: () => void }>(function Orb({ theme = 'pearl', calm, drag, defer = false, active = true, onReady }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const apiRef = useRef<RobotApi | null>(null)
   const activeRef = useRef(active)
@@ -71,13 +71,15 @@ export const Orb = forwardRef<RobotApi | null, { theme?: string; calm?: boolean;
 
   return (
     <>
+      <div className="qbot-orb-fallback" aria-hidden="true" />
       <canvas ref={canvasRef} aria-label="QuorlythBot animated voice orb" role="img" />
-      {state !== 'ok' && (
-        <div className="ast-fb" aria-live="polite">
-          {state === 'loading'
-            ? <span className="ast-ld"><i /><i /><i /></span>
-            : <button className="chip" onClick={() => setAttempt(value => value + 1)}>Load the orb</button>}
-        </div>
+      {state === 'fail' && (
+        <button
+          className="qbot-orb-retry"
+          type="button"
+          aria-label="Retry the voice orb renderer"
+          onClick={() => setAttempt(value => value + 1)}
+        />
       )}
     </>
   )
