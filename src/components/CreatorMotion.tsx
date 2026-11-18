@@ -28,7 +28,7 @@ export function HeroCreator() {
     <div ref={stageRef} className="qth-creator-stage" data-visible={visible ? 'true' : 'false'} aria-hidden="true">
       <div className="qth-creator-stage__halo" />
       <div className="qth-creator-stage__art">
-        <img src={CREATOR_ART} width="480" height="817" alt="" loading="eager" decoding="async" />
+        <img src={CREATOR_ART} width="430" height="722" alt="" loading="eager" decoding="async" />
       </div>
       <div className="qth-creator-float qth-creator-float--signal">
         <span>COMMUNITY SIGNAL</span>
@@ -47,7 +47,7 @@ export function HeroCreator() {
 export function PreviewCreator() {
   return (
     <div className="qth-creator-echo" aria-hidden="true">
-      <img src={CREATOR_ART} width="480" height="817" alt="" loading="lazy" decoding="async" />
+      <img src={CREATOR_ART} width="430" height="722" alt="" loading="lazy" decoding="async" />
     </div>
   )
 }
