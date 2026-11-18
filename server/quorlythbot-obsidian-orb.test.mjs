@@ -13,10 +13,11 @@ test('QuorlythBot uses the site-matched obsidian pearl glass frame', async () =>
   assert.ok(bot.includes("import '../styles/bot-obsidian-glass.css'"))
   assert.ok(bot.includes("const theme = 'pearl'"))
   assert.ok(bot.includes("const accent = THEMES.pearl"))
-  assert.match(bot, /className=\{cn\('bstage bot-orb-dock qbot-live-orb-stage', stage\)\}/)
-  assert.match(bot, /\{live && \([\s\S]*?className=\{cn\('bstage bot-orb-dock qbot-live-orb-stage'/)
-  assert.match(bot, /active=\{!minimized && open && !!live\}/)
-  assert.match(bot, /aria-label="Live Talk voice visualizer"/)
+  assert.match(bot, /const orbVisible = bs\.robot && \(\!\!live \|\| speechState === 'playing' \|\| voiceStudioSpeaking\)/)
+  assert.match(bot, /\{orbVisible && \([\s\S]*?className=\{cn\('bstage bot-orb-dock qbot-live-orb-stage'/)
+  assert.match(bot, /active=\{!minimized && open && orbVisible\}/)
+  assert.match(bot, /aria-label=\{live \? 'Live Talk voice visualizer' : 'QuorlythBot speaking visualizer'\}/)
+  assert.match(bot, /onVoicePlaybackChange=\{setVoiceStudioSpeaking\}/)
   assert.doesNotMatch(bot, /robotReadyRef|pendingRobotPoseRef/)
   assert.match(bot, /view === 'chat' && \(/)
   assert.doesNotMatch(bot, /<Robot(?:\s|>)/)
@@ -107,7 +108,8 @@ test('the Live Talk orb is larger, brighter, and never mounted in ordinary chat'
 
   const orbStage = bot.indexOf("className={cn('bstage bot-orb-dock qbot-live-orb-stage'")
   assert.ok(orbStage > 0)
-  assert.ok(bot.lastIndexOf('{live && (', orbStage) >= 0, 'Orb stage must be conditionally mounted by Live Talk state.')
+  assert.ok(bot.lastIndexOf('{orbVisible && (', orbStage) >= 0, 'Orb stage must be mounted only while voice output is active.')
+  assert.match(bot, /voiceStudioSpeaking/)
   assert.match(glass, /height:clamp\(204px,25vh,248px\) !important/)
   assert.match(glass, /qbot-orb-stage-halo/)
   assert.match(glass, /drop-shadow\(0 0 42px rgba\(225,235,255,.09\)\)/)
@@ -122,4 +124,44 @@ test('QuorlythBot writeups, code, tables and inline icons use monochrome glass s
   assert.match(glass, /\.qbot-conversation \.am\.ma table/)
   assert.match(glass, /\.qbot-conversation \.am\.ma :is\(svg,\.ic,\.quorlyth-glyph\)/)
   assert.match(glass, /background:linear-gradient\(145deg,rgba\(255,255,255,.055\),rgba\(255,255,255,.018\)\),#050506/)
+})
+
+
+test('voice studio previews and voice matching also activate and release the parent orb', async () => {
+  const [bot, views] = await Promise.all([
+    source('src/bot/QuorlythBot.tsx'),
+    source('src/bot/views.tsx'),
+  ])
+
+  assert.match(bot, /onVoicePlaybackChange=\{setVoiceStudioSpeaking\}/)
+  assert.match(views, /onVoicePlaybackChange\?: \(speaking: boolean\) => void/)
+  assert.match(views, /p\.onVoicePlaybackChange\?\.\(true\)/)
+  assert.match(views, /p\.onVoicePlaybackChange\?\.\(false\)/)
+  assert.match(views, /Voice preview finished\./)
+})
+
+test('the reference sidebar layout uses white-glass primary action and Quorlyth orange icons', async () => {
+  const [bot, glass] = await Promise.all([
+    source('src/bot/QuorlythBot.tsx'),
+    source('src/styles/bot-obsidian-glass.css'),
+  ])
+
+  for (const region of ['bs-t', 'bs-n', 'bs-s', 'bs-l', 'bs-f']) assert.ok(bot.includes('className="' + region + '"'))
+  assert.match(bot, /qbot-sidebar-primary-action/)
+  assert.match(glass, /--qbot-orange: #F97316/)
+  assert.match(glass, /\.bs \.bs-n > \.bsb/)
+  assert.match(glass, /\.bs \.bs-n > \.bsb :is\(svg,\.ic\)/)
+  assert.match(glass, /linear-gradient\(145deg,#fff 0%,#f1f2f5 55%,#e2e5eb 100%\)/)
+  assert.match(glass, /\.bs-f \.bsu/)
+})
+
+test('Projects, Library, Customize and Voice Studio get high-contrast black copy on white glass', async () => {
+  const glass = await source('src/styles/bot-obsidian-glass.css')
+
+  assert.match(glass, /\.qbot-conversation:not\(\.qbot-chat-surface\) \.glass\.pad/)
+  assert.match(glass, /color:#111216 !important/)
+  assert.match(glass, /\.glass\.pad :is\(input,textarea,select\)/)
+  assert.match(glass, /\.qbot-conversation:not\(\.qbot-chat-surface\) :is\(\.bsk,\.bvc\)/)
+  assert.match(glass, /\.qbot-conversation:not\(\.qbot-chat-surface\) \.btn\.p/)
+  assert.match(glass, /\.qbot-chat-surface :is\(svg,\.ic,\.quorlyth-glyph\)/)
 })
