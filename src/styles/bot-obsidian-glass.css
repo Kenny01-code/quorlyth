@@ -1511,3 +1511,123 @@
     min-height:48px !important;
   }
 }
+
+/* ========================================================
+   EDITORIAL NOMI-STYLE CHAIR & LUXURY PRODUCT INTERFACE
+   ======================================================== */
+
+/* Editorial Header Title with inline pen edit */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh .bht {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-editorial-title {
+  margin: 0 !important;
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif !important;
+  font-size: clamp(20px, 2.4vw, 28px) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.015em !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-title-edit {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.75) !important;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18) !important;
+  transition: transform 0.18s ease, border-color 0.18s ease, color 0.18s ease, background 0.18s ease !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-title-edit:hover {
+  transform: scale(1.08);
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Sleek Outlined Share Pill */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-share-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #fff !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14) !important;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-share-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Quick Tool Pills at the bottom of the composer */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-composer-toolbar {
+  grid-column: 1 / 2 !important;
+  grid-row: 2 !important;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-tool-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-tool-pill:hover {
+  background: rgba(255, 255, 255, 0.11) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-tool-pill.qbot-tool-more {
+  padding: 6px 9px !important;
+}
+
+/* Micro-actions below assistant messages */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .mact {
+  display: flex !important;
+  align-items: center;
+  gap: 12px !important;
+  margin-top: 10px !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .mact button {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px !important;
+}

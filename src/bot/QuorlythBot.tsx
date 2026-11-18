@@ -4000,8 +4000,15 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 window.addEventListener('pointercancel', end)
               }}>
                 <button className="bib" aria-label="Sidebar" onClick={e => { e.stopPropagation(); setSide(!side) }}><Icon name="menu" size={18} /></button>
-                <div className="bht"><b className="bwm big">{wm('QuorlythBot')}</b></div>
+                <div className="bht">
+                  <div className="qbot-title-row">
+                    <h2 className="qbot-editorial-title">{cur?.title || (project ? project.name : 'Quorlyth')}</h2>
+                    <button className="qbot-title-edit" aria-label="Edit chat title" title="Edit title" onClick={e => { e.stopPropagation(); const next = prompt('Chat title:', cur?.title || ''); if (next && cur) { setCur({ ...cur, title: next }); bd.put('c_' + cur.id, { ...cur, title: next }) } }}><Icon name="pen" size={15} /></button>
+                  </div>
+                  <b className="bwm big">{wm('QuorlythBot')}</b>
+                </div>
                 <div className="bha">
+                  <button className="qbot-share-pill" aria-label="Share" title="Share conversation" onClick={() => { if (!msgs.length) return a.toast('No messages to share'); const text = msgs.map(m => (m.r === 'u' ? 'You: ' : 'Quorlyth: ') + m.t).join('\n\n'); navigator.clipboard.writeText(text).then(() => a.toast('Chat transcript copied')) }}><Icon name="share" size={14} /><span>Share</span></button>
                   <button className="bib" aria-label="Orb scale" title="Orb scale" onClick={() => setStage(stage === 'std' ? 'big' : 'std')}><Icon name="stage" size={18} /></button>
                   <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>
                   <button className="bib" aria-label="Minimize QuorlythBot" title="Minimize to launcher" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
@@ -4079,9 +4086,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                             <div className="mact">
                               <button disabled={!!(m as any).live} aria-label={speechLabel} title={speechLabel} aria-pressed={activeSpeech && speechState === 'playing'} onClick={() => toggleReplySpeech(speechKey, m.t)}><Icon name={speechIcon} size={14} /></button>
                               {activeSpeech && <button aria-label="Stop voice playback" title="Stop voice playback" onClick={stopVoice}><Icon name="stop" size={14} /></button>}
-                              <button aria-label="Copy" title="Copy reply" onClick={() => navigator.clipboard.writeText(m.t).then(() => a.toast('Copied'))}><Icon name="copy" size={14} /></button>
+                              <button aria-label="Copy" title="Copy reply" onClick={() => navigator.clipboard.writeText(m.t).then(() => a.toast('Copied'))}><Icon name="copy" size={14} /><span>Copy</span></button>
                               <button aria-label="Save" title="Save reply" onClick={() => { bd.put('l_' + slug(), { title: m.t.slice(0, 48), text: m.t, at: Date.now() }); a.toast('Saved to your library') }}><Icon name="star" size={14} /></button>
-                              {i === msgs.length - 1 && !busy && <button aria-label="Try again" title="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /></button>}
+                              {i === msgs.length - 1 && !busy && <button aria-label="Try again" title="Try again" onClick={() => { const u = msgs[msgs.length - 2]; if (u) { setCur({ ...cur!, msgs: msgs.slice(0, -2) }); send(u.t, true) } }}><Icon name="redo" size={14} /><span>Try again</span></button>}
                             </div>
                           </div>
                         )
@@ -4207,11 +4214,17 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                     {tour >= 0 && <><button className="chip on" onClick={() => { const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; setTour(tour + 1); step(steps, tour + 1) }}>Next</button><button className="chip" onClick={() => { setTour(-1); robot.current?.set('rest') }}>End tour</button></>}
                   </div>
                   <div className="ast-in">
-                    <textarea rows={1} value={input} placeholder={ph} aria-label="Message" onChange={e => setInput(e.target.value)}
+                    <textarea rows={1} value={input} placeholder={ph || "Ask me anything..."} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
                     <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
                     <button className={cn('btn', live && 'rec')} aria-label={live ? 'End voice conversation' : 'Start voice conversation'} title={live ? 'End voice conversation' : 'Start voice conversation'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'mic' : 'live'} size={18} /></button>
                     <button className="btn p" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
+                    <div className="qbot-composer-toolbar" aria-label="Quick prompt tools">
+                      <button type="button" className="qbot-tool-pill" onClick={() => { setInput('Brainstorm high-impact ideas for '); send() }}><Icon name="spark" size={13} /><span>Brainstorm</span></button>
+                      <button type="button" className="qbot-tool-pill" onClick={() => { setInput('Search across the platform for '); send() }}><Icon name="search" size={13} /><span>Web search</span></button>
+                      <button type="button" className="qbot-tool-pill" onClick={() => { setInput('Review this architecture and code: '); send() }}><Icon name="code" size={13} /><span>Code</span></button>
+                      <button type="button" className="qbot-tool-pill qbot-tool-more" aria-label="More tools" title="More skills" onClick={() => skill('write')}><Icon name="plus" size={13} /></button>
+                    </div>
                   </div>
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
                 </div>
