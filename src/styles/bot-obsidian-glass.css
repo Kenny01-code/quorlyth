@@ -688,3 +688,275 @@
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Primary sidebar action: polished pearl-glass control with a black icon tile. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .qbot-sidebar-primary-action {
+  position:relative;
+  isolation:isolate;
+  display:grid !important;
+  grid-template-columns:38px minmax(0,1fr) 22px;
+  align-items:center;
+  gap:11px;
+  width:100%;
+  min-height:60px !important;
+  margin:3px 0 13px !important;
+  padding:9px 12px !important;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.94) !important;
+  border-radius:17px !important;
+  background:
+    radial-gradient(ellipse 74% 62% at 6% 0%,rgba(255,255,255,.98),transparent 64%),
+    linear-gradient(145deg,#fff 0%,#f3f4f7 48%,#dfe3eb 100%) !important;
+  color:#08090c !important;
+  text-align:left;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,1),
+    inset 0 -1px 0 rgba(10,12,18,.08),
+    0 12px 26px -18px rgba(255,255,255,.72),
+    0 10px 24px -18px rgba(0,0,0,.9) !important;
+  -webkit-backdrop-filter:blur(24px) saturate(155%) !important;
+  backdrop-filter:blur(24px) saturate(155%) !important;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease,filter .2s ease !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action::before {
+  content:"";
+  position:absolute;
+  z-index:0;
+  inset:1px;
+  border-radius:15px;
+  pointer-events:none;
+  background:linear-gradient(118deg,rgba(255,255,255,.9),transparent 34%,rgba(255,255,255,.22) 72%,transparent);
+  opacity:.9;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action > * {
+  position:relative;
+  z-index:1;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-icon {
+  display:grid;
+  place-items:center;
+  width:38px;
+  height:38px;
+  border:1px solid rgba(255,255,255,.19);
+  border-radius:12px;
+  background:linear-gradient(145deg,#26282d,#08090b 76%);
+  color:#fff !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 5px 12px rgba(0,0,0,.2);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-icon :is(svg,.ic) {
+  color:#fff !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-copy {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  min-width:0;
+  gap:2px;
+  color:#08090c !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-copy b {
+  color:#08090c !important;
+  font-size:12px;
+  font-weight:740;
+  line-height:1.2;
+  letter-spacing:.005em;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-copy small {
+  color:rgba(13,15,19,.58) !important;
+  font-size:10px;
+  font-weight:520;
+  line-height:1.25;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-arrow {
+  display:grid;
+  place-items:center;
+  color:rgba(8,9,12,.68) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-arrow :is(svg,.ic) {
+  color:rgba(8,9,12,.68) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action:is(:hover,:focus-visible) {
+  transform:translateY(-2px);
+  border-color:#fff !important;
+  background:linear-gradient(145deg,#fff 0%,#f8f9fb 48%,#e5e9f1 100%) !important;
+  color:#050609 !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 16px 30px -19px rgba(255,255,255,.78),
+    0 15px 28px -20px rgba(0,0,0,.95) !important;
+  filter:brightness(1.025);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action:active {
+  transform:translateY(0) scale(.985);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action:focus-visible {
+  outline:2px solid rgba(255,255,255,.88);
+  outline-offset:3px;
+}
+
+/* Live Talk only: a larger floating orb with an illuminated, soft optical stage. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock.qbot-live-orb-stage {
+  height:clamp(204px,25vh,248px) !important;
+  min-height:204px;
+  margin:0 !important;
+  isolation:isolate;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-orb-stage-halo {
+  position:absolute;
+  z-index:0;
+  inset:3% 15% 0;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse 31% 44% at 50% 48%,rgba(230,239,255,.2),transparent 72%),
+    radial-gradient(ellipse 58% 70% at 50% 58%,rgba(63,105,195,.12),transparent 74%);
+  filter:blur(24px);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-orb-stage-halo::after {
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:5%;
+  width:min(34%,220px);
+  height:12%;
+  border-radius:50%;
+  transform:translateX(-50%);
+  background:radial-gradient(ellipse,rgba(0,0,0,.58),rgba(10,14,24,.18) 45%,transparent 76%);
+  filter:blur(9px);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock.qbot-live-orb-stage canvas {
+  z-index:1;
+  filter:
+    drop-shadow(0 22px 34px rgba(0,0,0,.42))
+    drop-shadow(0 0 22px rgba(112,151,225,.2))
+    drop-shadow(0 0 42px rgba(225,235,255,.09));
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-orb-fallback {
+  width:clamp(142px,18vh,178px);
+  background:
+    radial-gradient(ellipse 34% 18% at 31% 13%,rgba(255,255,255,1),transparent 78%),
+    radial-gradient(ellipse 55% 31% at 65% 76%,rgba(255,255,255,.98),transparent 76%),
+    radial-gradient(ellipse 42% 35% at 24% 82%,rgba(110,151,235,.62),transparent 80%),
+    linear-gradient(150deg,#173d9a 0%,#326bd6 34%,#a6c2f5 57%,#eef3ff 77%,#fff 100%);
+  box-shadow:
+    inset -13px -16px 30px rgba(17,36,82,.28),
+    inset 9px 10px 24px rgba(255,255,255,.58),
+    inset 1px 1px 2px rgba(255,255,255,.9),
+    0 26px 58px rgba(0,0,0,.3),
+    0 0 54px rgba(124,159,226,.22);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-live-orb-stage .qbot-orb-retry {
+  display:none;
+}
+
+/* Monochrome writing surfaces: readable white text, quiet silver separators and black glass. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma :is(
+  h1,h2,h3,h4,p,li,blockquote,figcaption,span,b,strong,em,small,time,label,code,pre,th,td
+) {
+  color:rgba(250,251,253,.94) !important;
+  -webkit-text-fill-color:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma a {
+  color:#fff !important;
+  text-decoration-color:rgba(255,255,255,.52) !important;
+  text-underline-offset:3px;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma :is(svg,.ic,.quorlyth-glyph) {
+  color:#f7f8fb !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma :is(code,kbd) {
+  padding:.12em .42em;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;
+  background:rgba(255,255,255,.075);
+  color:#fff !important;
+  font-size:.91em;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma pre {
+  overflow-x:auto;
+  padding:14px 16px;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:14px;
+  background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),#050506 !important;
+  color:#f7f8fb !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.075),0 10px 24px rgba(0,0,0,.22);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma pre code {
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#f7f8fb !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma blockquote {
+  margin:12px 0;
+  padding:9px 14px;
+  border-left:2px solid rgba(255,255,255,.76);
+  border-radius:0 10px 10px 0;
+  background:rgba(255,255,255,.035);
+  color:rgba(248,249,252,.86) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma table {
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:12px;
+  background:rgba(0,0,0,.24);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma :is(th,td) {
+  padding:9px 11px;
+  border-right:1px solid rgba(255,255,255,.09);
+  border-bottom:1px solid rgba(255,255,255,.09);
+  text-align:left;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma th {
+  background:rgba(255,255,255,.075);
+  color:#fff !important;
+  font-weight:680;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma :is(hr) {
+  border:0;
+  border-top:1px solid rgba(255,255,255,.15);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .am.ma li::marker {
+  color:rgba(255,255,255,.84);
+}
+
+@media(max-width:760px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock.qbot-live-orb-stage {
+    height:clamp(174px,22vh,198px) !important;
+    min-height:174px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock.qbot-live-orb-stage.big {
+    height:clamp(190px,24vh,216px) !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-orb-fallback {
+    width:clamp(132px,19vh,158px);
+  }
+}
+@media(max-width:420px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .qbot-sidebar-primary-action {
+    min-height:56px !important;
+    padding:8px 10px !important;
+    grid-template-columns:36px minmax(0,1fr) 20px;
+    gap:9px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-icon {
+    width:36px;
+    height:36px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock.qbot-live-orb-stage {
+    height:164px !important;
+    min-height:164px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-orb-fallback {
+    width:132px;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action {
+    transition:none !important;
+  }
+}
