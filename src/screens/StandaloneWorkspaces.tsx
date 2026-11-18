@@ -113,10 +113,10 @@ async function reviewEvidenceAgainstTask(task: WorkspaceTask, evidence: {
       alignmentScore: 0,
       summary: 'Quorlyth could not complete its AI decision. The evidence remains pending for an authorised workspace manager.',
       matchedCriteria: [],
-      gaps: ['Automatic pre-review unavailable.'],
+      gaps: ['Automatic AI decision unavailable.'],
       recommendations: ['An authorised workspace manager can review the deliverable and make the decision while the AI service is unavailable.'],
       reviewedAt,
-      scopeNote,
+      scopeNote: 'Quorlyth AI could not complete a final decision. The evidence remains pending for an authorised workspace manager.',
     }
   }
 }
