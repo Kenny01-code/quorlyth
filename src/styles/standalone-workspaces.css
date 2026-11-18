@@ -904,3 +904,32 @@ details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7
 @media(prefers-reduced-motion:reduce){
   .sw-artifact .ql-evidence-preview__open{transition:none}
 }
+
+
+/* AI evidence decisions are authoritative workspace reviews; manager actions are explicit overrides. */
+.sw-ai-evidence-review__authority{
+  display:block;
+  margin-top:5px;
+  color:rgba(226,232,242,.58);
+  font-size:10px;
+  line-height:1.5;
+}
+.sw-ai-evidence-review__result.status-aligned{
+  border-color:rgba(165,220,190,.3);
+  color:#c4f0d7;
+  background:rgba(77,160,112,.12);
+}
+.sw-ai-evidence-review__result.status-needs_changes,
+.sw-ai-evidence-review__result.status-unclear{
+  border-color:rgba(244,190,137,.28);
+  color:#f1d0ae;
+  background:rgba(180,111,54,.12);
+}
+.sw-ai-evidence-review__result.status-unavailable{
+  border-color:rgba(255,255,255,.15);
+  color:rgba(239,242,248,.78);
+  background:rgba(255,255,255,.045);
+}
+.sw-review-controls .sw-field>span{
+  letter-spacing:.01em;
+}
