@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
 import { Orbit } from '../components/Orbit'
+import { HeroCreator, PreviewCreator } from '../components/CreatorMotion'
 import { Bar } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { useReveal } from '../lib/hooks'
@@ -95,6 +96,7 @@ export function Landing() {
           event.currentTarget.style.setProperty('--qth-orbit-y', '0deg')
         }}>
         <Orbit />
+        <HeroCreator />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
         <h1 className="hero-title"><EditorialReveal text={HERO_COPY.headline} /></h1>
@@ -132,6 +134,7 @@ export function Landing() {
             <span className="chip">Illustrative demo</span>
             <span className="dim">Idea review</span>
           </div>
+          <PreviewCreator />
           <h3>What should our community build next?</h3>
           <p className="mut">A community-led concept, ready for review.</p>
           <div className="preview-divider" />
@@ -141,7 +144,7 @@ export function Landing() {
         </div>
       </section>
       <div className="grid g5">
-        {STAGES.map(([ic, t, d]) => <div key={t} className="glass pad lift" style={{ padding: '22px 18px', borderRadius: 20 }}><div style={{ marginBottom: 34 }}><Icon name={ic} size={26} /></div><h3>{t}</h3><p className="dim">{d}</p></div>)}
+        {STAGES.map(([ic, t, d], i) => <div key={t} className="glass pad lift rv qth-motion-card" style={{ padding: '22px 18px', borderRadius: 20, ['--qth-motion-index' as any]: i }}><div style={{ marginBottom: 34 }}><Icon name={ic} size={26} /></div><h3>{t}</h3><p className="dim">{d}</p></div>)}
       </div>
       <div className="sec rv" id="how-it-works"><h2>From a crowd to a choice.</h2><p className="mut">Five quiet steps turn a following into something you can steer.</p>
         <div className="tl">{STEPS.map(([ic, t, d, what], i) => (
