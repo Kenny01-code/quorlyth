@@ -1354,17 +1354,27 @@ function WorkspaceProjectView() {
           const statusLabel=artifact.status==='approved'?'Approved':artifact.status==='changes_requested'?'Changes requested':'Awaiting review'
           return <article className="sw-artifact" key={artifact.id}>
             <div className="sw-artifact__top"><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div className="sw-artifact__identity"><p className="ql-eyebrow">{artifact.provider==='github'?(artifact.kind==='pull_request'?'PULL REQUEST':'COMMIT'):(artifact.kind==='file'?'FILE SUBMISSION':artifact.kind==='demo'?'DEMO / PROTOTYPE':artifact.kind==='document'?'DOCUMENT / REPORT':'PROJECT LINK')} · {localDate(artifact.verifiedAt||artifact.submittedAt)}</p><h4>{artifact.summary||'GitHub source record'}</h4><p>{artifact.repositoryFullName||(typeof meta.repository==='string'?meta.repository:artifact.provider==='github'?'GitHub':'External link')} · Submitted by {a.nm(artifact.submittedBy)}</p></div><span className={'sw-review-status status-'+artifact.status}>{statusLabel}</span></div>
-            <div className="sw-source-confirmation"><QuorlythGlyph name="check" size={14}/><span>{artifact.provider==='github'?<>GitHub API confirmed this source{meta.authorLogin?' · @'+String(meta.authorLogin):''}{meta.signatureVerified===true?' · Signed commit verified':''}</>:<>Contributor-submitted evidence · not source-verified</>}</span>{artifact.url&&<span>Preview available below</span>}</div>
-            {artifact.aiReview && <section className="sw-ai-evidence-review" style={{ display: 'grid', gap: 8, padding: 13, marginTop: 12, borderRadius: 13, border: '1px solid var(--line, rgba(255,255,255,.12))', background: 'rgba(255,255,255,.025)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                <strong><QuorlythGlyph name="review" size={14}/> Quorlyth plan-alignment review</strong>
-                <span className={'sw-pill' + (artifact.aiReview.status === 'aligned' ? ' is-done' : '')}>{artifact.aiReview.status === 'aligned' ? 'Likely aligned' : artifact.aiReview.status === 'needs_changes' ? 'Gaps detected' : artifact.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Needs human judgement'} · {artifact.aiReview.alignmentScore}/100</span>
+            <div className={'sw-source-confirmation ' + (artifact.provider === 'github' ? 'is-source-verified' : 'is-contributor-submitted')}>
+              <QuorlythGlyph name={artifact.provider === 'github' ? 'check' : 'link'} size={14}/>
+              <span>{artifact.provider==='github'?<>GitHub API confirmed this source{meta.authorLogin?' · @'+String(meta.authorLogin):''}{meta.signatureVerified===true?' · Signed commit verified':''}</>:<>Contributor-submitted evidence · not source-verified</>}</span>
+              {artifact.url&&<span className="sw-source-confirmation__preview">Preview available below</span>}
+            </div>
+            {artifact.aiReview && <section className="sw-ai-evidence-review">
+              <div className="sw-ai-evidence-review__top">
+                <div className="sw-ai-evidence-review__heading">
+                  <span className="sw-ai-evidence-review__icon"><QuorlythGlyph name="review" size={15}/></span>
+                  <div><p className="ql-eyebrow">PRELIMINARY AUTOMATIC CHECK</p><strong>Quorlyth plan-alignment review</strong></div>
+                </div>
+                <span className={'sw-ai-evidence-review__result status-' + artifact.aiReview.status}>
+                  {artifact.aiReview.status === 'aligned' ? 'Likely aligned' : artifact.aiReview.status === 'needs_changes' ? 'Gaps detected' : artifact.aiReview.status === 'unavailable' ? 'Review unavailable' : 'Needs human judgement'}
+                  <span>{artifact.aiReview.status === 'unavailable' ? 'Not scored' : artifact.aiReview.alignmentScore + '/100'}</span>
+                </span>
               </div>
-              <p className="sw-muted q-writeup">{artifact.aiReview.summary}</p>
-              {!!artifact.aiReview.matchedCriteria.length && <div><small className="ql-eyebrow">POSSIBLE MATCHES</small><ul className="sw-ai-review-list">{artifact.aiReview.matchedCriteria.map((item,index)=><li key={'match-'+index}>{item}</li>)}</ul></div>}
-              {!!artifact.aiReview.gaps.length && <div><small className="ql-eyebrow">GAPS TO CHECK</small><ul className="sw-ai-review-list">{artifact.aiReview.gaps.map((item,index)=><li key={'gap-'+index}>{item}</li>)}</ul></div>}
-              {!!artifact.aiReview.recommendations.length && <div><small className="ql-eyebrow">SUGGESTED NEXT ACTIONS</small><ul className="sw-ai-review-list">{artifact.aiReview.recommendations.map((item,index)=><li key={'rec-'+index}>{item}</li>)}</ul></div>}
-              <small className="sw-muted">{artifact.aiReview.scopeNote} · {localDate(artifact.aiReview.reviewedAt)}</small>
+              <p className="sw-ai-evidence-review__summary q-writeup">{artifact.aiReview.summary}</p>
+              {!!artifact.aiReview.matchedCriteria.length && <div className="sw-ai-evidence-review__group sw-ai-evidence-review__group--matches"><small className="ql-eyebrow">POSSIBLE MATCHES</small><ul className="sw-ai-review-list">{artifact.aiReview.matchedCriteria.map((item,index)=><li key={'match-'+index}>{item}</li>)}</ul></div>}
+              {!!artifact.aiReview.gaps.length && <div className="sw-ai-evidence-review__group sw-ai-evidence-review__group--gaps"><small className="ql-eyebrow">GAPS TO CHECK</small><ul className="sw-ai-review-list">{artifact.aiReview.gaps.map((item,index)=><li key={'gap-'+index}>{item}</li>)}</ul></div>}
+              {!!artifact.aiReview.recommendations.length && <div className="sw-ai-evidence-review__group sw-ai-evidence-review__group--actions"><small className="ql-eyebrow">SUGGESTED NEXT ACTIONS</small><ul className="sw-ai-review-list">{artifact.aiReview.recommendations.map((item,index)=><li key={'rec-'+index}>{item}</li>)}</ul></div>}
+              <div className="sw-ai-evidence-review__scope"><QuorlythGlyph name="info" size={13}/><p>{artifact.aiReview.scopeNote}</p><small>{localDate(artifact.aiReview.reviewedAt)}</small></div>
             </section>}
             {artifact.url && <EvidencePreview url={artifact.url} name={artifact.summary || artifact.kind || "Submitted evidence"} summary={artifact.summary} compact={false} />}
             {typeof meta.message==='string'&&<p className="sw-artifact__message q-writeup">{meta.message.slice(0,700)}</p>}
