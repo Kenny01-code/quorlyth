@@ -29,7 +29,7 @@ test('an unavailable automatic alignment review is not presented as a zero score
   assert.match(screen, /GAPS TO CHECK/)
   assert.match(screen, /SUGGESTED NEXT ACTIONS/)
   assert.match(screen, /artifact\.aiReview\.scopeNote/)
-  assert.match(screen, /A workspace reviewer should compare the actual deliverable against the task definition of done\./)
+  assert.match(screen, /An authorised workspace manager can review the deliverable while the AI service is unavailable\./)
   assert.match(styles, /\.sw-ai-evidence-review__result\.status-unavailable/)
   assert.match(styles, /\.sw-ai-evidence-review__scope/)
 })
@@ -47,4 +47,29 @@ test('the website submission preview remains in Quorlyth with clear, responsive 
   assert.match(styles, /\.sw-artifact \.ql-evidence-preview/)
   assert.match(styles, /\.sw-artifact \.ql-evidence-preview__open/)
   assert.match(styles, /@media\(max-width:620px\)/)
+})
+
+test('Quorlyth AI is the final evidence decision-maker, with a manager override path', async () => {
+  const [screen, edge] = await Promise.all([
+    source('src/screens/StandaloneWorkspaces.tsx'),
+    source('supabase/functions/standalone-github/index.ts'),
+  ])
+
+  assert.match(screen, /review_evidence_ai/)
+  assert.match(screen, /FINAL AI DECISION/)
+  assert.match(screen, /artifact\.aiReview\.decision === 'approved' \? 'AI approved'/)
+  assert.match(screen, /reviewSource: 'human'/)
+  assert.match(screen, /artifact\.reviewSource === 'quorlyth_ai' \? 'Manager override'/)
+  assert.match(screen, /decision === 'approved'/)
+  assert.match(screen, /decision === 'changes_requested'/)
+
+  const start = edge.indexOf('if (action === "review_evidence_ai")')
+  const end = edge.indexOf('if (action === "save_ai_review")')
+  assert.ok(start >= 0 && end > start, 'The server-side AI decision action must exist before the legacy pre-review action.')
+  const finalAction = edge.slice(start, end)
+  assert.match(finalAction, /fetch\(aiEndpoint/)
+  assert.match(finalAction, /reviewedBy: "quorlyth-ai"/)
+  assert.match(finalAction, /reviewSource: "quorlyth_ai"/)
+  assert.match(finalAction, /status: decision/)
+  assert.doesNotMatch(finalAction, /body\.aiReview/, 'The server must generate the verdict itself, not trust a browser-supplied decision.')
 })
