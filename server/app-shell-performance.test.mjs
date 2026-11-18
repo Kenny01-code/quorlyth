@@ -168,20 +168,22 @@ test('heavy feature styles are split from the initial global stylesheet', async 
   assert.match(automations, /styles\/automations\.css/)
 })
 
-test('QuorlythBot theme metadata no longer pulls the Three.js renderer into the bot chunk', async () => {
-  const [config, themes, robot3d, robot, bot] = await Promise.all([
+test('QuorlythBot pearl orb keeps the Three.js renderer lazy-loaded outside the bot chunk', async () => {
+  const [config, themes, orb3d, orb, bot] = await Promise.all([
     readSource('src/bot/config.ts'),
     readSource('src/bot/robot-themes.ts'),
-    readSource('src/bot/robot3d.ts'),
-    readSource('src/bot/Robot.tsx'),
+    readSource('src/bot/orb3d.ts'),
+    readSource('src/bot/Orb.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
   ])
   assert.match(config, /from '\.\/robot-themes'/)
-  assert.doesNotMatch(config, /from '\.\/robot3d'/)
+  assert.doesNotMatch(config, /from '\.\/orb3d'/)
   assert.match(themes, /export const THEMES/)
-  assert.match(robot3d, /from ["']three["']/)
-  assert.match(robot, /import\('\.\/robot3d'\)/)
-  assert.match(bot, /<Robot\s+ref=\{robot\}\s+theme=\{theme\}/)
+  assert.match(orb3d, /from ["']three["']/)
+  assert.match(orb, /import\('\.\/orb3d'\)/)
+  assert.match(bot, /import \{ Orb \} from '\.\/Orb'/)
+  assert.match(bot, /<Orb\s+ref=\{robot\}\s+theme=\{theme\}/)
+  assert.doesNotMatch(bot, /from ["']\.\/orb3d["']/)
 })
 
 test('community manager access keeps its editorial black-ink glass treatment', async () => {
