@@ -5,6 +5,9 @@ import type { RobotApi } from './Robot'
 export const Orb = forwardRef<RobotApi | null, { theme?: string; calm?: boolean; drag?: boolean; defer?: boolean; active?: boolean; onReady?: () => void }>(function Orb({ theme = 'pearl', calm, drag, defer = false, active = true, onReady }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const apiRef = useRef<RobotApi | null>(null)
+  const pendingApiCallsRef = useRef<Map<string, unknown[]>>(new Map())
+  const onReadyRef = useRef(onReady)
+  onReadyRef.current = onReady
   const activeRef = useRef(active)
   const themeRef = useRef(theme)
   const calmRef = useRef(calm)
@@ -17,7 +20,13 @@ export const Orb = forwardRef<RobotApi | null, { theme?: string; calm?: boolean;
   const [attempt, setAttempt] = useState(0)
 
   useImperativeHandle(ref, () => new Proxy({} as RobotApi, {
-    get: (_target, key: string) => (...args: unknown[]) => (apiRef.current as any)?.[key]?.(...args),
+    get: (_target, key: string) => (...args: unknown[]) => {
+      const api = apiRef.current as any
+      if (typeof api?.[key] === 'function') return api[key](...args)
+      // Keep the last requested state per control while the WebGL chunk is loading.
+      // Audio can begin before Three.js; its animation command must not be lost.
+      pendingApiCallsRef.current.set(key, args)
+    },
   }), [])
 
   useEffect(() => {
@@ -40,14 +49,19 @@ export const Orb = forwardRef<RobotApi | null, { theme?: string; calm?: boolean;
           })
           if (cancelled) { orb.dispose(); return }
           apiRef.current = orb as RobotApi
-          if (!activeRef.current) orb.active(false)
-          if (calmRef.current) orb.calm(true)
+          orb.active(activeRef.current)
+          orb.calm(!!calmRef.current)
+          for (const [method, args] of pendingApiCallsRef.current) {
+            const action = (orb as any)[method]
+            if (typeof action === 'function') action(...args)
+          }
+          pendingApiCallsRef.current.clear()
           dispose = () => {
             orb.dispose()
             if (apiRef.current === (orb as RobotApi)) apiRef.current = null
           }
           setState('ok')
-          onReady?.()
+          onReadyRef.current?.()
         } catch {
           if (!cancelled) setState('fail')
         }
