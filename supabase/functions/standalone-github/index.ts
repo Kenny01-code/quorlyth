@@ -338,7 +338,7 @@ Deno.serve(async (req: Request) => {
       const now = Date.now();
       const reviewNote = decision === "approved"
         ? summary
-        : [...gaps, ...recommendations].join("\\n").slice(0, 1600) || summary;
+        : [...gaps, ...recommendations].join("\n").slice(0, 1600) || summary;
       const updatedArtifact = {
         ...artifact,
         aiReview,
