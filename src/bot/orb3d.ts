@@ -5,24 +5,18 @@ import {
   AdditiveBlending,
   AmbientLight,
   BackSide,
-  BufferAttribute,
-  BufferGeometry,
   CanvasTexture,
   Color,
   DirectionalLight,
   Group,
   Mesh,
-  MeshBasicMaterial,
   MeshPhysicalMaterial,
   PerspectiveCamera,
-  Points,
-  PointsMaterial,
   Scene,
   ShaderMaterial,
   SphereGeometry,
   Sprite,
   SpriteMaterial,
-  TorusGeometry,
   WebGLRenderer,
   sRGBEncoding,
 } from 'three'
@@ -71,10 +65,10 @@ const fragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uEnergy;
   uniform float uCalm;
-  uniform vec3 uTerracotta;
-  uniform vec3 uOrange;
-  uniform vec3 uDeep;
-  uniform vec3 uBone;
+  uniform vec3 uPearl;
+  uniform vec3 uIce;
+  uniform vec3 uCobalt;
+  uniform vec3 uWhite;
 
   varying vec3 vNormalView;
   varying vec3 vViewDirection;
@@ -91,13 +85,13 @@ const fragmentShader = /* glsl */ `
     vec3 i = floor(p);
     vec3 f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
-    float n000 = hash31(i + vec3(0.0, 0.0, 0.0));
+    float n000 = hash31(i);
     float n100 = hash31(i + vec3(1.0, 0.0, 0.0));
     float n010 = hash31(i + vec3(0.0, 1.0, 0.0));
     float n110 = hash31(i + vec3(1.0, 1.0, 0.0));
     float n001 = hash31(i + vec3(0.0, 0.0, 1.0));
     float n101 = hash31(i + vec3(1.0, 0.0, 1.0));
-    float n011 = hash31(i + vec3(0.0, 1.0, 1.0));
+    float n011 = hash31(i + vec3(0.0, 1.0, 0.0));
     float n111 = hash31(i + vec3(1.0, 1.0, 1.0));
     float x00 = mix(n000, n100, f.x);
     float x10 = mix(n010, n110, f.x);
@@ -125,42 +119,45 @@ const fragmentShader = /* glsl */ `
   void main() {
     vec3 N = normalize(vNormalView);
     vec3 V = normalize(vViewDirection);
-    vec3 local = normalize(vObjectPosition) * 2.65;
-    float t = uTime * mix(0.105, 0.22, uEnergy);
+    vec3 spherePoint = normalize(vObjectPosition);
+    vec3 local = spherePoint * 2.65;
+    float t = uTime * mix(0.085, 0.205, uEnergy);
 
-    // Warped, layered flow gives the surface a slow liquid-glass current.
+    // Preserve the procedural orb while deepening its slow volumetric liquid current.
     vec3 warp = vec3(
-      fbm(local * 1.25 + vec3(t * 0.72, 1.7, -t * 0.32)),
-      fbm(local * 1.35 + vec3(4.1, -t * 0.46, t * 0.61)),
-      fbm(local * 1.18 + vec3(-t * 0.39, 3.4, t * 0.53))
+      fbm(local * 1.22 + vec3(t * 0.66, 1.7, -t * 0.29)),
+      fbm(local * 1.34 + vec3(4.1, -t * 0.43, t * 0.56)),
+      fbm(local * 1.16 + vec3(-t * 0.36, 3.4, t * 0.49))
     );
-    vec3 flowPoint = local * 2.25 + (warp - 0.5) * 2.8;
-    flowPoint += vec3(t * 0.62, -t * 0.82, t * 0.31);
+    vec3 flowPoint = local * 2.18 + (warp - 0.5) * 2.65;
+    flowPoint += vec3(t * 0.58, -t * 0.76, t * 0.28);
     float flow = fbm(flowPoint);
-    float detail = fbm(flowPoint * 2.15 + warp * 1.8);
-    float current = 0.5 + 0.5 * sin((flow * 5.6 + detail * 1.9 + local.y * 0.68) * 6.2831 + t * 1.5);
+    float detail = fbm(flowPoint * 2.08 + warp * 1.7);
+    float current = 0.5 + 0.5 * sin((flow * 5.2 + detail * 1.8 + local.y * 0.62) * 6.2831 + t * 1.35);
     float filament = pow(1.0 - abs(current - 0.5) * 2.0, 5.0);
-    filament = smoothstep(0.34, 0.94, filament) * (0.22 + uEnergy * 0.38);
+    filament = smoothstep(0.42, 0.96, filament) * (0.12 + uEnergy * 0.28);
 
-    float latitude = 0.5 + 0.5 * sin(local.y * 1.8 + flow * 4.2 - t * 1.2);
-    float depth = smoothstep(0.14, 0.9, flow * 0.76 + latitude * 0.24);
-    vec3 color = mix(uDeep, uTerracotta, depth);
-    color = mix(color, uOrange, filament * 0.72);
-    color = mix(color, uTerracotta, smoothstep(0.7, 0.96, detail) * 0.24);
+    // Cobalt occupies the upper hemisphere; pearl-white clouding rolls through the lower half.
+    float boundary = spherePoint.y + (flow - 0.5) * 0.34 + (detail - 0.5) * 0.16;
+    float blueMask = smoothstep(-0.24, 0.37, boundary);
+    vec3 cobalt = mix(uCobalt, uIce, smoothstep(0.16, 0.86, flow * 0.66 + detail * 0.34));
+    vec3 pearl = mix(uPearl, uWhite, smoothstep(0.28, 0.82, detail) * 0.26);
+    vec3 color = mix(pearl, cobalt, blueMask);
+    float cloud = smoothstep(0.43, 0.82, fbm(flowPoint * 0.72 + warp * 1.35));
+    float lowerCloud = (1.0 - blueMask) * cloud * 0.22;
+    color = mix(color, uWhite, lowerCloud);
+    color = mix(color, uIce, filament * (0.08 + blueMask * 0.18));
 
-    float fresnel = pow(1.0 - max(dot(N, V), 0.0), 2.7);
-    vec3 L = normalize(vec3(-0.48, 0.72, 0.9));
+    float fresnel = pow(1.0 - max(dot(N, V), 0.0), 2.55);
+    vec3 L = normalize(vec3(-0.46, 0.74, 0.88));
     float diffuse = max(dot(N, L), 0.0);
-    float specular = pow(max(dot(reflect(-L, N), V), 0.0), 34.0);
-    float innerLight = 0.68 + diffuse * 0.27;
+    float specular = pow(max(dot(reflect(-L, N), V), 0.0), 48.0);
+    float broadSpecular = pow(max(dot(reflect(-L, N), V), 0.0), 10.0);
+    float innerLight = 0.78 + diffuse * 0.23;
     color *= innerLight;
-    color += uBone * (specular * 0.12 + fresnel * 0.055);
-    color += uOrange * (fresnel * 0.17 + uEnergy * 0.045);
-
-    // A restrained, brighter current blooms only while QuorlythBot is active.
-    color += uOrange * filament * (0.18 + uEnergy * 0.18);
-    float calmDim = mix(1.0, 0.91, uCalm);
-    color *= calmDim;
+    color += uWhite * (specular * 0.28 + broadSpecular * 0.035 + fresnel * 0.085);
+    color += uIce * (fresnel * 0.075 + filament * (0.08 + uEnergy * 0.14));
+    color *= mix(1.0, 0.94, uCalm);
     gl_FragColor = vec4(color, 1.0);
     #include <tonemapping_fragment>
     #include <encodings_fragment>
@@ -172,35 +169,16 @@ function createGlowTexture() {
   canvas.width = canvas.height = 128
   const context = canvas.getContext('2d')
   if (!context) return null
-  const gradient = context.createRadialGradient(64, 64, 2, 64, 64, 64)
-  gradient.addColorStop(0, 'rgba(255,116,23,0.42)')
-  gradient.addColorStop(0.38, 'rgba(255,177,93,0.2)')
-  gradient.addColorStop(1, 'rgba(155,46,5,0)')
+  const gradient = context.createRadialGradient(64, 64, 3, 64, 64, 64)
+  gradient.addColorStop(0, 'rgba(132,174,255,0.34)')
+  gradient.addColorStop(0.42, 'rgba(206,222,255,0.15)')
+  gradient.addColorStop(0.72, 'rgba(255,255,255,0.045)')
+  gradient.addColorStop(1, 'rgba(35,78,172,0)')
   context.fillStyle = gradient
   context.fillRect(0, 0, 128, 128)
   const texture = new CanvasTexture(canvas)
   texture.needsUpdate = true
   return texture
-}
-
-function makeOrbitPoints(count: number) {
-  const positions = new Float32Array(count * 3)
-  const sizes = new Float32Array(count)
-  for (let i = 0; i < count; i++) {
-    const angle = i * 2.399963229728653
-    const band = (i % 7) / 6
-    const radius = 1.28 + band * 0.42
-    const y = Math.sin(angle * 0.37) * (0.18 + band * 0.19)
-    const ringRadius = Math.sqrt(Math.max(0.1, radius * radius - y * y))
-    positions[i * 3] = Math.cos(angle) * ringRadius
-    positions[i * 3 + 1] = y
-    positions[i * 3 + 2] = Math.sin(angle) * ringRadius
-    sizes[i] = 0.55 + ((i * 13) % 11) / 11
-  }
-  const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(positions, 3))
-  geometry.setAttribute('aSize', new BufferAttribute(sizes, 1))
-  return geometry
 }
 
 export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbApi {
@@ -222,30 +200,30 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
   renderer.setClearColor(0x000000, 0)
 
   const scene = new Scene()
-  const camera = new PerspectiveCamera(34, width / height, 0.1, 40)
-  camera.position.set(0, 0, 4.35)
+  const camera = new PerspectiveCamera(32, width / height, 0.1, 40)
+  camera.position.set(0, 0, 4.15)
   camera.lookAt(0, 0, 0)
 
   const root = new Group()
   scene.add(root)
 
-  const key = new DirectionalLight(0xffc4a3, 1.25)
-  key.position.set(-3.5, 4, 5)
-  const rim = new DirectionalLight(0xff7417, 2.25)
-  rim.position.set(4, -1, -4)
-  const warmFill = new DirectionalLight(0x9b2e05, 0.9)
-  warmFill.position.set(0, -4, 4)
-  scene.add(new AmbientLight(0xf0ead9, 0.58), key, rim, warmFill)
+  const key = new DirectionalLight(0xffffff, 1.55)
+  key.position.set(-3.5, 4.2, 5)
+  const rim = new DirectionalLight(0x85adff, 2.35)
+  rim.position.set(4, -1.2, -4)
+  const pearlFill = new DirectionalLight(0xdce8ff, 1.05)
+  pearlFill.position.set(0, -4, 4)
+  scene.add(new AmbientLight(0xeaf0ff, 0.78), key, rim, pearlFill)
 
   const shader = new ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uEnergy: { value: 0.2 },
       uCalm: { value: 0 },
-      uTerracotta: { value: new Color(0xff7417) },
-      uOrange: { value: new Color(0xffb15d) },
-      uDeep: { value: new Color(0x9b2e05) },
-      uBone: { value: new Color(0xf0ead9) },
+      uPearl: { value: new Color(0xeaf0ff) },
+      uIce: { value: new Color(0x91b7ff) },
+      uCobalt: { value: new Color(0x285bd8) },
+      uWhite: { value: new Color(0xffffff) },
     },
     vertexShader,
     fragmentShader,
@@ -257,58 +235,23 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
   const orb = new Mesh(orbGeometry, shader)
   root.add(orb)
 
-  // Thin clearcoat shell, with no white wash over the underlying terracotta.
+  // A clear optical surface gives the same sphere a deeper polished-glass finish.
   const shell = new Mesh(
-    new SphereGeometry(1.012, 112, 88),
+    new SphereGeometry(1.014, 144, 112),
     new MeshPhysicalMaterial({
-      color: 0xff7417,
-      roughness: 0.2,
-      metalness: 0.16,
+      color: 0xeaf0ff,
+      roughness: 0.085,
+      metalness: 0.035,
       clearcoat: 1,
-      clearcoatRoughness: 0.12,
+      clearcoatRoughness: 0.055,
+      reflectivity: 0.82,
       transparent: true,
-      opacity: 0.105,
+      opacity: 0.12,
       side: BackSide,
       depthWrite: false,
     }),
   )
   root.add(shell)
-
-  const ringHot = new Mesh(
-    new TorusGeometry(1.2, 0.009, 10, 240),
-    new MeshBasicMaterial({ color: 0xffb15d, transparent: true, opacity: 0.8, toneMapped: false, depthWrite: false }),
-  )
-  ringHot.rotation.set(1.12, 0.12, -0.22)
-  root.add(ringHot)
-
-  const ringTerracotta = new Mesh(
-    new TorusGeometry(1.31, 0.006, 8, 220),
-    new MeshBasicMaterial({ color: 0xff7417, transparent: true, opacity: 0.52, toneMapped: false, depthWrite: false }),
-  )
-  ringTerracotta.rotation.set(0.52, -0.88, 0.2)
-  root.add(ringTerracotta)
-
-  const ringBone = new Mesh(
-    new TorusGeometry(1.43, 0.0035, 6, 220),
-    new MeshBasicMaterial({ color: 0xf0ead9, transparent: true, opacity: 0.18, toneMapped: false, depthWrite: false }),
-  )
-  ringBone.rotation.set(-0.36, 0.7, 1.08)
-  root.add(ringBone)
-
-  const particleGeometry = makeOrbitPoints(420)
-  const particles = new Points(
-    particleGeometry,
-    new PointsMaterial({
-      color: 0xf0ead9,
-      size: 0.014,
-      transparent: true,
-      opacity: 0.34,
-      depthWrite: false,
-      blending: AdditiveBlending,
-      sizeAttenuation: true,
-    }),
-  )
-  root.add(particles)
 
   const glowTexture = createGlowTexture()
   const aura = glowTexture
@@ -323,8 +266,8 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
       }))
     : null
   if (aura) {
-    aura.scale.set(3.9, 3.9, 1)
-    aura.position.set(0, 0, -1.25)
+    aura.scale.set(3.15, 3.15, 1)
+    aura.position.set(0, 0, -0.95)
     scene.add(aura)
   }
 
@@ -359,7 +302,7 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
     const h = Math.max(1, canvas.clientHeight || height)
     renderer.setSize(w, h, false)
     camera.aspect = w / h
-    camera.position.z = w / h < 0.8 ? 4.35 / Math.max(0.65, w / h) : 4.35
+    camera.position.z = w / h < 0.8 ? 4.15 / Math.max(0.65, w / h) : 4.15
     camera.lookAt(0, 0, 0)
     camera.updateProjectionMatrix()
   }
@@ -427,14 +370,14 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
     if (reducedMotion) {
       targetEnergy = mode === 'speaking' ? 0.42 : mode === 'thinking' ? 0.34 : mode === 'listening' ? 0.28 : mode === 'excited' ? 0.48 : 0.17
     } else {
-      if (mode === 'idle') targetEnergy = 0.17 + Math.sin(t * 0.72) * 0.035
-      if (mode === 'listening') targetEnergy = 0.34 + Math.sin(t * 1.8) * 0.055 + audioLevel * 0.2
-      if (mode === 'thinking') targetEnergy = 0.48 + Math.sin(t * 2.3) * 0.065
-      if (mode === 'speaking') targetEnergy = 0.48 + Math.abs(Math.sin(t * 5.5) * Math.sin(t * 2.4 + 0.6)) * 0.38 + audioLevel * 0.16
-      if (mode === 'excited') targetEnergy = 0.68 + Math.sin(t * 3.3) * 0.12
+      if (mode === 'idle') targetEnergy = 0.19 + Math.sin(t * 0.72) * 0.035
+      if (mode === 'listening') targetEnergy = 0.32 + Math.sin(t * 1.8) * 0.055 + audioLevel * 0.3
+      if (mode === 'thinking') targetEnergy = 0.39 + Math.sin(t * 2.3) * 0.065
+      if (mode === 'speaking') targetEnergy = 0.44 + Math.abs(Math.sin(t * 5.5) * Math.sin(t * 2.4 + 0.6)) * 0.42 + audioLevel * 0.2
+      if (mode === 'excited') targetEnergy = 0.7 + Math.sin(t * 3.3) * 0.12
     }
 
-    const response = 1 - Math.exp(-dt * 4.8)
+    const response = 1 - Math.exp(-dt * 7.2)
     energy += (targetEnergy - energy) * response
     bump *= 0.9
     shake *= 0.9
@@ -454,20 +397,9 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
     shader.uniforms.uTime.value = reducedMotion ? 0 : t
     shader.uniforms.uEnergy.value = energy
     shader.uniforms.uCalm.value = calm ? 1 : 0
-    if (!reducedMotion) {
-      ringHot.rotation.z += dt * (mode === 'speaking' ? 0.58 : 0.22)
-      ringHot.rotation.x += dt * 0.035
-      ringTerracotta.rotation.y -= dt * 0.16
-      ringTerracotta.rotation.z += dt * 0.06
-      ringBone.rotation.x += dt * 0.045
-      ringBone.rotation.y -= dt * 0.025
-      particles.rotation.y -= dt * 0.045
-      particles.rotation.x += dt * 0.018
-    }
-    particles.scale.setScalar(1 + energy * 0.035)
     if (aura) {
-      aura.material.opacity = reducedMotion ? 0.48 : 0.42 + energy * 0.3 + Math.sin(t * 1.3) * 0.035
-      aura.scale.setScalar(reducedMotion ? 3.9 : 3.75 + energy * 0.55)
+      aura.material.opacity = reducedMotion ? 0.3 : 0.24 + energy * 0.14 + Math.sin(t * 1.1) * 0.018
+      aura.scale.setScalar(reducedMotion ? 3.1 : 3.0 + energy * 0.25)
     }
 
     renderer.render(scene, camera)
@@ -485,15 +417,12 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
   }
 
   function setTheme(name: string) {
-    const theme = THEMES[name as keyof typeof THEMES] || THEMES.terracotta
-    shader.uniforms.uTerracotta.value.setHex(theme.p)
-    shader.uniforms.uOrange.value.setHex(theme.g)
-    shader.uniforms.uDeep.value.setHex(Number.parseInt(theme.g2.slice(1), 16))
-    shader.uniforms.uBone.value.setHex(theme.c)
+    const theme = THEMES[name as keyof typeof THEMES] || THEMES.pearl
+    shader.uniforms.uPearl.value.setHex(theme.p)
+    shader.uniforms.uIce.value.setHex(theme.g)
+    shader.uniforms.uCobalt.value.setHex(Number.parseInt(theme.g2.slice(1), 16))
+    shader.uniforms.uWhite.value.setHex(theme.c)
     ;(shell.material as MeshPhysicalMaterial).color.setHex(theme.p)
-    ;(ringHot.material as MeshBasicMaterial).color.setHex(theme.g)
-    ;(ringTerracotta.material as MeshBasicMaterial).color.setHex(theme.p)
-    ;(particles.material as PointsMaterial).color.setHex(theme.c)
   }
 
   const api: OrbApi = {
@@ -549,10 +478,6 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
       shader.dispose()
       shell.geometry.dispose()
       ;(shell.material as MeshPhysicalMaterial).dispose()
-      ringHot.geometry.dispose(); (ringHot.material as MeshBasicMaterial).dispose()
-      ringTerracotta.geometry.dispose(); (ringTerracotta.material as MeshBasicMaterial).dispose()
-      ringBone.geometry.dispose(); (ringBone.material as MeshBasicMaterial).dispose()
-      particleGeometry.dispose(); (particles.material as PointsMaterial).dispose()
       if (aura) { aura.material.map?.dispose(); aura.material.dispose() }
       renderer.dispose()
     },
@@ -565,7 +490,7 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
   canvas.addEventListener('pointerup', onPointerUp)
   canvas.addEventListener('pointercancel', onPointerUp)
   canvas.addEventListener('pointerleave', onPointerLeave)
-  setTheme(options.theme || 'terracotta')
+  setTheme(options.theme || 'pearl')
   resize()
   schedule()
   return api
