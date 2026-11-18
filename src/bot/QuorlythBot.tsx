@@ -4057,8 +4057,23 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               >
                 {view === 'chat' ? (
                   !msgs.length ? (
-                    <div className="bhero"><p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p><h3>{project ? project.name : 'How can I help?'}</h3><p className="mut">Ask anything about your space, or pick a skill.</p>
-                      <div className="bgrid sm">{SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map(s => <button key={s.id} className="bsk" onClick={() => skill(s.id)}><span className="bski"><Icon name={s.icon} size={20} /></span><b>{s.n}</b></button>)}</div></div>
+                    <div className="bhero">
+                      <p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p>
+                      <h3>{project ? project.name : 'How can I help?'}</h3>
+                      <p className="mut">Ask anything about your space, or pick a skill.</p>
+                      <div className="bgrid sm">
+                        {SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map(s => (
+                          <button key={s.id} className="bsk" onClick={() => skill(s.id)}>
+                            <span className="bski"><Icon name={s.icon} size={20} /></span>
+                            <div className="bsk-info">
+                              <b>{s.n}</b>
+                              <span className="dim bsk-desc">{s.d}</span>
+                            </div>
+                            <span className="bsk-arrow" aria-hidden="true"><Icon name="arrow-up-right" size={14} /></span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ) : (
                     <div className="ast-log" aria-live="polite">
                       {msgs.map((m, i) => {
