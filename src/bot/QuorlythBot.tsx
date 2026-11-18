@@ -4030,7 +4030,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                     robotReadyRef.current = true
                     const pose = pendingRobotPoseRef.current
                     pendingRobotPoseRef.current = null
-                    if (pose === 'welcome') robot.current?.welcome()
+                    if (speechState === 'playing' || live?.state === 'speaking') robot.current?.talk(true)
+                    else if (live?.state === 'listening' || live?.state === 'connecting') robot.current?.listen(true)
+                    else if (live?.state === 'thinking' || busy) robot.current?.think(true)
+                    else if (pose === 'welcome') robot.current?.welcome()
                     else if (pose === 'wave') robot.current?.wave()
                   }}
                 />
