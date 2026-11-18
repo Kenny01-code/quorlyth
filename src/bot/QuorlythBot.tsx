@@ -4016,7 +4016,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                     ref={robot}
                     theme={theme}
                     calm={bs.calm}
-                    active={!minimized && open && !!live}
+                    active={!minimized && open && orbVisible}
                     onReady={() => {
                       if (speechState === 'playing' || voiceStudioSpeaking || live?.state === 'speaking') robot.current?.talk(true)
                       else if (live?.state === 'listening' || live?.state === 'connecting') robot.current?.listen(true)
