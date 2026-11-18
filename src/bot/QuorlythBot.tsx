@@ -300,8 +300,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const role = !a.me ? 'visitor' : a.owner ? 'owner' : 'member'
   const communityOwner = !!a.me && a.data.communities.some(c => a.ownsCommunity(c.id))
   const robot = useRef<RobotApi | null>(null)
-  const robotReadyRef = useRef(false)
-  const pendingRobotPoseRef = useRef<'welcome' | 'wave' | null>(null)
   const log = useRef<HTMLDivElement>(null)
   const ctl = useRef<AbortController | null>(null)
   const rt = useRef<{ stop: () => void; respond?: () => void; interrupt?: () => void } | null>(null)
@@ -480,22 +478,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       lastOpenedAt,
       now,
     })
-    if (greeting.kind === 'quiet') {
-      pendingRobotPoseRef.current = 'wave'
-      if (robotReadyRef.current) {
-        pendingRobotPoseRef.current = null
-        robot.current?.wave()
-      }
-      return
-    }
-    const openingPose = greeting.kind === 'first' ? 'welcome' : 'wave'
-    pendingRobotPoseRef.current = openingPose
-    if (robotReadyRef.current) {
-      pendingRobotPoseRef.current = null
-      if (openingPose === 'welcome') robot.current?.welcome()
-      else robot.current?.wave()
-    }
-    // Speak the greeting automatically when the chat frame opens; the preview button is only for voice testing.
+    if (greeting.kind === 'quiet') return
+    // The orb is reserved for Live Talk; normal welcome speech stays unobstructed.
     say(greeting.text)
   }
 
@@ -4020,24 +4004,22 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); stopVoice(); setOpen(false) }}><Icon name="decline" size={18} /></button>
                 </div>
               </header>
-              <div className={cn('bstage bot-orb-dock', stage)}>
-                <Orb
-                  ref={robot}
-                  theme={theme}
-                  calm={bs.calm}
-                  active={!minimized && open}
-                  onReady={() => {
-                    robotReadyRef.current = true
-                    const pose = pendingRobotPoseRef.current
-                    pendingRobotPoseRef.current = null
-                    if (speechState === 'playing' || live?.state === 'speaking') robot.current?.talk(true)
-                    else if (live?.state === 'listening' || live?.state === 'connecting') robot.current?.listen(true)
-                    else if (live?.state === 'thinking' || busy) robot.current?.think(true)
-                    else if (pose === 'welcome') robot.current?.welcome()
-                    else if (pose === 'wave') robot.current?.wave()
-                  }}
-                />
-              </div>
+              {live && (
+                <div className={cn('bstage bot-orb-dock qbot-live-orb-stage', stage)} role="group" aria-label="Live Talk voice visualizer">
+                  <span className="qbot-orb-stage-halo" aria-hidden="true" />
+                  <Orb
+                    ref={robot}
+                    theme={theme}
+                    calm={bs.calm}
+                    active={!minimized && open && !!live}
+                    onReady={() => {
+                      if (speechState === 'playing' || live?.state === 'speaking') robot.current?.talk(true)
+                      else if (live?.state === 'listening' || live?.state === 'connecting') robot.current?.listen(true)
+                      else if (live?.state === 'thinking' || busy) robot.current?.think(true)
+                    }}
+                  />
+                </div>
+              )}
               <div
                 className={cn('qbot-conversation', view === 'chat' && 'qbot-chat-surface')}
                 ref={log}
