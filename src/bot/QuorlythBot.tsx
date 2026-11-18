@@ -314,6 +314,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const speechMessageKeyRef = useRef('')
   const [speechMessageKey, setSpeechMessageKey] = useState('')
   const [speechState, setSpeechState] = useState<'idle' | 'loading' | 'playing' | 'paused'>('idle')
+  const [voiceStudioSpeaking, setVoiceStudioSpeaking] = useState(false)
   const [thinkingPhase, setThinkingPhase] = useState<'off' | 'thinking' | 'leaving'>('off')
   const thinkingExitTimer = useRef<number | null>(null)
   const [open, setOpen] = useState(initialOpen)
@@ -361,6 +362,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
   const theme = 'pearl'
+  const orbVisible = bs.robot && (!!live || speechState === 'playing' || voiceStudioSpeaking)
   const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
   const wide = !narrow
 
@@ -3872,8 +3874,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               <div className="bs-n">
                 <button className="bsb p qbot-sidebar-primary-action" onClick={() => { if (busy) return; stopLive(); stopVoice(); setCur(null); setView('chat') }}>
                   <span className="qbot-sidebar-primary-icon"><Icon name="plus" size={18} /></span>
-                  <span className="qbot-sidebar-primary-copy"><b>New chat</b><small>Start a fresh conversation</small></span>
-                  <span className="qbot-sidebar-primary-arrow"><Icon name="arrow-up-right" size={15} /></span>
+                  <span className="qbot-sidebar-primary-copy"><b>New chat</b></span>
                 </button>
                 {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
               </div>
@@ -4008,8 +4009,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); stopVoice(); setOpen(false) }}><Icon name="decline" size={18} /></button>
                 </div>
               </header>
-              {live && (
-                <div className={cn('bstage bot-orb-dock qbot-live-orb-stage', stage)} role="group" aria-label="Live Talk voice visualizer">
+              {orbVisible && (
+                <div className={cn('bstage bot-orb-dock qbot-live-orb-stage', stage)} role="group" aria-label={live ? 'Live Talk voice visualizer' : 'QuorlythBot speaking visualizer'}>
                   <span className="qbot-orb-stage-halo" aria-hidden="true" />
                   <Orb
                     ref={robot}
@@ -4017,7 +4018,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                     calm={bs.calm}
                     active={!minimized && open && !!live}
                     onReady={() => {
-                      if (speechState === 'playing' || live?.state === 'speaking') robot.current?.talk(true)
+                      if (speechState === 'playing' || voiceStudioSpeaking || live?.state === 'speaking') robot.current?.talk(true)
                       else if (live?.state === 'listening' || live?.state === 'connecting') robot.current?.listen(true)
                       else if (live?.state === 'thinking' || busy) robot.current?.think(true)
                     }}
@@ -4092,7 +4093,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                         </div>}
                     </div>
                   )
-                ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} startLive={startLive} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} />}
+                ) : <BotViews view={view} bd={bd} role={role} skill={id => skill(id)} setPj={setPj} pj={pj} theme={theme} robot={robot} startLive={startLive} stage={stage} setStage={setStage} mode={mode} setMode={setMode as any} onVoicePlaybackChange={setVoiceStudioSpeaking} />}
                 {view === 'chat' && pendingAction && <div className="glass qbot-action" role="group" aria-label="Confirm QuorlythBot action"><div><span className="dim">ACTION PREVIEW</span><h3>{({
                   community: 'Create community',
                   idea: 'Submit idea',
