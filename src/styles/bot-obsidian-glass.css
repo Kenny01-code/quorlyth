@@ -1,0 +1,690 @@
+/* QuorlythBot's obsidian / pearl visual system.
+   Built from the site's black canvas and white typography, not the earlier teal/orange bot theme.
+   All selectors stay inside the QuorlythBot frame. */
+
+#ast {
+  background:
+    radial-gradient(ellipse 64% 50% at 50% 0%, rgba(255, 255, 255, .065), transparent 74%),
+    rgba(0, 0, 0, .82) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(128%) !important;
+  backdrop-filter: blur(24px) saturate(128%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+  --qbot-ink: #fbfbfd;
+  --qbot-muted: rgba(244, 246, 250, .66);
+  --qbot-dim: rgba(232, 236, 243, .43);
+  --qbot-edge: rgba(255, 255, 255, .125);
+  --qbot-edge-strong: rgba(255, 255, 255, .22);
+  --qbot-glass: rgba(255, 255, 255, .035);
+  --qbot-glass-raised: rgba(255, 255, 255, .067);
+  --qbot-blue: #8fb5ff;
+  isolation: isolate;
+  overflow: hidden;
+  color: var(--qbot-ink) !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
+  border-radius: 32px !important;
+  background:
+    radial-gradient(ellipse 82% 54% at 0% 0%, rgba(255, 255, 255, .052), transparent 72%),
+    radial-gradient(ellipse 64% 48% at 100% 100%, rgba(112, 145, 205, .035), transparent 76%),
+    linear-gradient(150deg, rgba(26, 27, 30, .96) 0%, rgba(11, 12, 14, .975) 48%, rgba(4, 4, 5, .985) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .2),
+    inset 1px 0 0 rgba(255, 255, 255, .045),
+    inset 0 -1px 0 rgba(255, 255, 255, .055),
+    0 42px 120px rgba(0, 0, 0, .78),
+    0 0 88px -62px rgba(255, 255, 255, .23) !important;
+  -webkit-backdrop-filter: blur(42px) saturate(142%) !important;
+  backdrop-filter: blur(42px) saturate(142%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot)::before {
+  z-index: 0 !important;
+  inset: 1px !important;
+  border-radius: inherit !important;
+  pointer-events: none;
+  background:
+    linear-gradient(132deg, rgba(255, 255, 255, .11), transparent 23%, transparent 67%, rgba(255, 255, 255, .025)),
+    radial-gradient(ellipse 46% 26% at 8% 0%, rgba(255, 255, 255, .055), transparent 76%) !important;
+  opacity: .96;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot)::after {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  inset: 1px;
+  border: 1px solid rgba(255, 255, 255, .065);
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .018);
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* A unified inner room. The sidebar floats as a glass inset, while the main pane remains open. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bm {
+  display: flex !important;
+  flex: 1 1 0%;
+  flex-direction: column !important;
+  min-width: 0;
+  min-height: 0;
+  background:
+    radial-gradient(ellipse 68% 42% at 52% 0%, rgba(255, 255, 255, .022), transparent 75%),
+    transparent !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh {
+  order: 0;
+  flex: 0 0 auto;
+  min-height: 68px;
+  margin: 9px 10px 0 !important;
+  padding: 12px 15px !important;
+  border: 1px solid rgba(255, 255, 255, .095) !important;
+  border-radius: 21px !important;
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .022) 58%, rgba(255, 255, 255, .012)),
+    rgba(8, 8, 9, .62) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .14),
+    0 12px 34px -30px rgba(255, 255, 255, .16) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(138%) !important;
+  backdrop-filter: blur(30px) saturate(138%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bht {
+  gap: 0 !important;
+  min-width: 0;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bwm.big {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  letter-spacing: .105em;
+  text-shadow: 0 1px 18px rgba(255, 255, 255, .11);
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh .bib,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bha .bib {
+  border: 1px solid rgba(255, 255, 255, .105) !important;
+  border-radius: 13px !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .095), rgba(255, 255, 255, .025)),
+    rgba(15, 15, 17, .66) !important;
+  color: rgba(255, 255, 255, .86) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12) !important;
+  transition: transform .22s ease, border-color .22s ease, background .22s ease, color .22s ease !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh .bib:is(:hover, :focus-visible),
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh .bib.on {
+  border-color: rgba(255, 255, 255, .27) !important;
+  background: rgba(255, 255, 255, .115) !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+
+/* The navigation is a soft, inset black-glass collage rather than the old teal/cream panel. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs {
+  position: relative;
+  z-index: 4;
+  align-self: stretch;
+  flex: 0 0 244px !important;
+  width: 244px !important;
+  min-width: 0;
+  min-height: 0;
+  height: calc(100% - 20px) !important;
+  margin: 10px 0 10px 10px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .105) !important;
+  border-radius: 25px !important;
+  background:
+    radial-gradient(ellipse 95% 40% at 0% 0%, rgba(255, 255, 255, .062), transparent 72%),
+    linear-gradient(155deg, rgba(34, 35, 38, .84), rgba(15, 15, 17, .9) 54%, rgba(7, 7, 8, .94)) !important;
+  color: var(--qbot-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .15),
+    inset 0 0 36px rgba(255, 255, 255, .018),
+    0 20px 50px -36px rgba(0, 0, 0, .95) !important;
+  -webkit-backdrop-filter: blur(34px) saturate(132%) !important;
+  backdrop-filter: blur(34px) saturate(132%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: 23px;
+  pointer-events: none;
+  background:
+    linear-gradient(138deg, rgba(255, 255, 255, .085), transparent 25%, transparent 75%, rgba(255, 255, 255, .025));
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs > * {
+  position: relative;
+  z-index: 1;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(
+  .bs-t, .bs-s, .bs-f, .bs-l, .bgh, .bsu, .bwm, button, input, b, i, span, small, p, label
+) {
+  color: rgba(248, 249, 252, .88) !important;
+  opacity: 1;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(.dim, .mut, .bsu i, .bgh) {
+  color: rgba(226, 230, 238, .47) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-l {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-l::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb {
+  border: 1px solid transparent !important;
+  border-radius: 13px !important;
+  background: rgba(255, 255, 255, .022) !important;
+  color: rgba(247, 248, 251, .84) !important;
+  box-shadow: none !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bci:is(:hover, :focus-visible, .on),
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bsb:is(:hover, :focus-visible, .on) {
+  border-color: rgba(255, 255, 255, .13) !important;
+  background: rgba(255, 255, 255, .075) !important;
+  color: #fff !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(.ic, svg, .quorlyth-glyph) {
+  color: rgba(239, 242, 248, .78) !important;
+}
+
+/* Conversation sits above the orb dock in the flex composition. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation {
+  order: 2;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 120px;
+  margin: 11px 13px 0 !important;
+  padding: clamp(15px, 1.7vw, 23px) !important;
+  border: 1px solid rgba(255, 255, 255, .075) !important;
+  border-radius: 25px !important;
+  background:
+    radial-gradient(ellipse 70% 34% at 8% 0%, rgba(255, 255, 255, .042), transparent 72%),
+    linear-gradient(145deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .012) 55%, rgba(0, 0, 0, .16)),
+    rgba(5, 5, 6, .38) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .09),
+    0 20px 48px -40px rgba(0, 0, 0, .95) !important;
+  overscroll-behavior: contain;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation::-webkit-scrollbar,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface .ast-log {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 1px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface .ast-log > .am.mu,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface > .ast-log > .am.mu {
+  max-width: min(88%, 740px);
+  margin-left: auto;
+  padding: 13px 16px !important;
+  border: 1px solid rgba(255, 255, 255, .15) !important;
+  border-radius: 20px 20px 7px 20px !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .145), rgba(255, 255, 255, .055)),
+    rgba(34, 35, 38, .48) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .17),
+    0 16px 36px -30px rgba(255, 255, 255, .14) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(138%) !important;
+  backdrop-filter: blur(22px) saturate(138%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface .ast-log > .am.ma,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface > .ast-log > .am.ma {
+  max-width: min(100%, 900px);
+  padding: 13px 15px 11px !important;
+  border: 1px solid rgba(255, 255, 255, .075) !important;
+  border-radius: 7px 20px 20px 20px !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012)),
+    rgba(10, 10, 12, .48) !important;
+  color: rgba(250, 251, 253, .94) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .075) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation :is(
+  h1, h2, h3, h4, p, li, blockquote, figcaption, span, b, strong, em, small, time, label, code, pre
+),
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .dim,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .mut {
+  color: rgba(248, 249, 252, .88) !important;
+  -webkit-text-fill-color: currentColor;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .dim,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .mut {
+  color: var(--qbot-muted) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .glass,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .pad,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .bsk,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .qbot-action {
+  border: 1px solid rgba(255, 255, 255, .105) !important;
+  border-radius: 19px !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02)),
+    rgba(10, 10, 12, .42) !important;
+  color: var(--qbot-ink) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .115), 0 18px 38px -34px #000 !important;
+  -webkit-backdrop-filter: blur(24px) saturate(138%) !important;
+  backdrop-filter: blur(24px) saturate(138%) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .bsk {
+  color: #fff !important;
+  transition: border-color .22s ease, background .22s ease, transform .22s ease !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .bsk:is(:hover, :focus-visible) {
+  border-color: rgba(255, 255, 255, .22) !important;
+  background: rgba(255, 255, 255, .09) !important;
+  transform: translateY(-2px);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .bski,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation .bski .ic {
+  color: rgba(255, 255, 255, .88) !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-live-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-live-user {
+  align-self: flex-end;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-live-bot {
+  align-self: flex-start;
+  width: 100%;
+}
+
+/* The orb occupies the precise space between the conversation and the typing tile.
+   Its canvas stays unobstructed so the actual 3D surface, not a fake card, carries the moment. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock {
+  order: 3;
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  height: clamp(132px, 19vh, 176px) !important;
+  min-height: 132px;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  isolation: isolate;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock::before,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock::after {
+  display: none !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock.big {
+  height: clamp(158px, 23vh, 204px) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock canvas {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+  filter: drop-shadow(0 18px 27px rgba(28, 54, 113, .14));
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-orb-fallback {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: clamp(92px, 12vh, 132px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(ellipse 48% 22% at 35% 15%, rgba(255, 255, 255, .92), transparent 72%),
+    radial-gradient(ellipse 62% 36% at 57% 83%, rgba(255, 255, 255, .92), transparent 75%),
+    linear-gradient(164deg, #326be4 0%, #6d97f1 39%, #bdcdef 57%, #f8fbff 76%, #ffffff 100%);
+  box-shadow:
+    inset -9px -11px 23px rgba(36, 62, 128, .18),
+    inset 7px 8px 20px rgba(255, 255, 255, .45),
+    0 20px 46px rgba(25, 48, 100, .18),
+    0 0 42px rgba(133, 169, 242, .12);
+  animation: qbot-pearl-breathe 5.6s ease-in-out infinite;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-orb-retry {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes qbot-pearl-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(.985); filter: saturate(1); }
+  50% { transform: translate(-50%, -50%) scale(1.025); filter: saturate(1.08); }
+}
+
+/* The composer is a deep, continuous glass tile with soft silver reflections. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc {
+  order: 4;
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0 !important;
+  padding: 3px 14px 15px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc .ast-q:empty {
+  display: none;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in {
+  position: relative;
+  isolation: isolate;
+  display: grid !important;
+  grid-template-columns: 42px 42px minmax(0, 1fr) 48px;
+  grid-template-rows: minmax(56px, auto) 44px;
+  align-items: center;
+  gap: 7px 9px;
+  width: 100%;
+  min-width: 0;
+  min-height: 116px;
+  padding: 12px 13px 11px !important;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .19) !important;
+  border-radius: 27px !important;
+  background:
+    radial-gradient(ellipse 74% 68% at 0% 0%, rgba(255, 255, 255, .085), transparent 70%),
+    radial-gradient(ellipse 52% 56% at 100% 100%, rgba(152, 176, 222, .035), transparent 72%),
+    linear-gradient(145deg, rgba(255, 255, 255, .095), rgba(255, 255, 255, .025) 46%, rgba(0, 0, 0, .38)),
+    rgba(7, 7, 9, .88) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .2),
+    inset 0 -1px 0 rgba(255, 255, 255, .045),
+    inset 0 0 36px rgba(255, 255, 255, .025),
+    0 22px 58px -36px rgba(0, 0, 0, .98),
+    0 0 38px -30px rgba(255, 255, 255, .2) !important;
+  -webkit-backdrop-filter: blur(38px) saturate(150%) !important;
+  backdrop-filter: blur(38px) saturate(150%) !important;
+  transition: border-color .26s ease, box-shadow .26s ease, background .26s ease !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(128deg, rgba(255, 255, 255, .13), transparent 24%, transparent 72%, rgba(255, 255, 255, .035)),
+    linear-gradient(110deg, transparent 32%, rgba(255, 255, 255, .028) 48%, transparent 65%);
+  background-size: 100% 100%, 240% 100%;
+  animation: qbot-glass-sweep 16s ease-in-out infinite;
+}
+@keyframes qbot-glass-sweep {
+  0%, 20% { background-position: 0 0, 110% 0; }
+  75%, 100% { background-position: 0 0, -20% 0; }
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in:focus-within {
+  border-color: rgba(218, 230, 255, .48) !important;
+  background:
+    radial-gradient(ellipse 74% 68% at 0% 0%, rgba(255, 255, 255, .105), transparent 70%),
+    linear-gradient(145deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .03) 46%, rgba(0, 0, 0, .4)),
+    rgba(7, 7, 9, .92) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .23),
+    0 0 0 3px rgba(255, 255, 255, .045),
+    0 24px 62px -36px #000 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > textarea,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > textarea:focus,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > textarea:focus-visible {
+  z-index: 1;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  min-height: 56px !important;
+  max-height: 150px !important;
+  margin: 0 !important;
+  padding: 9px 10px 11px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #dce7ff !important;
+  font-family: inherit;
+  font-size: 15px !important;
+  font-weight: 450 !important;
+  line-height: 1.55 !important;
+  resize: none;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > textarea::placeholder {
+  color: rgba(235, 238, 245, .48) !important;
+  -webkit-text-fill-color: rgba(235, 238, 245, .48) !important;
+  opacity: 1 !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > .btn {
+  z-index: 1;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  border: 1px solid rgba(255, 255, 255, .11) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, .065) !important;
+  color: rgba(255, 255, 255, .88) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .11) !important;
+  transition: transform .2s ease, background .2s ease, border-color .2s ease !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > .btn:is(:hover, :focus-visible) {
+  border-color: rgba(255, 255, 255, .25) !important;
+  background: rgba(255, 255, 255, .13) !important;
+  transform: translateY(-1px);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > .btn.rec {
+  border-color: rgba(143, 181, 255, .48) !important;
+  background: rgba(76, 114, 196, .22) !important;
+  color: #dce7ff !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > .btn.p {
+  border-color: rgba(255, 255, 255, .84) !important;
+  background: linear-gradient(145deg, #fff, #dfe4ee) !important;
+  color: #08090b !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    0 8px 22px -14px rgba(255, 255, 255, .5) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > .btn.p :is(svg, .ic) {
+  color: #08090b !important;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc > p.dim {
+  margin: 8px 8px 0 !important;
+  color: rgba(223, 227, 235, .36) !important;
+  font-size: 10px !important;
+  letter-spacing: .015em;
+}
+
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsl,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bsi,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .chip,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .btn {
+  border-color: rgba(255, 255, 255, .13) !important;
+  background-color: rgba(255, 255, 255, .045) !important;
+  color: #f7f8fb !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(.bsl, .bsi, .chip, .btn):is(:hover, :focus-visible) {
+  border-color: rgba(255, 255, 255, .24) !important;
+  color: #fff !important;
+}
+
+/* All bot panels share the site's quiet white text; scrolling remains intact, chrome disappears. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(
+  .qbot-conversation, .qbot-conversation *, .bs, .bs *, .bc, .bc *
+) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) :is(
+  .qbot-conversation, .qbot-conversation *, .bs, .bs *, .bc, .bc *
+)::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+@media (max-width: 980px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs {
+    inset: 8px auto 8px 8px !important;
+    width: min(84%, 310px) !important;
+    max-width: calc(100% - 30px) !important;
+    height: auto !important;
+    margin: 0 !important;
+    border: 1px solid rgba(255, 255, 255, .17) !important;
+    border-radius: 24px !important;
+    background:
+      radial-gradient(ellipse 80% 42% at 0% 0%, rgba(255, 255, 255, .085), transparent 72%),
+      linear-gradient(150deg, rgba(28, 29, 32, .985), rgba(7, 7, 9, .99)) !important;
+    box-shadow: 28px 0 65px rgba(0, 0, 0, .58), inset 0 1px 0 rgba(255, 255, 255, .14) !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).side-on .bs {
+    transform: translateX(0) !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bm {
+    padding-inline: 7px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+    border-radius: 24px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh {
+    min-height: 58px;
+    margin: 7px 7px 0 !important;
+    padding: 9px 10px !important;
+    border-radius: 18px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation {
+    min-height: 105px;
+    margin: 8px 8px 0 !important;
+    padding: 12px !important;
+    border-radius: 20px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock {
+    height: 132px !important;
+    min-height: 132px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock.big {
+    height: 154px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bc {
+    padding: 0 8px 11px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in {
+    grid-template-columns: 38px 38px minmax(0, 1fr) 43px;
+    grid-template-rows: minmax(54px, auto) 42px;
+    gap: 6px;
+    min-height: 108px;
+    padding: 9px !important;
+    border-radius: 22px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > textarea,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > textarea:focus {
+    min-height: 54px !important;
+    padding: 8px !important;
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh {
+    gap: 3px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bha {
+    gap: 0;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bha .bib,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh > .bib {
+    width: 29px;
+    min-width: 29px;
+    height: 32px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bwm.big {
+    font-size: 12px;
+    letter-spacing: .045em;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in {
+    grid-template-columns: 34px 34px minmax(0, 1fr) 39px;
+    gap: 5px;
+    padding: 8px !important;
+    border-radius: 19px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > .btn {
+    min-width: 34px !important;
+    min-height: 36px !important;
+    padding: 7px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) *,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) *::before,
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
