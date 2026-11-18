@@ -93,7 +93,7 @@ test('the New chat sidebar action is a refined monochrome pearl-glass control', 
 
   assert.match(bot, /qbot-sidebar-primary-action/)
   assert.match(bot, /qbot-sidebar-primary-icon/)
-  assert.match(bot, /Start a fresh conversation/)
+  assert.doesNotMatch(bot, /Start a fresh conversation|qbot-sidebar-primary-arrow/)
   assert.match(glass, /\.bs-n > \.qbot-sidebar-primary-action/)
   assert.match(glass, /grid-template-columns:38px minmax\(0,1fr\) 22px/)
   assert.match(glass, /linear-gradient\(145deg,#fff 0%,#f3f4f7 48%,#dfe3eb 100%\)/)
