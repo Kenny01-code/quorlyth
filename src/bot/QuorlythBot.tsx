@@ -3870,7 +3870,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             <aside className={cn("bs", narrow && "qbot-sidebar-drawer")}>
               <div className="bs-t"><span className="astm2"><Logo size={24} /></span><b className="bwm">{wm('Quorlyth')}</b><button className="bib" aria-label="Close sidebar" onClick={() => setSide(false)}><Icon name="panel" size={18} /></button></div>
               <div className="bs-n">
-                <button className="bsb p" onClick={() => { if (busy) return; stopLive(); stopVoice(); setCur(null); setView('chat') }}><Icon name="plus" size={18} />New chat</button>
+                <button className="bsb p qbot-sidebar-primary-action" onClick={() => { if (busy) return; stopLive(); stopVoice(); setCur(null); setView('chat') }}>
+                  <span className="qbot-sidebar-primary-icon"><Icon name="plus" size={18} /></span>
+                  <span className="qbot-sidebar-primary-copy"><b>New chat</b><small>Start a fresh conversation</small></span>
+                  <span className="qbot-sidebar-primary-arrow"><Icon name="arrow-up-right" size={15} /></span>
+                </button>
                 {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
               </div>
               <div className="bs-s"><div className="iw"><Icon name="search" size={18} /><input placeholder="Search chats" aria-label="Search chats" value={q} onChange={e => setQ(e.target.value)} /></div></div>
