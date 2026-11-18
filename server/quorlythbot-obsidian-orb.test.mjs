@@ -13,7 +13,7 @@ test('QuorlythBot uses the site-matched obsidian pearl glass frame', async () =>
   assert.ok(bot.includes("import '../styles/bot-obsidian-glass.css'"))
   assert.ok(bot.includes("const theme = 'pearl'"))
   assert.ok(bot.includes("const accent = THEMES.pearl"))
-  assert.match(bot, /className=\{cn\('bstage bot-orb-dock', stage\)\}/)
+  assert.match(bot, /className=\{cn\('bstage bot-orb-dock qbot-live-orb-stage', stage\)\}/)
   assert.match(bot, /\{live && \([\s\S]*?className=\{cn\('bstage bot-orb-dock qbot-live-orb-stage'/)\n  assert.match(bot, /active=\{!minimized && open && !!live\}/)\n  assert.match(bot, /aria-label="Live Talk voice visualizer"/)\n  assert.doesNotMatch(bot, /robotReadyRef|pendingRobotPoseRef/)
   assert.match(bot, /view === 'chat' && \(/)
   assert.doesNotMatch(bot, /<Robot(?:\s|>)/)
@@ -37,7 +37,11 @@ test('the existing Three.js orb is a single cobalt-and-pearl sphere without orbi
     source('src/bot/robot-themes.ts'),
   ])
 
-  assert.match(orb, /new SphereGeometry\(1, 176, 144\)/)\n  assert.match(orb, /camera.position.set\(0, 0, 3.72\)/)\n  assert.match(orb, /roughness: 0.042/)\n  assert.match(orb, /clearcoatRoughness: 0.022/)\n  assert.match(orb, /edgeSoftbox/)
+  assert.match(orb, /new SphereGeometry\(1, 176, 144\)/)
+  assert.match(orb, /camera.position.set\(0, 0, 3\.72\)/)
+  assert.match(orb, /roughness: 0\.042/)
+  assert.match(orb, /clearcoatRoughness: 0\.022/)
+  assert.match(orb, /edgeSoftbox/)
   assert.match(orb, /uniform vec3 uPearl/)
   assert.match(orb, /uniform vec3 uCobalt/)
   assert.match(orb, /uniform vec3 uIce/)
