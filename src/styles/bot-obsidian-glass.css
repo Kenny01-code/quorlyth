@@ -960,3 +960,498 @@
     transition:none !important;
   }
 }
+
+
+/* Final QuorlythBot direction: the reference sidebar rhythm, black pearl glass,
+   white surfaces and the site's unmistakable Quorlyth orange. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) {
+  --qbot-orange: #F97316;
+  --qbot-orange-soft: rgba(249,115,22,.13);
+  --qbot-orange-line: rgba(249,115,22,.34);
+}
+
+/* Sidebar structure mirrors the reference: brand, one primary action, navigation,
+   search, flexible recents, then the fixed settings/account footer. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs {
+  display:flex !important;
+  flex-direction:column !important;
+  gap:0;
+  flex:0 0 264px !important;
+  width:264px !important;
+  padding:0 0 10px !important;
+  overflow:hidden !important;
+  border:1px solid rgba(255,255,255,.12) !important;
+  border-radius:25px !important;
+  background:
+    radial-gradient(ellipse 100% 34% at 0% 0%,rgba(255,255,255,.075),transparent 76%),
+    linear-gradient(160deg,rgba(23,24,27,.985),rgba(9,10,12,.99) 58%,#070708) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.15),
+    inset 0 0 36px rgba(255,255,255,.018),
+    0 20px 50px -36px rgba(0,0,0,.95) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-t {
+  min-height:70px;
+  display:flex !important;
+  align-items:center;
+  gap:10px;
+  margin:0 13px !important;
+  padding:0 5px !important;
+  border-bottom:1px solid rgba(255,255,255,.085) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-t .astm2 {
+  display:grid;
+  place-items:center;
+  flex:0 0 29px;
+  width:29px;
+  height:29px;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-t .bwm {
+  flex:1 1 auto;
+  color:#fff !important;
+  font-size:16px;
+  font-weight:650;
+  letter-spacing:.12em;
+  text-shadow:0 1px 16px rgba(255,255,255,.12);
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-t .bib {
+  display:grid;
+  place-items:center;
+  width:40px;
+  height:40px;
+  border:1px solid rgba(255,255,255,.13) !important;
+  border-radius:14px !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.025)) !important;
+  color:var(--qbot-orange) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-t .bib :is(svg,.ic) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-n {
+  display:flex !important;
+  flex-direction:column;
+  gap:5px;
+  margin:12px 12px 0 !important;
+  padding:0 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .bsb {
+  display:flex !important;
+  align-items:center;
+  justify-content:flex-start;
+  gap:14px;
+  width:100%;
+  min-height:47px !important;
+  padding:0 14px !important;
+  border:1px solid transparent !important;
+  border-radius:14px !important;
+  background:transparent !important;
+  color:rgba(248,249,252,.88) !important;
+  font-size:14px;
+  font-weight:570;
+  letter-spacing:-.01em;
+  text-align:left;
+  box-shadow:none !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .bsb :is(svg,.ic) {
+  flex:0 0 18px;
+  width:18px;
+  color:var(--qbot-orange) !important;
+  opacity:1 !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .bsb:not(.qbot-sidebar-primary-action):is(:hover,:focus-visible,.on) {
+  border-color:rgba(255,255,255,.09) !important;
+  background:linear-gradient(110deg,rgba(249,115,22,.115),rgba(255,255,255,.035)) !important;
+  color:#fff !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .bsb.on:not(.qbot-sidebar-primary-action) {
+  border-color:rgba(249,115,22,.18) !important;
+  background:linear-gradient(110deg,rgba(249,115,22,.13),rgba(255,255,255,.035)) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .qbot-sidebar-primary-action {
+  display:flex !important;
+  grid-template-columns:none;
+  align-items:center;
+  justify-content:flex-start;
+  gap:13px;
+  min-height:53px !important;
+  margin:4px 0 10px !important;
+  padding:0 15px !important;
+  border:1px solid rgba(255,255,255,.96) !important;
+  border-radius:16px !important;
+  background:
+    radial-gradient(ellipse 80% 68% at 8% 0%,rgba(255,255,255,.97),transparent 72%),
+    linear-gradient(145deg,#fff 0%,#f1f2f5 55%,#e2e5eb 100%) !important;
+  color:#111216 !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 rgba(10,12,18,.08),
+    0 12px 25px -18px rgba(255,255,255,.72),
+    0 10px 24px -18px rgba(0,0,0,.82) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action::before {
+  display:none;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-icon {
+  display:grid;
+  place-items:center;
+  width:21px;
+  height:21px;
+  border:0;
+  border-radius:0;
+  background:transparent !important;
+  color:var(--qbot-orange) !important;
+  box-shadow:none !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-icon :is(svg,.ic) {
+  width:19px;
+  height:19px;
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-copy {
+  display:block;
+  flex:1 1 auto;
+  color:#111216 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action .qbot-sidebar-primary-copy b {
+  color:#111216 !important;
+  font-size:14px;
+  font-weight:650;
+  line-height:1.2;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action:is(:hover,:focus-visible) {
+  transform:translateY(-1px);
+  background:linear-gradient(145deg,#fff,#f5f6f8 56%,#e9ebf0) !important;
+  border-color:#fff !important;
+  color:#090a0c !important;
+  box-shadow:inset 0 1px 0 #fff,0 15px 30px -18px rgba(255,255,255,.68),0 14px 28px -20px #000 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-s {
+  margin:12px 12px 0 !important;
+  padding:0 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw {
+  display:flex;
+  align-items:center;
+  min-height:51px;
+  padding:0 13px !important;
+  border:1px solid rgba(255,255,255,.14) !important;
+  border-radius:17px !important;
+  background:rgba(255,255,255,.025) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw :is(svg,.ic) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw input {
+  min-width:0;
+  padding:0 0 0 10px !important;
+  border:0 !important;
+  background:transparent !important;
+  color:#fff !important;
+  font-size:14px !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .iw input::placeholder {
+  color:rgba(236,239,245,.48) !important;
+  opacity:1;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-l {
+  flex:1 1 auto !important;
+  min-height:60px !important;
+  margin:10px 0 0 !important;
+  padding:7px 13px 14px !important;
+  overflow-y:auto !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-l .bgh {
+  margin:11px 0 9px !important;
+  color:rgba(226,230,238,.48) !important;
+  font-size:11px !important;
+  font-weight:760;
+  letter-spacing:.075em;
+  text-transform:none;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-l :is(.bci,.bch,.bitem,.bchat) {
+  color:rgba(248,249,252,.88) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-f {
+  flex:0 0 auto !important;
+  margin:0 !important;
+  padding:13px 12px 0 !important;
+  border-top:1px solid rgba(255,255,255,.105) !important;
+  background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.008)) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-f > .bsb {
+  min-height:43px;
+  padding:0 14px !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-f .bsu {
+  display:flex !important;
+  align-items:center;
+  gap:12px;
+  min-height:68px !important;
+  margin-top:7px !important;
+  padding:10px 13px !important;
+  border:1px solid rgba(255,255,255,.13) !important;
+  border-radius:17px !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.015)) !important;
+  color:#fff !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-f .bsu :is(svg,.ic) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-f .bsu :is(b,span) {
+  color:#fff !important;
+  text-align:left;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-f .bsu i {
+  display:block;
+  margin-top:3px;
+  color:rgba(226,230,238,.52) !important;
+  font-size:12px;
+  font-style:normal;
+}
+
+/* Orange is reserved for symbols and active details; the writing remains calm monochrome. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs :is(.ic,svg,.quorlyth-glyph) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bh .bib :is(svg,.ic) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bha .bib.on {
+  border-color:rgba(249,115,22,.34) !important;
+  background:rgba(249,115,22,.11) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > .btn:not(.p) :is(svg,.ic),
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .ast-in > .btn.p :is(svg,.ic) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+
+/* Projects, Library, Customize and Voice Studio use luminous white-glass cards
+   against the quiet black room, making labels and descriptions genuinely readable. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) {
+  color:#151619 !important;
+  background:
+    radial-gradient(ellipse 65% 24% at 2% 0%,rgba(249,115,22,.055),transparent 74%),
+    linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012)),
+    rgba(6,6,7,.5) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) :is(h1,h2,h3,h4,b,strong,label) {
+  color:#111216 !important;
+  -webkit-text-fill-color:#111216 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) :is(p,span,li,small,time,.dim,.mut) {
+  color:#373a40 !important;
+  -webkit-text-fill-color:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .bvt {
+  margin:3px 2px 5px !important;
+  color:#fff !important;
+  -webkit-text-fill-color:#fff !important;
+  font-size:20px;
+  font-weight:720;
+  letter-spacing:-.035em;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) > p.mut {
+  color:rgba(241,243,247,.7) !important;
+  -webkit-text-fill-color:currentColor;
+  font-size:13px;
+  line-height:1.6;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.cent {
+  border:1px solid rgba(255,255,255,.9) !important;
+  border-radius:19px !important;
+  background:
+    radial-gradient(ellipse 76% 60% at 0% 0%,rgba(255,255,255,.98),transparent 72%),
+    linear-gradient(145deg,rgba(255,255,255,.98),rgba(239,241,245,.96)) !important;
+  color:#151619 !important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 17px 36px -30px rgba(0,0,0,.74),
+    0 1px 0 rgba(255,255,255,.62) !important;
+  -webkit-backdrop-filter:blur(28px) saturate(148%) !important;
+  backdrop-filter:blur(28px) saturate(148%) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad :is(h1,h2,h3,h4,b,strong,label) {
+  color:#111216 !important;
+  -webkit-text-fill-color:#111216 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad :is(p,span,small,.dim,.mut) {
+  color:#373a40 !important;
+  -webkit-text-fill-color:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad :is(input,textarea,select) {
+  width:100%;
+  border:1px solid rgba(18,20,24,.15) !important;
+  border-radius:12px !important;
+  background:rgba(255,255,255,.86) !important;
+  color:#111216 !important;
+  -webkit-text-fill-color:#111216 !important;
+  box-shadow:inset 0 1px 2px rgba(12,14,18,.045) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad :is(input,textarea,select)::placeholder {
+  color:rgba(25,28,34,.46) !important;
+  -webkit-text-fill-color:rgba(25,28,34,.46) !important;
+  opacity:1;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad .field > span {
+  display:block;
+  margin-bottom:6px;
+  color:#191b20 !important;
+  font-size:12px;
+  font-weight:700;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad .acts .chip,
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad .acts button:not(.btn) {
+  border:1px solid rgba(20,22,26,.14) !important;
+  border-radius:999px !important;
+  background:rgba(255,255,255,.82) !important;
+  color:#22252a !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad .acts :is(.chip.on,.chip[aria-pressed="true"]) {
+  border-color:rgba(249,115,22,.48) !important;
+  background:rgba(249,115,22,.14) !important;
+  color:#8c340d !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .btn.p {
+  border:1px solid rgba(217,119,85,.72) !important;
+  border-radius:13px !important;
+  background:linear-gradient(145deg,#fb874d,#e85f32) !important;
+  color:#17100d !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.36),0 9px 20px -16px rgba(217,95,51,.85) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .btn:not(.p) {
+  border:1px solid rgba(20,22,26,.15) !important;
+  border-radius:13px !important;
+  background:rgba(255,255,255,.82) !important;
+  color:#181a1f !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .glass.pad :is(svg,.ic,.quorlyth-glyph) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) :is(.bsk,.bvc) {
+  border:1px solid rgba(255,255,255,.88) !important;
+  border-radius:17px !important;
+  background:linear-gradient(145deg,#fff,#eff1f4) !important;
+  color:#17191d !important;
+  box-shadow:inset 0 1px 0 #fff,0 12px 26px -24px rgba(0,0,0,.72) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) :is(.bsk,.bvc) :is(b,strong) {
+  color:#14161a !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) :is(.bsk,.bvc) .dim {
+  color:#4a4d54 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) :is(.bsk,.bvc) :is(svg,.ic) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .bvc.on {
+  border-color:rgba(249,115,22,.72) !important;
+  background:linear-gradient(145deg,#fff7f0,#f5eee8) !important;
+  box-shadow:0 0 0 2px rgba(249,115,22,.1),0 15px 28px -24px rgba(0,0,0,.75) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .csr {
+  border-color:rgba(18,20,24,.12) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .tg.on {
+  border-color:#e66b31 !important;
+  background:linear-gradient(110deg,#f99a55,#e66b31) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-conversation:not(.qbot-chat-surface) .tg.on i {
+  background:#fff !important;
+}
+
+/* Chat remains a simple black/white conversation with orange symbols and restrained highlights. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface {
+  border-color:rgba(255,255,255,.095) !important;
+  background:
+    radial-gradient(ellipse 54% 28% at 3% 0%,rgba(249,115,22,.035),transparent 75%),
+    linear-gradient(145deg,rgba(255,255,255,.026),rgba(255,255,255,.008) 58%,rgba(0,0,0,.16)),
+    rgba(5,5,6,.44) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface :is(svg,.ic,.quorlyth-glyph) {
+  color:var(--qbot-orange) !important;
+  stroke:currentColor;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface .am.ma :is(a) {
+  color:#ffad78 !important;
+  text-decoration-color:rgba(249,115,22,.48) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface .am.ma :is(code,kbd) {
+  border-color:rgba(249,115,22,.19) !important;
+  background:rgba(249,115,22,.075) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface .am.ma pre {
+  border-color:rgba(255,255,255,.12) !important;
+  background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.012)),#030304 !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface .bsk {
+  border-color:rgba(249,115,22,.17) !important;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-chat-surface .ast-log > .am.ma {
+  border-left:2px solid rgba(249,115,22,.36) !important;
+}
+
+/* The speaker orb appears for real audio playback (chat, studio preview and Live Talk),
+   while remaining absent from silent reading and ordinary idle chat. */
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bstage.bot-orb-dock.qbot-live-orb-stage {
+  height:clamp(204px,25vh,248px) !important;
+  min-height:204px;
+}
+:is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .qbot-orb-stage-halo {
+  background:
+    radial-gradient(ellipse 31% 44% at 50% 48%,rgba(255,244,235,.2),transparent 72%),
+    radial-gradient(ellipse 58% 70% at 50% 58%,rgba(249,115,22,.065),transparent 74%),
+    radial-gradient(ellipse 58% 70% at 50% 58%,rgba(63,105,195,.1),transparent 74%);
+}
+@media(max-width:980px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot).narrow > .bs.qbot-sidebar-drawer {
+    inset:8px auto 8px 8px !important;
+    width:min(330px,calc(100% - 24px)) !important;
+    max-width:calc(100% - 20px) !important;
+    height:calc(100% - 16px) !important;
+    margin:0 !important;
+    border:1px solid rgba(255,255,255,.14) !important;
+    border-radius:25px !important;
+    background:
+      radial-gradient(ellipse 100% 34% at 0% 0%,rgba(255,255,255,.075),transparent 76%),
+      linear-gradient(160deg,rgba(23,24,27,.99),rgba(8,9,11,.995)) !important;
+    box-shadow:24px 0 64px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.15) !important;
+  }
+}
+@media(max-width:760px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-t {
+    min-height:70px;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n {
+    gap:5px;
+    margin:12px 11px 0 !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .bsb {
+    min-height:47px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-s {
+    margin:12px 11px 0 !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-l {
+    padding-inline:12px !important;
+  }
+}
+@media(max-width:420px) {
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs-t {
+    margin-inline:11px !important;
+  }
+  :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .bs-n > .qbot-sidebar-primary-action {
+    min-height:51px !important;
+  }
+}
