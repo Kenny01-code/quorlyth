@@ -4,12 +4,12 @@ export { THEMES }
 export interface Voice { id: string; n: string; g: 'f' | 'm'; d: string; theme: string; ai: string }
 // Each persona maps to a natural OpenAI voice.
 export const VOICES: Voice[] = [
-  { id: 'aria', n: 'Aria', g: 'f', d: 'Warm and clear', theme: 'terracotta', ai: 'marin' },
-  { id: 'selene', n: 'Serene', g: 'f', d: 'Calm, warm and gently measured', theme: 'terracotta', ai: 'sage' },
-  { id: 'nova', n: 'Nova', g: 'f', d: 'Bright, lively and expressive', theme: 'terracotta', ai: 'shimmer' },
-  { id: 'atlas', n: 'Atlas', g: 'm', d: 'Deep and steady', theme: 'terracotta', ai: 'cedar' },
-  { id: 'orion', n: 'Orion', g: 'm', d: 'Smooth and confident', theme: 'terracotta', ai: 'echo' },
-  { id: 'leo', n: 'Leo', g: 'm', d: 'Friendly and relaxed', theme: 'terracotta', ai: 'ballad' },
+  { id: 'aria', n: 'Aria', g: 'f', d: 'Warm and clear', theme: 'pearl', ai: 'marin' },
+  { id: 'selene', n: 'Serene', g: 'f', d: 'Calm, warm and gently measured', theme: 'pearl', ai: 'sage' },
+  { id: 'nova', n: 'Nova', g: 'f', d: 'Bright, lively and expressive', theme: 'pearl', ai: 'shimmer' },
+  { id: 'atlas', n: 'Atlas', g: 'm', d: 'Deep and steady', theme: 'pearl', ai: 'cedar' },
+  { id: 'orion', n: 'Orion', g: 'm', d: 'Smooth and confident', theme: 'pearl', ai: 'echo' },
+  { id: 'leo', n: 'Leo', g: 'm', d: 'Friendly and relaxed', theme: 'pearl', ai: 'ballad' },
 ]
 
 export type VoiceAccent = 'auto' | 'nigerian' | 'american' | 'british' | 'international'
@@ -22,7 +22,7 @@ export const VOICE_ACCENTS: { id: VoiceAccent; name: string; description: string
 ]
 
 export interface BotSettings { tone: string; len: string; emo: boolean; about: string; voice: boolean; calm: boolean; robot: boolean; model: 'quick' | 'smart'; vid: string; accent: VoiceAccent; theme: string }
-export const BOT_DEFAULTS: BotSettings = { tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', accent: 'auto', theme: 'terracotta' }
+export const BOT_DEFAULTS: BotSettings = { tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: false, model: 'smart', vid: 'aria', accent: 'auto', theme: 'pearl' }
 
 export const SKILLS: { id: string; n: string; icon: string; d: string; own: boolean }[] = [
   { id: 'brief', n: 'Community briefing', icon: 'insight', d: 'Themes, demand and next steps from your ideas.', own: true },
