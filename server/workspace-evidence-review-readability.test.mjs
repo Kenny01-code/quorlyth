@@ -24,7 +24,7 @@ test('an unavailable automatic alignment review is not presented as a zero score
     source('src/styles/standalone-workspaces.css'),
   ])
 
-  assert.match(screen, /Review unavailable/)
+  assert.match(screen, /Decision unavailable/)
   assert.match(screen, /artifact\.aiReview\.status === 'unavailable' \? 'Not scored'/)
   assert.match(screen, /GAPS TO CHECK/)
   assert.match(screen, /SUGGESTED NEXT ACTIONS/)
