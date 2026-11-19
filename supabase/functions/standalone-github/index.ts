@@ -366,7 +366,14 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "finalize_project_ai") {
-      if (![ "owner", "manager" ].includes(role) && !isLinkedCommunityOwner) {
+      if (project.data.linkedIdeaId && !isLinkedCommunityOwner) {
+      const linkedIdea = await getDoc("ideas/" + cleanText(project.data.linkedIdeaId, 120));
+      const linkedCommunityId = cleanText(linkedIdea?.data?.cid, 120);
+      const linkedCommunity = linkedCommunityId ? await getDoc("communities/" + linkedCommunityId) : null;
+      isLinkedCommunityOwner = linkedCommunity?.data?.ownerId === user.id || linkedCommunity?.data?.createdBy === user.id;
+    }
+
+    if (![ "owner", "manager" ].includes(role) && !isLinkedCommunityOwner) {
         return respond(403, { error: "Only the project owner, workspace manager, or linked community owner can complete the project." });
       }
 
