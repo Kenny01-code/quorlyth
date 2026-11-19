@@ -56,7 +56,7 @@ function writeWorkspaceSnapshot<T>(userId: string, collection: string, rows: T[]
 async function reviewEvidenceAgainstTask(task: WorkspaceTask, evidence: {
   kind: string
   summary: string
-  url?: string
+  urlHost?: string
   files?: Array<{ name: string; size: number; mimeType: string }>
   githubMetadata?: Record<string, unknown>
 }): Promise<WorkspaceAIEvidenceReview> {
@@ -1020,7 +1020,7 @@ function WorkspaceProjectView() {
           const localReview = a.backend.auth.mode === 'supabase' ? undefined : await reviewEvidenceAgainstTask(evidenceTask, {
             kind,
             summary: evidenceSummary,
-            ...(artifactType === 'file' ? {} : { url: artifactUrl.trim() }),
+            ...(artifactType === 'file' ? {} : { urlHost: (() => { try { return new URL(artifactUrl.trim()).hostname } catch { return '' } })() }),
             files: attachments.map(file => ({ name: file.name, size: file.size, mimeType: file.mimeType })),
           })
           const localDecision = localReview?.decision || 'pending'
