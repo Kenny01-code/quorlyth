@@ -1,5 +1,5 @@
 import '../styles/evidence-preview.css'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type EvidencePreviewProps = {
   url: string
@@ -101,6 +101,9 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
   const type = parsed ? classify(parsed, mimeType, name) : 'link'
   const githubApi = useMemo(() => parsed && type === 'github' ? githubApiUrl(parsed) : null, [parsed, type])
   const [viewerOpen, setViewerOpen] = useState(false)
+  const viewerPanelRef = useRef<HTMLElement>(null)
+  const viewerCloseRef = useRef<HTMLButtonElement>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const [githubPreview, setGithubPreview] = useState<GithubPreviewState>({ status: 'idle', data: null, content: '', error: '' })
 
   useEffect(() => {
@@ -158,14 +161,44 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
   useEffect(() => {
     if (!viewerOpen) return
     const previousOverflow = document.body.style.overflow
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setViewerOpen(false)
-    }
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     document.body.style.overflow = 'hidden'
+    viewerCloseRef.current?.focus()
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setViewerOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const panel = viewerPanelRef.current
+      if (!panel) return
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), iframe, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )).filter(element => element.offsetParent !== null)
+      if (!focusable.length) {
+        event.preventDefault()
+        panel.focus()
+        return
+      }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
     window.addEventListener('keydown', onKeyDown)
     return () => {
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', onKeyDown)
+      const previous = previouslyFocusedRef.current
+      if (previous?.isConnected) previous.focus()
     }
   }, [viewerOpen])
 
@@ -208,10 +241,10 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
       <button type="button" className="ql-evidence-preview__open" onClick={() => setViewerOpen(true)} aria-haspopup="dialog">Preview in Quorlyth <span aria-hidden="true">↗</span></button>
     </section>
     {viewerOpen && <div className="ql-evidence-viewer" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setViewerOpen(false) }}>
-      <section className="ql-evidence-viewer__panel" role="dialog" aria-modal="true" aria-label={'Preview: ' + title}>
+      <section ref={viewerPanelRef} tabIndex={-1} className="ql-evidence-viewer__panel" role="dialog" aria-modal="true" aria-label={'Preview: ' + title}>
         <header className="ql-evidence-viewer__header">
           <div className="ql-evidence-viewer__title"><span className="ql-evidence-preview__type">{label}</span><strong>{title}</strong><small>{host}</small></div>
-          <button type="button" className="ql-evidence-viewer__close" onClick={() => setViewerOpen(false)} aria-label="Close evidence preview">×</button>
+          <button ref={viewerCloseRef} type="button" className="ql-evidence-viewer__close" onClick={() => setViewerOpen(false)} aria-label="Close evidence preview">×</button>
         </header>
         <div className="ql-evidence-viewer__body">
           {type === 'image' && <img className="ql-evidence-viewer__image" src={parsed.href} alt={name} />}
