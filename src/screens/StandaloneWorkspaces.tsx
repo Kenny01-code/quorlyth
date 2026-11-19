@@ -14,10 +14,15 @@ import { WorkSubmission } from '../lib/types'
 import { ChatAttachment, ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
 
 type WorkspaceTab = 'overview' | 'tasks' | 'evidence' | 'team'
+type WorkspaceFinalReview = {
+  status: 'completed'; reviewedBy: 'quorlyth-ai'; winnerUserId: string; overallScore: number
+  summary: string; reviewedAt: number; scopeNote: string
+  taskResults: Array<{ taskId: string; selectedEvidenceId: string; selectedSubmitterId: string; score: number; reason: string }>
+}
 type WorkspaceProject = {
   id: string; title: string; summary: string; status: 'active' | 'completed'; createdBy: string
   at: number; updatedAt: number; dueAt?: number | null; visibility: 'team'; docId?: string
-  linkedIdeaId?: string; linkedIdeaProjectId?: string
+  linkedIdeaId?: string; linkedIdeaProjectId?: string; finalReview?: WorkspaceFinalReview
 }
 type WorkspaceMember = {
   id: string; projectId: string; userId: string; role: 'owner' | 'manager' | 'contributor' | 'viewer'
@@ -123,7 +128,7 @@ async function reviewEvidenceAgainstTask(task: WorkspaceTask, evidence: {
 
 type WorkspaceAttachment = { path: string; name: string; mimeType: string; size: number; uploadedAt: number }
 type WorkspaceAIEvidenceReview = {
-  status: 'aligned' | 'needs_changes' | 'unclear' | 'unavailable'
+  status: 'screening' | 'aligned' | 'needs_changes' | 'unclear' | 'unavailable'
   decision: 'approved' | 'changes_requested' | 'pending'
   alignmentScore: number
   summary: string
@@ -462,12 +467,14 @@ function WorkspaceProjectView() {
   const myMembership = explicitTeam.find(item => item.userId === a.me?.id)
   const isOwner = !!a.me && project?.createdBy === a.me.id
   const hasLinkedCollaborationAccess = !!a.me?.id && linkedCollaboratorIds.includes(a.me.id)
+  const isCommunityOwner = !!a.me && (linkedCommunity?.ownerId === a.me.id || linkedCommunity?.createdBy === a.me.id)
   const role = isOwner ? 'owner'
     : explicitMembership
       ? (explicitMembership.status === 'active' ? explicitMembership.role : undefined)
       : (hasLinkedCollaborationAccess ? 'contributor' : undefined)
-  const canManage = !!role && ['owner','manager'].includes(role)
-  const canContribute = !!role && ['owner','manager','contributor'].includes(role)
+  const canManage = (!!role && ['owner','manager'].includes(role)) || isCommunityOwner
+  const canContribute = (!!role && ['owner','manager','contributor'].includes(role)) || isCommunityOwner
+  const canManageTask = (task: WorkspaceTask) => !!a.me && (canManage || task.createdBy === a.me.id)
   const taskAssignees = team.filter(member => member.status === 'active' && member.role !== 'viewer')
   if (a.me?.id && canManage && !taskAssignees.some(member => member.userId === a.me!.id)) {
     const now = Date.now()
@@ -486,6 +493,23 @@ function WorkspaceProjectView() {
   const doneCount = projectTasks.filter(task => task.status === 'done').length
   const progress = projectTasks.length ? Math.round(doneCount / projectTasks.length * 100) : 0
   const pendingReviews = projectArtifacts.filter(item => item.status === 'submitted').length
+  const screeningCount = projectArtifacts.filter(item => item.aiReview?.status === 'screening').length
+  const taskEvidenceReady = (task: WorkspaceTask) => {
+    const taskEvidence = projectArtifacts.filter(item => item.taskId === task.id)
+    const requiredContributors = assignedTaskIds(task).length
+      ? assignedTaskIds(task)
+      : [...new Set(taskEvidence.map(item => item.submittedBy).filter(Boolean))]
+    return requiredContributors.length > 0 && requiredContributors.every(userId => {
+      const latest = taskEvidence
+        .filter(item => item.submittedBy === userId)
+        .sort((first, second) => second.submittedAt - first.submittedAt)[0]
+      return latest?.status === 'approved' && latest.aiReview?.status !== 'screening'
+    })
+  }
+  const projectReadyForFinal = projectTasks.length > 0
+    && projectTasks.every(task => task.status === 'in_progress' || task.status === 'done')
+    && !projectArtifacts.some(item => item.status === 'submitted' || item.aiReview?.status === 'screening')
+    && projectTasks.every(taskEvidenceReady)
   const [tab, setTab] = useState<WorkspaceTab>('team')
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
@@ -507,6 +531,7 @@ function WorkspaceProjectView() {
   const selectedEvidenceTask = projectTasks.find(task => task.id === artifactTask)
   const selectedEvidenceAssignees = selectedEvidenceTask ? assignedTaskIds(selectedEvidenceTask) : []
   const canSubmitSelectedTaskEvidence = !!selectedEvidenceTask
+    && selectedEvidenceTask.status === 'in_progress'
     && (!selectedEvidenceAssignees.length || selectedEvidenceAssignees.includes(a.me?.id || ''))
   const [commentText, setCommentText] = useState('')
   const [commentFiles, setCommentFiles] = useState<File[]>([])
@@ -726,7 +751,7 @@ function WorkspaceProjectView() {
   }
 
   async function reassignTask(task: WorkspaceTask, assigneeIds: string[]) {
-    if (!a.backend || !canManage || task.status === 'done') return
+    if (!a.backend || !canManageTask(task) || task.status === 'done') return
     if (!a.me) return setError('Sign in again before changing task assignments.')
     const nextAssigneeIds = [...new Set(assigneeIds)]
     if (nextAssigneeIds.some(assigneeId => !taskAssignees.some(member => member.userId === assigneeId))) {
@@ -749,42 +774,20 @@ function WorkspaceProjectView() {
 
   async function startTask(task: WorkspaceTask) {
     if (!a.backend || !a.me) return
-    const assignedUsers = assignedTaskIds(task)
-    if (assignedUsers.length && !assignedUsers.includes(a.me.id)) {
-      setError('Only a teammate assigned to this task can start it. Ask the project manager to add you to the assignees.')
+    if (!canManageTask(task)) {
+      setError('Only the task creator, community owner, or workspace manager can start this task.')
       return
     }
+    if (task.status !== 'todo' || project.status !== 'active') return
     await runAction('start-'+task.id, async () => {
-      const currentAssignees = assignedTaskIds(task)
-      await a.backend!.store.update('standaloneTasks/' + task.id, {
+      const startedAt = Date.now()
+      await a.backend!.store.update('standaloneTasks/' + (task.docId || task.id), {
         status: 'in_progress',
-        ...(!currentAssignees.length ? { assigneeId: a.me!.id, assigneeIds: [a.me!.id] } : {}),
-        updatedAt: Date.now(),
+        startedAt,
+        startedBy: a.me!.id,
+        updatedAt: startedAt,
       })
-      a.toast('Task started.')
-    })
-  }
-
-  async function completeTask(task: WorkspaceTask) {
-    if (!a.backend) return
-    const approvedArtifact = projectArtifacts.find(artifact =>
-      artifact.taskId === task.id
-      && artifact.status === 'approved'
-      && ((artifact.provider === 'github' && artifact.verificationStatus === 'source_verified')
-        || (artifact.provider === 'manual' && (!!artifact.url || (artifact.attachments || []).length > 0))),
-    )
-    if (!approvedArtifact) return setError('A manager must approve previewable evidence before this task can be completed.')
-    await runAction('complete-'+task.id, async () => {
-      const completedAt = Date.now()
-      await a.backend!.store.update('standaloneTasks/' + (task.docId || task.id), { status: 'done', updatedAt: completedAt })
-      let milestoneSynced = true
-      if (task.milestoneId) {
-        milestoneSynced = await a.completeMilestoneFromWorkspaceEvidence(task.milestoneId, task.id, approvedArtifact.id)
-      }
-      emitWorkflowEvent('task.completed', { id: task.id, taskId: task.id, projectId: id, title: task.title, summary: task.description, at: completedAt, ...(task.milestoneId ? { milestoneId: task.milestoneId } : {}), evidenceId: approvedArtifact.id })
-      a.toast(milestoneSynced
-        ? 'Task completed with approved evidence.' + (task.milestoneId ? ' Its project milestone was updated too.' : '')
-        : 'Task completed. The linked milestone still needs an authorized community owner to finish its status update.')
+      a.toast('Task started. Assigned contributors can now submit their evidence separately.')
     })
   }
 
@@ -849,12 +852,23 @@ function WorkspaceProjectView() {
       nav('/workspaces')
     })
   }
-  async function toggleProjectStatus() {
-    if (!project || !a.backend) return
-    const next = project.status === 'completed' ? 'active' : 'completed'
+  async function finalizeProjectWithAI() {
+    if (!project || !a.backend || !canManage || project.status !== 'active') return
+    if (a.backend.auth.mode !== 'supabase') {
+      setError('Final AI project completion requires a signed-in Quorlyth workspace connected to the live review service.')
+      return
+    }
+    if (!projectReadyForFinal) {
+      setError('Start every task and wait for each assigned contributor’s latest evidence to receive an approval before marking the project complete.')
+      return
+    }
     await runAction('project-status', async () => {
-      await a.backend!.store.update('standaloneProjects/' + id, { status: next, updatedAt: Date.now() })
-      a.toast(next === 'completed' ? 'Workspace closed.' : 'Workspace reopened.')
+      const result = await githubAction(a, 'finalize_project_ai', id, {})
+      const finalReview = result?.finalReview as WorkspaceFinalReview | undefined
+      if (!finalReview?.winnerUserId || !Array.isArray(finalReview.taskResults)) {
+        throw new Error('Quorlyth AI did not return a valid final project ranking. The project remains open.')
+      }
+      a.toast('Project completed. Quorlyth AI selected ' + a.nm(finalReview.winnerUserId) + ' as the overall standout contributor.')
     })
   }
 
@@ -939,6 +953,7 @@ function WorkspaceProjectView() {
     if (!a.me) return setError('Sign in before submitting evidence.')
     const evidenceTask = projectTasks.find(task => task.id === artifactTask)
     if (!evidenceTask) return setError('This task is no longer available. Refresh and choose it again.')
+    if (evidenceTask.status !== 'in_progress') return setError('The task creator, community owner, or workspace manager must start this task before anyone can submit evidence.')
     const evidenceAssignees = assignedTaskIds(evidenceTask)
     if (evidenceAssignees.length && !evidenceAssignees.includes(a.me.id)) {
       return setError('This task is assigned to other teammates. Only an assigned teammate can submit evidence for review.')
@@ -1011,6 +1026,18 @@ function WorkspaceProjectView() {
             files: attachments.map(file => ({ name: file.name, size: file.size, mimeType: file.mimeType })),
           })
           const localDecision = localReview?.decision || 'pending'
+          const screeningStartedAt = Date.now()
+          const screeningReview: WorkspaceAIEvidenceReview = {
+            status: 'screening',
+            decision: 'pending',
+            alignmentScore: 0,
+            summary: 'Quorlyth AI is screening this submission against the task requirements.',
+            matchedCriteria: [],
+            gaps: [],
+            recommendations: [],
+            reviewedAt: screeningStartedAt,
+            scopeNote: 'Live screening in progress. The workspace owner and managers can see this state as it updates.',
+          }
           const record: WorkspaceArtifact = {
             id: artifactId, projectId: id, taskId: artifactTask, provider: 'manual', kind,
             ...(artifactType === 'file' ? { attachments } : { url: artifactUrl.trim() }),
@@ -1019,6 +1046,7 @@ function WorkspaceProjectView() {
             verificationStatus: 'submitted_evidence',
             submittedBy: a.me.id, submittedAt: now, updatedAt: now,
             sourceMetadata: { source: artifactType === 'file' ? 'private_file_upload' : 'user_submitted_link', submittedAt: now },
+            ...(a.backend.auth.mode === 'supabase' ? { aiReview: screeningReview } : {}),
             ...(localReview ? {
               aiReview: localReview,
               ...(localDecision !== 'pending' ? {
@@ -1064,6 +1092,8 @@ function WorkspaceProjectView() {
 
   async function reviewArtifact(artifact: WorkspaceArtifact, status: 'approved'|'changes_requested') {
     if (!a.backend || !a.me) return
+    const task = projectTasks.find(item => item.id === artifact.taskId)
+    if (!task || !canManageTask(task)) return setError('Only the task creator, community owner, or workspace manager can review this evidence.')
     const note = (reviewNotes[artifact.id] || '').trim()
     if (status === 'changes_requested' && note.length < 4) return setError('Explain what the contributor needs to change.')
     await runAction('review-'+artifact.id, async () => {
@@ -1071,7 +1101,7 @@ function WorkspaceProjectView() {
       await a.backend!.store.update('standaloneArtifacts/' + artifact.id, {
         status, reviewNote: note, reviewedAt: now, reviewedBy: a.me!.id, reviewedByType: 'human', reviewSource: 'human', updatedAt: now,
       })
-      a.toast(status === 'approved' ? 'Evidence approved. The task can now be marked complete.' : 'Changes requested from the contributor.')
+      a.toast(status === 'approved' ? 'Evidence approved. It is included in the final project comparison.' : 'Changes requested from the contributor.')
     })
   }
 
@@ -1221,6 +1251,21 @@ function WorkspaceProjectView() {
 
     {error && <div className="sw-error-banner" role="alert"><QuorlythGlyph name="alert" size={15} />{error}<button className="chip" type="button" onClick={() => setError('')}>Dismiss</button></div>}
 
+    {project.status === 'completed' && project.finalReview && <section className="sw-final-review-panel" aria-live="polite">
+      <div className="sw-final-review-panel__top"><div><p className="ql-eyebrow">FINAL AI PROJECT REVIEW</p><h3>Project complete</h3><p>Quorlyth AI compared the approved evidence across every task.</p></div><span className="sw-final-review-panel__score">{project.finalReview.overallScore}/100</span></div>
+      <div className="sw-final-review-panel__winner"><span>Overall standout contributor</span><strong>{a.nm(project.finalReview.winnerUserId)}</strong></div>
+      <p className="q-writeup">{project.finalReview.summary}</p>
+      <div className="sw-final-review-panel__results">{project.finalReview.taskResults.map(result => <article key={result.taskId}><div><strong>{projectTasks.find(task => task.id === result.taskId)?.title || 'Project task'}</strong><small>{a.nm(result.selectedSubmitterId)}</small></div><span>{result.score}/100</span><p>{result.reason}</p></article>)}</div>
+      <small className="sw-final-review-panel__scope">{project.finalReview.scopeNote} · {localDate(project.finalReview.reviewedAt)}</small>
+    </section>}
+
+    {canManage && project.status === 'active' && <section className="sw-finalization-panel">
+      <div><p className="ql-eyebrow">PROJECT CLOSEOUT</p><h3>Ready to mark the project complete?</h3><p>Quorlyth AI will compare each contributor’s latest approved evidence for every task, select the strongest submission per task, and identify the overall standout contributor.</p></div>
+      <div className="sw-finalization-panel__metrics"><span><strong>{projectTasks.filter(task => task.status === 'in_progress' || task.status === 'done').length}/{projectTasks.length}</strong> tasks started</span><span><strong>{screeningCount}</strong> AI screenings live</span><span><strong>{pendingReviews}</strong> awaiting decision</span></div>
+      <button type="button" className="btn p" disabled={busy === 'project-status' || !projectReadyForFinal || a.backend?.auth.mode !== 'supabase'} onClick={() => void finalizeProjectWithAI()}><QuorlythGlyph name="complete" size={15}/>{busy === 'project-status' ? 'AI is evaluating the project…' : 'Mark project complete'}</button>
+      {!projectReadyForFinal && <small>To continue: start every task and ensure every assigned contributor’s latest evidence is approved. All AI screenings and manager decisions must be finished first.</small>}
+    </section>}
+
     {tab === 'overview' && project.linkedIdeaId && linkedMilestones.length > 0 && <section className="glass pad sw-panel" style={{ marginBottom: 16, display: 'grid', gap: 12 }}>
       <div className="sw-section-heading"><div><p className="ql-eyebrow">SHARED SOURCE OF TRUTH</p><h3>Collaboration plan</h3><p>The project milestones below stay synced from Collaboration. Workspace tasks are the execution copies linked to each outcome.</p></div><span className="sw-count">{projectTasks.filter(task => !!task.milestoneId).length}/{linkedMilestones.length} tasks linked</span></div>
       {linkedMilestones.map(milestone => {
@@ -1298,7 +1343,7 @@ function WorkspaceProjectView() {
           {task.milestoneId && <p className="sw-task__description"><QuorlythGlyph name="link" size={13}/> Linked milestone: {linkedMilestones.find(milestone => milestone.id === task.milestoneId)?.title || 'Community milestone'} </p>}
           {task.acceptanceCriteria && <div className="sw-criteria"><span><QuorlythGlyph name="check" size={14}/></span><div><strong>Definition of done</strong><p>{task.acceptanceCriteria}</p></div></div>}
           <div className="sw-task__meta"><span><QuorlythGlyph name="person" size={13}/>{assignedTaskIds(task).length ? assignedTaskIds(task).length + ' assigned · ' + assignedTaskIds(task).map(uid => a.nm(uid)).join(', ') : 'Unassigned'}</span><span><QuorlythGlyph name="calendar" size={13}/>{task.dueAt?localDate(task.dueAt):'No deadline'}</span><button type="button" className="sw-link-button" onClick={()=>{setArtifactTask(task.id);setTab('evidence')}}><QuorlythGlyph name="link" size={13}/>{taskEvidence.length} evidence item{taskEvidence.length===1?'':'s'}</button></div>
-          {canManage && project.status==='active' && task.status!=='done' && <details className="sw-task-reassign">
+          {canManageTask(task) && project.status==='active' && task.status!=='done' && <details className="sw-task-reassign">
             <summary>{'Assign to teammates · ' + (assignedTaskIds(task).length || 'none') + ' selected'}</summary>
             <div className="sw-assignee-picker__actions">
               <button type="button" className="sw-link-button" disabled={busy==='assign-'+task.id} onClick={() => void reassignTask(task, taskAssignees.map(member => member.userId))}>Select everyone</button>
@@ -1323,7 +1368,7 @@ function WorkspaceProjectView() {
               })}
             </div>
           </details>}
-          <div className="sw-task__actions">{canContribute && project.status==='active' && task.status==='todo' && assignedTaskIds(task).length>0 && !currentAssignee && <span className="sw-muted">Waiting for an assigned teammate to start this task.</span>}{canContribute && project.status==='active' && task.status==='todo' && (currentAssignee||!assignedTaskIds(task).length) && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{canManage&&project.status==='active'&&task.status!=='done'&&<button className="btn p" type="button" disabled={busy==='complete-'+task.id||approved===0} title={approved?'Complete after evidence approval':'A manager must approve evidence first'} onClick={()=>void completeTask(task)}><QuorlythGlyph name="complete" size={14}/>{busy==='complete-'+task.id?'Checking…':'Mark complete'}{approved===0?' · evidence needed':''}</button>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Evidence approved</span>}{canManage&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-'+task.id} onClick={()=>void removeTask(task)}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-'+task.id?'Deleting…':'Delete task'}</button>}</div>
+          <div className="sw-task__actions">{canManageTask(task) && project.status==='active' && task.status==='todo' && <button className="btn" type="button" disabled={busy==='start-'+task.id} onClick={()=>void startTask(task)}><QuorlythGlyph name="start" size={14}/>Start task</button>}{!canManageTask(task) && project.status==='active' && task.status==='todo' && <span className="sw-muted">Waiting for the task creator, community owner or workspace manager to start this task.</span>}{task.status==='in_progress' && <span className="sw-verified"><QuorlythGlyph name="check" size={12}/>{approved} approved evidence · {taskEvidence.length} submissions</span>}{task.status==='done'&&<span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Included in final AI review</span>}{canManage&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-'+task.id} onClick={()=>void removeTask(task)}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-'+task.id?'Deleting…':'Delete task'}</button>}</div>
         </article>
       })}</div>}
     </section>}
@@ -1345,13 +1390,13 @@ function WorkspaceProjectView() {
       </section>
       <section className="glass pad sw-panel"><div className="sw-section-heading"><div><p className="ql-eyebrow">SUBMIT WORK EVIDENCE</p><h3>Attach a deliverable</h3><p>GitHub source records are checked by the API. Quorlyth AI makes the evidence decision separately, using the task criteria and supplied metadata.</p></div></div>
         <form className="sw-artifact-form" onSubmit={submitEvidence}>
-          <label className="sw-field"><span>Which task does this support?</span><select required value={artifactTask} onChange={e=>setArtifactTask(e.target.value)}><option value="">Choose a task</option>{projectTasks.filter(task=>task.status!=='done').map(task=><option key={task.id} value={task.id}>{task.title}</option>)}</select></label>
+          <label className="sw-field"><span>Which task does this support?</span><select required value={artifactTask} onChange={e=>setArtifactTask(e.target.value)}><option value="">Choose a task</option>{projectTasks.filter(task=>task.status==='in_progress').map(task=><option key={task.id} value={task.id}>{task.title}</option>)}</select></label>
           <label className="sw-field"><span>Evidence type</span><select value={artifactType} onChange={e=>setArtifactType(e.target.value as 'github'|'link'|'document'|'demo'|'file')}><option value="github">GitHub commit or pull request · API checked</option><option value="file">Private file attachments · AI review</option><option value="demo">Demo or prototype link · AI review</option><option value="document">Document or report link · AI review</option><option value="link">Other project deliverable link · AI review</option></select></label>
           {artifactType==='file'
             ? <label className="sw-field"><span>Private evidence files</span><input type="file" required multiple accept="image/*,video/*,audio/*,application/pdf,text/plain,text/markdown,text/csv,application/json,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={e=>setArtifactFiles(Array.from(e.currentTarget.files || []).slice(0,8))}/><small className="sw-muted">Up to 8 files · 25 MB each · private to this workspace</small>{artifactFiles.length>0&&<span className="sw-selected-files">{artifactFiles.map(file=>file.name).join(' · ')}</span>}</label>
             : <label className="sw-field"><span>{artifactType==='github'?'GitHub commit or pull request URL':'HTTPS evidence URL'}</span><input required type="url" value={artifactUrl} onChange={e=>setArtifactUrl(e.target.value)} placeholder={artifactType==='github'?'https://github.com/owner/repo/pull/42':'https://…'} /></label>}
           {artifactType!=='github'&&<label className="sw-field"><span>What does this evidence demonstrate?</span><textarea required rows={3} minLength={8} maxLength={1200} value={artifactSummary} onChange={e=>setArtifactSummary(e.target.value)} placeholder="Explain what this evidence demonstrates and how it meets the task criteria." /></label>}
-          <p className="sw-muted">{artifactType==='github'?'GitHub checks the connected public repository and source record. This confirms the record exists, not that its author owns the Quorlyth account.':artifactType==='file'?'These files are privately uploaded and are not independently source-verified. Quorlyth AI will decide from the task criteria and file metadata; it cannot claim to have opened private file contents. An authorised manager can override the decision.':'This link is contributor-submitted evidence, not source-verified. Quorlyth AI will decide from the task criteria and supplied description; it will not claim that the external link works. An authorised manager can override the decision.'}</p>
+          <p className="sw-muted">{artifactType==='github'?'GitHub checks the connected public repository and source record. This confirms the record exists, not that its author owns the Quorlyth account.':artifactType==='file'?'These files are privately uploaded and are not independently source-verified. Quorlyth AI will decide from the task criteria and file metadata; it cannot claim to have opened private file contents.':'This link is contributor-submitted evidence, not source-verified. Quorlyth AI will decide from the task criteria and supplied description; it will not claim that the external link works.'} Each contributor gets a separate evidence record and independent AI decision. The task must be started before submissions are accepted.</p>
           {selectedEvidenceTask && selectedEvidenceAssignees.length > 0 && !canSubmitSelectedTaskEvidence && <p className="sw-error-banner" role="status">
             This task is assigned to {selectedEvidenceAssignees.map(uid => a.nm(uid)).join(', ')}. You are currently signed in as {a.nm(a.me?.id || '')}{role ? ' (' + role + ')' : ''}, and this account is not one of the selected assignees.
             {' '}{role === 'viewer'
@@ -1365,7 +1410,7 @@ function WorkspaceProjectView() {
       <section className="glass pad sw-panel sw-evidence-register"><div className="sw-section-heading"><div><p className="ql-eyebrow">DELIVERABLE REGISTER</p><h3>Evidence and reviews</h3><p>GitHub source verification and AI evidence decisions are separate. Quorlyth AI makes the final approve or request-changes decision from the task criteria and submitted metadata. An authorised manager can override it.</p></div><span className="sw-count">{projectArtifacts.length} records</span></div>
         {projectArtifacts.length===0?<div className="sw-empty-inline"><QuorlythGlyph name="review" size={22}/><strong>No evidence submitted yet</strong><p className="sw-empty-inline-copy">Connect GitHub for source-checked commits and pull requests, or submit a demo, document or deliverable link for Quorlyth AI to review.</p></div>:<div className="sw-artifact-list">{projectArtifacts.map(artifact=>{
           const meta=artifact.sourceMetadata||{}
-          const statusLabel=artifact.status==='approved'?'Approved':artifact.status==='changes_requested'?'Changes requested':'Awaiting review'
+          const statusLabel=artifact.status==='approved'?'Approved':artifact.status==='changes_requested'?'Changes requested':artifact.aiReview?.status==='screening'?'AI screening':'Awaiting review'
           return <article className="sw-artifact" key={artifact.id}>
             <div className="sw-artifact__top"><span className="sw-repo-mark"><QuorlythGlyph name="link" size={17}/></span><div className="sw-artifact__identity"><p className="ql-eyebrow">{artifact.provider==='github'?(artifact.kind==='pull_request'?'PULL REQUEST':'COMMIT'):(artifact.kind==='file'?'FILE SUBMISSION':artifact.kind==='demo'?'DEMO / PROTOTYPE':artifact.kind==='document'?'DOCUMENT / REPORT':'PROJECT LINK')} · {localDate(artifact.verifiedAt||artifact.submittedAt)}</p><h4>{artifact.summary||'GitHub source record'}</h4><p>{artifact.repositoryFullName||(typeof meta.repository==='string'?meta.repository:artifact.provider==='github'?'GitHub':'External link')} · Submitted by {a.nm(artifact.submittedBy)}</p></div><span className={'sw-review-status status-'+artifact.status}>{statusLabel}</span></div>
             <div className={'sw-source-confirmation ' + (artifact.provider === 'github' ? 'is-source-verified' : 'is-contributor-submitted')}>
@@ -1377,14 +1422,14 @@ function WorkspaceProjectView() {
               <div className="sw-ai-evidence-review__top">
                 <div className="sw-ai-evidence-review__heading">
                   <span className="sw-ai-evidence-review__icon"><QuorlythGlyph name="review" size={15}/></span>
-                  <div><p className="ql-eyebrow">FINAL AI DECISION</p><strong>Quorlyth evidence review</strong><small className="sw-ai-evidence-review__authority">AI decides whether evidence is approved or changes are required. Workspace managers can override the decision.</small></div>
+                  <div><p className="ql-eyebrow">{artifact.aiReview.status === 'screening' ? 'LIVE AI SCREENING' : 'FINAL AI DECISION'}</p><strong>Quorlyth evidence review</strong><small className="sw-ai-evidence-review__authority">The owner, task creator and workspace managers can see screening updates as they arrive. The AI decision is recorded separately for every contributor’s submission.</small></div>
                 </div>
-                <span className={'sw-ai-evidence-review__result status-' + artifact.aiReview.status}>
-                  {artifact.aiReview.decision === 'approved' ? 'AI approved' : artifact.aiReview.decision === 'changes_requested' ? 'Changes requested' : artifact.aiReview.status === 'unavailable' ? 'Decision unavailable' : 'Awaiting manager review'}
-                  <span>{artifact.aiReview.status === 'unavailable' ? 'Not scored' : artifact.aiReview.alignmentScore + '/100'}</span>
+                <span className={'sw-ai-evidence-review__result status-' + artifact.aiReview.status} aria-live="polite">
+                  {artifact.aiReview.status === 'screening' ? 'AI screening…' : artifact.aiReview.decision === 'approved' ? 'AI approved' : artifact.aiReview.decision === 'changes_requested' ? 'Changes requested' : artifact.aiReview.status === 'unavailable' ? 'Decision unavailable' : 'Awaiting manager review'}
+                  <span>{artifact.aiReview.status === 'screening' ? 'In progress' : artifact.aiReview.status === 'unavailable' ? 'Not scored' : artifact.aiReview.alignmentScore + '/100'}</span>
                 </span>
               </div>
-              <p className="sw-ai-evidence-review__summary q-writeup">{artifact.aiReview.summary}</p>
+              <p className="sw-ai-evidence-review__summary q-writeup">{artifact.aiReview.status === 'screening' ? 'Quorlyth AI is comparing this submission with the task definition and acceptance criteria. This card updates automatically when the screening decision is saved.' : artifact.aiReview.summary}</p>
               {!!artifact.aiReview.matchedCriteria.length && <div className="sw-ai-evidence-review__group sw-ai-evidence-review__group--matches"><small className="ql-eyebrow">MATCHED REQUIREMENTS</small><ul className="sw-ai-review-list">{artifact.aiReview.matchedCriteria.map((item,index)=><li key={'match-'+index}>{item}</li>)}</ul></div>}
               {!!artifact.aiReview.gaps.length && <div className="sw-ai-evidence-review__group sw-ai-evidence-review__group--gaps"><small className="ql-eyebrow">GAPS TO CHECK</small><ul className="sw-ai-review-list">{artifact.aiReview.gaps.map((item,index)=><li key={'gap-'+index}>{item}</li>)}</ul></div>}
               {!!artifact.aiReview.recommendations.length && <div className="sw-ai-evidence-review__group sw-ai-evidence-review__group--actions"><small className="ql-eyebrow">SUGGESTED NEXT ACTIONS</small><ul className="sw-ai-review-list">{artifact.aiReview.recommendations.map((item,index)=><li key={'rec-'+index}>{item}</li>)}</ul></div>}
@@ -1395,7 +1440,7 @@ function WorkspaceProjectView() {
             {artifact.attachments?.map(attachment=><WorkspaceEvidenceAttachment key={attachment.path} attachment={attachment}/>)}
             {typeof meta.title==='string'&&<p className="sw-artifact__message">{meta.title.slice(0,300)}{typeof meta.state==='string'?' · '+meta.state:''}{meta.merged===true?' · Merged':''}</p>}
             {artifact.reviewNote&&<div className="sw-review-note"><strong>{artifact.status==='approved'?'Reviewer note':'Requested changes'}</strong><p>{artifact.reviewNote}</p>{artifact.reviewedBy&&artifact.reviewedAt&&<small>{artifact.reviewSource === 'quorlyth_ai' || artifact.reviewedBy === 'quorlyth-ai' ? 'Decided by Quorlyth AI' : artifact.reviewSource === 'human' ? 'Manager override by ' + a.nm(artifact.reviewedBy) : 'Reviewed by ' + a.nm(artifact.reviewedBy)} · {localDate(artifact.reviewedAt)}</small>}</div>}
-            {canManage&&project.status==='active'&&(artifact.status==='submitted'||artifact.reviewSource==='quorlyth_ai')&&artifact.submittedBy!==a.me?.id&&<div className="sw-review-controls"><label className="sw-field"><span>{artifact.reviewSource === 'quorlyth_ai' ? 'Manager override' : 'Reviewer feedback'} <small>Optional for approval, required for changes</small></span><textarea rows={2} maxLength={1600} value={reviewNotes[artifact.id]||''} onChange={e=>setReviewNotes(current=>({...current,[artifact.id]:e.target.value}))} placeholder="Check the source against the task's definition of done." /></label>{(artifact.aiReview?.recommendations || []).length > 0 && <button type="button" className="sw-link-button" onClick={() => { const review = artifact.aiReview; if (!review) return; setReviewNotes(current => ({ ...current, [artifact.id]: [...(review.gaps || []), ...(review.recommendations || [])].join('\n').slice(0, 1600) })) }}>Use Quorlyth's suggested feedback <QuorlythGlyph name="arrow" size={12}/></button>}<div className="acts"><button type="button" className="btn" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'changes_requested')}><QuorlythGlyph name="rotate" size={14}/>Request changes</button><button type="button" className="btn p" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'approved')}><QuorlythGlyph name="check" size={14}/>Approve evidence</button></div></div>}
+            {canManageTask(projectTasks.find(task => task.id === artifact.taskId) || { id: '', createdBy: '', projectId: '', title: '', description: '', status: 'todo', at: 0, updatedAt: 0 })&&project.status==='active'&&(artifact.status==='submitted'||artifact.reviewSource==='quorlyth_ai')&&artifact.submittedBy!==a.me?.id&&<div className="sw-review-controls"><label className="sw-field"><span>{artifact.reviewSource === 'quorlyth_ai' ? 'Manager override' : 'Reviewer feedback'} <small>Optional for approval, required for changes</small></span><textarea rows={2} maxLength={1600} value={reviewNotes[artifact.id]||''} onChange={e=>setReviewNotes(current=>({...current,[artifact.id]:e.target.value}))} placeholder="Check the source against the task's definition of done." /></label>{(artifact.aiReview?.recommendations || []).length > 0 && <button type="button" className="sw-link-button" onClick={() => { const review = artifact.aiReview; if (!review) return; setReviewNotes(current => ({ ...current, [artifact.id]: [...(review.gaps || []), ...(review.recommendations || [])].join('\n').slice(0, 1600) })) }}>Use Quorlyth's suggested feedback <QuorlythGlyph name="arrow" size={12}/></button>}<div className="acts"><button type="button" className="btn" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'changes_requested')}><QuorlythGlyph name="rotate" size={14}/>Request changes</button><button type="button" className="btn p" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'approved')}><QuorlythGlyph name="check" size={14}/>Approve evidence</button></div></div>}
           </article>
         })}</div>}
       </section>
@@ -1528,6 +1573,6 @@ function WorkspaceProjectView() {
 
     </div>}
 
-    {canManage&&<section className="glass pad sw-settings-panel"><details><summary><QuorlythGlyph name="settings" size={15}/>Workspace settings <span>Owner and manager only</span></summary><form onSubmit={saveProject} className="sw-settings-form"><label className="sw-field"><span>Project title</span><input value={projectTitle} onChange={e=>setProjectTitle(e.target.value)} maxLength={100} required /></label><label className="sw-field"><span>Project brief</span><textarea value={projectSummary} onChange={e=>setProjectSummary(e.target.value)} maxLength={4000} rows={3} required /></label><label className="sw-field"><span>Target delivery</span><input type="date" min={minimumDateInput(dateInput(project?.dueAt))} value={projectDueDate} onChange={e=>setProjectDueDate(e.target.value)} /></label><div className="acts"><button className="btn p" disabled={busy==='save-project'}>Save settings</button><button className="btn" type="button" disabled={busy==='project-status'||project.status==='active'&&projectTasks.some(task=>task.status!=='done')} onClick={()=>void toggleProjectStatus()}>{project.status==='completed'?'Reopen workspace':'Close workspace'} </button>{isOwner&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-workspace'} onClick={()=>void removeWorkspace()}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-workspace'?'Deleting workspace…':'Delete workspace permanently'}</button>}</div><p className="sw-muted">Closing a workspace is permitted only after every task has completed with approved evidence. Reopening allows new tasks or revisions.</p>{isOwner&&<p className="sw-muted">Permanent deletion is available to the workspace owner only and removes all tasks, evidence records, team memberships, comments and linked repository records.</p>}</form></details></section>}
+    {canManage&&<section className="glass pad sw-settings-panel"><details><summary><QuorlythGlyph name="settings" size={15}/>Workspace settings <span>Owner and manager only</span></summary><form onSubmit={saveProject} className="sw-settings-form"><label className="sw-field"><span>Project title</span><input value={projectTitle} onChange={e=>setProjectTitle(e.target.value)} maxLength={100} required /></label><label className="sw-field"><span>Project brief</span><textarea value={projectSummary} onChange={e=>setProjectSummary(e.target.value)} maxLength={4000} rows={3} required /></label><label className="sw-field"><span>Target delivery</span><input type="date" min={minimumDateInput(dateInput(project?.dueAt))} value={projectDueDate} onChange={e=>setProjectDueDate(e.target.value)} /></label><div className="acts"><button className="btn p" disabled={busy==='save-project'}>Save settings</button>{project.status === 'completed' ? <span className="sw-verified"><QuorlythGlyph name="check" size={12}/>Completed by Quorlyth AI</span> : <span className="sw-muted">Use the project closeout panel above to run the final AI comparison.</span>}{isOwner&&<button className="btn sw-danger-button" type="button" disabled={busy==='delete-workspace'} onClick={()=>void removeWorkspace()}><QuorlythGlyph name="trash" size={14}/>{busy==='delete-workspace'?'Deleting workspace…':'Delete workspace permanently'}</button>}</div><p className="sw-muted">Final completion is validated server-side. Every task must be started, every assigned contributor’s latest evidence must be approved, and no AI screening or manager decision may remain pending.</p>{isOwner&&<p className="sw-muted">Permanent deletion is available to the workspace owner only and removes all tasks, evidence records, team memberships, comments and linked repository records.</p>}</form></details></section>}
   </>
 }
