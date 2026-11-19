@@ -474,7 +474,7 @@ function WorkspaceProjectView() {
       : (hasLinkedCollaborationAccess ? 'contributor' : undefined)
   const canManage = (!!role && ['owner','manager'].includes(role)) || isCommunityOwner
   const canContribute = (!!role && ['owner','manager','contributor'].includes(role)) || isCommunityOwner
-  const canManageTask = (task: WorkspaceTask) => !!a.me && (canManage || task.createdBy === a.me.id)
+  const canManageTask = (task?: WorkspaceTask) => !!a.me && !!task && (canManage || task.createdBy === a.me.id)
   const taskAssignees = team.filter(member => member.status === 'active' && member.role !== 'viewer')
   if (a.me?.id && canManage && !taskAssignees.some(member => member.userId === a.me!.id)) {
     const now = Date.now()
@@ -496,15 +496,13 @@ function WorkspaceProjectView() {
   const screeningCount = projectArtifacts.filter(item => item.aiReview?.status === 'screening').length
   const taskEvidenceReady = (task: WorkspaceTask) => {
     const taskEvidence = projectArtifacts.filter(item => item.taskId === task.id)
-    const requiredContributors = assignedTaskIds(task).length
-      ? assignedTaskIds(task)
-      : [...new Set(taskEvidence.map(item => item.submittedBy).filter(Boolean))]
-    return requiredContributors.length > 0 && requiredContributors.every(userId => {
-      const latest = taskEvidence
-        .filter(item => item.submittedBy === userId)
-        .sort((first, second) => second.submittedAt - first.submittedAt)[0]
-      return latest?.status === 'approved' && latest.aiReview?.status !== 'screening'
-    })
+    const latestByContributor = new Map<string, WorkspaceArtifact>()
+    for (const artifact of [...taskEvidence].sort((first, second) => second.submittedAt - first.submittedAt)) {
+      if (!latestByContributor.has(artifact.submittedBy)) latestByContributor.set(artifact.submittedBy, artifact)
+    }
+    return [...latestByContributor.values()].some(artifact =>
+      artifact.status === 'approved' && artifact.aiReview?.status !== 'screening'
+    )
   }
   const projectReadyForFinal = projectTasks.length > 0
     && projectTasks.every(task => task.status === 'in_progress' || task.status === 'done')
@@ -1440,7 +1438,7 @@ function WorkspaceProjectView() {
             {artifact.attachments?.map(attachment=><WorkspaceEvidenceAttachment key={attachment.path} attachment={attachment}/>)}
             {typeof meta.title==='string'&&<p className="sw-artifact__message">{meta.title.slice(0,300)}{typeof meta.state==='string'?' · '+meta.state:''}{meta.merged===true?' · Merged':''}</p>}
             {artifact.reviewNote&&<div className="sw-review-note"><strong>{artifact.status==='approved'?'Reviewer note':'Requested changes'}</strong><p>{artifact.reviewNote}</p>{artifact.reviewedBy&&artifact.reviewedAt&&<small>{artifact.reviewSource === 'quorlyth_ai' || artifact.reviewedBy === 'quorlyth-ai' ? 'Decided by Quorlyth AI' : artifact.reviewSource === 'human' ? 'Manager override by ' + a.nm(artifact.reviewedBy) : 'Reviewed by ' + a.nm(artifact.reviewedBy)} · {localDate(artifact.reviewedAt)}</small>}</div>}
-            {canManageTask(projectTasks.find(task => task.id === artifact.taskId) || { id: '', createdBy: '', projectId: '', title: '', description: '', status: 'todo', at: 0, updatedAt: 0 })&&project.status==='active'&&(artifact.status==='submitted'||artifact.reviewSource==='quorlyth_ai')&&artifact.submittedBy!==a.me?.id&&<div className="sw-review-controls"><label className="sw-field"><span>{artifact.reviewSource === 'quorlyth_ai' ? 'Manager override' : 'Reviewer feedback'} <small>Optional for approval, required for changes</small></span><textarea rows={2} maxLength={1600} value={reviewNotes[artifact.id]||''} onChange={e=>setReviewNotes(current=>({...current,[artifact.id]:e.target.value}))} placeholder="Check the source against the task's definition of done." /></label>{(artifact.aiReview?.recommendations || []).length > 0 && <button type="button" className="sw-link-button" onClick={() => { const review = artifact.aiReview; if (!review) return; setReviewNotes(current => ({ ...current, [artifact.id]: [...(review.gaps || []), ...(review.recommendations || [])].join('\n').slice(0, 1600) })) }}>Use Quorlyth's suggested feedback <QuorlythGlyph name="arrow" size={12}/></button>}<div className="acts"><button type="button" className="btn" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'changes_requested')}><QuorlythGlyph name="rotate" size={14}/>Request changes</button><button type="button" className="btn p" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'approved')}><QuorlythGlyph name="check" size={14}/>Approve evidence</button></div></div>}
+            {canManageTask(projectTasks.find(task => task.id === artifact.taskId))&&project.status==='active'&&(artifact.status==='submitted'||artifact.reviewSource==='quorlyth_ai')&&artifact.submittedBy!==a.me?.id&&<div className="sw-review-controls"><label className="sw-field"><span>{artifact.reviewSource === 'quorlyth_ai' ? 'Manager override' : 'Reviewer feedback'} <small>Optional for approval, required for changes</small></span><textarea rows={2} maxLength={1600} value={reviewNotes[artifact.id]||''} onChange={e=>setReviewNotes(current=>({...current,[artifact.id]:e.target.value}))} placeholder="Check the source against the task's definition of done." /></label>{(artifact.aiReview?.recommendations || []).length > 0 && <button type="button" className="sw-link-button" onClick={() => { const review = artifact.aiReview; if (!review) return; setReviewNotes(current => ({ ...current, [artifact.id]: [...(review.gaps || []), ...(review.recommendations || [])].join('\n').slice(0, 1600) })) }}>Use Quorlyth's suggested feedback <QuorlythGlyph name="arrow" size={12}/></button>}<div className="acts"><button type="button" className="btn" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'changes_requested')}><QuorlythGlyph name="rotate" size={14}/>Request changes</button><button type="button" className="btn p" disabled={busy==='review-'+artifact.id} onClick={()=>void reviewArtifact(artifact,'approved')}><QuorlythGlyph name="check" size={14}/>Approve evidence</button></div></div>}
           </article>
         })}</div>}
       </section>
