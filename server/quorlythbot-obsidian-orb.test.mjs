@@ -12,7 +12,8 @@ test('QuorlythBot restores the exact live-site launcher treatment', async () => 
   assert.match(bot, /<span className="astm"><Logo size=\{30\} \/><\/span>/)
   assert.match(app, /<span className="astm"><Logo size=\{30\} \/><\/span>/)
   assert.doesNotMatch(bot + app, /QuorlythBotHead|qbot-launcher-restore/)
-  assert.match(bot, /title="Ask QuorlythBot"/)
+  assert.match(bot, /aria-label="Open QuorlythBot"/)
+  assert.match(bot, /title="Ask QuorlythBot\./)
   assert.match(app, /!intro && !botLoading && !botMounted/)
 })
 
