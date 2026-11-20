@@ -8,7 +8,6 @@ import { EvidencePreview } from '../components/EvidencePreview'
 import { useApp } from '../data/AppProvider'
 import { askJson } from '../ai/client'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
-import { emitWorkflowEvent } from '../lib/automation'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import { WorkSubmission } from '../lib/types'
 import { ChatAttachment, ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
@@ -20,7 +19,7 @@ type WorkspaceFinalReview = {
   taskResults: Array<{ taskId: string; selectedEvidenceId: string; selectedSubmitterId: string; score: number; reason: string }>
 }
 type WorkspaceProject = {
-  id: string; title: string; summary: string; status: 'active' | 'completed'; createdBy: string
+  id: string; title: string; summary: string; status: 'active' | 'completed'; createdBy: string; updatedBy?: string
   at: number; updatedAt: number; dueAt?: number | null; visibility: 'team'; docId?: string
   linkedIdeaId?: string; linkedIdeaProjectId?: string; finalReview?: WorkspaceFinalReview
 }
@@ -30,7 +29,7 @@ type WorkspaceMember = {
 }
 type WorkspaceTask = {
   id: string; projectId: string; title: string; description: string; status: 'todo' | 'in_progress' | 'done'
-  createdBy: string; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]; milestoneId?: string | null
+  createdBy: string; updatedBy?: string; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]; milestoneId?: string | null
   acceptanceCriteria?: string; docId?: string
 }
 const assignedTaskIds = (task: Pick<WorkspaceTask, 'assigneeId' | 'assigneeIds'>): string[] =>
@@ -343,7 +342,7 @@ function WorkspaceProjectList() {
     try {
       const project: WorkspaceProject = {
         id, title: cleanTitle.slice(0, 100), summary: cleanSummary.slice(0, 4000), status: 'active',
-        createdBy: a.me.id, at: now, updatedAt: now, dueAt: dateEnd(dueDate), visibility: 'team',
+        createdBy: a.me.id, updatedBy: a.me.id, at: now, updatedAt: now, dueAt: dateEnd(dueDate), visibility: 'team',
       }
       await a.backend.store.create('standaloneProjects/' + id, project)
       const ownerMembership: WorkspaceMember = {
@@ -351,7 +350,6 @@ function WorkspaceProjectList() {
         invitedBy: a.me.id, at: now, updatedAt: now,
       }
       await a.backend.store.create('standaloneProjectMembers/' + ownerMembership.id, ownerMembership)
-      emitWorkflowEvent('workspace.created', { id, title: cleanTitle, summary: cleanSummary, projectId: id, at: now })
       a.toast('Project workspace created.')
       nav('/workspaces/' + id)
     } catch (error) {
@@ -624,6 +622,7 @@ function WorkspaceProjectView() {
         dueAt,
         assigneeIds,
         assigneeId: assigneeIds[0] || null,
+        updatedBy: a.me.id,
         updatedAt: now,
       })
       return true
@@ -639,6 +638,7 @@ function WorkspaceProjectView() {
       acceptanceCriteria,
       status: 'todo',
       createdBy: a.me.id,
+      updatedBy: a.me.id,
       at: now,
       updatedAt: now,
       dueAt,
@@ -741,7 +741,7 @@ function WorkspaceProjectView() {
       const now = Date.now(); const taskId = crypto.randomUUID()
       const task: WorkspaceTask = {
         id: taskId, projectId: id, title: taskTitle.trim().slice(0,140), description: taskDescription.trim().slice(0,2000),
-        acceptanceCriteria: taskCriteria.trim().slice(0,1000), status: 'todo', createdBy: a.me!.id, at: now, updatedAt: now,
+        acceptanceCriteria: taskCriteria.trim().slice(0,1000), status: 'todo', createdBy: a.me!.id, updatedBy: a.me!.id, at: now, updatedAt: now,
         dueAt: dateEnd(taskDueDate), assigneeIds: [...taskAssigneeDraft], assigneeId: taskAssigneeDraft[0] || null,
         milestoneId: taskMilestoneId || null,
       }
@@ -765,6 +765,7 @@ function WorkspaceProjectView() {
       await a.backend!.store.update('standaloneTasks/' + (task.docId || task.id), {
         assigneeIds: nextAssigneeIds,
         assigneeId: nextAssigneeIds[0] || null,
+        updatedBy: a.me!.id,
         updatedAt: Date.now(),
       })
       a.toast(nextAssigneeIds.length
@@ -786,6 +787,7 @@ function WorkspaceProjectView() {
         status: 'in_progress',
         startedAt,
         startedBy: a.me!.id,
+        updatedBy: a.me!.id,
         updatedAt: startedAt,
       })
       a.toast('Task started. Assigned contributors can now submit their evidence separately.')
