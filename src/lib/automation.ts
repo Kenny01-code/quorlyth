@@ -78,6 +78,12 @@ export interface WorkflowEventPayload {
   communityId?: string
   projectId?: string
   taskId?: string
+  workspaceId?: string
+  actorId?: string
+  entityType?: string
+  status?: string
+  dueAt?: number | string | null
+  eventId?: string
   at?: number
   [key: string]: unknown
 }
@@ -301,8 +307,11 @@ export function validateWorkflowGraph(workflow: WorkflowDefinition): string | nu
 
 export function emitWorkflowEvent(type: WorkflowTrigger, payload: WorkflowEventPayload = {}) {
   if (typeof window === 'undefined' || type === 'manual') return
+  const at = payload.at || Date.now()
+  const isEditEvent = type === 'workspace.updated' || type === 'task.updated'
+  const eventId = payload.eventId || (isEditEvent ? newWorkflowId() : undefined)
   window.dispatchEvent(new CustomEvent<WorkflowEventDetail>(WORKFLOW_EVENT_NAME, {
-    detail: { type, payload: { ...payload, at: payload.at || Date.now() } },
+    detail: { type, payload: { ...payload, ...(eventId ? { eventId } : {}), at } },
   }))
 }
 
@@ -320,8 +329,12 @@ function interpolate(template: string | undefined, workflow: WorkflowDefinition,
     'event.body': String(event.payload.body || event.payload.summary || ''),
     'event.communityId': String(event.payload.communityId || ''),
     'event.projectId': String(event.payload.projectId || ''),
+    'event.workspaceId': String(event.payload.workspaceId || event.payload.projectId || ''),
     'event.taskId': String(event.payload.taskId || ''),
+    'event.actorId': String(event.payload.actorId || ''),
     'event.entityType': String(event.payload.entityType || ''),
+    'event.status': String(event.payload.status || ''),
+    'event.dueAt': String(event.payload.dueAt ?? ''),
     'event.deadline': event.payload.deadlineAt ? new Date(Number(event.payload.deadlineAt)).toLocaleString() : '',
     'event.deadlineAt': String(event.payload.deadlineAt || ''),
     'workflow.name': workflow.name,
@@ -493,8 +506,11 @@ export async function executeWorkflowActions(
           updatedBy: userId,
           automationWorkflowId: workflow.id,
           automationRunId: runId,
-          sourceEventId: String(event.payload.id || ''),
+          sourceEventId: String(event.payload.eventId || event.payload.at || event.payload.id || ''),
+          sourceEntityId: String(event.payload.id || event.payload.taskId || ''),
           sourceEventType: event.type,
+          sourceWorkspaceId: String(event.payload.workspaceId || event.payload.projectId || ''),
+          sourceTaskId: String(event.payload.taskId || ''),
           at,
           updatedAt: at,
           dueAt: null,
@@ -517,6 +533,12 @@ export async function executeWorkflowActions(
               summary: event.payload.summary || event.payload.body || null,
               communityId: event.payload.communityId || null,
               projectId: event.payload.projectId || null,
+              workspaceId: event.payload.workspaceId || event.payload.projectId || null,
+              taskId: event.payload.taskId || null,
+              actorId: event.payload.actorId || null,
+              entityType: event.payload.entityType || null,
+              status: event.payload.status || null,
+              dueAt: event.payload.dueAt || event.payload.deadlineAt || null,
               at: event.payload.at || at,
             },
             workflow: { id: workflow.id, name: workflow.name },
