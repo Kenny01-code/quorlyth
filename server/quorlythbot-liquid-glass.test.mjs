@@ -4,44 +4,26 @@ import { readFile } from 'node:fs/promises'
 
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('QuorlythBot chat uses its own liquid-glass frame and layered composer', async () => {
-  const [bot, glass] = await Promise.all([
+test('QuorlythBot uses the original live-site black composer and Robot shell', async () => {
+  const [bot, baseStyles, composerStyles] = await Promise.all([
     source('src/bot/QuorlythBot.tsx'),
-    source('src/styles/bot-liquid-glass.css'),
+    source('src/styles/bot.css'),
+    source('src/styles/bot-composer-fluid-black.css'),
   ])
-
-  assert.ok(bot.indexOf("import '../styles/bot-liquid-glass.css'") > bot.indexOf("import '../styles/bot-room-theme.css'"))
-  assert.ok(bot.includes("view === 'chat' && 'qbot-chat-surface'"))
-
-  assert.ok(glass.includes('.qbot-conversation.qbot-chat-surface'))
-  assert.ok(glass.includes('.ast-in > textarea'))
-  assert.ok(glass.includes('grid-template-rows: minmax(58px, auto) 44px'))
-  assert.ok(glass.includes('backdrop-filter: blur(32px) saturate(165%)'))
-  assert.ok(glass.includes('.ast-in > .btn:nth-of-type(3)'))
-  assert.ok(glass.includes('grid-column: 4'))
+  assert.match(bot, /import '\.\.\/styles\/bot\.css'/)
+  assert.match(bot, /import '\.\.\/styles\/bot-composer-fluid-black\.css'/)
+  assert.doesNotMatch(bot, /bot-room-theme\.css|bot-liquid-glass\.css|from '\.\/Orb'|<Orb/)
+  assert.match(bot, /className=\{cn\('qbot-conversation', view === 'chat' && 'qbot-chat-surface'\)\}/)
+  assert.match(bot, /<Robot ref=\{robot\} theme=\{theme\} calm=\{bs\.calm\} drag defer active=/)
+  assert.match(baseStyles, /\.ast-in/)
+  assert.match(composerStyles, /\.bsl/)
 })
 
-test('the entire QuorlythBot frontend shares one rounded liquid-glass material', async () => {
-  const glass = await source('src/styles/bot-liquid-glass.css')
-
-  // The sidebar gets an independent rounded inset panel, not a hard divider wall.
-  assert.ok(glass.includes('.bs {'))
-  assert.ok(glass.includes('margin: 10px 0 10px 10px !important'))
-  assert.ok(glass.includes('border-radius: 25px !important'))
-  assert.ok(glass.includes('.bs::before'))
-  assert.ok(glass.includes('.bs .bs-l'))
-  assert.ok(glass.includes('.bs .bs-f'))
-
-  // Every non-chat view receives the same glass room; nested cards retain their own shape.
-  assert.ok(glass.includes('.qbot-conversation:not(.qbot-chat-surface)'))
-  assert.ok(glass.includes('.qbot-conversation .glass'))
-  assert.ok(glass.includes(':is(.bsk, .bvc)'))
-  assert.ok(glass.includes('.qbot-conversation :is(input, textarea, select)'))
-  assert.ok(glass.includes('.cmx'))
-
-  // Preserve component geometry and avoid hiding/replacing the existing tiles or robot stage.
-  assert.ok(!/\.bsk\s*\{[^}]*display:\s*none/is.test(glass))
-  assert.ok(!/\.bvc\s*\{[^}]*display:\s*none/is.test(glass))
-  assert.ok(!/\.bstage\s*\{[^}]*display:\s*none/is.test(glass))
-  assert.ok(!/\.ast-stage\s*\{[^}]*display:\s*none/is.test(glass))
+test('the live-site Bot keeps voice/chat controls while sharing the same Robot stage', async () => {
+  const bot = await source('src/bot/QuorlythBot.tsx')
+  assert.match(bot, /aria-label=\{live \? 'End voice conversation' : 'Start voice conversation'\}/)
+  assert.match(bot, /view === 'chat' && bs\.robot && stage !== 'off'\) \|\| view === 'voice' \|\| !!live/)
+  assert.match(bot, /className=\{cn\('ast-cap', caption && 'on'\)\}/)
+  assert.match(bot, /live\?\.user/)
+  assert.match(bot, /live\?\.bot/)
 })
