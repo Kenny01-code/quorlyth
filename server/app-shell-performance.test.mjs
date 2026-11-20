@@ -456,7 +456,7 @@ test('the live-site Bot launcher hides on context menu and restores through the 
   assert.ok(bot.includes('!launcherHidden && <button'))
   assert.ok(bot.includes('setLauncherHidden(true)'))
   assert.ok(bot.includes("sessionStorage.setItem('qbot-launcher-hidden-v1', '1')"))
-  assert.ok(bot.includes("sessionStorage.removeItem('qbot-launcher-hidden-v1')"))
+  assert.ok(app.includes("sessionStorage.removeItem('qbot-launcher-hidden-v1')"))
   assert.ok(bot.includes("window.addEventListener('quorlyth:launcher-restore', restoreLauncher)"))
 })
 test('search palette keeps its original surface with black result copy and visible icons', async () => {
@@ -475,18 +475,20 @@ test('search palette keeps its original surface with black result copy and visib
   assert.ok(!styles.includes('#cmd .rr:hover'))
 })
 
-test('the robot loading state never renders a miniature duplicate character', async () => {
-  const [robot, styles, signIn] = await Promise.all([
+test('the live-site Robot loading state stays compact and offers a retry', async () => {
+  const [robot, signIn] = await Promise.all([
     readSource('src/bot/Robot.tsx'),
-    readSource('src/styles/contrast-system.css'),
     readSource('src/screens/SignIn.tsx'),
   ])
-  assert.ok(!robot.includes('qbot-robot-fallback-art'))
-  assert.ok(!robot.includes('qbot-robot-fallback-head'))
-  assert.ok(robot.includes('qbot-robot-loading-glow'))
-  assert.ok(styles.includes('.qbot-robot-loading-glow::before'))
+  assert.ok(robot.includes('<canvas ref={cv} />'))
+  assert.ok(robot.includes('className="ast-fb"'))
+  assert.ok(robot.includes('className="ast-ld"'))
+  assert.ok(robot.includes('Load the robot'))
+  assert.ok(!robot.includes('qbot-robot-loading-glow'))
+  assert.ok(!robot.includes('qbot-robot-retry'))
   assert.ok(signIn.includes('<Robot ref={r} defer'))
 })
+
 test('the full branded intro is reserved for first-time visitors', async () => {
   const app = await readSource('src/App.tsx')
   assert.ok(app.includes("localStorage.getItem('qintro') !== '1'"))
