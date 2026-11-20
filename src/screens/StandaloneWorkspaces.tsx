@@ -1334,7 +1334,6 @@ function WorkspaceProjectView() {
       {!projectTasks.length ? <div className="sw-empty-inline"><QuorlythGlyph name="milestone" size={22}/><strong>Nothing planned yet</strong><p>Start by adding a task with clear acceptance criteria.</p></div> : <div className="sw-task-list">{projectTasks.map(task => {
         const taskEvidence = projectArtifacts.filter(artifact => artifact.taskId===task.id)
         const approved = taskEvidence.filter(artifact=>artifact.status==='approved'&&((artifact.provider==='github'&&artifact.verificationStatus==='source_verified')||(artifact.provider==='manual'&&artifact.verificationStatus==='submitted_evidence'))).length
-        const currentAssignee = assignedTaskIds(task).includes(a.me?.id || '')
         return <article className="sw-task" key={task.id}>
           <div className="sw-task__top"><span className={'sw-task-check '+(task.status==='done'?'is-done':'')}>{task.status==='done'?<QuorlythGlyph name="check" size={14}/>:null}</span><div className="sw-task__title"><p className="ql-eyebrow">{task.status==='todo'?'QUEUED':task.status==='in_progress'?'IN PROGRESS':'APPROVED COMPLETE'}</p><h4>{task.title}</h4></div><span className={'sw-task-status '+(task.status==='done'?'is-done':'')}>{task.status==='done'?'Complete':task.status==='in_progress'?'Active':'Open'}</span></div>
           {task.description && <p className="sw-task__description q-writeup">{task.description}</p>}
