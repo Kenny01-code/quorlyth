@@ -492,7 +492,7 @@ export async function executeWorkflowActions(
           createdBy: userId,
           updatedBy: userId,
           automationWorkflowId: workflow.id,
-          automationRunId: run.id,
+          automationRunId: runId,
           sourceEventId: String(event.payload.id || ''),
           sourceEventType: event.type,
           at,
