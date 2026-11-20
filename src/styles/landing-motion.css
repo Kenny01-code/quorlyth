@@ -1,226 +1,13 @@
-/* Quorlyth landing motion: character-led depth that preserves the existing editorial layout. */
-@keyframes qth-creator-drift {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(0, -13px, 0); }
-}
-@keyframes qth-creator-orbit {
-  from { transform: rotate(-20deg) scaleY(.28); }
-  to { transform: rotate(340deg) scaleY(.28); }
-}
-@keyframes qth-creator-card-float {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(0, -8px, 0); }
-}
-@keyframes qth-creator-spark {
-  0%, 100% { opacity: .4; transform: scale(.72); }
-  50% { opacity: 1; transform: scale(1.16); }
-}
-@keyframes qth-fan-card-enter {
-  from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.985); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
-
+/* Minimal landing-page polish. No 3D character layers or decorative objects. */
 #root #main .hero {
   isolation: isolate;
   overflow: hidden;
-}
-#root #main .qth-creator-stage {
-  position: absolute !important;
-  top: 4%;
-  right: 0;
-  bottom: 0;
-  z-index: 0 !important;
-  width: min(43%, 500px);
-  min-height: 72%;
-  pointer-events: none;
-  overflow: visible;
-  isolation: isolate;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.3) 16%, #000 38%, #000 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.3) 16%, #000 38%, #000 100%);
-}
-.qth-creator-stage__halo {
-  position: absolute;
-  top: 9%;
-  right: 2%;
-  width: 88%;
-  aspect-ratio: 1;
-  border: 1px solid rgba(251,243,231,.48);
-  border-radius: 50%;
-  box-shadow: 0 0 34px rgba(249,115,22,.15), inset 0 0 34px rgba(251,243,231,.08);
-  animation: qth-creator-orbit 28s linear infinite;
-}
-.qth-creator-stage__halo::after {
-  content: "";
-  position: absolute;
-  inset: 12%;
-  border: 1px solid rgba(251,243,231,.25);
-  border-radius: 50%;
-}
-.qth-creator-stage::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 22% 7% 3% 16%;
-  background: radial-gradient(ellipse at 58% 46%, rgba(249,115,22,.42), rgba(249,115,22,.13) 38%, transparent 72%);
-  filter: blur(32px);
-}
-.qth-creator-stage__art {
-  position: absolute;
-  inset: 0;
-  transform: rotateX(var(--qth-orbit-x, 0deg)) rotateY(var(--qth-orbit-y, 0deg));
-  transform-style: preserve-3d;
-  opacity: 0;
-  transition: opacity 680ms ease, transform 520ms cubic-bezier(.2,.75,.25,1);
-}
-.qth-creator-stage[data-visible="true"] .qth-creator-stage__art { opacity: 1; }
-.qth-creator-stage__art img {
-  position: absolute;
-  right: -2%;
-  bottom: -3%;
-  display: block;
-  width: auto;
-  height: 100%;
-  max-width: 100%;
-  object-fit: contain;
-  object-position: right bottom;
-  filter: drop-shadow(0 24px 38px rgba(45,18,8,.34));
-  animation: qth-creator-drift 7.8s ease-in-out infinite;
-}
-.qth-creator-float {
-  position: absolute;
-  z-index: 3;
-  display: grid;
-  gap: 3px;
-  min-width: 150px;
-  padding: 11px 14px;
-  border: 1px solid rgba(251,243,231,.48);
-  border-radius: 15px;
-  color: #fff9ef;
-  background: linear-gradient(145deg, rgba(32,20,15,.76), rgba(32,20,15,.43));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.17), 0 14px 34px -23px rgba(20,9,4,.75);
-  backdrop-filter: blur(16px) saturate(135%);
-  -webkit-backdrop-filter: blur(16px) saturate(135%);
-  animation: qth-creator-card-float 8s ease-in-out infinite;
-}
-.qth-creator-float span {
-  color: #ffc09b;
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: .14em;
-}
-.qth-creator-float strong {
-  color: #fff9ef;
-  font-size: 13px;
-  font-weight: 650;
-  letter-spacing: -.01em;
-}
-.qth-creator-float--signal { top: 25%; left: 1%; }
-.qth-creator-float--credit { right: 1%; bottom: 24%; animation-delay: -3.2s; }
-.qth-creator-stage__spark {
-  position: absolute;
-  z-index: 3;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #fff4e7;
-  box-shadow: 0 0 9px #fff4e7, 0 0 23px rgba(249,115,22,.9);
-  animation: qth-creator-spark 3.8s ease-in-out infinite;
-}
-.qth-creator-stage__spark--one { top: 16%; right: 24%; }
-.qth-creator-stage__spark--two { top: 51%; left: 13%; width: 5px; height: 5px; animation-delay: -1.6s; }
-
-/* A second, quieter appearance carries the same creator into the product preview. */
-#root #main .preview-card { isolation: isolate; }
-.qth-creator-echo {
-  position: absolute;
-  z-index: 0;
-  right: -2px;
-  bottom: -38px;
-  width: 128px;
-  height: 205px;
-  opacity: .26;
-  pointer-events: none;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 100%);
-  mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 100%);
-}
-.qth-creator-echo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
-  filter: drop-shadow(0 12px 24px rgba(249,115,22,.24));
-  animation: qth-creator-drift 8.8s ease-in-out infinite;
-}
-#root #main .preview-card > :not(.qth-creator-echo) { position: relative; z-index: 1; }
-
-/* Make the existing journey cards feel tactile without changing their structure. */
-#root #main .g5 > .qth-motion-card {
-  transform-style: preserve-3d;
-  transition: transform 460ms cubic-bezier(.2,.75,.25,1), box-shadow 460ms ease, border-color 280ms ease;
-}
-#root #main .g5 > .qth-motion-card .ic {
-  color: #ef784b;
-  filter: drop-shadow(0 0 9px rgba(239,120,75,.18));
-  transition: transform 460ms cubic-bezier(.2,.75,.25,1), filter 460ms ease;
-}
-@media (hover:hover) and (prefers-reduced-motion: no-preference) {
-  #root #main .g5 > .qth-motion-card:hover {
-    transform: translateY(-8px) rotateX(1deg);
-    border-color: rgba(239,120,75,.4);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 22px 42px -28px rgba(239,120,75,.34);
-  }
-  #root #main .g5 > .qth-motion-card:hover .ic {
-    transform: translateY(-3px) scale(1.09);
-    filter: drop-shadow(0 0 13px rgba(239,120,75,.44));
-  }
-}
-
-@media (max-width: 1040px) {
-  #root #main .qth-creator-stage { right: -3%; width: 46%; opacity: .8; }
-  .qth-creator-float { min-width: 132px; padding: 9px 11px; }
-  .qth-creator-float--signal { left: 0; }
-  .qth-creator-float--credit { right: 0; }
-}
-@media (max-width: 760px) {
-  #root #main .qth-creator-stage {
-    top: 18%;
-    right: -14%;
-    width: 62%;
-    height: 76%;
-    opacity: .32;
-  }
-  .qth-creator-float, .qth-creator-stage__spark { display: none; }
-  .qth-creator-stage__halo { opacity: .6; }
-  .qth-creator-echo { width: 94px; height: 154px; right: -9px; opacity: .18; }
-}
-@media (max-width: 460px) {
-  #root #main .qth-creator-stage { right: -22%; width: 72%; opacity: .23; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .qth-creator-stage__halo,
-  .qth-creator-stage__art img,
-  .qth-creator-float,
-  .qth-creator-stage__spark,
-  .qth-creator-echo img {
-    animation: none !important;
-  }
-  #root #main .g5 > .qth-motion-card,
-  #root #main .g5 > .qth-motion-card .ic {
-    transition: none !important;
-  }
-}
-
-
-/* Editorial split hero: keep the screenshot's clay, cream and ink palette,
-   while giving the creator a dedicated visual column. */
-#root #main .hero {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   text-align: left !important;
-  min-height: clamp(620px, 66vw, 790px);
-  padding: clamp(34px, 5vw, 68px) clamp(28px, 4.2vw, 66px) 44px;
+  min-height: clamp(560px, 62vw, 720px);
+  padding: clamp(34px, 5vw, 68px) clamp(24px, 4.2vw, 66px) 44px;
 }
 #root #main .hero .hmark {
   margin: -8px 0 14px;
@@ -230,8 +17,8 @@
 #root #main .hero .hmark svg { width: 68px; height: 68px; }
 #root #main .hero > .chip { margin-bottom: 22px; }
 #root #main .hero h1.hero-title {
-  width: min(760px, 65%);
-  max-width: 65%;
+  width: min(900px, 100%);
+  max-width: 100%;
   min-height: 0;
   margin: 0;
   font-family: "Iowan Old Style", "Bodoni 72", "Times New Roman", Georgia, serif !important;
@@ -242,8 +29,8 @@
   text-wrap: balance;
 }
 #root #main .hero .hero-copy {
-  width: min(610px, 58%);
-  max-width: 610px;
+  width: min(720px, 100%);
+  max-width: 720px;
   margin: 24px 0 26px !important;
   font-size: clamp(15px, 1.25vw, 18px) !important;
   line-height: 1.6 !important;
@@ -254,7 +41,7 @@
   justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  width: min(760px, 68%);
+  width: 100%;
   flex-wrap: wrap;
 }
 #root #main .hero .hero-note {
@@ -263,56 +50,34 @@
   text-align: left;
 }
 #root #main .hero .hz {
-  width: min(520px, 55%);
+  width: min(520px, 70%);
   margin: 44px 0 0;
 }
-#root #main .qth-creator-stage {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 44%;
-  min-height: 100%;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.2) 12%, #000 38%, #000 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.2) 12%, #000 38%, #000 100%);
-}
-.qth-creator-stage__halo {
-  top: 11%;
-  right: -4%;
-  width: 92%;
-  border-color: rgba(28,21,17,.28);
-  box-shadow: 0 0 46px rgba(142,53,29,.18), inset 0 0 34px rgba(251,243,231,.18);
-}
-.qth-creator-stage__halo::after { border-color: rgba(28,21,17,.16); }
-.qth-creator-stage::before {
-  inset: 24% 0 2% 16%;
-  background: radial-gradient(ellipse at 58% 45%, rgba(142,53,29,.32), rgba(142,53,29,.12) 42%, transparent 74%);
-}
-.qth-creator-stage__art img {
-  right: -4%;
-  bottom: -1%;
-  height: 98%;
-  max-width: none;
-  filter: drop-shadow(0 28px 42px rgba(48,24,14,.32));
-}
-.qth-creator-float {
-  background: linear-gradient(145deg, rgba(28,21,17,.86), rgba(28,21,17,.68));
-  border-color: rgba(251,243,231,.6);
-}
-.qth-creator-float--signal { top: 23%; left: -2%; }
-.qth-creator-float--credit { right: -1%; bottom: 20%; }
 
-@media (max-width: 1040px) {
-  #root #main .hero { min-height: 650px; }
-  #root #main .hero h1.hero-title { width: 68%; max-width: 68%; font-size: clamp(44px, 6.4vw, 72px) !important; }
-  #root #main .hero .hero-copy { width: 62%; }
-  #root #main .hero .hero-actions { width: 70%; }
-  #root #main .qth-creator-stage { width: 43%; opacity: .92; }
-  .qth-creator-float--signal { left: -5%; }
-  .qth-creator-float--credit { right: -5%; }
+/* Existing journey cards keep their tactile hover treatment without floating art. */
+#root #main .g5 > .qth-motion-card {
+  transform-style: preserve-3d;
+  transition: transform 240ms ease, box-shadow 240ms ease, border-color 200ms ease;
+}
+#root #main .g5 > .qth-motion-card .ic {
+  color: #ef784b;
+  filter: drop-shadow(0 0 9px rgba(239,120,75,.18));
+  transition: transform 240ms ease, filter 240ms ease;
+}
+@media (hover:hover) and (prefers-reduced-motion: no-preference) {
+  #root #main .g5 > .qth-motion-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(239,120,75,.32);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 18px 34px -26px rgba(239,120,75,.28);
+  }
+  #root #main .g5 > .qth-motion-card:hover .ic {
+    transform: translateY(-2px) scale(1.06);
+    filter: drop-shadow(0 0 11px rgba(239,120,75,.34));
+  }
 }
 @media (max-width: 760px) {
   #root #main .hero {
-    min-height: 690px;
+    min-height: 0;
     padding: 34px 24px 36px;
   }
   #root #main .hero .hmark {
@@ -323,58 +88,31 @@
   #root #main .hero .hmark svg { width: 54px; height: 54px; }
   #root #main .hero > .chip { margin-bottom: 18px; }
   #root #main .hero h1.hero-title {
-    position: relative;
-    z-index: 2;
     width: 100%;
     max-width: 100%;
     font-size: clamp(42px, 10.5vw, 66px) !important;
     line-height: .98 !important;
   }
   #root #main .hero .hero-copy {
-    position: relative;
-    z-index: 2;
-    width: min(88%, 520px);
+    width: 100%;
+    max-width: 560px;
     margin: 20px 0 22px !important;
     font-size: 15px !important;
   }
-  #root #main .hero .hero-actions {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    gap: 9px;
-  }
-  #root #main .hero .hero-actions .btn {
-    padding: 12px 17px;
-    font-size: 13px;
-  }
-  #root #main .hero .hero-note {
-    position: relative;
-    z-index: 2;
-    margin-top: 22px !important;
-    max-width: 75%;
-  }
+  #root #main .hero .hero-actions { gap: 9px; }
+  #root #main .hero .hero-actions .btn { padding: 12px 17px; font-size: 13px; }
+  #root #main .hero .hero-note { margin-top: 22px !important; max-width: 100%; }
   #root #main .hero .hz { width: 70%; margin-top: 32px; }
-  #root #main .qth-creator-stage {
-    top: 29%;
-    right: -16%;
-    width: 76%;
-    height: 70%;
-    min-height: 0;
-    opacity: .32;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.22) 14%, #000 44%, #000 100%);
-    mask-image: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.22) 14%, #000 44%, #000 100%);
-  }
-  .qth-creator-stage__halo { top: 15%; right: 2%; width: 84%; }
-  .qth-creator-float, .qth-creator-stage__spark { display: none; }
 }
 @media (max-width: 460px) {
-  #root #main .hero { min-height: 700px; padding-inline: 19px; }
+  #root #main .hero { padding-inline: 19px; }
   #root #main .hero h1.hero-title { font-size: clamp(39px, 10.2vw, 52px) !important; }
   #root #main .hero .hero-copy { width: 100%; max-width: 420px; }
   #root #main .hero .hero-actions .btn { padding: 11px 14px; }
-  #root #main .qth-creator-stage { right: -27%; width: 86%; opacity: .25; }
 }
 @media (prefers-reduced-motion: reduce) {
-  #root #main .hero .hero-title,
-  #root #main .hero .hero-copy { animation: none !important; }
+  #root #main .g5 > .qth-motion-card,
+  #root #main .g5 > .qth-motion-card .ic {
+    transition: none !important;
+  }
 }
