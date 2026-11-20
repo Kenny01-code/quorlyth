@@ -47,7 +47,7 @@ test('workspace and task edit events have unique run IDs and full source context
     source('src/lib/automation.ts'),
     source('src/components/AutomationRuntime.tsx'),
     source('supabase/functions/automation-worker/index.ts'),
-    source('supabase/migrations/20261120203000_automation_event_entity_context.sql'),
+    source('supabase/migrations/20261120194512_automation_event_entity_context.sql'),
   ])
   assert.match(automation, /eventId: payload\.eventId \|\| \(isEditEvent \? newWorkflowId\(\)/)
   assert.match(automation, /'event\.workspaceId'/)
