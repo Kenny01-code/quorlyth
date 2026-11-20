@@ -223,7 +223,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
   const initialOpenHandled = useRef(false)
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
-  const theme = 'terracotta'
+  const theme = 'onyx'
   const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
   const wide = !narrow
 
@@ -314,7 +314,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
     if (launcherRestoreTimer.current !== null) window.clearTimeout(launcherRestoreTimer.current)
   }, [])
 
-  const accent = THEMES.terracotta
+  const accent = THEMES.onyx
   const style = { ['--ac1' as any]: accent.g1, ['--ac2' as any]: accent.g2, ['--acr' as any]: accent.cr } as React.CSSProperties
 
   function openPanel() {
@@ -1598,7 +1598,7 @@ export function QuorlythBot({ initialOpen = false }: { initialOpen?: boolean }) 
   const searchResults = [...new Map(shown.map(c => [c.id, c])).values()]
   const active = shown.filter(c => !c.arch), pinned = active.filter(c => c.pin), recent = active.filter(c => !c.pin), arch = shown.filter(c => c.arch)
   const item = (c: Chat) => {
-    const T = THEMES.terracotta
+    const T = THEMES.onyx
     return (
       <div key={c.id} className={cn('bci', cur?.id === c.id && view === 'chat' && 'on', T && 'tint', c.unread && 'unread')} tabIndex={0} role="button" aria-label={'Open chat: ' + c.title}
         style={T ? ({ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any) : undefined}
