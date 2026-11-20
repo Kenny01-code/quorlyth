@@ -22,7 +22,7 @@ test('chat, voice and Live Talk use one Robot visual, not a separate orb', async
   assert.doesNotMatch(bot, /from '\.\/Orb'|<Orb/)
   assert.match(bot, /<Robot ref=\{robot\} theme=\{theme\} calm=\{bs\.calm\} drag defer active=/)
   assert.match(bot, /view === 'chat' && bs\.robot && stage !== 'off'\) \|\| view === 'voice' \|\| !!live/)
-  assert.match(bot, /className=\{cn\('ast-cap', caption && 'on'\)\}/)
+  assert.match(bot, /className="bnm">QuorlythBot/)
 })
 
 test('Robot uses the original live loading indicator and retry action', async () => {
