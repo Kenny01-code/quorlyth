@@ -7,7 +7,7 @@ const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 test('the landing page contains no 3D character or decorative object layers', async () => {
   const landing = await source('src/screens/Landing.tsx')
   const styles = await source('src/styles/landing-motion.css')
-  assert.doesNotMatch(landing, /CreatorMotion|HeroCreator|PreviewCreator|qth-creator-stage|qth-creator-echo/)
+  assert.doesNotMatch(landing, /CreatorMotion|HeroCreator|PreviewCreator|qth-creator-stage|qth-creator-echo|<Orbit \/>/)
   assert.doesNotMatch(styles, /qth-creator|creator-hero/)
 })
 
