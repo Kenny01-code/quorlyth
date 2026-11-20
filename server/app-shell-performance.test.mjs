@@ -31,7 +31,7 @@ test('QuorlythBot stays closed until a user deliberately opens the launcher', as
   assert.match(app, /\{botMounted && <Suspense fallback=\{null\}><QuorlythBot initialOpen/)
 })
 
-test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
+test('the live-site QuorlythBot launcher stays in a body portal until its lazy-loaded module is ready', async () => {
   const [app, css, bot] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/styles/app.css'),
@@ -44,10 +44,9 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.ok(app.includes('createPortal('))
   assert.ok(app.includes('document.body'))
   assert.ok(app.includes('data-quorlyth-launcher'))
-  assert.ok(app.includes('botLauncherHidden ? ('))
-  assert.ok(app.includes('qbot-launcher-restore'))
+  assert.ok(app.includes('!botMounted && !botLauncherHidden && createPortal('))
+  assert.ok(!app.includes('qbot-launcher-restore'))
   assert.ok(app.includes('qbot-launcher-load-error'))
-  assert.ok(!app.includes('deferredLauncherHidden') && !app.includes('deferredHoldTimer'))
   assert.ok(app.includes('onContextMenu='))
   assert.ok(app.includes('qbot-launcher-hidden-v1'))
   assert.ok(css.includes('#astl.astl'))
@@ -59,7 +58,7 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.ok(launcher.includes('onClick={openPanel}'))
   assert.ok(launcher.includes('onContextMenu='))
   assert.ok(!launcher.includes('onPointerDown') && !launcher.includes('onPointerUp'))
-  assert.ok(bot.includes('launcherHidden ? ('))
+  assert.ok(bot.includes('!launcherHidden && <button'))
   assert.ok(bot.includes('setLauncherHidden(true)'))
   assert.ok(!bot.includes('startLauncherHold') && !bot.includes('launcherLongPressTriggered'))
 })
@@ -164,26 +163,22 @@ test('heavy feature styles are split from the initial global stylesheet', async 
   assert.match(messages, /styles\/messages-room\.css/)
   assert.match(chatMedia, /styles\/chat-media\.css/)
   assert.match(bot, /styles\/bot\.css/)
-  assert.match(bot, /styles\/bot-room-theme\.css/)
+  assert.match(bot, /styles\/bot-composer-fluid-black\.css/)
   assert.match(automations, /styles\/automations\.css/)
 })
 
-test('QuorlythBot pearl orb keeps the Three.js renderer lazy-loaded outside the bot chunk', async () => {
-  const [config, themes, orb3d, orb, bot] = await Promise.all([
-    readSource('src/bot/config.ts'),
-    readSource('src/bot/robot-themes.ts'),
-    readSource('src/bot/orb3d.ts'),
-    readSource('src/bot/Orb.tsx'),
+test('QuorlythBot keeps the live-site Robot renderer lazy-loaded outside the bot chunk', async () => {
+  const [robot, robot3d, bot] = await Promise.all([
+    readSource('src/bot/Robot.tsx'),
+    readSource('src/bot/robot3d.ts'),
     readSource('src/bot/QuorlythBot.tsx'),
   ])
-  assert.match(config, /from '\.\/robot-themes'/)
-  assert.doesNotMatch(config, /from '\.\/orb3d'/)
-  assert.match(themes, /export const THEMES/)
-  assert.match(orb3d, /from ["']three["']/)
-  assert.match(orb, /import\('\.\/orb3d'\)/)
-  assert.match(bot, /import \{ Orb \} from '\.\/Orb'/)
-  assert.match(bot, /<Orb\s+ref=\{robot\}\s+theme=\{theme\}/)
-  assert.doesNotMatch(bot, /from ["']\.\/orb3d["']/)
+  assert.match(bot, /import \{ Robot, RobotApi \} from '\.\/Robot'/)
+  assert.match(bot, /<Robot ref=\{robot\}/)
+  assert.doesNotMatch(bot, /from '\.\/Orb'|<Orb/)
+  assert.match(robot, /import\('\.\/robot3d'\)/)
+  assert.match(robot3d, /from ["']three["']/)
+  assert.match(robot, /active\?: boolean/)
 })
 
 test('community manager access keeps its editorial black-ink glass treatment', async () => {
@@ -447,26 +442,22 @@ test('automation run history can be cleared without deleting workflows or notifi
   assert.match(automations, /Your workflows, active\/draft status, and automation notifications will remain/)
 })
 
-test('the QuorlythBot launcher toggles visibility by right-click, with a reversible restore hotspot', async () => {
+test('the live-site Bot launcher hides on context menu and restores through the keyboard handoff', async () => {
   const [app, bot] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
   ])
   assert.ok(app.includes('const [botLauncherHidden, setBotLauncherHidden]'))
-  assert.ok(app.includes('!intro && !botLoading && !botMounted && createPortal('))
-  assert.ok(app.includes('botLauncherHidden ? ('))
-  assert.ok(app.includes('className="qbot-launcher-restore"'))
-  assert.ok(app.includes('Right-click or click to show QuorlythBot'))
+  assert.ok(app.includes('!intro && !botLoading && !botMounted && !botLauncherHidden && createPortal('))
   assert.ok(app.includes('onContextMenu='))
-  assert.ok(app.includes('launcherWasHidden || botLauncherHidden'))
+  assert.ok(app.includes("sessionStorage.getItem('qbot-launcher-hidden-v1') === '1'"))
   assert.ok(app.includes('quorlyth:launcher-restore'))
   assert.ok(bot.includes('const [launcherHidden, setLauncherHidden]'))
-  assert.ok(bot.includes('launcherHidden ? ('))
-  assert.ok(bot.includes('className="qbot-launcher-restore"'))
-  assert.ok(bot.includes('Right-click or click to show QuorlythBot'))
-  assert.ok(bot.includes('onContextMenu='))
+  assert.ok(bot.includes('!launcherHidden && <button'))
+  assert.ok(bot.includes('setLauncherHidden(true)'))
   assert.ok(bot.includes("sessionStorage.setItem('qbot-launcher-hidden-v1', '1')"))
   assert.ok(bot.includes("sessionStorage.removeItem('qbot-launcher-hidden-v1')"))
+  assert.ok(bot.includes("window.addEventListener('quorlyth:launcher-restore', restoreLauncher)"))
 })
 test('search palette keeps its original surface with black result copy and visible icons', async () => {
   const [palette, styles] = await Promise.all([
@@ -651,21 +642,16 @@ test('QuorlythBot typing helper displays only the compact robot head', async () 
   assert.ok(head.includes('url(#'))
   assert.doesNotMatch(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
 })
-test('QuorlythBot launchers retain the compact orange robot-head mark', async () => {
-  const [app, bot, head, css] = await Promise.all([
+test('QuorlythBot launchers use the original live-site Quorlyth logo mark', async () => {
+  const [app, bot, css] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
-    readSource('src/bot/QuorlythBotHead.tsx'),
     readSource('src/styles/app.css'),
   ])
-  assert.match(app, /QuorlythBotHead size=\{38\}/)
-  assert.match(bot, /QuorlythBotHead size=\{38\}/)
-  assert.match(head, /qbhead-shell/)
-  assert.match(head, /qbhead-face/)
-  assert.match(head, /#D06A40/)
-  assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)
-  assert.match(css, /rgba\(208,106,64,\.34\)/)
-  assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
+  assert.match(app, /<span className="astm"><Logo size=\{30\} \/><\/span>/)
+  assert.match(bot, /<span className="astm"><Logo size=\{30\} \/><\/span>/)
+  assert.doesNotMatch(app + bot, /QuorlythBotHead size=\{38\}/)
+  assert.match(css, /#astl\.astl/)
 })
 
 test('Automation starter cards render every label and trigger in high-contrast editorial ink', async () => {
@@ -768,18 +754,19 @@ test('visitor platform access submissions feed platform-admin notifications and 
 })
 
 
-test('QuorlythBot launcher greeting and dark-surface writeups stay white without recolouring light cards', async () => {
-  const [contrast, botTheme] = await Promise.all([
+test('QuorlythBot uses the live-site black room styles without global glass overrides', async () => {
+  const [contrast, bot, baseStyles, composer] = await Promise.all([
     readSource('src/styles/contrast-system.css'),
-    readSource('src/styles/bot-room-theme.css'),
+    readSource('src/bot/QuorlythBot.tsx'),
+    readSource('src/styles/bot.css'),
+    readSource('src/styles/bot-composer-fluid-black.css'),
   ])
   assert.ok(contrast.includes('.glass:not(.bot)'))
   assert.ok(!contrast.includes(':is(.glass, .card'))
-  assert.ok(botTheme.includes('#astl.astl .astb {\n  color: #FFFFFF !important;'))
-  assert.ok(botTheme.includes('.qbot-conversation .am.ma,'))
-  assert.ok(botTheme.includes('.bhero :is(h1, h2, h3, h4, p, li, span, b, strong, em, small)'))
-  assert.ok(botTheme.includes('.bs .bsb {'))
-  assert.ok(botTheme.includes('color: var(--qbot-ink) !important;'))
-  assert.ok(botTheme.includes('.am.mu {'))
-  assert.ok(botTheme.includes('color: #211A17 !important;'))
+  assert.match(bot, /bot-composer-fluid-black\.css/)
+  assert.doesNotMatch(bot, /bot-room-theme\.css|bot-liquid-glass\.css/)
+  assert.ok(baseStyles.includes('.qbot-conversation .am'))
+  assert.ok(baseStyles.includes('.bsb'))
+  assert.ok(composer.includes('.ast-in'))
+  assert.ok(composer.includes('background: #050506'))
 })
