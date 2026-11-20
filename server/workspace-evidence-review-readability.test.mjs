@@ -97,7 +97,7 @@ test('contributors retain separate evidence records with visible live AI screeni
   assert.match(screen, /AI screening…/)
   assert.match(screen, /Each contributor gets a separate evidence record and independent AI decision/)
   assert.match(edge, /latestByContributor/)
-  assert.match(edge, /artifact\.data\.submittedBy/)
+  assert.match(edge, /artifact\.submittedBy/)
 })
 
 test('project closeout compares approved submissions and saves the server-validated AI ranking', async () => {
