@@ -1,3 +1,4 @@
+import '../styles/landing-motion.css'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
