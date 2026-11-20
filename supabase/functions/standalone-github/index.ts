@@ -421,6 +421,7 @@ Deno.serve(async (req: Request) => {
         }
         const candidates = [...latestByContributor.entries()]
           .filter(([, artifact]) => artifact.status === "approved"
+            && (Number(artifact.reviewedAt) || 0) > (Number(task.updatedAt) || Number(task.at) || 0)
             && ["github", "manual"].includes(cleanText(artifact.provider, 30))
             && (artifact.provider !== "github" || artifact.verificationStatus === "source_verified")
             && (artifact.provider !== "manual" || artifact.verificationStatus === "submitted_evidence"))
