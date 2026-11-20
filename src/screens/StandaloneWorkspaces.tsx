@@ -866,7 +866,16 @@ function WorkspaceProjectView() {
       if (!finalReview?.winnerUserId || !Array.isArray(finalReview.taskResults)) {
         throw new Error('Quorlyth AI did not return a valid final project ranking. The project remains open.')
       }
-      a.toast('Project completed. Quorlyth AI selected ' + a.nm(finalReview.winnerUserId) + ' as the overall standout contributor.')
+      let linkedMilestonesUpdated = true
+      for (const result of finalReview.taskResults) {
+        const linkedTask = projectTasks.find(task => task.id === result.taskId)
+        if (linkedTask?.milestoneId) {
+          const synced = await a.completeMilestoneFromWorkspaceEvidence(linkedTask.milestoneId, linkedTask.id, result.selectedEvidenceId)
+          linkedMilestonesUpdated = synced && linkedMilestonesUpdated
+        }
+      }
+      a.toast('Project completed. Quorlyth AI selected ' + a.nm(finalReview.winnerUserId) + ' as the overall standout contributor.'
+        + (linkedMilestonesUpdated ? ' Linked community milestones were updated too.' : ' Some linked milestones still need an authorised community or workspace manager to sync them.'))
     })
   }
 
