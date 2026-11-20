@@ -7,7 +7,6 @@ import { EvidencePreviewHost } from './components/EvidencePreview'
 import { Intro } from './components/Intro'
 import { Landing } from './screens/Landing'
 import { Logo } from './lib/Logo'
-import { QuorlythBotHead } from './bot/QuorlythBotHead'
 const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
 const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
@@ -165,9 +164,7 @@ export default function App() {
       const tag = target?.tagName?.toUpperCase() || ''
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
       event.preventDefault()
-      let launcherWasHidden = false
-      try { launcherWasHidden = sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch {}
-      if (launcherWasHidden || botLauncherHidden) {
+      if (botLauncherHidden) {
         try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
         setBotLauncherHidden(false)
         window.dispatchEvent(new CustomEvent('quorlyth:launcher-restore'))
@@ -452,57 +449,34 @@ export default function App() {
       {bell && <Suspense fallback={null}><NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} /></Suspense>}
       {palette && <Suspense fallback={null}><Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} /></Suspense>}
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
-      {!intro && !botLoading && !botMounted && createPortal(
+      {!botMounted && !botLauncherHidden && createPortal(
         <div className="qbot-launcher-portal" data-quorlyth-launcher>
-          {botLauncherHidden ? (
-            <button
-              type="button"
-              className="qbot-launcher-restore"
-              aria-label="Restore QuorlythBot launcher"
-              title="Right-click or click to show QuorlythBot"
-              onClick={() => {
-                try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-                setBotLauncherHidden(false)
-              }}
-              onContextMenu={event => {
-                event.preventDefault()
-                try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-                setBotLauncherHidden(false)
-              }}
-            >
-              <span className="qbot-launcher-restore-mark" aria-hidden="true" />
-              <span className="qbot-launcher-restore-tip">Right-click to show QuorlythBot</span>
-            </button>
-          ) : (
-            <>
-              <button
-                id="astl"
-                type="button"
-                className={botLoading ? 'astl qbot-deferred-loading' : 'astl'}
-                disabled={botLoading}
-                aria-busy={botLoading}
-                aria-expanded={false}
-                aria-controls="ast"
-                onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
-                aria-label={botLoading ? 'Loading QuorlythBot' : botLoadError ? 'Retry loading QuorlythBot' : 'Open QuorlythBot. Ask about your ideas, communities, analytics, projects, or next steps.'}
-                title={(botLoading ? 'Opening QuorlythBot…' : botLoadError || 'Ask QuorlythBot about your communities, ideas, projects, or next steps.') + ' Right-click to hide this launcher.'}
-                onClick={() => { void openQuorlythBot() }}
-                onContextMenu={event => {
-                  event.preventDefault()
-                  try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
-                  setBotLauncherHidden(true)
-                }}
-              >
-                <span className="astm"><QuorlythBotHead size={38} /></span>
-                <span className="astl-hint" aria-hidden="true">Ask Quorlyth</span>
-              </button>
-              {botLoading && <span className="qbot-launcher-status" role="status">Opening QuorlythBot…</span>}
-              {botLoadError && <div className="qbot-launcher-load-error" role="alert">
-                <span>{botLoadError}</span>
-                <button type="button" onClick={() => void openQuorlythBot()}>Retry</button>
-              </div>}
-            </>
-          )}
+          <button
+            id="astl"
+            type="button"
+            className={botLoading ? 'astl qbot-deferred-loading' : 'astl'}
+            disabled={botLoading}
+            aria-busy={botLoading}
+            aria-expanded={false}
+            aria-controls="ast"
+            onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
+            aria-label={botLoading ? 'Loading QuorlythBot' : botLoadError ? 'Retry loading QuorlythBot' : 'Open QuorlythBot. Ask about your ideas, communities, analytics, projects, or next steps.'}
+            title={botLoading ? 'Opening QuorlythBot…' : botLoadError || 'Ask QuorlythBot about your communities, ideas, projects, or next steps.'}
+            onClick={() => { void openQuorlythBot() }}
+            onContextMenu={event => {
+              event.preventDefault()
+              try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
+              setBotLauncherHidden(true)
+            }}
+          >
+            <span className="astm"><Logo size={30} /></span>
+            <span className="astl-hint" aria-hidden="true">Ask Quorlyth</span>
+          </button>
+          {botLoading && <span className="qbot-launcher-status" role="status">Opening QuorlythBot…</span>}
+          {botLoadError && <div className="qbot-launcher-load-error" role="alert">
+            <span>{botLoadError}</span>
+            <button type="button" onClick={() => void openQuorlythBot()}>Retry</button>
+          </div>}
         </div>,
         document.body,
       )}
