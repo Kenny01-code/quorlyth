@@ -860,7 +860,7 @@ function WorkspaceProjectView() {
       return
     }
     if (!projectReadyForFinal) {
-      setError('Start every task and wait for each assigned contributor’s latest evidence to receive an approval before marking the project complete.')
+      setError('Start every task and make sure each task has at least one latest approved submission before marking the project complete.')
       return
     }
     await runAction('project-status', async () => {
@@ -1273,7 +1273,7 @@ function WorkspaceProjectView() {
       <div><p className="ql-eyebrow">PROJECT CLOSEOUT</p><h3>Ready to mark the project complete?</h3><p>Quorlyth AI will compare each contributor’s latest approved evidence for every task, select the strongest submission per task, and identify the overall standout contributor.</p></div>
       <div className="sw-finalization-panel__metrics"><span><strong>{projectTasks.filter(task => task.status === 'in_progress' || task.status === 'done').length}/{projectTasks.length}</strong> tasks started</span><span><strong>{screeningCount}</strong> AI screenings live</span><span><strong>{pendingReviews}</strong> awaiting decision</span></div>
       <button type="button" className="btn p" disabled={busy === 'project-status' || !projectReadyForFinal || a.backend?.auth.mode !== 'supabase'} onClick={() => void finalizeProjectWithAI()}><QuorlythGlyph name="complete" size={15}/>{busy === 'project-status' ? 'AI is evaluating the project…' : 'Mark project complete'}</button>
-      {!projectReadyForFinal && <small>To continue: start every task and ensure every assigned contributor’s latest evidence is approved. All AI screenings and manager decisions must be finished first.</small>}
+      {!projectReadyForFinal && <small>To continue: start every task and ensure each task has at least one latest approved submission. All AI screenings and reviewer decisions must be finished first.</small>}
     </section>}
 
     {tab === 'overview' && project.linkedIdeaId && linkedMilestones.length > 0 && <section className="glass pad sw-panel" style={{ marginBottom: 16, display: 'grid', gap: 12 }}>
