@@ -8,7 +8,7 @@ test('the landing page contains no 3D character or decorative object layers', as
   const landing = await source('src/screens/Landing.tsx')
   const styles = await source('src/styles/landing-motion.css')
   assert.doesNotMatch(landing, /CreatorMotion|HeroCreator|PreviewCreator|qth-creator-stage|qth-creator-echo/)
-  assert.doesNotMatch(styles, /qth-creator|creator-hero\\.webp|qth-creator-echo/)
+  assert.doesNotMatch(styles, /qth-creator|creator-hero/)
 })
 
 test('the landing hero remains responsive and preserves reduced-motion support', async () => {
