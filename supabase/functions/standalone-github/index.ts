@@ -135,6 +135,8 @@ Deno.serve(async (req: Request) => {
       if (isIdeaAuthor || isCommunityOwner || isAcceptedCollaborator) role = "contributor";
     }
 
+    if (isLinkedCommunityOwner && !role) role = "contributor";
+
     if (!["owner", "manager", "contributor", "viewer"].includes(role)) {
       return respond(403, { error: "You need active workspace access or an accepted collaboration role to use this integration." });
     }
