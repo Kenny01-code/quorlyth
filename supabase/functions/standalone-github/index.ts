@@ -682,6 +682,17 @@ Deno.serve(async (req: Request) => {
         updatedAt: now,
         repositoryId: cleanText(connected.data.id, 100),
         repositoryFullName: cleanText(connected.data.fullName, 220),
+        aiReview: {
+          status: "screening",
+          decision: "pending",
+          alignmentScore: 0,
+          summary: "Quorlyth AI is screening this GitHub submission against the task requirements.",
+          matchedCriteria: [],
+          gaps: [],
+          recommendations: [],
+          reviewedAt: now,
+          scopeNote: "Live screening in progress. This source has been confirmed separately by the GitHub API.",
+        },
         sourceMetadata: metadata,
       };
       const { error: insertError } = await serviceClient.from("docs").insert({
