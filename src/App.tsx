@@ -164,7 +164,9 @@ export default function App() {
       const tag = target?.tagName?.toUpperCase() || ''
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
       event.preventDefault()
-      if (botLauncherHidden) {
+      let launcherWasHidden = false
+      try { launcherWasHidden = sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch {}
+      if (launcherWasHidden || botLauncherHidden) {
         try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
         setBotLauncherHidden(false)
         window.dispatchEvent(new CustomEvent('quorlyth:launcher-restore'))
