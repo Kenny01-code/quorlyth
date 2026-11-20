@@ -72,4 +72,73 @@ test('Quorlyth AI is the final evidence decision-maker, with a manager override 
   assert.match(finalAction, /reviewSource: "quorlyth_ai"/)
   assert.match(finalAction, /status: decision/)
   assert.doesNotMatch(finalAction, /body\.aiReview/, 'The server must generate the verdict itself, not trust a browser-supplied decision.')
+  assert.match(edge, /Browser-supplied AI pre-reviews are no longer accepted/)
+})
+
+test('task start belongs to the task creator, community owner or workspace manager', async () => {
+  const screen = await source('src/screens/StandaloneWorkspaces.tsx')
+  const edge = await source('supabase/functions/standalone-github/index.ts')
+
+  assert.match(screen, /const canManageTask = \(task\?: WorkspaceTask\) => .*task\.createdBy === a\.me\.id/)
+  assert.match(screen, /Only the task creator, community owner, or workspace manager can start this task/)
+  assert.match(screen, /startedBy: a\.me!\.id/)
+  assert.match(screen, /selectedEvidenceTask\.status === 'in_progress'/)
+  assert.match(edge, /task\.data\.status !== "in_progress"/)
+  assert.match(edge, /The task must be started by its creator, community owner, or workspace manager/)
+})
+
+test('contributors retain separate evidence records with visible live AI screening', async () => {
+  const screen = await source('src/screens/StandaloneWorkspaces.tsx')
+  const edge = await source('supabase/functions/standalone-github/index.ts')
+
+  assert.match(screen, /id: artifactId, projectId: id, taskId: artifactTask, provider: 'manual'/)
+  assert.match(screen, /status: 'screening'/)
+  assert.match(screen, /LIVE AI SCREENING/)
+  assert.match(screen, /AI screening…/)
+  assert.match(screen, /Each contributor gets a separate evidence record and independent AI decision/)
+  assert.match(edge, /latestByContributor/)
+  assert.match(edge, /artifact\.data\.submittedBy/)
+})
+
+test('project closeout compares approved submissions and saves the server-validated AI ranking', async () => {
+  const [screen, edge, styles] = await Promise.all([
+    source('src/screens/StandaloneWorkspaces.tsx'),
+    source('supabase/functions/standalone-github/index.ts'),
+    source('src/styles/standalone-workspaces.css'),
+  ])
+
+  assert.match(screen, /Mark project complete/)
+  assert.match(screen, /finalize_project_ai/)
+  assert.match(screen, /FINAL AI PROJECT REVIEW/)
+  assert.match(screen, /Overall standout contributor/)
+  assert.match(screen, /taskResults\.map\(result/)
+  assert.doesNotMatch(screen, /async function completeTask/)
+  assert.doesNotMatch(screen, /async function toggleProjectStatus/)
+
+  const start = edge.indexOf('if (action === "finalize_project_ai")')
+  const end = edge.indexOf('if (action === "verify_artifact")', start)
+  assert.ok(start >= 0 && end > start, 'Final project evaluation must be a separate server action.')
+  const finalAction = edge.slice(start, end)
+  assert.match(finalAction, /Only the project owner, workspace manager, or linked community owner/)
+  assert.match(finalAction, /latestByContributor/)
+  assert.match(finalAction, /artifact\.status === "approved"/)
+  assert.match(finalAction, /selectedEvidenceId/)
+  assert.match(finalAction, /finalize_standalone_project_with_ai_review/)
+  assert.match(finalAction, /serviceClient\.rpc/)
+  assert.match(finalAction, /The project remains open/)
+  assert.match(styles, /\.sw-finalization-panel/)
+  assert.match(styles, /\.sw-final-review-panel__results/)
+})
+
+test('the evidence viewer traps keyboard focus and restores it when closed', async () => {
+  const preview = await source('src/components/EvidencePreview.tsx')
+  assert.match(preview, /viewerCloseRef\.current\?\.focus\(\)/)
+  assert.match(preview, /event\.key !== 'Tab'/)
+  assert.match(preview, /if \(previous\?\.isConnected\) previous\.focus\(\)/)
+  assert.match(preview, /aria-modal="true"/)
+})
+
+test('the landing page no longer renders decorative 3D character layers', async () => {
+  const landing = await source('src/screens/Landing.tsx')
+  assert.doesNotMatch(landing, /CreatorMotion|HeroCreator|PreviewCreator/)
 })
