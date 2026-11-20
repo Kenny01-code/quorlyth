@@ -112,7 +112,7 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
   const type = parsed ? classify(parsed, mimeType, name) : 'link'
   if (!parsed) return <div className="ql-evidence-preview ql-evidence-preview--unavailable"><strong>{name}</strong><span>Preview unavailable: this is not a valid HTTP(S) link.</span></div>
   const embed = embedUrl(parsed, type)
-  const host = parsed.hostname.replace(/^www\\./i, '')
+  const host = parsed.hostname.replace(/^www\./i, '')
   const title = summary.trim() || name
   const label = ({ image: 'Image', video: 'Video', audio: 'Audio', pdf: 'PDF document', github: 'GitHub source', youtube: 'YouTube video', vimeo: 'Vimeo video', figma: 'Figma design', 'google-docs': 'Google document', notion: 'Notion page', loom: 'Loom recording', document: 'Document', link: 'Website' } as Record<string, string>)[type] || 'Evidence'
   const open = (event: MouseEvent<HTMLElement>) => {
@@ -182,7 +182,7 @@ export function EvidencePreviewHost() {
           const suffix = response.status === 404 ? 'This GitHub record may be private or unavailable.' : response.status === 403 ? 'GitHub may be rate-limiting this preview.' : 'GitHub could not load this record.'
           throw new Error(suffix)
         }
-        if (/(?:^|\\/)(?:pull|pulls)\\/\\d+\\/?$/i.test(parsed.pathname)) {
+        if (/(?:^|\/)(?:pull|pulls)\/\d+\/?$/i.test(parsed.pathname)) {
           try {
             const filesResponse = await fetch(githubApi + '/files?per_page=20', { signal: controller.signal, headers: { Accept: 'application/vnd.github+json' } })
             if (filesResponse.ok) {
@@ -239,7 +239,7 @@ export function EvidencePreviewHost() {
   }, [open])
 
   if (!open || !request || !parsed || typeof document === 'undefined') return null
-  const host = parsed.hostname.replace(/^www\\./i, '')
+  const host = parsed.hostname.replace(/^www\./i, '')
   const title = summary.trim() || name
   const label = ({ image: 'Image', video: 'Video', audio: 'Audio', pdf: 'PDF document', github: 'GitHub source', youtube: 'YouTube video', vimeo: 'Vimeo video', figma: 'Figma design', 'google-docs': 'Google document', notion: 'Notion page', loom: 'Loom recording', document: 'Document', link: 'Website' } as Record<string, string>)[type] || 'Evidence'
   const sourceBlocksEmbedding = ['notion', 'document', 'link'].includes(type)
