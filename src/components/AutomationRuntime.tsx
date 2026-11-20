@@ -79,7 +79,7 @@ export function AutomationRuntime() {
       for (const doc of docs) {
         if (seenIdeas.has(doc.id)) continue
         seenIdeas.add(doc.id)
-        emitWorkflowEvent('idea.created', { id: doc.id, title: String(doc.data?.title || ''), body: String(doc.data?.body || ''), communityId: String(doc.data?.cid || ''), at: Number(doc.data?.at) || Date.now() })
+        emitWorkflowEvent('idea.created', { id: doc.id, title: String(doc.data?.title || ''), body: String(doc.data?.body || ''), communityId: String(doc.data?.cid || ''), entityType: 'idea', actorId: String(doc.data?.authorId || ''), at: Number(doc.data?.at) || Date.now() })
       }
     }, error => console.warn('Workflow idea trigger could not refresh:', error)))
 
@@ -99,6 +99,7 @@ export function AutomationRuntime() {
           id: doc.id,
           projectId: doc.id,
           workspaceId: doc.id,
+          entityType: 'workspace',
           title: String(doc.data?.title || ''),
           summary: String(doc.data?.summary || ''),
           status: String(doc.data?.status || 'active'),
@@ -140,6 +141,7 @@ export function AutomationRuntime() {
           taskId: doc.id,
           projectId: String(doc.data?.projectId || ''),
           workspaceId: String(doc.data?.projectId || ''),
+          entityType: 'task',
           title: String(doc.data?.title || ''),
           summary: String(doc.data?.description || ''),
           status: nextStatus,
@@ -166,6 +168,8 @@ export function AutomationRuntime() {
         if (previousStatus === 'todo' && nextStatus === 'in_progress') emitWorkflowEvent('milestone.started', {
           id: doc.id,
           projectId: String(doc.data?.projectId || ''),
+          entityType: 'milestone',
+          actorId: String(doc.data?.updatedBy || doc.data?.assigneeId || ''),
           title: String(doc.data?.title || ''),
           summary: String(doc.data?.acceptanceCriteria || doc.data?.description || ''),
           at: Number(doc.data?.updatedAt) || Date.now(),
@@ -187,7 +191,10 @@ export function AutomationRuntime() {
         const payload = {
           id: doc.id,
           projectId: String(doc.data?.projectId || ''),
+          workspaceId: String(doc.data?.projectId || ''),
           taskId: String(doc.data?.taskId || ''),
+          entityType: 'evidence',
+          actorId: String(doc.data?.reviewedBy || doc.data?.submittedBy || ''),
           title: String(doc.data?.summary || 'Evidence submitted'),
           summary: String(doc.data?.summary || ''),
           status: nextStatus,
@@ -212,7 +219,10 @@ export function AutomationRuntime() {
         const payload = {
           id: doc.id,
           projectId: String(doc.data?.projectId || ''),
+          workspaceId: String(doc.data?.projectId || ''),
           milestoneId: String(doc.data?.milestoneId || ''),
+          entityType: 'evidence',
+          actorId: String(doc.data?.reviewedBy || doc.data?.submittedBy || ''),
           title: String(doc.data?.summary || 'Milestone evidence submitted'),
           summary: String(doc.data?.summary || ''),
           status: nextStatus,
@@ -239,7 +249,7 @@ export function AutomationRuntime() {
 
       const matching = workflowsRef.current.filter(workflow => workflowMatchesEvent(workflow, detail))
       for (const workflow of matching) {
-        const runKey = workflow.id + ':' + detail.type + ':' + String(detail.payload?.id || detail.payload?.at || Date.now())
+        const runKey = workflow.id + ':' + detail.type + ':' + (eventId || String(detail.payload?.id || detail.payload?.at || now))
         if (activeRuns.current.has(runKey)) continue
         activeRuns.current.add(runKey)
 
