@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
+import { EvidencePreviewHost } from './components/EvidencePreview'
 import { Intro } from './components/Intro'
 import { Landing } from './screens/Landing'
 import { Logo } from './lib/Logo'
@@ -506,6 +507,7 @@ export default function App() {
         document.body,
       )}
       {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
+      <EvidencePreviewHost />
       <Toast />
       {writingAssistantMounted && <Suspense fallback={null}><WritingAssistant /></Suspense>}
     </>

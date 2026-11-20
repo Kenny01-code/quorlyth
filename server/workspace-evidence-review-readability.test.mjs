@@ -140,6 +140,22 @@ test('the evidence viewer traps keyboard focus and restores it when closed', asy
   assert.match(preview, /aria-modal="true"/)
 })
 
+test('evidence review is hosted in a stable body portal with a viewport-level blurred backdrop', async () => {
+  const [preview, app, styles] = await Promise.all([
+    source('src/components/EvidencePreview.tsx'),
+    source('src/App.tsx'),
+    source('src/styles/evidence-preview.css'),
+  ])
+  assert.match(preview, /EVIDENCE_PREVIEW_EVENT/)
+  assert.match(preview, /export function EvidencePreviewHost/)
+  assert.match(preview, /createPortal\([\s\S]*document\.body/)
+  assert.match(preview, /viewerPanelRef/)
+  assert.match(app, /<EvidencePreviewHost\s*\/>/)
+  assert.match(styles, /z-index:\s*2147483000/)
+  assert.match(styles, /backdrop-filter:\s*blur\(28px\)/)
+  assert.doesNotMatch(preview.slice(preview.indexOf('export function EvidencePreview('), preview.indexOf('export function EvidencePreviewHost')), /viewerOpen/)
+})
+
 test('the landing page no longer renders decorative 3D character layers', async () => {
   const landing = await source('src/screens/Landing.tsx')
   assert.doesNotMatch(landing, /CreatorMotion|HeroCreator|PreviewCreator/)
