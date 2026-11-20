@@ -161,7 +161,7 @@ test('workspace and task edits carry their own project context into local and pe
     source('src/lib/automation.ts'),
     source('src/components/AutomationRuntime.tsx'),
     source('src/screens/Automations.tsx'),
-    source('supabase/migrations/20261120091000_workspace_task_update_automation_events.sql'),
+    source('supabase/migrations/20261120083321_workspace_task_update_automation_events.sql'),
   ])
   assert.match(automation, /'task\.updated'/)
   assert.match(automation, /'workspace\.updated'/)
