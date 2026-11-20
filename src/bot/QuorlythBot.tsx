@@ -332,6 +332,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [stage, setStage] = useState<'std' | 'big' | 'off'>('std')
+  const [caption, setCaption] = useState('')
   const [status, setStatus] = useState('Online')
   const [thinkingTask, setThinkingTask] = useState('')
   const [q, setQ] = useState('')
@@ -487,9 +488,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       lastOpenedAt,
       now,
     })
-    if (greeting.kind === 'quiet') return
-    // The orb is reserved for Live Talk; normal welcome speech stays unobstructed.
+    if (greeting.kind === 'quiet') {
+      setCaption('')
+      return
+    }
+    // Keep the live-site greeting visible briefly on the Robot stage.
+    setCaption(greeting.text)
     say(greeting.text)
+    window.setTimeout(() => setCaption(''), 6500)
   }
 
   // The app defers loading this module until the lightweight launcher is clicked.
@@ -1101,6 +1107,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       robot.current?.think(true)
       setStatus('Thinking')
       setThinkingTask(taskPreview(t))
+      setCaption('')
     })
     ctl.current = new AbortController()
     let renderTimer: number | null = null
@@ -1283,6 +1290,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           if (renderTimer === null) {
             renderTimer = window.setTimeout(() => {
               renderTimer = null
+              setCaption(latestClean.slice(-140))
               setCur(prev => prev ? { ...prev, msgs: prev.msgs.filter(m => !(m as any).live).concat([{ r: 'a', t: latestClean, live: true } as any]) } : prev)
             }, 40)
           }
@@ -1298,6 +1306,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       persist(c)
       if (bs.voice) finishReplySpeech(clean)
       else robot.current?.talk(false)
+      window.setTimeout(() => setCaption(''), 1500)
     } catch (e: any) {
       if (renderTimer !== null) { window.clearTimeout(renderTimer); renderTimer = null }
       replySpeechController.abort()
@@ -1386,7 +1395,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   function step(steps: [string, string][], i: number) {
     const s = steps[i]
     if (!s) { setTour(-1); setCur(c => add(c, { r: 'a', t: 'That is the tour. Ask me anything whenever you like.' })); robot.current?.cheer(); return }
-    nav(s[0]); setCur(c => add(c, { r: 'a', t: s[1] })); robot.current?.set('point'); setTimeout(() => robot.current?.set('explain'), 900); say(s[1])
+    nav(s[0]); setCur(c => add(c, { r: 'a', t: s[1] })); setCaption(s[1]); robot.current?.set('point'); setTimeout(() => robot.current?.set('explain'), 900); say(s[1])
   }
 
   function isExplicitVoiceTaskRequest(text: string): boolean {
@@ -2053,6 +2062,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     stopSpeechPlayback()
     try { window.speechSynthesis?.cancel() } catch {}
     setLive(null)
+    setCaption('')
     robot.current?.talk(false)
   }
   useEffect(() => () => {
@@ -4008,7 +4018,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               </header>
               <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
                 <Robot ref={robot} theme={theme} calm={bs.calm} drag defer active={!minimized && ((view === 'chat' && bs.robot && stage !== 'off') || view === 'voice' || !!live)} />
-                <div className="bnm">QuorlythBot</div>
+                <div className={cn('ast-cap', caption && 'on')}>{caption}</div><div className="bnm">QuorlythBot</div>
               </div>
               <div
                 className={cn('qbot-conversation', view === 'chat' && 'qbot-chat-surface')}
