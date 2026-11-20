@@ -1,12 +1,10 @@
 import '../styles/bot.css'
-import '../styles/bot-room-theme.css'
-import '../styles/bot-liquid-glass.css'
+import '../styles/bot-composer-fluid-black.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
-import { QuorlythBotHead } from './QuorlythBotHead'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
@@ -16,9 +14,7 @@ import type { WorkflowAction, WorkflowActionType, WorkflowDefinition, WorkflowTr
 import { cn, slug, when } from '../lib/util'
 import { askJson, prefetchElevenLabsSpeech, speakText, startRealtime, stopSpeechPlayback, streamChat } from '../ai/client'
 import type { SpeechPlayback } from '../ai/client'
-import { Robot } from './Robot'
-import type { RobotApi } from './Robot'
-import { Orb } from './Orb'
+import { Robot, RobotApi } from './Robot'
 import { ChatMenu } from './ChatMenu'
 import { BotViews } from './views'
 import { SKILLS, THEMES, TOUR_MEMBER, TOUR_OWNER, VOICES } from './config'
@@ -3612,7 +3608,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         const now = Date.now()
         const project = {
           id: action.workspaceId, title: action.title.trim().slice(0, 100), summary: action.summary.trim().slice(0, 4000),
-          status: 'active' as const, createdBy: a.me.id, at: now, updatedAt: now, dueAt: null, visibility: 'team' as const,
+          status: 'active' as const, createdBy: a.me.id, updatedBy: a.me.id, at: now, updatedAt: now, dueAt: null, visibility: 'team' as const,
         }
         await a.backend.store.create(projectPath, project)
         try {
@@ -3625,7 +3621,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           try { await a.backend.store.delete(projectPath) } catch { /* retain original failure; do not report success */ }
           throw error
         }
-        emitWorkflowEvent('workspace.created', { id: action.workspaceId, title: project.title, summary: project.summary, projectId: action.workspaceId, at: now })
         ok = true
         successOverride = 'Private workspace created. Opening your new project space now.'
       } else if (action.type === 'updateStandaloneWorkspace') {
@@ -3640,6 +3635,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         const patch = {
           ...(action.patch.title !== undefined ? { title: action.patch.title.trim().slice(0, 100) } : {}),
           ...(action.patch.summary !== undefined ? { summary: action.patch.summary.trim().slice(0, 4000) } : {}),
+          updatedBy: a.me.id,
           updatedAt: Date.now(),
         }
         if (patch.title !== undefined && patch.title.length < 2) throw new Error('Workspace names need at least two characters.')
@@ -3654,7 +3650,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         const rows = await a.backend.store.exportAll()
         const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
         if (current.createdBy !== a.me.id && member?.role !== 'owner' && member?.role !== 'manager') throw new Error('Only the workspace owner or an active manager can change its status.')
-        await a.backend.store.update(projectPath, { status: action.status, updatedAt: Date.now() })
+        if (action.status === 'completed' && current.finalReview?.status !== 'completed') {
+          throw new Error('A workspace can only be completed through its AI evidence closeout. Review the task evidence, then use Mark project complete.')
+        }
+        const statusUpdatedAt = Date.now()
+        await a.backend.store.update(projectPath, { status: action.status, updatedBy: a.me.id, updatedAt: statusUpdatedAt })
         ok = true
       } else if (action.type === 'createStandaloneTask') {
         if (!a.me || !a.backend) throw new Error('Sign in before adding a workspace task.')
@@ -3670,7 +3670,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         await a.backend.store.create(taskPath, {
           id: action.taskId, projectId: action.workspaceId, title: action.title.trim().slice(0, 140),
           description: action.description.trim().slice(0, 2000), acceptanceCriteria: action.acceptanceCriteria.trim().slice(0, 1000),
-          status: 'todo', createdBy: a.me.id, at: now, updatedAt: now, dueAt: null, assigneeId: null,
+          status: 'todo', createdBy: a.me.id, updatedBy: a.me.id, at: now, updatedAt: now, dueAt: null, assigneeId: null,
         })
         ok = true
       } else if (action.type === 'updateStandaloneTask') {
@@ -3687,6 +3687,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           ...(action.patch.title !== undefined ? { title: action.patch.title.trim().slice(0, 140) } : {}),
           ...(action.patch.description !== undefined ? { description: action.patch.description.trim().slice(0, 2000) } : {}),
           ...(action.patch.acceptanceCriteria !== undefined ? { acceptanceCriteria: action.patch.acceptanceCriteria.trim().slice(0, 1000) } : {}),
+          updatedBy: a.me.id,
           updatedAt: Date.now(),
         }
         if (patch.title !== undefined && patch.title.length < 2) throw new Error('Task titles need at least two characters.')
@@ -3701,13 +3702,19 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         if (!currentProject || currentProject.status === 'completed' || !currentTask || currentTask.projectId !== action.workspaceId || currentTask.title !== action.currentTitle) throw new Error('That task is no longer available to start.')
         const rows = await a.backend.store.exportAll()
         const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
-        const canManage = currentProject.createdBy === a.me.id || member?.role === 'owner' || member?.role === 'manager'
-        const canContribute = canManage || member?.role === 'contributor'
-        if (!canContribute) throw new Error('Only an active project owner, manager or contributor can start tasks.')
-        if (currentTask.status === 'done') throw new Error('This task is already completed through the approved evidence flow.')
-        const currentAssignees = Array.from(new Set([...(Array.isArray(currentTask.assigneeIds) ? currentTask.assigneeIds : []), ...(currentTask.assigneeId ? [currentTask.assigneeId] : [])]))
-        if (currentAssignees.length && !currentAssignees.includes(a.me.id) && !canManage) throw new Error('This task is assigned to another teammate.')
-        await a.backend.store.update(taskPath, { status: 'in_progress', ...(!currentAssignees.length ? { assigneeId: a.me.id, assigneeIds: [a.me.id] } : {}), updatedAt: Date.now() })
+        const linkedIdea = currentProject.linkedIdeaId
+          ? a.data.ideas.find(idea => idea.id === currentProject.linkedIdeaId)
+          : undefined
+        const linkedCommunity = linkedIdea
+          ? a.data.communities.find(community => community.id === linkedIdea.cid)
+          : undefined
+        const isCommunityOwner = linkedCommunity?.ownerId === a.me.id || linkedCommunity?.createdBy === a.me.id
+        const canManage = currentProject.createdBy === a.me.id || member?.role === 'owner' || member?.role === 'manager' || isCommunityOwner
+        const canStartTask = canManage || currentTask.createdBy === a.me.id
+        if (!canStartTask) throw new Error('Only the task creator, linked community owner, or workspace owner/manager can start this task.')
+        if (currentTask.status !== 'todo') throw new Error(currentTask.status === 'done' ? 'This task is already completed through the approved evidence flow.' : 'This task has already been started.')
+        const startedAt = Date.now()
+        await a.backend.store.update(taskPath, { status: 'in_progress', startedAt, startedBy: a.me.id, updatedBy: a.me.id, updatedAt: startedAt })
         ok = true
       } else if (action.type === 'assignStandaloneTask') {
         if (!a.me || !a.backend) throw new Error('Sign in before assigning a workspace task.')
@@ -3725,7 +3732,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         ].filter(Boolean))
         const ids = Array.from(new Set(action.assigneeIds))
         if (ids.some(id => !validAssignees.has(id))) throw new Error('A selected assignee is no longer an active owner, manager or contributor in this workspace. Refresh the team list and try again.')
-        await a.backend.store.update(taskPath, { assigneeIds: ids, assigneeId: ids[0] || null, updatedAt: Date.now() })
+        await a.backend.store.update(taskPath, { assigneeIds: ids, assigneeId: ids[0] || null, updatedBy: a.me.id, updatedAt: Date.now() })
         ok = true
         successOverride = ids.length ? 'Task assigned to ' + action.assigneeNames.join(', ') + '.' : 'Task assignments cleared. The task is now unassigned.'
       } else if (action.type === 'deleteStandaloneTask') {
@@ -3896,44 +3903,23 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
 
   return (
     <>
-      {launcherHidden ? (
-        <button
-          type="button"
-          className="qbot-launcher-restore"
-          aria-label="Restore QuorlythBot launcher"
-          title="Right-click or click to show QuorlythBot"
-          onClick={() => {
-            try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-            setLauncherHidden(false)
-          }}
-          onContextMenu={event => {
-            event.preventDefault()
-            try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-            setLauncherHidden(false)
-          }}
-        >
-          <span className="qbot-launcher-restore-mark" aria-hidden="true" />
-          <span className="qbot-launcher-restore-tip">Right-click to show QuorlythBot</span>
-        </button>
-      ) : (
-        <button
-          id="astl"
-          type="button"
-          className={cn('astl', open && 'hide')}
-          aria-label="Open QuorlythBot"
-          aria-expanded={open}
-          aria-controls="ast"
-          title="Ask QuorlythBot. Right-click to hide this launcher."
-          onClick={openPanel}
-          onContextMenu={event => {
-            event.preventDefault()
-            try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
-            setLauncherHidden(true)
-          }}
-        >
-          <span className="astm"><QuorlythBotHead size={38} /></span>{greet && <span className="astb">{greet}</span>}
-        </button>
-      )}
+      {!launcherHidden && <button
+        id="astl"
+        type="button"
+        className={cn('astl', open && 'hide')}
+        aria-label="Open QuorlythBot"
+        aria-expanded={open}
+        aria-controls="ast"
+        title="Ask QuorlythBot. Right-click to hide this launcher."
+        onClick={openPanel}
+        onContextMenu={event => {
+          event.preventDefault()
+          try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
+          setLauncherHidden(true)
+        }}
+      >
+        <span className="astm"><Logo size={30} /></span>{greet && <span className="astb">{greet}</span>}
+      </button>}
       {open && (
         <div id="ast">
           <div id="bot" className={cn('astp glass bot qbot-sidebar-compact-v2', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
@@ -4009,10 +3995,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 </div>
               </header>
               <div className={cn('bstage', stage, !bs.robot && 'off', view === 'voice' && 'studio')} style={{ display: (view === 'chat' || view === 'voice' || live) && bs.robot && stage !== 'off' || view === 'voice' || live ? '' : 'none' }}>
-                {view === 'voice' || !!live
-                  ? <Orb ref={robot} theme={theme} calm={bs.calm} drag defer active={!minimized && (view === 'voice' || !!live)} />
-                  : <Robot ref={robot} theme={theme} calm={bs.calm} drag active={!minimized && view === 'chat' && bs.robot && stage !== 'off'} />}
-                <div className="bnm">QuorlythBot</div>
+                <Robot ref={robot} theme={theme} calm={bs.calm} drag defer active={!minimized && ((view === 'chat' && bs.robot && stage !== 'off') || view === 'voice' || !!live)} />
+                <div className={cn('ast-cap', caption && 'on')}>{caption}</div><div className="bnm">QuorlythBot</div>
               </div>
               <div
                 className={cn('qbot-conversation', view === 'chat' && 'qbot-chat-surface')}
