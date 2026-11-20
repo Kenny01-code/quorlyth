@@ -523,26 +523,21 @@ test('QuorlythBot chat frame reduces expensive blur and offscreen transcript ren
   assert.match(robot, /if\(!lowPower\)addEventListener\(["']pointermove["']/)
 })
 
-test('QuorlythBot uses a darker solid burnt-orange 3D shell with the original dark face', async () => {
-  const [theme, robot] = await Promise.all([
+test('QuorlythBot restores the original live-site Robot palette with Onyx default', async () => {
+  const [theme, config, bot, robot] = await Promise.all([
     readSource('src/bot/robot-themes.ts'),
-    readSource('src/bot/robot3d.ts'),
+    readSource('src/bot/config.ts'),
+    readSource('src/bot/QuorlythBot.tsx'),
+    readSource('src/bot/Robot.tsx'),
   ])
-  assert.ok(theme.includes('p: 0xc9562e'))
-  assert.ok(theme.includes('b: 0x211a17'))
-  assert.ok(theme.includes('c: 0xa64829'))
-  assert.ok(theme.includes('e: 0x6f2b1a'))
-  assert.ok(theme.includes("g1: '#C9562E'"))
-  assert.ok(theme.includes("g2: '#6F2B1A'"))
-  assert.ok(theme.includes("cr: '201,86,46'"))
-  assert.match(robot, /shell\.color\.setHex\(T\.p\)/)
-  assert.match(robot, /arm\.color\.setHex\(T\.p\)/)
-  assert.match(robot, /shell\.roughness=\.46/)
-  assert.match(robot, /arm\.roughness=\.45/)
-  assert.match(robot, /color:0xc9562e/)
-  assert.match(robot, /new DirectionalLight\(0xffddc2,1\.08\)/)
-  assert.ok(!theme.includes('p: 0xef784b'))
-  assert.ok(!theme.includes('p: 0xd06a40'))
+  assert.ok(theme.includes('onyx:{n:"Onyx",p:0x1b1b1d,b:0x000000,c:0xcfcfcf'))
+  assert.ok(theme.includes('champagne:{n:"Champagne"'))
+  assert.ok(theme.includes('glacier:{n:"Glacier"'))
+  assert.ok(config.includes("theme: 'onyx' }"))
+  assert.ok(bot.includes('const theme = bs.theme || \'onyx\''))
+  assert.ok(bot.includes("(c.color && (THEMES as any)[c.color]) || null"))
+  assert.ok(robot.includes("theme = 'onyx'"))
+  assert.doesNotMatch(theme, /terracotta/)
 })
 
 
@@ -694,12 +689,21 @@ test('Settings access-request queues scroll independently with no visible scroll
   assert.match(styles, /display: none/)
 })
 
-test('QuorlythBot loading and restore glows use the uploaded orange swatch', async () => {
-  const contrast = await readSource('src/styles/contrast-system.css')
-  assert.match(contrast, /background: linear-gradient\(180deg, #F3A17C, #D06A40 60%, #843A25\)/)
-  assert.match(contrast, /border-top-color: #D06A40/)
-  assert.match(contrast, /rgba\(208, 106, 64, \.12\)/)
+test('QuorlythBot uses the original live-site loading state and reversible launcher handoff', async () => {
+  const [robot, app, bot] = await Promise.all([
+    readSource('src/bot/Robot.tsx'),
+    readSource('src/App.tsx'),
+    readSource('src/bot/QuorlythBot.tsx'),
+  ])
+  assert.match(robot, /className="ast-fb"/)
+  assert.match(robot, /className="ast-ld"/)
+  assert.match(robot, /Load the robot/)
+  assert.doesNotMatch(robot, /qbot-robot-loading-glow|qbot-robot-retry/)
+  assert.match(app, /quorlyth:launcher-restore/)
+  assert.match(bot, /window\.addEventListener\('quorlyth:launcher-restore', restoreLauncher\)/)
+  assert.match(bot, /<span className="astm"><Logo size=\{30\} \/><\/span>/)
 })
+
 
 test('platform admins use the shared layered orange role badge in My Space and public community cards', async () => {
   const [me, badges, css] = await Promise.all([

@@ -357,7 +357,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const initialPromptHandled = useRef(0)
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
   const project = bd.projects.find(p => p.id === pj) || null
-  const theme = 'terracotta'
+  const theme = bs.theme || 'onyx'
   const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
   const wide = !narrow
 
@@ -407,6 +407,16 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     if (Object.keys(updates).length) bd.saveSettings(updates)
   }, [a.me?.id, bd.doc('botset')?.model])
 
+  useEffect(() => {
+    if (!a.me || !bd.doc('botset')) return
+    const key = 'qbot-live-theme-default-v1:' + a.me.id
+    try {
+      if (localStorage.getItem(key)) return
+      if (bs.theme === 'terracotta' || bs.theme === 'pearl') bd.saveSettings({ theme: 'onyx' })
+      localStorage.setItem(key, '1')
+    } catch { /* Keep the current appearance if browser storage is unavailable. */ }
+  }, [a.me?.id, bd.doc('botset')?.theme])
+
   // greeting bubble on the launcher, first time visitors get a wave when opened
   useEffect(() => {
     if (!a.ready) return
@@ -439,8 +449,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     return () => window.clearTimeout(timer)
   }, [voiceRequest])
 
-  const accent = THEMES.terracotta
-  const style = { ['--ac1' as any]: accent.g1, ['--ac2' as any]: accent.g2, ['--acr' as any]: accent.cr } as React.CSSProperties
+  const accent = (cur?.color && (THEMES as any)[cur.color]) || null
+  const style = accent
+    ? { ['--ac1' as any]: accent.g1, ['--ac2' as any]: accent.g2, ['--acr' as any]: accent.cr } as React.CSSProperties
+    : {}
 
   function openPanel() {
     setOpen(true)
@@ -2184,7 +2196,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const searchResults = [...new Map(shown.map(c => [c.id, c])).values()]
   const active = shown.filter(c => !c.arch), pinned = active.filter(c => c.pin), recent = active.filter(c => !c.pin), arch = shown.filter(c => c.arch)
   const item = (c: Chat) => {
-    const T = THEMES.terracotta
+    const T = (c.color && (THEMES as any)[c.color]) || null
     return (
       <div key={c.id} className={cn('bci', cur?.id === c.id && view === 'chat' && 'on', T && 'tint', c.unread && 'unread')} tabIndex={0} role="button" aria-label={'Open chat: ' + c.title}
         style={T ? ({ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any) : undefined}
