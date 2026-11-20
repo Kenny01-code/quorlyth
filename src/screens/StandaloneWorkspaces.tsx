@@ -500,8 +500,11 @@ function WorkspaceProjectView() {
     for (const artifact of [...taskEvidence].sort((first, second) => second.submittedAt - first.submittedAt)) {
       if (!latestByContributor.has(artifact.submittedBy)) latestByContributor.set(artifact.submittedBy, artifact)
     }
+    const lastTaskChange = Number(task.updatedAt) || Number(task.at) || 0
     return [...latestByContributor.values()].some(artifact =>
-      artifact.status === 'approved' && artifact.aiReview?.status !== 'screening'
+      artifact.status === 'approved'
+      && artifact.aiReview?.status !== 'screening'
+      && Number(artifact.reviewedAt) > lastTaskChange
     )
   }
   const projectReadyForFinal = projectTasks.length > 0
