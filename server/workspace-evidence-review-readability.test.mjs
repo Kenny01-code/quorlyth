@@ -156,6 +156,26 @@ test('evidence review is hosted in a stable body portal with a viewport-level bl
   assert.doesNotMatch(preview.slice(preview.indexOf('export function EvidencePreview('), preview.indexOf('export function EvidencePreviewHost')), /viewerOpen/)
 })
 
+test('workspace and task edits carry their own project context into local and persistent automations', async () => {
+  const [automation, runtime, builder, migration] = await Promise.all([
+    source('src/lib/automation.ts'),
+    source('src/components/AutomationRuntime.tsx'),
+    source('src/screens/Automations.tsx'),
+    source('supabase/migrations/20261120091000_workspace_task_update_automation_events.sql'),
+  ])
+  assert.match(automation, /'task\.updated'/)
+  assert.match(automation, /'workspace\.updated'/)
+  assert.match(automation, /targetWorkspace\.status/)
+  assert.match(automation, /sourceEventType: event\.type/)
+  assert.match(runtime, /emitWorkflowEvent\('workspace\.updated'/)
+  assert.match(runtime, /emitWorkflowEvent\('task\.updated'/)
+  assert.match(runtime, /workspaceId: String\(doc\.data\?\.projectId/)
+  assert.match(builder, /trigger: 'task\.updated'/)
+  assert.match(builder, /trigger: 'workspace\.updated'/)
+  assert.match(migration, /'workspace\.updated'/)
+  assert.match(migration, /'task\.updated'/)
+})
+
 test('the landing page no longer renders decorative 3D character layers', async () => {
   const landing = await source('src/screens/Landing.tsx')
   assert.doesNotMatch(landing, /CreatorMotion|HeroCreator|PreviewCreator/)

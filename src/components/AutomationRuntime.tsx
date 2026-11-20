@@ -53,7 +53,9 @@ export function AutomationRuntime() {
     const unsubscribes: Array<() => void> = []
     const seenIdeas = new Set<string>()
     const seenProjects = new Set<string>()
+    const projectSignatures = new Map<string, string>()
     const taskStatuses = new Map<string, string>()
+    const taskSignatures = new Map<string, string>()
     const milestoneStatuses = new Map<string, string>()
     const artifactStatuses = new Map<string, string>()
     const workSubmissionStatuses = new Map<string, string>()
@@ -84,41 +86,72 @@ export function AutomationRuntime() {
     unsubscribes.push(store.subscribe('standaloneProjects', docs => {
       if (!alive) return
       if (!projectsReady) {
-        docs.forEach(doc => seenProjects.add(doc.id))
+        docs.forEach(doc => {
+          seenProjects.add(doc.id)
+          projectSignatures.set(doc.id, JSON.stringify([doc.data?.title, doc.data?.summary, doc.data?.dueAt, doc.data?.status]))
+        })
         projectsReady = true
         return
       }
       for (const doc of docs) {
-        if (seenProjects.has(doc.id)) continue
-        seenProjects.add(doc.id)
-        emitWorkflowEvent('workspace.created', { id: doc.id, projectId: doc.id, title: String(doc.data?.title || ''), summary: String(doc.data?.summary || ''), at: Number(doc.data?.at) || Date.now() })
+        const signature = JSON.stringify([doc.data?.title, doc.data?.summary, doc.data?.dueAt, doc.data?.status])
+        const payload = {
+          id: doc.id,
+          projectId: doc.id,
+          workspaceId: doc.id,
+          title: String(doc.data?.title || ''),
+          summary: String(doc.data?.summary || ''),
+          status: String(doc.data?.status || 'active'),
+          dueAt: doc.data?.dueAt ?? null,
+          actorId: String(doc.data?.updatedBy || doc.data?.createdBy || ''),
+          at: Number(doc.data?.updatedAt || doc.data?.at) || Date.now(),
+        }
+        if (!seenProjects.has(doc.id)) {
+          seenProjects.add(doc.id)
+          projectSignatures.set(doc.id, signature)
+          emitWorkflowEvent('workspace.created', payload)
+          continue
+        }
+        const previous = projectSignatures.get(doc.id)
+        projectSignatures.set(doc.id, signature)
+        if (previous !== undefined && previous !== signature) emitWorkflowEvent('workspace.updated', payload)
       }
     }, error => console.warn('Workflow workspace trigger could not refresh:', error)))
 
     unsubscribes.push(store.subscribe('standaloneTasks', docs => {
       if (!alive) return
       if (!tasksReady) {
-        docs.forEach(doc => taskStatuses.set(doc.id, String(doc.data?.status || 'todo')))
+        docs.forEach(doc => {
+          taskStatuses.set(doc.id, String(doc.data?.status || 'todo'))
+          taskSignatures.set(doc.id, JSON.stringify([doc.data?.title, doc.data?.description, doc.data?.acceptanceCriteria, doc.data?.dueAt, doc.data?.assigneeId, doc.data?.assigneeIds, doc.data?.status]))
+        })
         tasksReady = true
         return
       }
       for (const doc of docs) {
         const nextStatus = String(doc.data?.status || 'todo')
         const previousStatus = taskStatuses.get(doc.id)
+        const signature = JSON.stringify([doc.data?.title, doc.data?.description, doc.data?.acceptanceCriteria, doc.data?.dueAt, doc.data?.assigneeId, doc.data?.assigneeIds, nextStatus])
+        const previousSignature = taskSignatures.get(doc.id)
         taskStatuses.set(doc.id, nextStatus)
+        taskSignatures.set(doc.id, signature)
         const payload = {
           id: doc.id,
           taskId: doc.id,
           projectId: String(doc.data?.projectId || ''),
+          workspaceId: String(doc.data?.projectId || ''),
           title: String(doc.data?.title || ''),
           summary: String(doc.data?.description || ''),
+          status: nextStatus,
+          dueAt: doc.data?.dueAt ?? null,
+          actorId: String(doc.data?.updatedBy || doc.data?.createdBy || doc.data?.assigneeId || ''),
           at: Number(doc.data?.updatedAt) || Date.now(),
         }
         if (previousStatus === 'todo' && nextStatus === 'in_progress') emitWorkflowEvent('task.started', payload)
-        if (previousStatus && previousStatus !== 'done' && nextStatus === 'done') emitWorkflowEvent('task.completed', payload)
+        else if (previousStatus && previousStatus !== 'done' && nextStatus === 'done') emitWorkflowEvent('task.completed', payload)
+        else if (previousStatus !== undefined && previousSignature !== undefined && previousSignature !== signature) emitWorkflowEvent('task.updated', payload)
       }
     }, error => console.warn('Workflow task trigger could not refresh:', error)))
-
     unsubscribes.push(store.subscribe('milestones', docs => {
       if (!alive) return
       if (!milestonesReady) {
@@ -195,7 +228,8 @@ export function AutomationRuntime() {
     const onWorkflowEvent = (raw: Event) => {
       const detail = (raw as CustomEvent<WorkflowEventDetail>).detail
       if (!detail?.type) return
-      const eventId = String(detail.payload?.id || detail.payload?.taskId || detail.payload?.at || '')
+      const isEditEvent = detail.type === 'workspace.updated' || detail.type === 'task.updated'
+      const eventId = String(detail.payload?.eventId || (isEditEvent ? detail.payload?.at || detail.payload?.updatedAt || '' : detail.payload?.id || detail.payload?.taskId || detail.payload?.at || ''))
       const dedupeKey = detail.type + ':' + eventId
       const now = Date.now()
       const previousEventAt = recentEvents.current.get(dedupeKey)

@@ -1,6 +1,6 @@
 import type { DocStore } from '../data/docstore'
 
-export type WorkflowTrigger = 'manual' | 'idea.created' | 'task.started' | 'task.completed' | 'workspace.created' | 'milestone.started' | 'evidence.submitted' | 'evidence.reviewed' | 'deadline.reached'
+export type WorkflowTrigger = 'manual' | 'idea.created' | 'task.started' | 'task.updated' | 'task.completed' | 'workspace.created' | 'workspace.updated' | 'milestone.started' | 'evidence.submitted' | 'evidence.reviewed' | 'deadline.reached'
 export type WorkflowActionType = 'notify' | 'create_task' | 'webhook'
 export type WorkflowConditionField = 'text' | 'title' | 'body' | 'summary' | 'event.type' | 'event.entityType'
 export type WorkflowConditionOperator = 'contains' | 'equals' | 'not_contains' | 'starts_with'
@@ -96,8 +96,10 @@ export const TRIGGER_INFO: Record<WorkflowTrigger, { title: string; description:
   manual: { title: 'Run manually', description: 'Start this workflow whenever you choose.' },
   'idea.created': { title: 'A new idea is submitted', description: 'Runs when someone shares an idea in a Quorlyth community.' },
   'task.started': { title: 'A teammate starts a task', description: 'Runs when an assigned workspace contributor begins work.' },
+  'task.updated': { title: 'A workspace task is updated', description: 'Runs when a task title, brief, due date, status or assignment changes in its workspace.' },
   'task.completed': { title: 'A workspace task is completed', description: 'Runs after a standalone workspace task has been completed.' },
   'workspace.created': { title: 'A workspace is created', description: 'Runs when you create a new independent project workspace.' },
+  'workspace.updated': { title: 'A workspace is updated', description: 'Runs when a workspace name, project brief, status or deadline changes.' },
   'milestone.started': { title: 'A collaboration milestone starts', description: 'Runs when an assigned collaborator starts a planned outcome.' },
   'evidence.submitted': { title: 'Work evidence is submitted', description: 'Runs when a contributor submits a deliverable for review.' },
   'evidence.reviewed': { title: 'Evidence is reviewed', description: 'Runs when a workspace reviewer approves evidence or requests changes.' },
@@ -464,6 +466,17 @@ export async function executeWorkflowActions(
       } else if (action.type === 'create_task') {
         const projectId = String(action.projectId || '').trim()
         if (!projectId) throw new Error('Choose a workspace for the task action.')
+        const targetWorkspace = await store.get('standaloneProjects/' + projectId)
+        if (!targetWorkspace) throw new Error('The workspace selected for this automation no longer exists. Choose an active workspace and save the workflow again.')
+        if (String(targetWorkspace.status || 'active') === 'completed') throw new Error('This workspace is already complete. Choose an active workspace for new automation tasks.')
+        const targetMembership = await store.get('standaloneProjectMembers/' + projectId + '__' + userId)
+        const canManageTarget = targetWorkspace.createdBy === userId || (
+          targetMembership?.projectId === projectId
+          && targetMembership?.userId === userId
+          && targetMembership?.status === 'active'
+          && ['owner', 'manager'].includes(String(targetMembership?.role || ''))
+        )
+        if (!canManageTarget) throw new Error('Your workspace manager access has changed. Reopen Automation Studio and select a workspace you still manage.')
         const title = interpolate(action.taskTitle || 'Follow up: {{event.title}}', workflow, event).slice(0, 140)
         if (title.length < 2) throw new Error('Give the generated task a title.')
         const description = interpolate(action.taskDescription || 'Created by {{workflow.name}}.\n\nContext: {{event.body}}', workflow, event).slice(0, 2000)
@@ -477,10 +490,16 @@ export async function executeWorkflowActions(
           acceptanceCriteria: criteria,
           status: 'todo',
           createdBy: userId,
+          updatedBy: userId,
+          automationWorkflowId: workflow.id,
+          automationRunId: run.id,
+          sourceEventId: String(event.payload.id || ''),
+          sourceEventType: event.type,
           at,
           updatedAt: at,
           dueAt: null,
           assigneeId: null,
+          assigneeIds: [],
         })
         await mark(node, 'success', 'Created "' + title + '" in the selected workspace.')
       } else if (action.type === 'webhook') {

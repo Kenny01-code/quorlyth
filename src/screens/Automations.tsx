@@ -87,6 +87,8 @@ function SocialConnectionMark({ provider }: { provider: SocialConnection['provid
 const TEMPLATES: Template[] = [
   { key: 'idea-alert', name: 'New idea alert', description: 'Notify your team when a fresh community idea enters the system.', trigger: 'idea.created', action: 'notify', message: 'New idea submitted: {{event.title}}' },
   { key: 'task-handoff', name: 'Completed task handoff', description: 'Send a handoff notice when a contributor completes an assigned task.', trigger: 'task.completed', action: 'notify', message: 'Task completed: {{event.title}}. Review the evidence and confirm the next step.' },
+  { key: 'task-change', name: 'Task change alert', description: 'Notify your team when task details, due dates or assignments change.', trigger: 'task.updated', action: 'notify', message: 'Task updated: {{event.title}}. Check the latest brief, due date and assignment in its workspace.' },
+  { key: 'workspace-change', name: 'Workspace change digest', description: 'Notify your team when a project brief, status or due date changes.', trigger: 'workspace.updated', action: 'notify', message: 'Workspace updated: {{event.title}}. Review the latest project brief and schedule.' },
   { key: 'idea-review', name: 'Idea → delivery task', description: 'Turn a new idea into a real task inside a workspace you manage.', trigger: 'idea.created', action: 'create_task' },
   { key: 'evidence-review', name: 'Evidence review alert', description: 'Notify a reviewer whenever a contributor submits work for inspection.', trigger: 'evidence.submitted', action: 'notify', message: 'Evidence submitted for {{event.title}}. Check Quorlyth’s alignment notes and inspect the deliverable.' },
   { key: 'milestone-start', name: 'Milestone progress update', description: 'Keep the team informed when an assigned collaboration outcome moves into progress.', trigger: 'milestone.started', action: 'notify', message: 'Work has started on {{event.title}}. Keep the definition of done visible.' },
@@ -145,7 +147,8 @@ function TriggerGlyph({ trigger }: { trigger: WorkflowTrigger }) {
   const glyph = trigger === 'idea.created' ? 'idea'
     : trigger === 'task.completed' ? 'complete'
     : trigger === 'task.started' || trigger === 'milestone.started' ? 'start'
-    : trigger === 'workspace.created' ? 'workspace'
+    : trigger === 'workspace.created' || trigger === 'workspace.updated' ? 'workspace'
+    : trigger === 'task.updated' ? 'edit'
     : trigger === 'evidence.submitted' ? 'upload'
     : trigger === 'evidence.reviewed' ? 'review'
     : 'start'

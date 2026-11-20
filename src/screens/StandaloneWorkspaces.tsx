@@ -589,7 +589,7 @@ function WorkspaceProjectView() {
     if (!project || !a.backend) return
     if (isPastDateChange(projectDueDate, dateInput(project.dueAt))) return setError(PAST_DATE_MESSAGE)
     await runAction('save-project', async () => {
-      await a.backend!.store.update('standaloneProjects/' + project.id, { title: projectTitle.trim(), summary: projectSummary.trim(), dueAt: dateEnd(projectDueDate), updatedAt: Date.now() })
+      await a.backend!.store.update('standaloneProjects/' + project.id, { title: projectTitle.trim(), summary: projectSummary.trim(), dueAt: dateEnd(projectDueDate), updatedBy: a.me!.id, updatedAt: Date.now() })
       a.toast('Workspace details saved.')
     })
   }
