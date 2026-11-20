@@ -59,6 +59,8 @@ test('workspace and task edit events have unique run IDs and full source context
   assert.match(worker, /sourceEventType: String\(event\.trigger_type \|\| ''\)/)
   assert.match(worker, /sourceWorkspaceId: String\(event\.payload\?\.workspaceId/)
   assert.match(worker, /updatedBy: ownerId/)
+  assert.match(worker, /sourceEventId: String\(event\.id \|\| event\.payload\?\.eventId/)
+  assert.match(worker, /sourceActorId: String\(event\.payload\?\.actorId/ )
   assert.match(migration, /'entityType', 'workspace'/)
   assert.match(migration, /'entityType', 'task'/)
   assert.match(migration, /'entityType', 'evidence'/)
