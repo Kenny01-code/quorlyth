@@ -767,6 +767,6 @@ test('QuorlythBot uses the live-site black room styles without global glass over
   assert.doesNotMatch(bot, /bot-room-theme\.css|bot-liquid-glass\.css/)
   assert.ok(baseStyles.includes('.qbot-conversation .am'))
   assert.ok(baseStyles.includes('.bsb'))
-  assert.ok(composer.includes('.ast-in'))
+  assert.ok(composer.includes('.bsl'))
   assert.ok(composer.includes('background: #050506'))
 })
