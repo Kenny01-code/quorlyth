@@ -509,6 +509,8 @@ export async function executeWorkflowActions(
           sourceEventId: String(event.payload.eventId || event.payload.at || event.payload.id || ''),
           sourceEntityId: String(event.payload.id || event.payload.taskId || ''),
           sourceEventType: event.type,
+          sourceEntityType: String(event.payload.entityType || ''),
+          sourceActorId: String(event.payload.actorId || ''),
           sourceWorkspaceId: String(event.payload.workspaceId || event.payload.projectId || ''),
           sourceTaskId: String(event.payload.taskId || ''),
           at,
