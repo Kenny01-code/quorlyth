@@ -232,9 +232,11 @@ async function runAction(
       assigneeId: null,
       automationWorkflowId: workflow.id,
       automationRunId: runId,
-      sourceEventId: String(event.payload?.eventId || event.payload?.at || event.payload?.id || ''),
+      sourceEventId: String(event.id || event.payload?.eventId || event.payload?.at || event.payload?.id || ''),
       sourceEntityId: String(event.payload?.id || event.payload?.taskId || ''),
       sourceEventType: String(event.trigger_type || ''),
+      sourceEntityType: String(event.payload?.entityType || ''),
+      sourceActorId: String(event.payload?.actorId || ''),
       sourceWorkspaceId: String(event.payload?.workspaceId || event.payload?.projectId || ''),
       sourceTaskId: String(event.payload?.taskId || ''),
     });
