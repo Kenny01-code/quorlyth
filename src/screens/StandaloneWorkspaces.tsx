@@ -774,7 +774,7 @@ function WorkspaceProjectView() {
   }
 
   async function startTask(task: WorkspaceTask) {
-    if (!a.backend || !a.me) return
+    if (!a.backend || !a.me || !project) return
     if (!canManageTask(task)) {
       setError('Only the task creator, community owner, or workspace manager can start this task.')
       return
