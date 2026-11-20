@@ -933,3 +933,47 @@ details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7
 .sw-review-controls .sw-field>span{
   letter-spacing:.01em;
 }
+
+
+/* Project closeout is a distinct, evidence-led action rather than a per-task toggle. */
+.sw-finalization-panel,
+.sw-final-review-panel {
+  display: grid;
+  gap: 16px;
+  margin: 18px 0;
+  padding: clamp(17px, 2.6vw, 26px);
+  border: 1px solid rgba(249,115,22,.24);
+  border-radius: 20px;
+  color: var(--text, #f0ead9);
+  background:
+    radial-gradient(ellipse 70% 110% at 0% 0%, rgba(249,115,22,.09), transparent 68%),
+    linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+}
+.sw-finalization-panel h3,
+.sw-final-review-panel h3 { margin: 4px 0 6px; font-size: clamp(17px, 2vw, 21px); font-weight: 520; letter-spacing: -.025em; }
+.sw-finalization-panel > div:first-child p:last-child,
+.sw-final-review-panel__top p { margin: 0; max-width: 760px; color: var(--muted, #c6bca8); font-size: 12px; line-height: 1.7; }
+.sw-finalization-panel__metrics { display: flex; flex-wrap: wrap; gap: 8px; }
+.sw-finalization-panel__metrics span { display: flex; align-items: baseline; gap: 6px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; color: var(--muted, #c6bca8); font-size: 10px; }
+.sw-finalization-panel__metrics strong { color: var(--text, #f0ead9); font-size: 14px; font-variant-numeric: tabular-nums; }
+.sw-finalization-panel > button { width: fit-content; max-width: 100%; }
+.sw-finalization-panel > small,
+.sw-final-review-panel__scope { color: var(--muted, #c6bca8); font-size: 10px; line-height: 1.65; }
+.sw-finalization-panel > small { max-width: 760px; }
+.sw-final-review-panel__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.sw-final-review-panel__score { flex: none; padding: 9px 11px; border: 1px solid rgba(249,115,22,.28); border-radius: 12px; color: #ffb276; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sw-final-review-panel__winner { display: grid; gap: 4px; padding: 14px; border: 1px solid rgba(249,115,22,.2); border-radius: 13px; background: rgba(249,115,22,.055); }
+.sw-final-review-panel__winner span { color: var(--muted, #c6bca8); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.sw-final-review-panel__winner strong { font-size: 18px; font-weight: 560; }
+.sw-final-review-panel > .q-writeup { margin: 0; color: var(--text, #f0ead9); font-size: 12px; line-height: 1.75; }
+.sw-final-review-panel__results { display: grid; gap: 8px; }
+.sw-final-review-panel__results article { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 5px 14px; padding: 12px; border: 1px solid rgba(255,255,255,.085); border-radius: 12px; background: rgba(0,0,0,.12); }
+.sw-final-review-panel__results article > div { display: grid; gap: 4px; min-width: 0; }
+.sw-final-review-panel__results article strong { font-size: 12px; font-weight: 550; overflow-wrap: anywhere; }
+.sw-final-review-panel__results article small { color: var(--muted, #c6bca8); font-size: 10px; }
+.sw-final-review-panel__results article > span { color: #ffb276; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sw-final-review-panel__results article > p { grid-column: 1 / -1; margin: 0; color: var(--muted, #c6bca8); font-size: 11px; line-height: 1.65; }
+@media(max-width:620px) {
+  .sw-final-review-panel__top { align-items: center; }
+  .sw-finalization-panel > button { width: 100%; justify-content: center; }
+}
