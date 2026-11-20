@@ -72,11 +72,10 @@ export const Robot = forwardRef<RobotApi | null, { theme?: string; calm?: boolea
     <>
       <canvas ref={cv} />
       {state !== 'ok' && (
-        <div className="ast-fb" aria-live="polite">
-          <span className="qbot-robot-loading-glow" aria-hidden="true">
-            <i /><i /><b />
-          </span>
-          {state === 'fail' && <button className="chip qbot-robot-retry" onClick={() => setTry(t => t + 1)}>Retry robot</button>}
+        <div className="ast-fb">
+          {state === 'loading'
+            ? <span className="ast-ld"><i /><i /><i /></span>
+            : <button className="chip" onClick={() => setTry(t => t + 1)}>Load the robot</button>}
         </div>
       )}
     </>
