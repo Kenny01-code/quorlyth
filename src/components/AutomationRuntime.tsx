@@ -140,6 +140,7 @@ export function AutomationRuntime() {
           taskId: doc.id,
           projectId: String(doc.data?.projectId || ''),
           workspaceId: String(doc.data?.projectId || ''),
+          entityType: 'task',
           title: String(doc.data?.title || ''),
           summary: String(doc.data?.description || ''),
           status: nextStatus,
