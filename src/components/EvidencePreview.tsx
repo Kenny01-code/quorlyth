@@ -141,7 +141,7 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
 
 export function EvidencePreviewHost() {
   const [request, setRequest] = useState<EvidencePreviewRequest | null>(null)
-  const [open, setOpen] = useState(false)
+  const open = request !== null
   const openRef = useRef(false)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const viewerPanelRef = useRef<HTMLElement>(null)
@@ -155,7 +155,6 @@ export function EvidencePreviewHost() {
       if (!openRef.current) previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
       openRef.current = true
       setRequest({ url: detail.url, name: detail.name || 'Evidence', mimeType: detail.mimeType || '', summary: detail.summary || '' })
-      setOpen(true)
     }
     window.addEventListener(EVIDENCE_PREVIEW_EVENT, onRequest)
     return () => window.removeEventListener(EVIDENCE_PREVIEW_EVENT, onRequest)
@@ -207,15 +206,17 @@ export function EvidencePreviewHost() {
   }, [open, type, githubApi, parsed])
 
   const dismiss = () => {
+    if (!openRef.current) return
     openRef.current = false
-    setOpen(false)
     setRequest(null)
   }
 
   useEffect(() => {
     if (!open) return
     const previousOverflow = document.body.style.overflow
+    const previousRootOverflow = document.documentElement.style.overflow
     document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
     const focusFrame = window.requestAnimationFrame(() => viewerCloseRef.current?.focus())
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); dismiss(); return }
@@ -232,6 +233,7 @@ export function EvidencePreviewHost() {
     return () => {
       window.cancelAnimationFrame(focusFrame)
       document.body.style.overflow = previousOverflow
+      document.documentElement.style.overflow = previousRootOverflow
       window.removeEventListener('keydown', onKeyDown)
       const previous = previouslyFocusedRef.current
       if (previous?.isConnected) previous.focus()
