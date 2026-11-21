@@ -157,7 +157,7 @@
 /* A single body-level review surface escapes every card/list stacking context. */
 .ql-evidence-viewer {
   position: fixed;
-  z-index: 2147483647;
+  z-index: 2147483647 !important;
   inset: 0;
   width: 100vw;
   height: 100dvh;
