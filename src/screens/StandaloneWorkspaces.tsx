@@ -624,6 +624,7 @@ function WorkspaceProjectView() {
         dueAt,
         assigneeIds,
         assigneeId: assigneeIds[0] || null,
+        updatedBy: a.me.id,
         updatedAt: now,
       })
       return true
@@ -639,6 +640,7 @@ function WorkspaceProjectView() {
       acceptanceCriteria,
       status: 'todo',
       createdBy: a.me.id,
+      updatedBy: a.me.id,
       at: now,
       updatedAt: now,
       dueAt,
@@ -741,7 +743,7 @@ function WorkspaceProjectView() {
       const now = Date.now(); const taskId = crypto.randomUUID()
       const task: WorkspaceTask = {
         id: taskId, projectId: id, title: taskTitle.trim().slice(0,140), description: taskDescription.trim().slice(0,2000),
-        acceptanceCriteria: taskCriteria.trim().slice(0,1000), status: 'todo', createdBy: a.me!.id, at: now, updatedAt: now,
+        acceptanceCriteria: taskCriteria.trim().slice(0,1000), status: 'todo', createdBy: a.me!.id, updatedBy: a.me!.id, at: now, updatedAt: now,
         dueAt: dateEnd(taskDueDate), assigneeIds: [...taskAssigneeDraft], assigneeId: taskAssigneeDraft[0] || null,
         milestoneId: taskMilestoneId || null,
       }
@@ -765,6 +767,7 @@ function WorkspaceProjectView() {
       await a.backend!.store.update('standaloneTasks/' + (task.docId || task.id), {
         assigneeIds: nextAssigneeIds,
         assigneeId: nextAssigneeIds[0] || null,
+        updatedBy: a.me!.id,
         updatedAt: Date.now(),
       })
       a.toast(nextAssigneeIds.length
