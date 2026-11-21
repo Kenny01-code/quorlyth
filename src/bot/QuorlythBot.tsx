@@ -3670,7 +3670,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         await a.backend.store.create(taskPath, {
           id: action.taskId, projectId: action.workspaceId, title: action.title.trim().slice(0, 140),
           description: action.description.trim().slice(0, 2000), acceptanceCriteria: action.acceptanceCriteria.trim().slice(0, 1000),
-          status: 'todo', createdBy: a.me.id, at: now, updatedAt: now, dueAt: null, assigneeId: null,
+          status: 'todo', createdBy: a.me.id, updatedBy: a.me.id, at: now, updatedAt: now, dueAt: null, assigneeId: null,
         })
         ok = true
       } else if (action.type === 'updateStandaloneTask') {
@@ -3679,15 +3679,21 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         const taskPath = 'standaloneTasks/' + action.taskId
         const currentProject = await a.backend.store.get(projectPath) as any
         const currentTask = await a.backend.store.get(taskPath) as any
-        if (!currentProject || currentProject.title !== action.workspaceTitle || !currentTask || currentTask.projectId !== action.workspaceId || currentTask.title !== action.currentTitle) throw new Error('That task changed or is no longer in the selected workspace.')
+        if (!currentProject || currentProject.status !== 'active' || currentProject.title !== action.workspaceTitle || !currentTask || currentTask.projectId !== action.workspaceId || currentTask.title !== action.currentTitle) throw new Error('That task changed or its workspace is no longer active.')
         const rows = await a.backend.store.exportAll()
         const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
-        if (currentProject.createdBy !== a.me.id && member?.role !== 'owner' && member?.role !== 'manager') throw new Error('Only the workspace owner or an active manager can edit task details.')
+        const linkedIdea = currentProject.linkedIdeaId ? a.data.ideas.find(idea => idea.id === currentProject.linkedIdeaId) : undefined
+        const linkedCommunity = linkedIdea ? a.data.communities.find(community => community.id === linkedIdea.cid) : undefined
+        const isCommunityOwner = linkedCommunity?.ownerId === a.me.id || linkedCommunity?.createdBy === a.me.id
+        const canManageTask = currentProject.createdBy === a.me.id || member?.role === 'owner' || member?.role === 'manager' || isCommunityOwner || currentTask.createdBy === a.me.id
+        if (!canManageTask) throw new Error('Only the task creator, linked community owner, or workspace owner/manager can edit this task.')
+        const updatedAt = Date.now()
         const patch = {
           ...(action.patch.title !== undefined ? { title: action.patch.title.trim().slice(0, 140) } : {}),
           ...(action.patch.description !== undefined ? { description: action.patch.description.trim().slice(0, 2000) } : {}),
           ...(action.patch.acceptanceCriteria !== undefined ? { acceptanceCriteria: action.patch.acceptanceCriteria.trim().slice(0, 1000) } : {}),
-          updatedAt: Date.now(),
+          updatedBy: a.me.id,
+          updatedAt,
         }
         if (patch.title !== undefined && patch.title.length < 2) throw new Error('Task titles need at least two characters.')
         await a.backend.store.update(taskPath, patch)
@@ -3698,16 +3704,17 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
         const taskPath = 'standaloneTasks/' + action.taskId
         const currentProject = await a.backend.store.get(projectPath) as any
         const currentTask = await a.backend.store.get(taskPath) as any
-        if (!currentProject || currentProject.status === 'completed' || !currentTask || currentTask.projectId !== action.workspaceId || currentTask.title !== action.currentTitle) throw new Error('That task is no longer available to start.')
+        if (!currentProject || currentProject.status !== 'active' || !currentTask || currentTask.projectId !== action.workspaceId || currentTask.title !== action.currentTitle) throw new Error('That task or workspace is no longer active.')
         const rows = await a.backend.store.exportAll()
         const member = rows.find(row => row.path.startsWith('standaloneProjectMembers/') && (row.data as any)?.projectId === action.workspaceId && (row.data as any)?.userId === a.me!.id && (row.data as any)?.status === 'active')?.data as any
-        const canManage = currentProject.createdBy === a.me.id || member?.role === 'owner' || member?.role === 'manager'
-        const canContribute = canManage || member?.role === 'contributor'
-        if (!canContribute) throw new Error('Only an active project owner, manager or contributor can start tasks.')
-        if (currentTask.status === 'done') throw new Error('This task is already completed through the approved evidence flow.')
-        const currentAssignees = Array.from(new Set([...(Array.isArray(currentTask.assigneeIds) ? currentTask.assigneeIds : []), ...(currentTask.assigneeId ? [currentTask.assigneeId] : [])]))
-        if (currentAssignees.length && !currentAssignees.includes(a.me.id) && !canManage) throw new Error('This task is assigned to another teammate.')
-        await a.backend.store.update(taskPath, { status: 'in_progress', ...(!currentAssignees.length ? { assigneeId: a.me.id, assigneeIds: [a.me.id] } : {}), updatedAt: Date.now() })
+        const linkedIdea = currentProject.linkedIdeaId ? a.data.ideas.find(idea => idea.id === currentProject.linkedIdeaId) : undefined
+        const linkedCommunity = linkedIdea ? a.data.communities.find(community => community.id === linkedIdea.cid) : undefined
+        const isCommunityOwner = linkedCommunity?.ownerId === a.me.id || linkedCommunity?.createdBy === a.me.id
+        const canManageTask = currentProject.createdBy === a.me.id || member?.role === 'owner' || member?.role === 'manager' || isCommunityOwner || currentTask.createdBy === a.me.id
+        if (!canManageTask) throw new Error('Only the task creator, linked community owner, or workspace owner/manager can start this task.')
+        if (currentTask.status !== 'todo') throw new Error(currentTask.status === 'done' ? 'This task is already completed through the approved evidence flow.' : 'This task has already been started.')
+        const startedAt = Date.now()
+        await a.backend.store.update(taskPath, { status: 'in_progress', startedAt, startedBy: a.me.id, updatedBy: a.me.id, updatedAt: startedAt })
         ok = true
       } else if (action.type === 'assignStandaloneTask') {
         if (!a.me || !a.backend) throw new Error('Sign in before assigning a workspace task.')
