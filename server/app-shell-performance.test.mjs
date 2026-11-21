@@ -530,26 +530,25 @@ test('QuorlythBot chat frame reduces expensive blur and offscreen transcript ren
   assert.match(robot, /if\(!lowPower\)addEventListener\(["']pointermove["']/)
 })
 
-test('QuorlythBot uses the exact deep site-orange 3D shell with the original dark face', async () => {
+test('QuorlythBot keeps its original dark face with deeper site-orange shell and thicker proportions', async () => {
   const [theme, robot] = await Promise.all([
     readSource('src/bot/robot-themes.ts'),
     readSource('src/bot/robot3d.ts'),
   ])
-  assert.ok(theme.includes('p: 0xf97316'))
-  assert.ok(theme.includes('b: 0x17120f'))
+  assert.ok(theme.includes('p: 0xea580c'))
+  assert.ok(theme.includes('b: 0x211a17'))
   assert.ok(theme.includes('c: 0xc2410c'))
-  assert.ok(theme.includes('e: 0xc2410c'))
-  assert.ok(theme.includes("g1: '#F97316'"))
-  assert.ok(theme.includes("g2: '#C2410C'"))
-  assert.ok(theme.includes("cr: '249,115,22'"))
+  assert.ok(theme.includes('e: 0x9a3412'))
+  assert.ok(theme.includes("g1: '#EA580C'"))
+  assert.ok(theme.includes("g2: '#9A3412'"))
+  assert.ok(theme.includes("cr: '234,88,12'"))
   assert.match(robot, /shell\.color\.setHex\(T\.p\)/)
   assert.match(robot, /arm\.color\.setHex\(T\.p\)/)
-  assert.match(robot, /shell\.roughness=\.34/)
-  assert.match(robot, /arm\.roughness=\.34/)
-  assert.match(robot, /color:0xf97316/)
-  assert.match(robot, /new DirectionalLight\(0xff7a18,\.78\)/)
-  assert.ok(!theme.includes('p: 0xef784b'))
-  assert.ok(!theme.includes('p: 0xd06a40'))
+  assert.match(robot, /sk\.scale\.set\(1\.1,1\.12,1\.04\)/)
+  assert.match(robot, /tor\.scale\.set\(1\.72,1\.32,1\.02\)/)
+  assert.match(robot, /color:0xea580c/)
+  assert.match(robot, /new DirectionalLight\(0xc2410c,\.72\)/)
+  assert.doesNotMatch(robot, /0xffcf86|0xffb15c/)
 })
 
 
@@ -651,7 +650,7 @@ test('QuorlythBot typing helper displays only the compact robot head', async () 
   assert.ok(head.includes('url(#'))
   assert.doesNotMatch(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
 })
-test('QuorlythBot launchers retain the compact orange robot-head mark', async () => {
+test('QuorlythBot launchers retain the compact deep-orange robot-head mark', async () => {
   const [app, bot, head, css] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
@@ -662,10 +661,12 @@ test('QuorlythBot launchers retain the compact orange robot-head mark', async ()
   assert.match(bot, /QuorlythBotHead size=\{38\}/)
   assert.match(head, /qbhead-shell/)
   assert.match(head, /qbhead-face/)
-  assert.match(head, /#F97316/)
+  assert.match(head, /#EA580C/)
   assert.match(head, /#C2410C/)
-  assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)
-  assert.match(css, /rgba\(249,115,22,\.34\)/)
+  assert.match(head, /#9A3412/)
+  assert.match(head, /#F97316/)
+  assert.doesNotMatch(head, /#FFB15C|#FFD1A6|#FFE1B8/)
+  assert.match(css, /rgba\(234,88,12,\.38\)/)
   assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
 })
 
