@@ -140,9 +140,9 @@ export default function App() {
       cancelIdleCallback?: (handle: number) => void
     }
     if (idleWindow.requestIdleCallback) {
-      idleHandle = idleWindow.requestIdleCallback(preload, { timeout: 1200 })
+      idleHandle = idleWindow.requestIdleCallback(preload, { timeout: 450 })
     } else {
-      timeoutHandle = window.setTimeout(preload, 350)
+      timeoutHandle = window.setTimeout(preload, 120)
     }
     return () => {
       cancelled = true
