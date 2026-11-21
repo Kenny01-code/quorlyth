@@ -30,7 +30,7 @@ type WorkspaceMember = {
 }
 type WorkspaceTask = {
   id: string; projectId: string; title: string; description: string; status: 'todo' | 'in_progress' | 'done'
-  createdBy: string; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]; milestoneId?: string | null
+  createdBy: string; updatedBy?: string; startedBy?: string; startedAt?: number; at: number; updatedAt: number; dueAt?: number | null; assigneeId?: string | null; assigneeIds?: string[]; milestoneId?: string | null
   acceptanceCriteria?: string; docId?: string
 }
 const assignedTaskIds = (task: Pick<WorkspaceTask, 'assigneeId' | 'assigneeIds'>): string[] =>
