@@ -664,7 +664,7 @@ test('QuorlythBot launchers retain the compact orange robot-head mark', async ()
   assert.match(head, /qbhead-face/)
   assert.match(head, /#F97316/)\n  assert.match(head, /#C2410C/)
   assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)
-  assert.match(css, /rgba\(208,106,64,\.34\)/)
+  assert.match(css, /rgba\(249,115,22,\.34\)/)
   assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
 })
 
