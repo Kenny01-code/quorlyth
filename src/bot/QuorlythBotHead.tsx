@@ -25,8 +25,8 @@ export function QuorlythBotHead({ size = 38 }: { size?: number }) {
     >
       <defs>
         <linearGradient id={shell} x1="13" y1="12" x2="49" y2="55" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#F97316" />
-          <stop offset=".3" stopColor="#F97316" />
+          <stop stopColor="#FB923C" />
+          <stop offset=".3" stopColor="#EA580C" />
           <stop offset=".72" stopColor="#C2410C" />
           <stop offset="1" stopColor="#9A3412" />
         </linearGradient>
