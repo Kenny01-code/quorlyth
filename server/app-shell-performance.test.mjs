@@ -31,7 +31,7 @@ test('QuorlythBot stays closed until a user deliberately opens the launcher', as
   assert.match(app, /\{botMounted && <Suspense fallback=\{null\}><QuorlythBot initialOpen/)
 })
 
-test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
+test('the QuorlythBot launcher stays visible while its module loads and warms its visual engines before open', async () => {
   const [app, css, bot] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/styles/app.css'),
@@ -47,6 +47,9 @@ test('the QuorlythBot launcher stays visible in a body portal until its lazy-loa
   assert.ok(app.includes('botLauncherHidden ? ('))
   assert.ok(app.includes('qbot-launcher-restore'))
   assert.ok(app.includes('qbot-launcher-load-error'))
+  assert.ok(app.includes('requestIdleCallback'))
+  assert.ok(app.includes('warmQuorlythBot'))
+  assert.ok(bot.includes("Promise.all([import('./robot3d'), import('./orb3d')])"))
   assert.ok(!app.includes('deferredLauncherHidden') && !app.includes('deferredHoldTimer'))
   assert.ok(app.includes('onContextMenu='))
   assert.ok(app.includes('qbot-launcher-hidden-v1'))
@@ -453,7 +456,7 @@ test('the QuorlythBot launcher toggles visibility by right-click, with a reversi
     readSource('src/bot/QuorlythBot.tsx'),
   ])
   assert.ok(app.includes('const [botLauncherHidden, setBotLauncherHidden]'))
-  assert.ok(app.includes('!intro && !botLoading && !botMounted && createPortal('))
+  assert.ok(app.includes('!intro && !botMounted && createPortal('))
   assert.ok(app.includes('botLauncherHidden ? ('))
   assert.ok(app.includes('className="qbot-launcher-restore"'))
   assert.ok(app.includes('Right-click or click to show QuorlythBot'))
