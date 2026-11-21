@@ -249,11 +249,18 @@ async function runAction(
         body: JSON.stringify({
           event: {
             type: event.trigger_type,
+            eventId: event.id || event.payload?.eventId || null,
             id: event.payload?.id || null,
+            entityType: event.payload?.entityType || null,
             title: event.payload?.title || null,
             summary: event.payload?.summary || event.payload?.body || null,
             communityId: event.payload?.communityId || null,
             projectId: event.payload?.projectId || null,
+            workspaceId: event.payload?.workspaceId || event.payload?.projectId || null,
+            taskId: event.payload?.taskId || null,
+            actorId: event.payload?.actorId || null,
+            status: event.payload?.status || null,
+            dueAt: event.payload?.dueAt ?? null,
             at: event.payload?.at || at,
           },
           workflow: { id: workflow.id, name: workflow.name },
