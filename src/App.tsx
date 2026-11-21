@@ -30,7 +30,19 @@ const Settings = lazy(() => import('./screens/Settings').then(m => ({ default: m
 const Database = lazy(() => import('./screens/Database').then(m => ({ default: m.Database })))
 const Access = lazy(() => import('./screens/Access').then(m => ({ default: m.Access })))
 const Onboarding = lazy(() => import('./screens/Onboarding').then(m => ({ default: m.Onboarding })))
-const loadQuorlythBot = () => import('./bot/QuorlythBot').then(m => ({ default: m.QuorlythBot }))
+// Share one in-flight import between idle preloading, pointer intent and the open action.
+let quorlythBotModulePromise: Promise<typeof import('./bot/QuorlythBot')> | null = null
+const loadQuorlythBotModule = () => {
+  if (!quorlythBotModulePromise) {
+    quorlythBotModulePromise = import('./bot/QuorlythBot').catch(error => {
+      quorlythBotModulePromise = null
+      throw error
+    })
+  }
+  return quorlythBotModulePromise
+}
+const loadQuorlythBot = () => loadQuorlythBotModule().then(m => ({ default: m.QuorlythBot }))
+const warmQuorlythBot = () => loadQuorlythBotModule().then(m => m.preloadQuorlythBotVisuals())
 const QuorlythBot = lazy(loadQuorlythBot)
 const AutomationRuntime = lazy(() => import('./components/AutomationRuntime').then(m => ({ default: m.AutomationRuntime })))
 const WritingAssistant = lazy(() => import('./components/WritingAssistant').then(m => ({ default: m.WritingAssistant })))
@@ -109,6 +121,35 @@ export default function App() {
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
+
+  // Warm the bot code and its visual engines while the page is idle, so the
+  // first open does not wait for several sequential dynamic imports.
+  useEffect(() => {
+    if (intro || botLauncherHidden || botMountedRef.current) return
+    let cancelled = false
+    let idleHandle: number | null = null
+    let timeoutHandle: number | null = null
+    const preload = () => {
+      if (cancelled) return
+      void warmQuorlythBot().catch(error => {
+        if (!cancelled) console.warn('QuorlythBot background preload deferred:', error)
+      })
+    }
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    if (idleWindow.requestIdleCallback) {
+      idleHandle = idleWindow.requestIdleCallback(preload, { timeout: 1200 })
+    } else {
+      timeoutHandle = window.setTimeout(preload, 350)
+    }
+    return () => {
+      cancelled = true
+      if (idleHandle !== null) idleWindow.cancelIdleCallback?.(idleHandle)
+      if (timeoutHandle !== null) window.clearTimeout(timeoutHandle)
+    }
+  }, [intro, botLauncherHidden])
 
   const openQuorlythBot = useCallback(async (startVoice = false) => {
     if (startVoice) pendingVoiceOpenRef.current = true
@@ -452,7 +493,7 @@ export default function App() {
       {bell && <Suspense fallback={null}><NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} /></Suspense>}
       {palette && <Suspense fallback={null}><Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} /></Suspense>}
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
-      {!intro && !botLoading && !botMounted && createPortal(
+      {!intro && !botMounted && createPortal(
         <div className="qbot-launcher-portal" data-quorlyth-launcher>
           {botLauncherHidden ? (
             <button
@@ -483,7 +524,9 @@ export default function App() {
                 aria-busy={botLoading}
                 aria-expanded={false}
                 aria-controls="ast"
-                onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
+                onFocus={() => { void warmQuorlythBot().catch(() => {}) }}
+                onPointerEnter={() => { void warmQuorlythBot().catch(() => {}) }}
+                onPointerDown={() => { void warmQuorlythBot().catch(() => {}) }}
                 aria-label={botLoading ? 'Loading QuorlythBot' : botLoadError ? 'Retry loading QuorlythBot' : 'Open QuorlythBot. Ask about your ideas, communities, analytics, projects, or next steps.'}
                 title={(botLoading ? 'Opening QuorlythBot…' : botLoadError || 'Ask QuorlythBot about your communities, ideas, projects, or next steps.') + ' Right-click to hide this launcher.'}
                 onClick={() => { void openQuorlythBot() }}
