@@ -151,8 +151,8 @@ test('evidence review is hosted in a stable body portal with a viewport-level bl
   assert.match(preview, /createPortal\([\s\S]*document\.body/)
   assert.match(preview, /viewerPanelRef/)
   assert.match(app, /<EvidencePreviewHost\s*\/>/)
-  assert.match(styles, /z-index:\s*2147483000/)
-  assert.match(styles, /backdrop-filter:\s*blur\(28px\)/)
+  assert.match(styles, /z-index:\s*2147483647\s*!important/)
+  assert.match(styles, /backdrop-filter:\s*blur\(32px\)\s*saturate\(140%\)/)
   assert.doesNotMatch(preview.slice(preview.indexOf('export function EvidencePreview('), preview.indexOf('export function EvidencePreviewHost')), /viewerOpen/)
 })
 
