@@ -146,15 +146,17 @@ test('Normal chat starts ElevenLabs speech while the answer is still streaming',
   assert.match(bot, /preferElevenLabsVoice:\s*true/)
 })
 
-test('Automatic page-guide popups are removed and QuorlythBot opens after the welcome', async () => {
+test('Automatic page-guide popups are removed and QuorlythBot warms after the welcome without auto-opening', async () => {
   const app = await readSource('src/App.tsx')
   assert.doesNotMatch(app, /PageAssist|pageBotPrompt|page-assist|quorlyth:page-assist/)
-  assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
-  assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
-  assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
+  assert.match(app, /const warmQuorlythBot = \(\) => loadQuorlythBotModule\(\)\.then\(m => m\.preloadQuorlythBotVisuals\(\)\)/)
+  assert.match(app, /requestIdleCallback\(preload, \{ timeout: 1200 \}\)/)
+  assert.match(app, /onFocus=\{\(\) => \{ void warmQuorlythBot\(\)/)
+  assert.match(app, /onPointerEnter=\{\(\) => \{ void warmQuorlythBot\(\)/)
+  assert.match(app, /onPointerDown=\{\(\) => \{ void warmQuorlythBot\(\)/)
   assert.match(app, /onClick=\{\(\) => \{[\s\S]{0,180}openQuorlythBot\(\)/)
   assert.match(app, /const QuorlythBot = lazy\(loadQuorlythBot\)/)
+  assert.match(app, /\{botMounted && <Suspense fallback=\{null\}><QuorlythBot initialOpen/)
   assert.doesNotMatch(app, /qbot-open-fallback/)
 })
 
