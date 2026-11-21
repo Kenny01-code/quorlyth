@@ -291,6 +291,12 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
   }
 }
 
+// Preload both visual engines during idle time. Their WebGL renderers are
+// still created only when the relevant bot view is mounted.
+export function preloadQuorlythBotVisuals(): Promise<void> {
+  return Promise.all([import('./robot3d'), import('./orb3d')]).then(() => undefined)
+}
+
 export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialPrompt = '', promptRequest = 0 }: { initialOpen?: boolean; voiceRequest?: number; initialPrompt?: string; promptRequest?: number }) {
   const a = useApp()
   const nav = useNavigate()
