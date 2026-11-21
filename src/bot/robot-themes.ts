@@ -1,16 +1,17 @@
 export const THEMES = {
-  // Deep Quorlyth site orange, with the original dark faceplate and no yellow-orange highlights.
+  // The robot shell uses the exact uploaded Quorlyth orange swatch (#D06A40).
+  // Its highlights and shadows stay in the same orange family; the deep-ink faceplate is unchanged.
   terracotta: {
-    n: 'Quorlyth Deep Orange',
-    p: 0xea580c,
+    n: 'Quorlyth Orange',
+    p: 0xc9562e,
     b: 0x211a17,
-    c: 0xc2410c,
-    g: 0xf97316,
-    e: 0x9a3412,
-    ei: 0.16,
-    g1: '#EA580C',
-    g2: '#9A3412',
-    cr: '234,88,12',
+    c: 0xa64829,
+    g: 0xffa16f,
+    e: 0x6f2b1a,
+    ei: 0.14,
+    g1: '#C9562E',
+    g2: '#6F2B1A',
+    cr: '201,86,46',
   },
   pearl: {
     n: 'Cobalt Pearl',
