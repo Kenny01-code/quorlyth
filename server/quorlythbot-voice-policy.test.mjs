@@ -150,7 +150,7 @@ test('Automatic page-guide popups are removed and QuorlythBot warms after the we
   const app = await readSource('src/App.tsx')
   assert.doesNotMatch(app, /PageAssist|pageBotPrompt|page-assist|quorlyth:page-assist/)
   assert.match(app, /const warmQuorlythBot = \(\) => loadQuorlythBotModule\(\)\.then\(m => m\.preloadQuorlythBotVisuals\(\)\)/)
-  assert.match(app, /requestIdleCallback\(preload, \{ timeout: 1200 \}\)/)
+  assert.match(app, /window\.setTimeout\(preload, 120\)/) && assert.match(app, /requestIdleCallback\(preload, \{ timeout: 450 \}\)/)
   assert.match(app, /onFocus=\{\(\) => \{ void warmQuorlythBot\(\)/)
   assert.match(app, /onPointerEnter=\{\(\) => \{ void warmQuorlythBot\(\)/)
   assert.match(app, /onPointerDown=\{\(\) => \{ void warmQuorlythBot\(\)/)
