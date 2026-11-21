@@ -28,8 +28,8 @@ test('QuorlythBot keeps its original dark face and uses deeper shades of the sit
   assert.match(head, /#EA580C/)
   assert.match(head, /#C2410C/)
   assert.match(head, /#9A3412/)
-  assert.match(head, /#FB923C/)
-  assert.doesNotMatch(head, /#FFB15C|#FFD1A6|#FFE1B8|#FFF0D8/)
+  assert.match(head, /#F97316/)
+  assert.doesNotMatch(head, /#FB923C|#FFB15C|#FFD1A6|#FFE1B8|#FFF0D8/)
 
   assert.match(styles, /rgba\(234,88,12,\.38\)/)
 })
