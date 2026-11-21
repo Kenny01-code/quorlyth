@@ -786,6 +786,7 @@ function WorkspaceProjectView() {
         status: 'in_progress',
         startedAt,
         startedBy: a.me!.id,
+        updatedBy: a.me!.id,
         updatedAt: startedAt,
       })
       a.toast('Task started. Assigned contributors can now submit their evidence separately.')
