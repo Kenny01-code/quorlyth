@@ -157,7 +157,7 @@
 /* A single body-level review surface escapes every card/list stacking context. */
 .ql-evidence-viewer {
   position: fixed;
-  z-index: 2147483000;
+  z-index: 2147483647;
   inset: 0;
   width: 100vw;
   height: 100dvh;
@@ -170,8 +170,8 @@
   isolation: isolate;
   padding: clamp(12px, 2.4vw, 32px);
   background: rgba(6, 5, 5, .62);
-  backdrop-filter: blur(28px) saturate(135%);
-  -webkit-backdrop-filter: blur(28px) saturate(135%);
+  backdrop-filter: blur(32px) saturate(140%);
+  -webkit-backdrop-filter: blur(32px) saturate(140%);
 }
 .ql-evidence-viewer__panel {
   box-sizing: border-box;
