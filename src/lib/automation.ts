@@ -72,12 +72,18 @@ export interface WorkflowDefinition {
 
 export interface WorkflowEventPayload {
   id?: string
+  eventId?: string
+  entityType?: string
   title?: string
   body?: string
   summary?: string
   communityId?: string
   projectId?: string
+  workspaceId?: string
   taskId?: string
+  actorId?: string
+  status?: string
+  dueAt?: number | null
   at?: number
   [key: string]: unknown
 }
@@ -301,8 +307,10 @@ export function validateWorkflowGraph(workflow: WorkflowDefinition): string | nu
 
 export function emitWorkflowEvent(type: WorkflowTrigger, payload: WorkflowEventPayload = {}) {
   if (typeof window === 'undefined' || type === 'manual') return
+  const eventId = String(payload.eventId || newWorkflowId())
+  const at = Number(payload.at) || Date.now()
   window.dispatchEvent(new CustomEvent<WorkflowEventDetail>(WORKFLOW_EVENT_NAME, {
-    detail: { type, payload: { ...payload, at: payload.at || Date.now() } },
+    detail: { type, payload: { ...payload, eventId, at } },
   }))
 }
 
@@ -493,8 +501,13 @@ export async function executeWorkflowActions(
           updatedBy: userId,
           automationWorkflowId: workflow.id,
           automationRunId: runId,
-          sourceEventId: String(event.payload.id || ''),
+          sourceEventId: String(event.payload.eventId || ''),
+          sourceEntityId: String(event.payload.id || event.payload.taskId || ''),
           sourceEventType: event.type,
+          sourceEntityType: String(event.payload.entityType || ''),
+          sourceActorId: String(event.payload.actorId || ''),
+          sourceWorkspaceId: String(event.payload.workspaceId || event.payload.projectId || ''),
+          sourceTaskId: String(event.payload.taskId || ''),
           at,
           updatedAt: at,
           dueAt: null,
@@ -512,11 +525,18 @@ export async function executeWorkflowActions(
           body: JSON.stringify({
             event: {
               type: event.type,
+              eventId: event.payload.eventId || null,
               id: event.payload.id || null,
+              entityType: event.payload.entityType || null,
               title: event.payload.title || null,
               summary: event.payload.summary || event.payload.body || null,
               communityId: event.payload.communityId || null,
               projectId: event.payload.projectId || null,
+              workspaceId: event.payload.workspaceId || event.payload.projectId || null,
+              taskId: event.payload.taskId || null,
+              actorId: event.payload.actorId || null,
+              status: event.payload.status || null,
+              dueAt: event.payload.dueAt ?? null,
               at: event.payload.at || at,
             },
             workflow: { id: workflow.id, name: workflow.name },
