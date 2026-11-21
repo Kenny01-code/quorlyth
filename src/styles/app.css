@@ -2167,7 +2167,7 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 #astl.astl:disabled { cursor: progress; opacity: .88 !important; }
 #astl.astl .astm { display: grid; place-items: center; width: 100%; height: 100%; pointer-events: none; }
 #astl.astl .astm svg { display: block; width: 30px; height: 30px; max-width: 30px; max-height: 30px; }
-#astl.astl .astm .qbot-head-mark { display:block; width:38px!important; height:38px!important; max-width:38px!important; max-height:38px!important; filter:drop-shadow(0 3px 5px rgba(249,115,22,.34)) drop-shadow(0 0 9px rgba(249,115,22,.18)); }
+#astl.astl .astm .qbot-head-mark { display:block; width:38px!important; height:38px!important; max-width:38px!important; max-height:38px!important; filter:drop-shadow(0 3px 5px rgba(234,88,12,.38)) drop-shadow(0 0 9px rgba(194,65,12,.22)); }
 #astl.astl .astl-hint {
   position: absolute;
   right: calc(100% + 12px);
