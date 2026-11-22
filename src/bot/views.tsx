@@ -5,6 +5,7 @@ import { useApp } from '../data/AppProvider'
 import { cn, slug, when } from '../lib/util'
 import { speakText, stopSpeechPlayback, type SpeechPlayback } from '../ai/client'
 import { RobotApi } from './Robot'
+import { RobotStudio } from './RobotStudio'
 import { SKILLS, THEMES, VOICES, VOICE_ACCENTS } from './config'
 import { useBotData } from './useBotData'
 import '../styles/voice-studio-responsive.css'
@@ -81,6 +82,13 @@ export function BotViews(p: P) {
   }, [p.view, hello.state])
 
   useEffect(() => () => clearHelloPlayback(), [])
+
+  if (p.view === 'robot-studio') return <RobotStudio theme={p.theme} onThemeChange={async theme => {
+    p.robot.current?.theme(theme)
+    const saved = await bd.saveSettings({ theme })
+    if (!saved) a.toast('The robot finish could not be saved. Check your connection and try again.')
+    return saved
+  }} />
 
   async function playNaturalVoicePreview(voice: string) {
     clearHelloPlayback()
@@ -258,7 +266,7 @@ export function BotViews(p: P) {
         <textarea value={about} maxLength={500} onChange={e => setAbout(e.target.value)} placeholder="For example, I make bold, minimal music and want warm, short replies." /><div className="acts" style={{ marginTop: 12 }}><button className="btn p" onClick={() => { bd.saveSettings({ about: about.trim() }); a.toast('Saved') }}>Save</button></div></div>
       <div className="glass pad" style={{ padding: '6px 18px' }}>
         <Tgl on={s.voice} label="Voice" desc="I speak my replies aloud" onClick={() => bd.saveSettings({ voice: !s.voice })} />
-        <Tgl on={s.robot} label="Show the robot" desc="The 3D character above the chat" onClick={() => bd.saveSettings({ robot: !s.robot })} />
+        <Tgl on={s.robot} label="Voice visualizer" desc="Show the orb during voice previews" onClick={() => bd.saveSettings({ robot: !s.robot })} />
         <Tgl on={s.calm} label="Calm gestures" desc="Fewer hand movements while speaking" onClick={() => bd.saveSettings({ calm: !s.calm })} />
       </div></>
   )
@@ -311,6 +319,6 @@ export function BotViews(p: P) {
           <button className="btn" onClick={() => { if (del !== 'all') return setDel('all'); bd.chats.forEach(c => bd.remove(c.id)); setDel(''); a.toast('Chats deleted') }}>{del === 'all' ? 'Confirm delete all' : 'Delete all chats'}</button></div></div>
       <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Shortcuts</h3>
         {[['Send', 'Enter'], ['New line', 'Shift Enter'], ['Skills', '/'], ['Close menus', 'Esc']].map(([k, v]) => <div key={k} className="kr"><span className="mut">{k}</span><kbd>{v}</kbd></div>)}
-        <div className="acts"><button className="btn" onClick={() => { bd.saveSettings({ tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', accent: 'auto', theme: 'terracotta' }); p.robot.current?.theme('terracotta'); a.toast('Customization reset') }}><Icon name="rotate" size={16} />Reset customization</button></div></div></>
+        <div className="acts"><button className="btn" onClick={() => { bd.saveSettings({ tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', accent: 'auto', theme: 'pearl' }); p.robot.current?.theme('pearl'); a.toast('Customization reset') }}><Icon name="rotate" size={16} />Reset customization</button></div></div></>
   )
 }

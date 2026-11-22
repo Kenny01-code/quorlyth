@@ -3,6 +3,7 @@ import '../styles/bot-room-theme.css'
 import '../styles/bot-liquid-glass.css'
 import '../styles/bot-obsidian-glass.css'
 import '../styles/bot-redesign.css'
+import '../styles/robot-studio.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -158,7 +159,7 @@ function playPreparedSpeechBlob(
   })
 }
 
-type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'settings'
+type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'robot-studio' | 'settings'
 type Live = null | { state: string; user: string; bot: string }
 type SocialPublishProvider = Exclude<SocialProvider, 'meta'>
 type SocialTargetOption = { connectionId: string; provider: SocialPublishProvider; accountName: string; username: string; boards: Array<{ id: string; name: string }>; defaultBoardId: string }
@@ -366,10 +367,10 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     window.requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('#bot .ast-in textarea')?.focus())
   }
   const project = bd.projects.find(p => p.id === pj) || null
-  const theme = 'terracotta'
+  const theme = bs.theme || 'pearl'
   // Keep the voice orb out of ordinary chat and transcript playback. Live Talk
   // gets a dedicated dock; the robot preference still controls Voice Studio.
-  const orbVisible = bs.robot && view !== 'chat' && (speechState === 'playing' || voiceStudioSpeaking)
+  const orbVisible = bs.robot && view !== 'chat' && view !== 'robot-studio' && (speechState === 'playing' || voiceStudioSpeaking)
   const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
   const wide = !narrow
 
@@ -3894,7 +3895,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   <span className="qbot-sidebar-primary-icon"><Icon name="plus" size={18} /></span>
                   <span className="qbot-sidebar-primary-copy"><b>New chat</b></span>
                 </button>
-                {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
+                {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio'], ['robot-studio', 'stage', 'Robot studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
               </div>
               <div className="bs-s"><div className="iw"><Icon name="search" size={18} /><input placeholder="Search chats" aria-label="Search chats" value={q} onChange={e => setQ(e.target.value)} /></div></div>
               <div className="bs-l">
@@ -4019,14 +4020,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               }}>
                 <button className="bib" aria-label="Sidebar" onClick={e => { e.stopPropagation(); setSide(!side) }}><Icon name="menu" size={18} /></button>
                 <div className="bht">
-                  <div className="qbot-title-row">
+                  {view === 'robot-studio' ? <div className="qbot-title-row"><span className="qbot-chat-title">Robot studio <i className="qrs-header-badge">DESIGN MODE</i></span></div> : <div className="qbot-title-row">
                     <span className="qbot-chat-title">{cur?.title || (project ? project.name : 'New chat')}</span>
                     <button className="qbot-title-edit" aria-label="Edit chat title" title="Edit title" onClick={e => { e.stopPropagation(); const next = prompt('Chat title:', cur?.title || ''); if (next && cur) { setCur({ ...cur, title: next }); bd.put('c_' + cur.id, { ...cur, title: next }) } }}><Icon name="pen" size={13} /></button>
-                  </div>
+                  </div>}
                 </div>
                 <div className="bha">
-                  <button className="qbot-share-pill" aria-label="Share" title="Share conversation" onClick={() => { if (!msgs.length) return a.toast('No messages to share'); const text = msgs.map(m => (m.r === 'u' ? 'You: ' : 'Quorlyth: ') + m.t).join('\n\n'); navigator.clipboard.writeText(text).then(() => a.toast('Chat transcript copied')) }}><Icon name="share" size={13} /><span>Share</span></button>
-                  <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>
+                  {view === 'chat' && <button className="qbot-share-pill" aria-label="Share" title="Share conversation" onClick={() => { if (!msgs.length) return a.toast('No messages to share'); const text = msgs.map(m => (m.r === 'u' ? 'You: ' : 'Quorlyth: ') + m.t).join('\n\n'); navigator.clipboard.writeText(text).then(() => a.toast('Chat transcript copied')) }}><Icon name="share" size={13} /><span>Share</span></button>}
+                  {view === 'chat' && <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>}
                   <button className="bib" aria-label="Minimize QuorlythBot" title="Minimize to launcher" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
                   <button className="bib" aria-label="Resize" title="Expand" onClick={() => { const next = mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact'; setSize(null); setPosition(null); setMode(next) }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
                   <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); stopVoice(); setOpen(false) }}><Icon name="decline" size={18} /></button>
@@ -4049,7 +4050,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 </div>
               )}
               <div
-                className={cn('qbot-conversation', view === 'chat' && 'qbot-chat-surface')}
+                className={cn('qbot-conversation', view === 'chat' && 'qbot-chat-surface', view === 'robot-studio' && 'qbot-robot-studio-shell')}
                 ref={log}
                 onWheel={event => {
                   // The transcript has one scroll owner; handle mouse wheels directly
@@ -4261,13 +4262,13 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                     <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
                     <button className={cn('btn', live && 'rec')} aria-label={live ? 'End voice conversation' : 'Start voice conversation'} title={live ? 'End voice conversation' : 'Start voice conversation'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'mic' : 'live'} size={18} /></button>
                     <button className="btn p" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
-                  </div>
-                  <div className="qbot-composer-toolbar" aria-label="Quick prompt tools">
-                    <span className="qbot-composer-tools-label">TRY</span>
-                    <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Brainstorm a few strong ideas for ')}><Icon name="spark" size={14} /><span>Brainstorm</span></button>
-                    <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Find useful conversations and ideas about ')}><Icon name="search" size={14} /><span>Search Quorlyth</span></button>
-                    <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Review this code and suggest improvements: ')}><Icon name="code" size={14} /><span>Review code</span></button>
-                    <button type="button" className="qbot-tool-pill qbot-tool-more" aria-label="More tools" title="More skills" onClick={() => setView('skills')}><Icon name="plus" size={14} /><span>All tools</span></button>
+                    <div className="qbot-composer-toolbar" aria-label="Quick prompt tools">
+                      <span className="qbot-composer-tools-label">TRY</span>
+                      <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Brainstorm a few strong ideas for ')}><Icon name="spark" size={14} /><span>Brainstorm</span></button>
+                      <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Find useful conversations and ideas about ')}><Icon name="search" size={14} /><span>Search Quorlyth</span></button>
+                      <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Review this code and suggest improvements: ')}><Icon name="code" size={14} /><span>Review code</span></button>
+                      <button type="button" className="qbot-tool-pill qbot-tool-more" aria-label="More tools" title="More skills" onClick={() => setView('skills')}><Icon name="plus" size={14} /><span>All tools</span></button>
+                    </div>
                   </div>
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
                 </div>

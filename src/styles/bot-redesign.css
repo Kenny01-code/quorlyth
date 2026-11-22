@@ -1,12 +1,12 @@
 /* QuorlythBot's focused conversation workspace. This is the final, component-
    scoped layer so the chat UI has one predictable surface and type hierarchy. */
 #bot.qbot-premium {
-  --qbot-surface: #111214;
-  --qbot-panel: #0b0c0e;
-  --qbot-line: #2a2b2f;
+  --qbot-surface: #171819;
+  --qbot-panel: #08090a;
+  --qbot-line: #292a2c;
   --qbot-text: #f4f3f1;
   --qbot-muted: #b3b2b0;
-  --qbot-orange: #e98b61;
+  --qbot-orange: #ff812f;
   color: var(--qbot-text) !important;
   border: 1px solid #343539 !important;
   border-radius: 24px !important;
@@ -439,7 +439,7 @@
   justify-content: space-between;
   margin-bottom: 7px !important;
   padding: 0 2px;
-  color: #c9a38f;
+  color: #ff9a57;
   font-size: 9px;
   font-weight: 730;
   letter-spacing: .13em;
@@ -456,7 +456,7 @@
 #bot.qbot-premium .ast-in {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) 40px 40px 44px !important;
-  grid-template-rows: auto !important;
+  grid-template-rows: auto auto !important;
   align-items: end !important;
   gap: 7px !important;
   min-height: 0 !important;
@@ -469,9 +469,9 @@
   backdrop-filter: none !important;
 }
 #bot.qbot-premium .ast-in:focus-within {
-  border-color: #9a6148 !important;
-  background: #1b1a19 !important;
-  box-shadow: 0 0 0 2px rgba(233, 139, 97, .14) !important;
+  border-color: #b85e20 !important;
+  background: #1b1917 !important;
+  box-shadow: 0 0 0 2px rgba(255, 129, 47, .17) !important;
 }
 #bot.qbot-premium .ast-in > textarea {
   grid-column: 1;
@@ -524,17 +524,22 @@
   background: #30231d !important;
 }
 #bot.qbot-premium .ast-in > .btn.p {
-  border-color: #d7855e !important;
-  color: #20130d !important;
-  background: #eca078 !important;
+  border-color: #ff9a57 !important;
+  color: #21140d !important;
+  background: #ff812f !important;
 }
 #bot.qbot-premium .ast-in > .btn.p :is(svg, .ic) { color: #20130d !important; }
 #bot.qbot-premium .ast-in > .btn.p:disabled { border-color: #4a3e38 !important; color: #b0aaa6 !important; background: #39332f !important; opacity: 1 !important; }
 #bot.qbot-premium .qbot-composer-toolbar {
   display: flex !important;
+  grid-column: 1 / -1;
+  grid-row: 2;
   align-items: center !important;
   gap: 7px !important;
-  margin-top: 9px !important;
+  width: 100%;
+  margin: 3px 0 0 !important;
+  padding: 8px 2px 1px;
+  border-top: 1px solid #323337;
 }
 #bot.qbot-premium .qbot-composer-tools-label {
   margin-right: 3px;
@@ -556,7 +561,7 @@
   font-size: 11px !important;
   line-height: 1 !important;
 }
-#bot.qbot-premium .qbot-tool-pill :is(svg, .ic) { color: #e5a17c !important; }
+#bot.qbot-premium .qbot-tool-pill :is(svg, .ic) { color: #ff9a57 !important; }
 #bot.qbot-premium .qbot-tool-pill:is(:hover, :focus-visible) {
   outline: 2px solid rgba(233, 139, 97, .3) !important;
   outline-offset: 1px !important;

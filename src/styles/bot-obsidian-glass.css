@@ -703,20 +703,18 @@
   margin:3px 0 13px !important;
   padding:9px 12px !important;
   overflow:hidden;
-  border:1px solid rgba(255,255,255,.94) !important;
+  border:1px solid rgba(255,160,88,.88) !important;
   border-radius:17px !important;
-  background:
-    radial-gradient(ellipse 74% 62% at 6% 0%,rgba(255,255,255,.98),transparent 64%),
-    linear-gradient(145deg,#fff 0%,#f3f4f7 48%,#dfe3eb 100%) !important;
-  color:#08090c !important;
+  background:linear-gradient(135deg,#ff9848 0%,#ff812f 56%,#ed681e 100%) !important;
+  color:#21140d !important;
   text-align:left;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,1),
-    inset 0 -1px 0 rgba(10,12,18,.08),
-    0 12px 26px -18px rgba(255,255,255,.72),
+    inset 0 1px 0 rgba(255,255,255,.24),
+    inset 0 -1px 0 rgba(75,31,7,.16),
+    0 12px 26px -18px rgba(255,129,47,.62),
     0 10px 24px -18px rgba(0,0,0,.9) !important;
-  -webkit-backdrop-filter:blur(24px) saturate(155%) !important;
-  backdrop-filter:blur(24px) saturate(155%) !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
   transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease,filter .2s ease !important;
 }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action::before {
@@ -726,8 +724,8 @@
   inset:1px;
   border-radius:15px;
   pointer-events:none;
-  background:linear-gradient(118deg,rgba(255,255,255,.9),transparent 34%,rgba(255,255,255,.22) 72%,transparent);
-  opacity:.9;
+  background:linear-gradient(118deg,rgba(255,255,255,.18),transparent 34%,rgba(255,255,255,.07) 72%,transparent);
+  opacity:.8;
 }
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action > * {
   position:relative;
@@ -738,7 +736,7 @@
   place-items:center;
   width:38px;
   height:38px;
-  border:1px solid rgba(255,255,255,.19);
+  border:1px solid rgba(255,255,255,.2);
   border-radius:12px;
   background:linear-gradient(145deg,#26282d,#08090b 76%);
   color:#fff !important;
