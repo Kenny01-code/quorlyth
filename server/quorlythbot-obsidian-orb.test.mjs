@@ -4,14 +4,14 @@ import { readFile } from 'node:fs/promises'
 
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('QuorlythBot uses the site-matched obsidian pearl glass frame', async () => {
+test('QuorlythBot keeps its restored terracotta robot theme with the obsidian pearl-glass voice dock', async () => {
   const [bot, glass] = await Promise.all([
     source('src/bot/QuorlythBot.tsx'),
     source('src/styles/bot-obsidian-glass.css'),
   ])
 
   assert.ok(bot.includes("import '../styles/bot-obsidian-glass.css'"))
-  assert.ok(bot.includes("const theme = 'pearl'"))
+  assert.ok(bot.includes("const theme = 'terracotta'"))
   assert.ok(bot.includes("const accent = THEMES.pearl"))
   assert.match(bot, /const orbVisible = bs\.robot && \(\!\!live \|\| speechState === 'playing' \|\| voiceStudioSpeaking\)/)
   assert.match(bot, /\{orbVisible && \([\s\S]*?className=\{cn\('bstage bot-orb-dock qbot-live-orb-stage'/)
