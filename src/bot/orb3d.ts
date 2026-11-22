@@ -170,10 +170,10 @@ function createGlowTexture() {
   const context = canvas.getContext('2d')
   if (!context) return null
   const gradient = context.createRadialGradient(64, 64, 3, 64, 64, 64)
-  gradient.addColorStop(0, 'rgba(132,174,255,0.34)')
-  gradient.addColorStop(0.42, 'rgba(206,222,255,0.15)')
+  gradient.addColorStop(0, 'rgba(255,139,81,0.34)')
+  gradient.addColorStop(0.42, 'rgba(255,207,174,0.15)')
   gradient.addColorStop(0.72, 'rgba(255,255,255,0.045)')
-  gradient.addColorStop(1, 'rgba(35,78,172,0)')
+  gradient.addColorStop(1, 'rgba(122,45,22,0)')
   context.fillStyle = gradient
   context.fillRect(0, 0, 128, 128)
   const texture = new CanvasTexture(canvas)
@@ -209,22 +209,22 @@ export function orb3d(canvas: HTMLCanvasElement, options: OrbOptions = {}): OrbA
 
   const key = new DirectionalLight(0xffffff, 2.05)
   key.position.set(-3.5, 4.2, 5)
-  const rim = new DirectionalLight(0x9fc2ff, 2.75)
+  const rim = new DirectionalLight(0xff9b68, 2.75)
   rim.position.set(4, -1.2, -4)
   const pearlFill = new DirectionalLight(0xf1f5ff, 1.42)
   pearlFill.position.set(0, -4, 4)
   const edgeSoftbox = new DirectionalLight(0xffffff, 0.92)
   edgeSoftbox.position.set(-4, -1.5, 2.8)
-  scene.add(new AmbientLight(0xeaf0ff, 0.66), key, rim, pearlFill, edgeSoftbox)
+  scene.add(new AmbientLight(0xffefe7, 0.66), key, rim, pearlFill, edgeSoftbox)
 
   const shader = new ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uEnergy: { value: 0.2 },
       uCalm: { value: 0 },
-      uPearl: { value: new Color(0xf0f4ff) },
-      uIce: { value: new Color(0xa8c8ff) },
-      uCobalt: { value: new Color(0x2452c8) },
+      uPearl: { value: new Color(0xffd7bf) },
+      uIce: { value: new Color(0xffa16f) },
+      uCobalt: { value: new Color(0xc9562e) },
       uWhite: { value: new Color(0xffffff) },
     },
     vertexShader,
