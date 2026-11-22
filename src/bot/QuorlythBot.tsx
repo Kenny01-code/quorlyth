@@ -2,6 +2,7 @@ import '../styles/bot.css'
 import '../styles/bot-room-theme.css'
 import '../styles/bot-liquid-glass.css'
 import '../styles/bot-obsidian-glass.css'
+import '../styles/bot-redesign.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -3954,7 +3955,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
       )}
       {open && (
         <div id="ast">
-          <div id="bot" className={cn('astp glass bot qbot-sidebar-compact-v2', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
+          <div id="bot" className={cn('astp glass bot qbot-sidebar-compact-v2 qbot-premium', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
             {mode !== 'full' && <div className="bresz" title="Drag to resize" role="separator" aria-label="Resize QuorlythBot" onPointerDown={e => {
               if (e.button !== 0) return
               e.preventDefault()
@@ -3988,7 +3989,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               addEventListener('pointercancel', up)
             }} />}
             {sideShown && sidebar}
-            <section className="bm">
+            <section className={cn('bm', view === 'chat' && 'qbot-chat-mode')}>
               <header className="bh" onPointerDown={e => {
                 if (mode === 'full' || e.button !== 0 || (e.target as HTMLElement).closest('button, input, textarea, a, select, [role="button"], .bresz')) return
                 const el = panel.current
@@ -4066,18 +4067,18 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               >
                 {view === 'chat' ? (
                   !msgs.length ? (
-                    <div className="bhero">
-                      <p className="dim">{role === 'owner' ? 'Platform owner' : communityOwner ? 'Community owner' : role === 'member' ? 'Member' : 'Visitor'}</p>
-                      <h3>{project ? project.name : 'How can I help?'}</h3>
-                      <p className="mut">Ask anything about your space, or pick a skill.</p>
-                      <div className="bgrid sm">
-                        {SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 6).map(s => (
-                          <button key={s.id} className="bsk" onClick={() => skill(s.id)}>
-                            <span className="bski"><Icon name={s.icon} size={20} /></span>
-                            <div className="bsk-info">
-                              <b>{s.n}</b>
-                              <span className="dim bsk-desc">{s.d}</span>
-                            </div>
+                    <div className="bhero qbot-welcome">
+                      <div className="qbot-welcome-mark"><Logo size={25} /></div>
+                      <p className="qbot-welcome-kicker"><span />CREATOR WORKSPACE <i>{role === 'owner' ? 'PLATFORM OWNER' : communityOwner ? 'COMMUNITY OWNER' : role === 'member' ? 'MEMBER' : 'VISITOR'}</i></p>
+                      <h3>{project ? <>Let’s move <em>{project.name}</em> forward.</> : <>Make the next<br /><em>idea count.</em></>}</h3>
+                      <p className="qbot-welcome-copy">Bring a question, shape an idea, or get a clear read on what your community needs next.</p>
+                      <div className="qbot-welcome-label"><span>START WITH</span><span>Choose a direction</span></div>
+                      <div className="bgrid sm qbot-welcome-grid">
+                        {SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 4).map((s, index) => (
+                          <button key={s.id} className="bsk qbot-welcome-card" onClick={() => skill(s.id)}>
+                            <span className="bski"><Icon name={s.icon} size={19} /></span>
+                            <span className="qbot-welcome-card-index">0{index + 1}</span>
+                            <div className="bsk-info"><b>{s.n}</b><span className="dim bsk-desc">{s.d}</span></div>
                             <span className="bsk-arrow" aria-hidden="true"><Icon name="arrow-up-right" size={14} /></span>
                           </button>
                         ))}
@@ -4086,7 +4087,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   ) : (
                     <div className="ast-log" aria-live="polite">
                       {msgs.map((m, i) => {
-                        if (m.r === 'u') return <div key={i} className="am mu">{m.t}</div>
+                        if (m.r === 'u') return <div key={i} className="am mu qbot-user-message"><span className="qbot-message-label">You</span><span>{m.t}</span></div>
                         const speechKey = (cur?.id || 'active') + ':' + i
                         const activeSpeech = speechMessageKey === speechKey && speechState !== 'idle'
                         const speechIcon = activeSpeech
@@ -4096,7 +4097,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                           ? speechState === 'paused' ? 'Resume voice playback' : speechState === 'loading' ? 'Cancel voice preparation' : 'Pause voice playback'
                           : 'Play reply aloud'
                         return (
-                          <div key={i} className="am ma"><div className="mt">{m.t}{(m as any).live && <span className="btyping" aria-label="QuorlythBot is typing"><i /><i /><i /></span>}</div>
+                          <div key={i} className="am ma qbot-assistant-message"><div className="qbot-assistant-byline"><span className="qbot-assistant-mark"><Logo size={15} /></span><b>QuorlythBot</b><i>Assistant</i></div><div className="mt">{m.t}{(m as any).live && <span className="btyping" aria-label="QuorlythBot is typing"><i /><i /><i /></span>}</div>
                             {m.btns?.length ? <div style={{ marginTop: 8 }}>{m.btns.map((b, k) => <button key={k} className="chip on" onClick={() => act(b)}>{b.l}</button>)}</div> : null}
                             <div className="mact">
                               <button disabled={!!(m as any).live} aria-label={speechLabel} title={speechLabel} aria-pressed={activeSpeech && speechState === 'playing'} onClick={() => toggleReplySpeech(speechKey, m.t)}><Icon name={speechIcon} size={14} /></button>
@@ -4253,18 +4254,20 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   <div className="ast-q">
                     {tour >= 0 && <><button className="chip on" onClick={() => { const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; setTour(tour + 1); step(steps, tour + 1) }}>Next</button><button className="chip" onClick={() => { setTour(-1); robot.current?.set('rest') }}>End tour</button></>}
                   </div>
+                  <div className="qbot-composer-label"><span>MESSAGE</span><kbd>Enter ↵</kbd></div>
                   <div className="ast-in">
                     <textarea rows={1} value={input} placeholder={ph || "Ask me anything..."} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
                     <button className={cn('btn', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording — click to stop and send' : 'Record a voice note'} style={{ padding: 12 }} onClick={dictate}><Icon name="mic" size={18} /></button>
                     <button className={cn('btn', live && 'rec')} aria-label={live ? 'End voice conversation' : 'Start voice conversation'} title={live ? 'End voice conversation' : 'Start voice conversation'} style={{ padding: 12 }} onClick={startLive}><Icon name={live ? 'mic' : 'live'} size={18} /></button>
                     <button className="btn p" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} style={{ padding: '12px 18px' }} onClick={() => send()}><Icon name="send" size={18} /></button>
-                    <div className="qbot-composer-toolbar" aria-label="Quick prompt tools">
-                      <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Brainstorm a few strong ideas for ')}><Icon name="spark" size={14} /><span>Brainstorm</span></button>
-                      <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Find useful conversations and ideas about ')}><Icon name="search" size={14} /><span>Search Quorlyth</span></button>
-                      <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Review this code and suggest improvements: ')}><Icon name="code" size={14} /><span>Review code</span></button>
-                      <button type="button" className="qbot-tool-pill qbot-tool-more" aria-label="More tools" title="More skills" onClick={() => setView('skills')}><Icon name="plus" size={14} /><span>Tools</span></button>
-                    </div>
+                  </div>
+                  <div className="qbot-composer-toolbar" aria-label="Quick prompt tools">
+                    <span className="qbot-composer-tools-label">TRY</span>
+                    <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Brainstorm a few strong ideas for ')}><Icon name="spark" size={14} /><span>Brainstorm</span></button>
+                    <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Find useful conversations and ideas about ')}><Icon name="search" size={14} /><span>Search Quorlyth</span></button>
+                    <button type="button" className="qbot-tool-pill" onClick={() => primeComposer('Review this code and suggest improvements: ')}><Icon name="code" size={14} /><span>Review code</span></button>
+                    <button type="button" className="qbot-tool-pill qbot-tool-more" aria-label="More tools" title="More skills" onClick={() => setView('skills')}><Icon name="plus" size={14} /><span>All tools</span></button>
                   </div>
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
                 </div>

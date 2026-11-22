@@ -16,11 +16,9 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
   const [del, setDel] = useState(false)
   const [clearConfirm, setClearConfirm] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  // Render inside QuorlythBot and keep the menu within the sidebar's useful lane.
-  // Its top is the Skills/Projects seam; its bottom stops above the profile footer.
-  const sidebarFrame = anchor?.closest<HTMLElement>('.bs') ?? null
+  // Keep the menu close to the specific chat row and within the bot panel.
   const botFrame = anchor?.closest<HTMLElement>('#bot') ?? anchor?.closest<HTMLElement>('.astp.bot') ?? null
-  const [position, setPosition] = useState({ left: 8, top: 8, width: 320 })
+  const [position, setPosition] = useState({ left: 8, top: 8, width: 272 })
   const [panelMaxHeight, setPanelMaxHeight] = useState(Math.max(80, window.innerHeight - 16))
 
   useEffect(() => {
@@ -31,33 +29,19 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
     const menu = menuRef.current
     if (!menu) return
     const place = () => {
-      if (!sidebarFrame || !botFrame || !menu) return
-      const sidebarRect = sidebarFrame.getBoundingClientRect()
+      if (!botFrame || !menu) return
       const botRect = botFrame.getBoundingClientRect()
-      const nav = sidebarFrame.querySelector<HTMLElement>('.bs-n')
-      const footer = sidebarFrame.querySelector<HTMLElement>('.bs-f')
-      const navButtons = nav ? Array.from(nav.querySelectorAll<HTMLElement>('.bsb')) : []
-      const skills = navButtons.find(button => button.textContent?.trim().includes('Skills'))
-      const projects = navButtons.find(button => button.textContent?.trim().includes('Projects'))
-      const seam = skills && projects
-        ? (skills.getBoundingClientRect().bottom + projects.getBoundingClientRect().top) / 2
-        : nav?.getBoundingClientRect().bottom ?? sidebarRect.top + 72
-      const footerTop = footer?.getBoundingClientRect().top ?? sidebarRect.bottom - 12
-      const topViewport = Math.max(sidebarRect.top + 8, Math.min(seam, footerTop - 80))
-      const bottomViewport = Math.min(sidebarRect.bottom - 8, footerTop - 8)
-      // Float from the sidebar's right edge into the bot's chat lane.
-      // A small overlap keeps the panel visually attached to the sidebar while
-      // placing most of its surface between the navigation and conversation.
-      const laneLeft = Math.max(botRect.left + 8, sidebarRect.right - 18)
-      const availableRight = Math.min(botRect.right, window.innerWidth) - laneLeft - 8
-      // On narrow layouts there may be no chat lane beside the drawer; keep
-      // the panel inside the original sidebar instead of forcing horizontal overflow.
-      const hasRoomBesideSidebar = availableRight >= 230
-      const leftViewport = hasRoomBesideSidebar ? laneLeft : sidebarRect.left + 8
-      const width = hasRoomBesideSidebar
-        ? Math.min(320, availableRight)
-        : Math.max(180, Math.min(320, sidebarRect.width - 16, window.innerWidth - 16))
-      const height = Math.max(80, bottomViewport - topViewport)
+      const gutter = 8
+      const rightEdge = Math.min(botRect.right, window.innerWidth)
+      const bottomEdge = Math.min(botRect.bottom, window.innerHeight)
+      const width = Math.max(190, Math.min(276, botRect.width - gutter * 2, window.innerWidth - gutter * 2))
+      const height = Math.max(96, Math.min(menu.scrollHeight, botRect.height - gutter * 2, window.innerHeight - gutter * 2))
+      let leftViewport = x
+      if (leftViewport + width > rightEdge - gutter) leftViewport = x - width
+      leftViewport = Math.max(botRect.left + gutter, Math.min(leftViewport, rightEdge - width - gutter))
+      let topViewport = y + 5
+      if (topViewport + height > bottomEdge - gutter) topViewport = y - height - 5
+      topViewport = Math.max(botRect.top + gutter, Math.min(topViewport, bottomEdge - height - gutter))
       // Position against the browser's actual CSS containing block. This avoids
       // the offset errors caused by assuming #bot is always the offset parent.
       const containingBlock = menu.offsetParent instanceof HTMLElement ? menu.offsetParent : botFrame
@@ -70,7 +54,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
     place()
     window.addEventListener('resize', place)
     window.addEventListener('scroll', place, true)
-    const observed = [anchor, sidebarFrame, botFrame].filter((node): node is HTMLElement => node instanceof HTMLElement)
+    const observed = [anchor, botFrame].filter((node): node is HTMLElement => node instanceof HTMLElement)
     const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(place) : null
     observed.forEach(node => resizeObserver?.observe(node))
     return () => {
@@ -78,7 +62,7 @@ export function ChatMenu({ chat, x, y, leftBound, rightBound, anchor, offsetX, o
       window.removeEventListener('scroll', place, true)
       resizeObserver?.disconnect()
     }
-  }, [x, y, leftBound, rightBound, anchor, sidebarFrame, botFrame, offsetX, offsetY, chat?.id, proj, del])
+  }, [x, y, anchor, botFrame, chat?.id, proj, del, clearConfirm])
   const item = (icon: string, label: string, fn: () => void, cls = '') => (
     <button role="menuitem" className={cls} onClick={() => { fn(); onClose() }}><Icon name={icon} size={16} />{label}</button>
   )
