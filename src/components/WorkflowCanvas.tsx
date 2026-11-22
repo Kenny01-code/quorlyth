@@ -1,4 +1,4 @@
-import { CSSProperties, PointerEvent as ReactPointerEvent, useMemo, useState } from 'react'
+import { CSSProperties, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ACTION_INFO,
   CONDITION_FIELD_INFO,
@@ -20,17 +20,13 @@ import {
   workflowWithGraph,
 } from '../lib/automation'
 import { QuorlythGlyph } from './QuorlythGlyph'
+import { PositionedWorkflowNode, positionWorkflowNodes, workflowCanvasSize, workflowEdgePath, workflowNodeSize } from '../lib/workflowLayout'
 import '../styles/workflow-canvas.css'
 
 type ProjectOption = { id: string; title: string }
 type RunStatus = 'running' | 'success' | 'failed' | 'skipped'
-type PlacedNode = WorkflowNode extends infer Node ? Node extends WorkflowNode ? Omit<Node, 'position'> & { position: { x: number; y: number } } : never : never
 type DragState = { id: string; pointerId: number; startX: number; startY: number; originX: number; originY: number }
-
-const NODE_WIDTH = 250
-const NODE_HEIGHT = 126
-const TRIGGER_WIDTH = 260
-const CONDITION_WIDTH = 270
+type PanState = { pointerId: number; startX: number; startY: number; scrollLeft: number; scrollTop: number }
 
 function newAction(type: WorkflowActionType): WorkflowAction {
   const id = newWorkflowId()
@@ -42,45 +38,6 @@ function newAction(type: WorkflowActionType): WorkflowAction {
     acceptanceCriteria: '',
   }
   return { id, type, title: ACTION_INFO.webhook.title, url: '' }
-}
-
-function positionedNodes(nodes: WorkflowNode[], edges: WorkflowEdge[]): PlacedNode[] {
-  const trigger = nodes.find(node => node.type === 'trigger')
-  const condition = nodes.find(node => node.type === 'condition')
-  const actionNodes = nodes.filter((node): node is Extract<WorkflowNode, { type: 'action' }> => node.type === 'action')
-  const firstActionFor = (handle: 'true' | 'false' | 'next') => {
-    const sourceId = condition?.id || trigger?.id
-    const edge = edges.find(item => item.source === sourceId && item.sourceHandle === handle)
-    return edge?.target || ''
-  }
-  const collect = (firstId: string) => {
-    const chain: string[] = []
-    let id = firstId
-    while (id && !chain.includes(id)) {
-      chain.push(id)
-      id = edges.find(edge => edge.source === id && edge.sourceHandle === 'next')?.target || ''
-    }
-    return chain
-  }
-  const trueChain = collect(firstActionFor(condition ? 'true' : 'next'))
-  const falseChain = condition ? collect(firstActionFor('false')) : []
-  const positions = new Map<string, { x: number; y: number }>()
-  if (trigger) positions.set(trigger.id, { x: 60, y: condition ? 230 : 255 })
-  if (condition) positions.set(condition.id, { x: 390, y: 230 })
-  if (condition) {
-    trueChain.forEach((id, index) => positions.set(id, { x: 790, y: 65 + index * 175 }))
-    falseChain.forEach((id, index) => positions.set(id, { x: 790, y: 430 + index * 175 }))
-  } else {
-    trueChain.forEach((id, index) => positions.set(id, { x: 570, y: 220 + index * 175 }))
-  }
-  // Unconnected nodes remain visible so the user can reconnect them.
-  actionNodes.forEach((node, index) => {
-    if (!positions.has(node.id)) positions.set(node.id, { x: 790, y: 620 + index * 150 })
-  })
-  return nodes.map(node => {
-    const fallback = positions.get(node.id) || { x: 60, y: 230 }
-    return { ...node, position: node.position || fallback } as PlacedNode
-  })
 }
 
 function branchActions(nodes: WorkflowNode[], edges: WorkflowEdge[], branch: 'true' | 'false' | 'next') {
@@ -98,16 +55,6 @@ function branchActions(nodes: WorkflowNode[], edges: WorkflowEdge[], branch: 'tr
     current = edges.find(edge => edge.source === current && edge.sourceHandle === 'next')?.target || ''
   }
   return output
-}
-
-function edgePath(source: PlacedNode, target: PlacedNode, handle: string) {
-  const sourceWidth = source.type === 'trigger' ? TRIGGER_WIDTH : source.type === 'condition' ? CONDITION_WIDTH : NODE_WIDTH
-  const sourceX = source.position.x + sourceWidth
-  const sourceY = source.position.y + (source.type === 'condition' ? handle === 'false' ? 112 : 62 : NODE_HEIGHT / 2)
-  const targetX = target.position.x
-  const targetY = target.position.y + NODE_HEIGHT / 2
-  const curve = Math.max(70, Math.abs(targetX - sourceX) * 0.45)
-  return { d: `M ${sourceX} ${sourceY} C ${sourceX + curve} ${sourceY}, ${targetX - curve} ${targetY}, ${targetX} ${targetY}`, sourceX, sourceY, targetX, targetY }
 }
 
 function statusClass(status?: RunStatus) {
@@ -135,22 +82,51 @@ export function WorkflowCanvas({
   const [selectedId, setSelectedId] = useState<string>(graph.nodes[0]?.id || '')
   const [zoom, setZoom] = useState(1)
   const [drag, setDrag] = useState<DragState | null>(null)
-  const nodes = useMemo(() => positionedNodes(graph.nodes, graph.edges), [graph.nodes, graph.edges])
+  const nodes = useMemo(() => positionWorkflowNodes(graph.nodes, graph.edges), [graph.nodes, graph.edges])
   const selected = nodes.find(node => node.id === selectedId) || nodes[0]
-  const condition = nodes.find((node): node is Extract<PlacedNode, { type: 'condition' }> => node.type === 'condition')
-  const trigger = nodes.find((node): node is Extract<PlacedNode, { type: 'trigger' }> => node.type === 'trigger')
+  const condition = nodes.find((node): node is Extract<PositionedWorkflowNode, { type: 'condition' }> => node.type === 'condition')
+  const trigger = nodes.find((node): node is Extract<PositionedWorkflowNode, { type: 'trigger' }> => node.type === 'trigger')
   const trueActions = branchActions(nodes, graph.edges, condition ? 'true' : 'next')
   const falseActions = condition ? branchActions(nodes, graph.edges, 'false') : []
   const latestSteps = new Map((latestRun?.steps || []).map(step => [step.nodeId || step.id, step]))
   const actionCount = nodes.filter(node => node.type === 'action').length
   const webhookCount = nodes.filter(node => node.type === 'action' && node.action.type === 'webhook').length
   const hasCondition = Boolean(condition)
-  const canvasHeight = Math.max(720, (Math.max(trueActions.length, falseActions.length) * 175) + 560)
-  const canvasWidth = hasCondition ? 1220 : 1040
-  const displayNodes = nodes.map(node => ({
-    ...node,
-    position: node.position || { x: 60, y: 230 },
-  })) as PlacedNode[]
+  const { width: canvasWidth, height: canvasHeight } = workflowCanvasSize(nodes)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const panRef = useRef<PanState | null>(null)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [showMinimap, setShowMinimap] = useState(true)
+  const [isPanning, setIsPanning] = useState(false)
+  const [view, setView] = useState({ left: 0, top: 0, width: 1, height: 1 })
+
+  function syncViewport() {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    setView({ left: viewport.scrollLeft, top: viewport.scrollTop, width: viewport.clientWidth, height: viewport.clientHeight })
+  }
+
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(syncViewport)
+    observer?.observe(viewport)
+    window.addEventListener('resize', syncViewport)
+    syncViewport()
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', syncViewport)
+    }
+  }, [isExpanded])
+
+  useEffect(() => {
+    if (!isExpanded) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsExpanded(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isExpanded])
 
   function commit(nextNodes: WorkflowNode[], nextEdges: WorkflowEdge[]) {
     onChange(workflowWithGraph(workflow, nextNodes, nextEdges))
@@ -231,7 +207,7 @@ export function WorkflowCanvas({
     updateNode(trigger.id, { trigger: value } as Partial<WorkflowNode>)
   }
 
-  function handleDragStart(event: ReactPointerEvent<HTMLDivElement>, node: PlacedNode) {
+  function handleDragStart(event: ReactPointerEvent<HTMLDivElement>, node: PositionedWorkflowNode) {
     if ((event.target as HTMLElement).closest('button, input, select, textarea')) return
     event.preventDefault()
     event.stopPropagation()
@@ -259,13 +235,91 @@ export function WorkflowCanvas({
     if (drag?.pointerId === event.pointerId) setDrag(null)
   }
 
-  function nodeStyle(node: PlacedNode): CSSProperties {
-    const width = node.type === 'trigger' ? TRIGGER_WIDTH : node.type === 'condition' ? CONDITION_WIDTH : NODE_WIDTH
-    return { left: node.position.x, top: node.position.y, width }
+  function nodeStyle(node: PositionedWorkflowNode): CSSProperties {
+    return { left: node.position.x, top: node.position.y, width: workflowNodeSize(node).width }
   }
 
   function runStatus(id: string) {
     return latestSteps.get(id)?.status as RunStatus | undefined
+  }
+
+  function changeZoom(next: number, point?: { x: number; y: number }) {
+    const viewport = viewportRef.current
+    const bounded = Math.max(.35, Math.min(1.75, Number(next.toFixed(2))))
+    if (viewport && point) {
+      const worldX = (viewport.scrollLeft + point.x) / zoom
+      const worldY = (viewport.scrollTop + point.y) / zoom
+      setZoom(bounded)
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        viewport.scrollLeft = worldX * bounded - point.x
+        viewport.scrollTop = worldY * bounded - point.y
+        syncViewport()
+      }))
+      return
+    }
+    setZoom(bounded)
+  }
+
+  function fitWorkflow() {
+    const viewport = viewportRef.current
+    if (!viewport || !nodes.length) return
+    const left = Math.min(...nodes.map(node => node.position.x))
+    const top = Math.min(...nodes.map(node => node.position.y))
+    const right = Math.max(...nodes.map(node => node.position.x + workflowNodeSize(node).width))
+    const bottom = Math.max(...nodes.map(node => node.position.y + workflowNodeSize(node).height))
+    const contentWidth = Math.max(1, right - left)
+    const contentHeight = Math.max(1, bottom - top)
+    const next = Math.max(.35, Math.min(1.5, (viewport.clientWidth - 80) / contentWidth, (viewport.clientHeight - 80) / contentHeight))
+    setZoom(next)
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      viewport.scrollLeft = Math.max(0, left * next - Math.max(0, (viewport.clientWidth - contentWidth * next) / 2))
+      viewport.scrollTop = Math.max(0, top * next - Math.max(0, (viewport.clientHeight - contentHeight * next) / 2))
+      syncViewport()
+    }))
+  }
+
+  function handleCanvasWheel(event: ReactWheelEvent<HTMLDivElement>) {
+    if (!event.ctrlKey && !event.metaKey) return
+    event.preventDefault()
+    const rect = event.currentTarget.getBoundingClientRect()
+    changeZoom(zoom * (event.deltaY < 0 ? 1.1 : .9), { x: event.clientX - rect.left, y: event.clientY - rect.top })
+  }
+
+  function startCanvasPan(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.button !== 0 || (event.target as HTMLElement).closest('.wfc-node, .wfc-minimap, button, input, select, textarea')) return
+    const viewport = viewportRef.current
+    if (!viewport) return
+    event.preventDefault()
+    panRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, scrollLeft: viewport.scrollLeft, scrollTop: viewport.scrollTop }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsPanning(true)
+  }
+
+  function moveCanvasPan(event: ReactPointerEvent<HTMLDivElement>) {
+    const pan = panRef.current
+    const viewport = viewportRef.current
+    if (!pan || pan.pointerId !== event.pointerId || !viewport) return
+    viewport.scrollLeft = pan.scrollLeft - (event.clientX - pan.startX)
+    viewport.scrollTop = pan.scrollTop - (event.clientY - pan.startY)
+    syncViewport()
+  }
+
+  function endCanvasPan(event: ReactPointerEvent<HTMLDivElement>) {
+    if (panRef.current?.pointerId !== event.pointerId) return
+    panRef.current = null
+    setIsPanning(false)
+  }
+
+  function navigateMinimap(event: ReactMouseEvent<HTMLButtonElement>) {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const svg = event.currentTarget.querySelector('svg')
+    const rect = svg?.getBoundingClientRect() || event.currentTarget.getBoundingClientRect()
+    const worldX = ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvasWidth
+    const worldY = ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvasHeight
+    viewport.scrollLeft = Math.max(0, worldX * zoom - viewport.clientWidth / 2)
+    viewport.scrollTop = Math.max(0, worldY * zoom - viewport.clientHeight / 2)
+    syncViewport()
   }
 
   return (
@@ -277,84 +331,107 @@ export function WorkflowCanvas({
       </div>
 
       <div className="wfc-workspace">
-        <section className="wfc-canvas-column">
+        <section className={'wfc-canvas-column' + (isExpanded ? ' is-expanded' : '')}>
           <header className="wfc-canvas-toolbar">
-            <div><span className="wfc-live-indicator" /><strong>VISUAL WORKFLOW CANVAS</strong><small>{nodes.length} nodes · {graph.edges.length} connections</small></div>
+            <div className="wfc-canvas-title"><span className={'wfc-live-indicator' + (latestRun?.status === 'running' ? ' is-running' : '')} /><strong>VISUAL WORKFLOW CANVAS</strong><small>{nodes.length} nodes &middot; {graph.edges.length} connections</small>{latestRun?.status === 'running' && <span className="wfc-run-live">LIVE RUN</span>}</div>
             <div className="wfc-zoom-tools">
-              <button type="button" onClick={() => setZoom(value => Math.max(.65, Number((value - .1).toFixed(2))))} aria-label="Zoom out">−</button>
+              <button type="button" onClick={() => changeZoom(zoom - .1)} aria-label="Zoom out">-</button>
               <span>{Math.round(zoom * 100)}%</span>
-              <button type="button" onClick={() => setZoom(value => Math.min(1.25, Number((value + .1).toFixed(2))))} aria-label="Zoom in">+</button>
-              <button type="button" onClick={() => setZoom(1)} aria-label="Reset zoom"><QuorlythGlyph name="rotate" size={13} /></button>
+              <button type="button" onClick={() => changeZoom(zoom + .1)} aria-label="Zoom in">+</button>
+              <button type="button" onClick={fitWorkflow} aria-label="Fit workflow to canvas">Fit</button>
+              <button type="button" aria-pressed={showMinimap} onClick={() => setShowMinimap(value => !value)} aria-label={showMinimap ? 'Hide minimap' : 'Show minimap'} title={showMinimap ? 'Hide minimap' : 'Show minimap'}><QuorlythGlyph name="stage" size={14} /></button>
+              <button type="button" onClick={() => setIsExpanded(value => !value)} aria-label={isExpanded ? 'Close expanded canvas' : 'Expand canvas'} title={isExpanded ? 'Close expanded canvas (Esc)' : 'Expand canvas'}><QuorlythGlyph name={isExpanded ? 'shrink' : 'expand'} size={14} /></button>
             </div>
           </header>
 
-          <div className="wfc-canvas-viewport">
-            <div
-              className="wfc-canvas-inner"
-              style={{ width: canvasWidth, height: canvasHeight, transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-              onPointerMove={handleDragMove}
-              onPointerUp={handleDragEnd}
-              onPointerCancel={handleDragEnd}
-            >
-              <svg className="wfc-edges" width={canvasWidth} height={canvasHeight} aria-hidden="true">
-                {graph.edges.map(edge => {
-                  const source = displayNodes.find(node => node.id === edge.source)
-                  const target = displayNodes.find(node => node.id === edge.target)
-                  if (!source || !target) return null
-                  const path = edgePath(source, target, edge.sourceHandle)
-                  const step = latestSteps.get(target.id)
-                  const edgeClass = step?.status === 'success' ? 'is-success' : step?.status === 'failed' ? 'is-failed' : step?.status === 'running' ? 'is-running' : ''
-                  const middleX = (path.sourceX + path.targetX) / 2
-                  return <g key={edge.id} className={'wfc-edge ' + edgeClass}>
-                    <path d={path.d} />
-                    <circle cx={path.targetX} cy={path.targetY} r="4" />
-                    {edge.label && <text x={middleX} y={path.sourceY - 10}>{edge.label}</text>}
-                  </g>
+          <div
+            ref={viewportRef}
+            className={'wfc-canvas-viewport' + (isPanning ? ' is-panning' : '')}
+            onPointerDown={startCanvasPan}
+            onPointerMove={event => { moveCanvasPan(event); handleDragMove(event) }}
+            onPointerUp={event => { endCanvasPan(event); handleDragEnd(event) }}
+            onPointerCancel={event => { endCanvasPan(event); handleDragEnd(event) }}
+            onWheel={handleCanvasWheel}
+            onScroll={syncViewport}
+          >
+            <div className="wfc-canvas-world" style={{ width: canvasWidth * zoom, height: canvasHeight * zoom }}>
+              <div className="wfc-canvas-inner" style={{ width: canvasWidth, height: canvasHeight, transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+                <svg className="wfc-edges" width={canvasWidth} height={canvasHeight} aria-hidden="true">
+                  {graph.edges.map(edge => {
+                    const source = nodes.find(node => node.id === edge.source)
+                    const target = nodes.find(node => node.id === edge.target)
+                    if (!source || !target) return null
+                    const path = workflowEdgePath(source, target, edge.sourceHandle)
+                    const step = latestSteps.get(target.id)
+                    const edgeClass = step?.status ? 'is-' + step.status : ''
+                    const middleX = (path.sourceX + path.targetX) / 2
+                    return <g key={edge.id} className={'wfc-edge ' + edgeClass}>
+                      <path d={path.d} />
+                      <circle cx={path.targetX} cy={path.targetY} r="4" />
+                      {edge.label && <text x={middleX} y={path.sourceY - 10}>{edge.label}</text>}
+                    </g>
+                  })}
+                </svg>
+                {nodes.map(node => {
+                  const status = runStatus(node.id)
+                  const title = node.type === 'trigger' ? TRIGGER_INFO[node.trigger].title
+                    : node.type === 'condition' ? 'Decision: ' + (node.value || 'Set a condition')
+                      : node.action.title || ACTION_INFO[node.action.type].title
+                  const subtitle = node.type === 'trigger' ? 'Quorlyth event'
+                    : node.type === 'condition' ? CONDITION_OPERATOR_INFO[node.operator] + ' ' + (node.value || 'any value')
+                      : node.action.type === 'webhook' ? 'HTTPS request'
+                        : node.action.type === 'create_task' ? 'Workspace action' : 'In-app notification'
+                  const label = node.type === 'trigger' ? 'TRIGGER'
+                    : node.type === 'condition' ? 'IF / ELSE ROUTER'
+                      : node.action.type === 'webhook' ? 'WEBHOOK'
+                        : node.action.type === 'create_task' ? 'WORKSPACE ACTION' : 'NOTIFICATION ACTION'
+                  return <div
+                    key={node.id}
+                    className={'wfc-node wfc-node-' + node.type + statusClass(status) + (selected?.id === node.id ? ' is-selected' : '')}
+                    style={nodeStyle(node)}
+                    onPointerDown={event => handleDragStart(event, node)}
+                    onClick={() => setSelectedId(node.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') setSelectedId(node.id) }}
+                  >
+                    <div className="wfc-node-top"><span className="wfc-node-kind">{label}</span><span className="wfc-node-status">{status || (node.type === 'trigger' ? 'LISTENING' : node.type === 'condition' ? 'ROUTER' : 'READY')}</span></div>
+                    <div className="wfc-node-main"><span className="wfc-node-icon"><NodeSymbol node={node} /></span><div><strong>{title}</strong><small>{subtitle}</small></div></div>
+                    {node.type === 'trigger' && <div className="wfc-node-foot"><span>Event source</span><span className="wfc-port wfc-port-output" /></div>}
+                    {node.type === 'condition' && <div className="wfc-condition-ports"><span className="wfc-port-label true">true <i /></span><span className="wfc-port-label false">false <i /></span></div>}
+                    {node.type === 'action' && <div className="wfc-node-foot"><span>{node.action.type === 'webhook' ? 'POST request' : node.action.type === 'create_task' ? 'Create record' : 'Save notification'}</span><span className="wfc-port wfc-port-output" /></div>}
+                    <span className="wfc-port wfc-port-input" />
+                  </div>
                 })}
-              </svg>
-              {displayNodes.map(node => {
-                const status = runStatus(node.id)
-                const title = node.type === 'trigger' ? TRIGGER_INFO[node.trigger].title
-                  : node.type === 'condition' ? 'Decision · ' + (node.value || 'Set a condition')
-                    : node.action.title || ACTION_INFO[node.action.type].title
-                const subtitle = node.type === 'trigger' ? 'Quorlyth event'
-                  : node.type === 'condition' ? CONDITION_OPERATOR_INFO[node.operator] + ' ' + (node.value || '…')
-                    : node.action.type === 'webhook' ? 'HTTPS request'
-                      : node.action.type === 'create_task' ? 'Workspace action' : 'In-app notification'
-                const label = node.type === 'trigger' ? 'TRIGGER'
-                  : node.type === 'condition' ? 'IF / ELSE ROUTER'
-                    : node.action.type === 'webhook' ? 'WEBHOOK'
-                      : node.action.type === 'create_task' ? 'WORKSPACE ACTION' : 'NOTIFICATION ACTION'
-                return <div
-                  key={node.id}
-                  className={'wfc-node wfc-node-' + node.type + statusClass(status) + (selected?.id === node.id ? ' is-selected' : '')}
-                  style={nodeStyle(node)}
-                  onPointerDown={event => handleDragStart(event, node)}
-                  onClick={() => setSelectedId(node.id)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') setSelectedId(node.id) }}
-                >
-                  <div className="wfc-node-top"><span className="wfc-node-kind">{label}</span><span className="wfc-node-status">{status || (node.type === 'trigger' ? 'LISTENING' : node.type === 'condition' ? 'ROUTER' : 'READY')}</span></div>
-                  <div className="wfc-node-main"><span className="wfc-node-icon"><NodeSymbol node={node} /></span><div><strong>{title}</strong><small>{subtitle}</small></div></div>
-                  {node.type === 'trigger' && <div className="wfc-node-foot"><span>Event source</span><span className="wfc-port wfc-port-output" /></div>}
-                  {node.type === 'condition' && <div className="wfc-condition-ports"><span className="wfc-port-label true">true <i /></span><span className="wfc-port-label false">false <i /></span></div>}
-                  {node.type === 'action' && <div className="wfc-node-foot"><span>{node.action.type === 'webhook' ? 'POST request' : node.action.type === 'create_task' ? 'Create record' : 'Save notification'}</span><span className="wfc-port wfc-port-output" /></div>}
-                  <span className="wfc-port wfc-port-input" />
-                </div>
-              })}
+              </div>
             </div>
+            {showMinimap && <button className="wfc-minimap" type="button" aria-label="Workflow minimap. Click to navigate the canvas." title="Click the map to navigate the workflow" onClick={navigateMinimap}>
+              <span>OVERVIEW</span>
+              <svg viewBox={`0 0 ${canvasWidth} ${canvasHeight}`} preserveAspectRatio="none" aria-hidden="true">
+                {graph.edges.map(edge => {
+                  const source = nodes.find(node => node.id === edge.source)
+                  const target = nodes.find(node => node.id === edge.target)
+                  if (!source || !target) return null
+                  const path = workflowEdgePath(source, target, edge.sourceHandle)
+                  const step = latestSteps.get(target.id)
+                  return <path key={edge.id} className={step?.status ? 'is-' + step.status : ''} d={path.d} />
+                })}
+                {nodes.map(node => <rect key={node.id} className={'is-' + node.type + (runStatus(node.id) ? ' is-' + runStatus(node.id) : '')} x={node.position.x} y={node.position.y} width={workflowNodeSize(node).width} height={workflowNodeSize(node).height} rx="13" />)}
+                <rect className="wfc-minimap-view" x={view.left / zoom} y={view.top / zoom} width={Math.min(canvasWidth, view.width / zoom)} height={Math.min(canvasHeight, view.height / zoom)} rx="4" />
+              </svg>
+              <small>Click to navigate</small>
+            </button>}
           </div>
 
           <div className="wfc-node-palette">
-            <div><p>ADD TO CANVAS</p><small>{actionCount}/{MAX_WORKFLOW_ACTIONS} steps · {webhookCount}/{MAX_WORKFLOW_WEBHOOKS} webhook connections</small></div>
+            <div><p>ADD TO CANVAS</p><small>{actionCount}/{MAX_WORKFLOW_ACTIONS} steps | {webhookCount}/{MAX_WORKFLOW_WEBHOOKS} webhook connections</small></div>
             {!condition && <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={addDecision}><QuorlythGlyph name="sliders" size={15} />Decision</button>}
             <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={() => addAction(condition ? 'true' : 'next', 'notify')}><QuorlythGlyph name="bell" size={15} />Notify</button>
             <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={() => addAction(condition ? 'true' : 'next', 'create_task')}><QuorlythGlyph name="workspace" size={15} />Create task</button>
             <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS || webhookCount >= MAX_WORKFLOW_WEBHOOKS} onClick={() => addAction(condition ? 'true' : 'next', 'webhook')}><QuorlythGlyph name="send" size={15} />Webhook</button>
             {condition && <><span className="wfc-palette-divider" /><button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} className="wfc-false-add" onClick={() => addAction('false', 'notify')}>+ False route</button></>}
           </div>
-          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange your canvas. Select a node to edit its configuration. Up to 128 action steps are supported; webhook steps are capped at 3 to protect run reliability.</p>
+          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange | drag empty canvas to pan | Ctrl or Cmd + scroll to zoom | Fit shows the full workflow. Up to 128 actions; 3 webhooks.</p>
         </section>
 
         <aside className="wfc-inspector">

@@ -398,6 +398,17 @@ export async function executeWorkflowActions(
     else steps.push(step)
     await progress(status === 'failed' ? 'failed' : 'running')
   }
+  const markSkippedChain = async (firstId: string, detail: string) => {
+    const seen = new Set<string>()
+    let id = firstId
+    while (id && !seen.has(id)) {
+      seen.add(id)
+      const node = byId.get(id)
+      if (!node || node.type !== 'action') break
+      await mark(node, 'skipped', detail)
+      id = edges.find(edge => edge.source === id && edge.sourceHandle === 'next')?.target || ''
+    }
+  }
 
   const trigger = nodes.find((node): node is Extract<WorkflowNode, { type: 'trigger' }> => node.type === 'trigger')
   if (!trigger) {
@@ -416,6 +427,9 @@ export async function executeWorkflowActions(
     await mark(condition, 'success', matched
       ? 'Condition matched. Following the true route.'
       : 'Condition did not match. Following the false route.')
+    const skippedHandle = matched ? 'false' : 'true'
+    const skippedStart = edges.find(edge => edge.source === condition.id && edge.sourceHandle === skippedHandle)?.target || ''
+    await markSkippedChain(skippedStart, 'Skipped because the ' + skippedHandle + ' route was not selected.')
     nextEdge = edges.find(edge => edge.source === condition.id && edge.sourceHandle === (matched ? 'true' : 'false'))
   }
 
@@ -516,6 +530,8 @@ export async function executeWorkflowActions(
     const next = edges.find(edge => edge.source === currentId && edge.sourceHandle === 'next')
     currentId = next?.target || ''
   }
+
+  if (failed && currentId) await markSkippedChain(currentId, 'Skipped because an earlier workflow step failed.')
 
   const run = makeRun(failed ? 'failed' : 'success')
   await progress(run.status)
