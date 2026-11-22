@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
 import { Orbit } from '../components/Orbit'
-import { HeroCreator, PreviewCreator } from '../components/CreatorMotion'
 import { Bar } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { useReveal } from '../lib/hooks'
@@ -81,22 +80,8 @@ export function Landing() {
   const ws = [...WORDS, ...WORDS]
   return (
     <>
-      <div className="hero" id="top"
-        onPointerMove={event => {
-          if (event.pointerType === 'touch' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-          const rect = event.currentTarget.getBoundingClientRect()
-          if (!rect.width || !rect.height) return
-          const x = (event.clientX - rect.left) / rect.width - .5
-          const y = (event.clientY - rect.top) / rect.height - .5
-          event.currentTarget.style.setProperty('--qth-orbit-x', `${-y * 3.5}deg`)
-          event.currentTarget.style.setProperty('--qth-orbit-y', `${x * 5}deg`)
-        }}
-        onPointerLeave={event => {
-          event.currentTarget.style.setProperty('--qth-orbit-x', '0deg')
-          event.currentTarget.style.setProperty('--qth-orbit-y', '0deg')
-        }}>
+      <div className="hero" id="top">
         <Orbit />
-        <HeroCreator />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
         <h1 className="hero-title"><EditorialReveal text={HERO_COPY.headline} /></h1>
@@ -134,7 +119,6 @@ export function Landing() {
             <span className="chip">Illustrative demo</span>
             <span className="dim">Idea review</span>
           </div>
-          <PreviewCreator />
           <h3>What should our community build next?</h3>
           <p className="mut">A community-led concept, ready for review.</p>
           <div className="preview-divider" />
