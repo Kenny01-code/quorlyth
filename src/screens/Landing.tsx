@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
-import { Orbit } from '../components/Orbit'
 import { HeroCreator, PreviewCreator } from '../components/CreatorMotion'
 import { Bar } from '../components/ui'
 import { useApp } from '../data/AppProvider'
@@ -95,7 +94,6 @@ export function Landing() {
           event.currentTarget.style.setProperty('--qth-orbit-x', '0deg')
           event.currentTarget.style.setProperty('--qth-orbit-y', '0deg')
         }}>
-        <Orbit />
         <HeroCreator />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>

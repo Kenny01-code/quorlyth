@@ -26,20 +26,9 @@ export function HeroCreator() {
 
   return (
     <div ref={stageRef} className="qth-creator-stage" data-visible={visible ? 'true' : 'false'} aria-hidden="true">
-      <div className="qth-creator-stage__halo" />
       <div className="qth-creator-stage__art">
         <img src={CREATOR_ART} width="430" height="722" alt="" loading="eager" decoding="async" />
       </div>
-      <div className="qth-creator-float qth-creator-float--signal">
-        <span>COMMUNITY SIGNAL</span>
-        <strong>Ideas in motion</strong>
-      </div>
-      <div className="qth-creator-float qth-creator-float--credit">
-        <span>CREATOR × COMMUNITY</span>
-        <strong>Built together</strong>
-      </div>
-      <span className="qth-creator-stage__spark qth-creator-stage__spark--one" />
-      <span className="qth-creator-stage__spark qth-creator-stage__spark--two" />
     </div>
   )
 }
