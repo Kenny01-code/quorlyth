@@ -13,7 +13,7 @@ test('QuorlythBot keeps its restored terracotta robot theme with the obsidian pe
   assert.ok(bot.includes("import '../styles/bot-obsidian-glass.css'"))
   assert.ok(bot.includes("const theme = 'terracotta'"))
   assert.ok(bot.includes("const accent = THEMES.pearl"))
-  assert.match(bot, /const orbVisible = bs\\.robot && view !== 'chat' && \\(speechState === 'playing' \\|\\| voiceStudioSpeaking\\)/)
+  assert.ok(bot.includes("const orbVisible = bs.robot && view !== 'chat' && (speechState === 'playing' || voiceStudioSpeaking)"))
   assert.match(bot, /\{orbVisible && \([\s\S]*?className=\{cn\('bstage bot-orb-dock qbot-live-orb-stage'/)
   assert.match(bot, /active=\{!minimized && open && orbVisible\}/)
   assert.match(bot, /aria-label=\{live \? 'Live Talk voice visualizer' : 'QuorlythBot speaking visualizer'\}/)
