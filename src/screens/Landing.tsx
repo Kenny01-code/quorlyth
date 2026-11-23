@@ -5,7 +5,9 @@ import { HeroCreator, PreviewCreator } from '../components/CreatorMotion'
 import { Bar } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { useReveal } from '../lib/hooks'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { QuorlythBotHomePreview } from '../components/QuorlythBotHomePreview'
+import '../styles/qbot-home-preview.css'
 
 const HERO_COPY = {
   headline: 'Make your community part of what comes next.',
@@ -63,6 +65,8 @@ const FEATURES = [['rank', 'Ranked with reasons', 'Every score comes with a plai
 export function Landing() {
   const nav = useNavigate()
   const { me, data, enterDemo, ready } = useApp()
+  const [botPreviewOpen, setBotPreviewOpen] = useState(false)
+  const closeBotPreview = useCallback(() => setBotPreviewOpen(false), [])
   useEffect(() => {
     const detail = { page_path: window.location.pathname }
     window.dispatchEvent(new CustomEvent('quorlyth:conversion', { detail: { event: 'landing_view', ...detail } }))
@@ -115,11 +119,13 @@ export function Landing() {
             const analyticsWindow = window as Window & { gtag?: (command: string, eventName: string, parameters?: Record<string, unknown>) => void }
             analyticsWindow.gtag?.('event', 'how_it_works_click', { page_path: '/' })
           }}>See how it works</a>
+          <button type="button" className="btn qbot-home-preview-trigger" onClick={() => setBotPreviewOpen(true)}><Icon name="spark" size={15} />Preview QuorlythBot</button>
           <button className="btn" onClick={() => nav('/architecture')}>How Quorlyth works</button>
         </div>
         <p className="hero-note">Explore with sample data. No account needed.</p>
         <i className="hz" />
       </div>
+      <QuorlythBotHomePreview open={botPreviewOpen} onClose={closeBotPreview} />
       <div className="mq"><div>{ws.map((x, i) => <span key={i} style={{ display: 'contents' }}><span>{x}</span><Icon name="audience" size={14} /></span>)}</div></div>
       <section className="product-preview rv" aria-labelledby="preview-heading">
         <div className="preview-copy">
