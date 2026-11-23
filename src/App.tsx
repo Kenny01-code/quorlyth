@@ -1,12 +1,10 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
 import { Landing } from './screens/Landing'
 import { Logo } from './lib/Logo'
-import { QuorlythBotHead } from './bot/QuorlythBotHead'
 const Privacy = lazy(() => import('./screens/Legal').then(m => ({ default: m.Privacy })))
 const Terms = lazy(() => import('./screens/Legal').then(m => ({ default: m.Terms })))
 const SignIn = lazy(() => import('./screens/SignIn').then(m => ({ default: m.SignIn })))
@@ -29,8 +27,6 @@ const Settings = lazy(() => import('./screens/Settings').then(m => ({ default: m
 const Database = lazy(() => import('./screens/Database').then(m => ({ default: m.Database })))
 const Access = lazy(() => import('./screens/Access').then(m => ({ default: m.Access })))
 const Onboarding = lazy(() => import('./screens/Onboarding').then(m => ({ default: m.Onboarding })))
-const loadQuorlythBot = () => import('./bot/QuorlythBot').then(m => ({ default: m.QuorlythBot }))
-const QuorlythBot = lazy(loadQuorlythBot)
 const AutomationRuntime = lazy(() => import('./components/AutomationRuntime').then(m => ({ default: m.AutomationRuntime })))
 const WritingAssistant = lazy(() => import('./components/WritingAssistant').then(m => ({ default: m.WritingAssistant })))
 const Palette = lazy(() => import('./components/Palette').then(m => ({ default: m.Palette })))
@@ -92,57 +88,11 @@ export default function App() {
   const [replay, setReplay] = useState(0)
   const skipNextPageTransition = useRef(false)
   const [sound, setSound] = useState(() => localStorage.getItem('qsnd') !== '0')
-  // Keep the lightweight launcher visible until the lazy-loaded bot is ready.
-  const [botMounted, setBotMounted] = useState(false)
-  const [botLoading, setBotLoading] = useState(false)
-  const [botLoadError, setBotLoadError] = useState('')
-  const [botLauncherHidden, setBotLauncherHidden] = useState(() => {
-    try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
-  })
-  const [botVoiceRequest, setBotVoiceRequest] = useState(0)
-  const botMountedRef = useRef(false)
-  const botLoadingRef = useRef(false)
-  const pendingVoiceOpenRef = useRef(false)
   const [writingAssistantMounted, setWritingAssistantMounted] = useState(false)
   const [desktopPermission, setDesktopPermission] = useState<NotificationPermission | 'unsupported'>(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
-
-  const openQuorlythBot = useCallback(async (startVoice = false) => {
-    if (startVoice) pendingVoiceOpenRef.current = true
-
-    if (botMountedRef.current) {
-      if (pendingVoiceOpenRef.current) {
-        pendingVoiceOpenRef.current = false
-        setBotVoiceRequest(value => value + 1)
-      }
-      return
-    }
-    if (botLoadingRef.current) return
-
-    botLoadingRef.current = true
-    setBotLoading(true)
-    setBotLoadError('')
-
-    try {
-      // Resolve the same dynamic import used by React.lazy BEFORE replacing the
-      // visible launcher. A failed or slow chunk must never leave an empty corner.
-      await loadQuorlythBot()
-      const shouldStartVoice = pendingVoiceOpenRef.current
-      pendingVoiceOpenRef.current = false
-      if (shouldStartVoice) setBotVoiceRequest(value => value + 1)
-      botMountedRef.current = true
-      setBotMounted(true)
-    } catch (error) {
-      pendingVoiceOpenRef.current = false
-      console.error('QuorlythBot failed to load:', error)
-      setBotLoadError('QuorlythBot could not load. Check your connection, then retry.')
-    } finally {
-      botLoadingRef.current = false
-      setBotLoading(false)
-    }
-  }, [])
 
   // Load the AI writing helper only when someone actually focuses a textarea.
   // This keeps its AI/streaming client out of the initial application bundle.
@@ -157,26 +107,6 @@ export default function App() {
     return () => document.removeEventListener('focusin', onFirstTextareaFocus, true)
   }, [])
 
-  useEffect(() => {
-    const summonLiveTalk = (event: KeyboardEvent) => {
-      if (!(event.altKey && event.shiftKey && event.code === 'KeyQ') || event.repeat || event.ctrlKey || event.metaKey) return
-      const target = event.target as HTMLElement | null
-      const tag = target?.tagName?.toUpperCase() || ''
-      if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return
-      event.preventDefault()
-      let launcherWasHidden = false
-      try { launcherWasHidden = sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch {}
-      if (launcherWasHidden || botLauncherHidden) {
-        try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-        setBotLauncherHidden(false)
-        window.dispatchEvent(new CustomEvent('quorlyth:launcher-restore'))
-        return
-      }
-      void openQuorlythBot(true)
-    }
-    window.addEventListener('keydown', summonLiveTalk)
-    return () => window.removeEventListener('keydown', summonLiveTalk)
-  }, [openQuorlythBot, botLauncherHidden])
   useEffect(() => {
     if (us.st.preferences?.sound !== undefined) setSound(us.st.preferences.sound)
   }, [a.me?.id, us.st.preferences?.sound])
@@ -451,61 +381,6 @@ export default function App() {
       {bell && <Suspense fallback={null}><NotifPanel list={notifs} sound={sound} onSound={() => { const n = !sound; setSound(n); localStorage.setItem('qsnd', n ? '1' : '0'); void us.patch({ preferences: { ...(us.st.preferences || {}), sound: n } }); if (n) chime() }} desktopPermission={desktopPermission} onDesktop={enableDesktopAlerts} onOpen={n => us.patch({ read: { [n.key]: true } })} onMarkAll={us.markAll} onClose={() => setBell(false)} /></Suspense>}
       {palette && <Suspense fallback={null}><Palette onClose={() => setPalette(false)} onReplay={() => { setIntro(true); setReplay(r => r + 1) }} onKeys={() => setKeys(true)} /></Suspense>}
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
-      {!intro && !botLoading && !botMounted && createPortal(
-        <div className="qbot-launcher-portal" data-quorlyth-launcher>
-          {botLauncherHidden ? (
-            <button
-              type="button"
-              className="qbot-launcher-restore"
-              aria-label="Restore QuorlythBot launcher"
-              title="Right-click or click to show QuorlythBot"
-              onClick={() => {
-                try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-                setBotLauncherHidden(false)
-              }}
-              onContextMenu={event => {
-                event.preventDefault()
-                try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-                setBotLauncherHidden(false)
-              }}
-            >
-              <span className="qbot-launcher-restore-mark" aria-hidden="true" />
-              <span className="qbot-launcher-restore-tip">Right-click to show QuorlythBot</span>
-            </button>
-          ) : (
-            <>
-              <button
-                id="astl"
-                type="button"
-                className={botLoading ? 'astl qbot-deferred-loading' : 'astl'}
-                disabled={botLoading}
-                aria-busy={botLoading}
-                aria-expanded={false}
-                aria-controls="ast"
-                onFocus={() => { void loadQuorlythBot().catch(() => {}) }}
-                aria-label={botLoading ? 'Loading QuorlythBot' : botLoadError ? 'Retry loading QuorlythBot' : 'Open QuorlythBot. Ask about your ideas, communities, analytics, projects, or next steps.'}
-                title={(botLoading ? 'Opening QuorlythBot…' : botLoadError || 'Ask QuorlythBot about your communities, ideas, projects, or next steps.') + ' Right-click to hide this launcher.'}
-                onClick={() => { void openQuorlythBot() }}
-                onContextMenu={event => {
-                  event.preventDefault()
-                  try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
-                  setBotLauncherHidden(true)
-                }}
-              >
-                <span className="astm"><QuorlythBotHead size={38} /></span>
-                <span className="astl-hint" aria-hidden="true">Ask Quorlyth</span>
-              </button>
-              {botLoading && <span className="qbot-launcher-status" role="status">Opening QuorlythBot…</span>}
-              {botLoadError && <div className="qbot-launcher-load-error" role="alert">
-                <span>{botLoadError}</span>
-                <button type="button" onClick={() => void openQuorlythBot()}>Retry</button>
-              </div>}
-            </>
-          )}
-        </div>,
-        document.body,
-      )}
-      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen voiceRequest={botVoiceRequest} /></Suspense>}
       <Toast />
       {writingAssistantMounted && <Suspense fallback={null}><WritingAssistant /></Suspense>}
     </>
