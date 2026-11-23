@@ -7,7 +7,6 @@ import { speakText, stopSpeechPlayback, type SpeechPlayback } from '../ai/client
 import { RobotApi } from './Robot'
 import { SKILLS, THEMES, VOICES, VOICE_ACCENTS } from './config'
 import { useBotData } from './useBotData'
-import '../styles/voice-studio-responsive.css'
 
 interface P {
   view: string; bd: ReturnType<typeof useBotData>; role: string; skill: (id: string) => void

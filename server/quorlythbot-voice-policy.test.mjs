@@ -84,15 +84,16 @@ test('Voice Studio cancels pending speech when its view unmounts and exposes a s
 test('Sign-in and Voice Studio use phone-specific layout and lower mobile WebGL costs', async () => {
   const [signInCss, voiceCss, orb, robot] = await Promise.all([
     readSource('src/styles/signin-performance.css'),
-    readSource('src/styles/voice-studio-responsive.css'),
+    readSource('src/styles/quorlythbot-reference.css'),
     readSource('src/bot/orb3d.ts'),
     readSource('src/bot/robot3d.ts'),
   ])
   assert.match(signInCss, /@media \(max-width: 540px\)/)
   assert.match(signInCss, /env\(safe-area-inset-bottom/)
   assert.match(signInCss, /\.q-signin-hello-status\.is-error/)
-  assert.match(voiceCss, /@media \(max-width: 390px\)/)
-  assert.match(voiceCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(voiceCss, /@media \(max-width: 640px\)/)
+  assert.match(voiceCss, /\.qbot-template-grid/)
+  assert.match(voiceCss, /\.bvgrid/)
   assert.match(orb, /lowPowerDevice/)
   assert.match(orb, /1000 \/ 30/)
   assert.match(robot, /lowPower/)
@@ -106,11 +107,11 @@ test('Nigerian accent never silently uses an American voice when no matching ID 
   assert.match(server, /No alternate voice will be used/)
 })
 
-test('Fluid-black styling is scoped to the slash-command picker, not the composer', async () => {
-  const css = await readSource('src/styles/bot-composer-fluid-black.css')
-  assert.match(css, /\.bsl/)
-  assert.match(css, /\.bsi/)
-  assert.doesNotMatch(css, /\.ast-in|textarea|#root/)
+test('The new slash-command picker is visually separated from the composer', async () => {
+  const css = await readSource('src/styles/quorlythbot-reference.css')
+  assert.match(css, /\.qbot-command-picker/)
+  assert.match(css, /\.qbot-composer-frame/)
+  assert.doesNotMatch(css, /#root/)
 })
 
 test('Auto-spoken QuorlythBot replies show an error if ElevenLabs playback fails', async () => {

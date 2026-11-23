@@ -4,44 +4,73 @@ import { readFile } from 'node:fs/promises'
 
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('QuorlythBot chat uses its own liquid-glass frame and layered composer', async () => {
-  const [bot, glass] = await Promise.all([
+test('QuorlythBot is rebuilt as the reference-style conversation workspace', async () => {
+  const [bot, css] = await Promise.all([
     source('src/bot/QuorlythBot.tsx'),
-    source('src/styles/bot-liquid-glass.css'),
+    source('src/styles/quorlythbot-reference.css'),
   ])
 
-  assert.ok(bot.indexOf("import '../styles/bot-liquid-glass.css'") > bot.indexOf("import '../styles/bot-room-theme.css'"))
-  assert.ok(bot.includes("view === 'chat' && 'qbot-chat-surface'"))
-
-  assert.ok(glass.includes('.qbot-conversation.qbot-chat-surface'))
-  assert.ok(glass.includes('.ast-in > textarea'))
-  assert.ok(glass.includes('grid-template-rows: minmax(58px, auto) 44px'))
-  assert.ok(glass.includes('backdrop-filter: blur(32px) saturate(165%)'))
-  assert.ok(glass.includes('.ast-in > .btn:nth-of-type(3)'))
-  assert.ok(glass.includes('grid-column: 4'))
+  assert.ok(bot.includes("import '../styles/quorlythbot-reference.css'"))
+  for (const legacy of ['bot-room-theme.css', 'bot-liquid-glass.css', 'bot-obsidian-glass.css', 'bot-redesign.css', 'bot.css']) {
+    assert.ok(!bot.includes(legacy), 'Legacy Bot stylesheet remains imported: ' + legacy)
+  }
+  for (const part of ['qbot-rail-brand', 'qbot-new-chat', 'Explore Quorlyth AI', 'Knowledge Base', 'Templates', 'qbot-history-scroll', 'qbot-account-card']) {
+    assert.ok(bot.includes(part), 'Missing reference sidebar element: ' + part)
+  }
+  for (const part of ['qbot-reference-overlay', 'qbot-reference-shell', 'qbot-topbar', 'qbot-workspace-switch', 'qbot-empty-state', 'qbot-composer-frame', 'qbot-feature-grid']) {
+    assert.ok(bot.includes(part), 'Missing reference workspace element: ' + part)
+  }
+  assert.ok(css.includes('#ast.qbot-reference-overlay'))
+  assert.ok(css.includes('#bot.qbot-reference-shell .qbot-rail'))
+  assert.ok(css.includes('#bot.qbot-reference-shell .qbot-topbar'))
+  assert.ok(css.includes('.qbot-empty-state h1'))
+  assert.ok(css.includes('.qbot-composer-frame'))
+  assert.ok(css.includes('.qbot-feature-card:hover'))
 })
 
-test('the entire QuorlythBot frontend shares one rounded liquid-glass material', async () => {
-  const glass = await source('src/styles/bot-liquid-glass.css')
+test('the former site-wide preview design is removed and the new design is isolated to QuorlythBot', async () => {
+  const [main, bot, views] = await Promise.all([
+    source('src/main.tsx'),
+    source('src/bot/QuorlythBot.tsx'),
+    source('src/bot/views.tsx'),
+  ])
+  assert.ok(!main.includes('quorlyth-premium-preview.css'))
+  assert.ok(!bot.includes('qbot-premium'))
+  assert.ok(!views.includes('voice-studio-responsive.css'))
+  assert.ok(main.includes("import './styles/app.css'"))
+  assert.ok(bot.includes("import '../styles/quorlythbot-reference.css'"))
+})
 
-  // The sidebar gets an independent rounded inset panel, not a hard divider wall.
-  assert.ok(glass.includes('.bs {'))
-  assert.ok(glass.includes('margin: 10px 0 10px 10px !important'))
-  assert.ok(glass.includes('border-radius: 25px !important'))
-  assert.ok(glass.includes('.bs::before'))
-  assert.ok(glass.includes('.bs .bs-l'))
-  assert.ok(glass.includes('.bs .bs-f'))
+test('chat history grouping retains search, pinned, archived and saved chat actions', async () => {
+  const bot = await source('src/bot/QuorlythBot.tsx')
+  assert.ok(bot.includes('const recentGroups = recent.reduce'))
+  assert.ok(bot.includes("offset === 1 ? 'YESTERDAY'"))
+  assert.ok(bot.includes("groups.push({ label, chats: [chatItem] })"))
+  assert.ok(bot.includes('pinned.map(item)'))
+  assert.ok(bot.includes('arch.map(item)'))
+  assert.ok(bot.includes('setShowArch(!showArch)'))
+  assert.ok(bot.includes('setCur(c)'))
+  assert.ok(bot.includes('setQ(e.target.value)'))
+})
 
-  // Every non-chat view receives the same glass room; nested cards retain their own shape.
-  assert.ok(glass.includes('.qbot-conversation:not(.qbot-chat-surface)'))
-  assert.ok(glass.includes('.qbot-conversation .glass'))
-  assert.ok(glass.includes(':is(.bsk, .bvc)'))
-  assert.ok(glass.includes('.qbot-conversation :is(input, textarea, select)'))
-  assert.ok(glass.includes('.cmx'))
+test('the composer shortcuts launch real skills and voice actions', async () => {
+  const bot = await source('src/bot/QuorlythBot.tsx')
+  assert.match(bot, /onClick=\{\(\) => skill\('brief'\)\}/)
+  assert.match(bot, /onClick=\{\(\) => skill\('post'\)\}/)
+  assert.match(bot, /onClick=\{\(\) => primeComposer\('Help me think through this question/)
+  assert.match(bot, /onClick=\{dictate\}/)
+  assert.match(bot, /onClick=\{startLive\}/)
+  assert.match(bot, /onClick=\{\(\) => send\(\)\}/)
+  assert.match(bot, /setView\('templates'\)/)
+  assert.match(bot, /view === 'templates'/)
+})
 
-  // Preserve component geometry and avoid hiding/replacing the existing tiles or robot stage.
-  assert.ok(!/\.bsk\s*\{[^}]*display:\s*none/is.test(glass))
-  assert.ok(!/\.bvc\s*\{[^}]*display:\s*none/is.test(glass))
-  assert.ok(!/\.bstage\s*\{[^}]*display:\s*none/is.test(glass))
-  assert.ok(!/\.ast-stage\s*\{[^}]*display:\s*none/is.test(glass))
+test('the Bot workspace adapts to touch layouts and respects reduced-motion preferences', async () => {
+  const css = await source('src/styles/quorlythbot-reference.css')
+  assert.match(css, /@media \(max-width: 860px\)/)
+  assert.match(css, /@media \(max-width: 640px\)/)
+  assert.match(css, /env\(safe-area-inset-bottom\)/)
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
+  assert.match(css, /grid-template-columns: 1fr/)
+  assert.match(css, /qbot-sidebar-scrim/)
 })

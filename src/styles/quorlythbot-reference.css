@@ -1,0 +1,1308 @@
+/* QUORLYTHBOT REFERENCE BUILD
+   A clean, single-source interface system inspired by the supplied chat workspace reference.
+   Scoped to the QuorlythBot window. The rest of Quorlyth keeps its own site styling. */
+
+:root {
+  --qbot-ink: #f2eee9;
+  --qbot-muted: #a09c97;
+  --qbot-dim: #77736f;
+  --qbot-canvas: #090909;
+  --qbot-rail: #191919;
+  --qbot-panel: #141414;
+  --qbot-panel-raised: #1b1b1b;
+  --qbot-line: rgba(255,255,255,.085);
+  --qbot-line-strong: rgba(255,255,255,.13);
+  --qbot-orange: #D97755;
+  --qbot-orange-light: #E48763;
+  --qbot-orange-deep: #B85B40;
+  --qbot-orange-wash: rgba(217,119,85,.12);
+  --qbot-orange-stroke: rgba(217,119,85,.34);
+  --qbot-motion: cubic-bezier(.2,.72,.2,1);
+}
+
+/* App canvas */
+#ast.qbot-reference-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 110 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(8px, 2.8vw, 44px);
+  pointer-events: auto !important;
+  background: rgba(4,5,6,.72);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
+  backdrop-filter: blur(16px) saturate(115%);
+  animation: qbot-overlay-enter .22s ease both;
+}
+#ast .astp.qbot-reference-shell {
+  position: relative !important;
+  inset: auto !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch;
+  gap: 0 !important;
+  width: min(1720px, calc(100vw - 56px)) !important;
+  height: min(1280px, calc(100dvh - 56px)) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255,255,255,.15) !important;
+  border-radius: 24px !important;
+  color: var(--qbot-ink) !important;
+  background: #0a0a0a !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.075),
+    0 48px 140px rgba(0,0,0,.72),
+    0 0 0 7px rgba(255,255,255,.035) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  isolation: isolate;
+  animation: qbot-window-enter .42s var(--qbot-motion) both;
+}
+#ast .astp.qbot-reference-shell::before,
+#ast .astp.qbot-reference-shell::after { display: none !important; }
+#ast .astp.qbot-reference-shell > * { min-width: 0; }
+#ast .astp.qbot-reference-shell.m-large {
+  width: min(1420px, calc(100vw - 42px)) !important;
+  height: min(980px, calc(100dvh - 42px)) !important;
+}
+#ast .astp.qbot-reference-shell.m-compact {
+  width: min(980px, calc(100vw - 32px)) !important;
+  height: min(760px, calc(100dvh - 32px)) !important;
+}
+#ast .astp.qbot-reference-shell.m-full {
+  width: min(1720px, calc(100vw - 56px)) !important;
+  height: min(1280px, calc(100dvh - 56px)) !important;
+}
+#ast .astp.qbot-reference-shell .bresz { display: none !important; }
+
+/* Left rail */
+#bot.qbot-reference-shell .qbot-rail {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex: 0 0 286px;
+  flex-direction: column;
+  width: 286px;
+  min-width: 250px;
+  min-height: 0;
+  padding: 20px 15px 13px;
+  overflow: hidden;
+  color: var(--qbot-ink);
+  border: 0 !important;
+  border-right: 1px solid rgba(255,255,255,.065) !important;
+  border-radius: 0 !important;
+  background: linear-gradient(180deg, #1a1a1a, #171717 72%, #191919) !important;
+  box-shadow: none !important;
+}
+#bot.qbot-reference-shell .qbot-rail::before,
+#bot.qbot-reference-shell .qbot-rail::after { display: none !important; }
+.qbot-rail-brand {
+  display: flex;
+  flex: 0 0 62px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 4px 14px;
+}
+.qbot-brand-lockup { display: flex; min-width: 0; align-items: center; gap: 11px; }
+.qbot-brand-symbol {
+  display: grid;
+  width: 38px;
+  height: 40px;
+  flex: 0 0 38px;
+  place-items: center;
+  color: var(--qbot-orange-light);
+  filter: drop-shadow(0 3px 9px rgba(217,119,85,.22));
+}
+.qbot-brand-symbol .qbot-head-mark { width: 36px !important; height: 36px !important; }
+.qbot-brand-wording { display: flex; flex-direction: column; gap: 1px; line-height: 1.15; }
+.qbot-brand-wording b { color: #f4f1ed; font-size: 16px; font-weight: 760; letter-spacing: .12em; }
+.qbot-brand-wording small { color: #8d8883; font-size: 8px; font-weight: 720; letter-spacing: .22em; }
+.qbot-icon-button {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: #a6a29e;
+  background: transparent;
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.qbot-icon-button:hover,
+.qbot-icon-button:focus-visible {
+  color: #fff;
+  border-color: rgba(255,255,255,.09);
+  background: rgba(255,255,255,.055);
+}
+.qbot-icon-button:active { transform: scale(.96); }
+.qbot-rail-collapse { width: 32px; height: 32px; flex-basis: 32px; border-radius: 9px; background: rgba(255,255,255,.045); }
+.qbot-rail-primary { flex: none; padding: 8px 0 15px; }
+.qbot-new-chat {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid rgba(241,157,123,.42);
+  border-radius: 10px;
+  color: #21140f;
+  background: linear-gradient(180deg, #e28a65 0%, #D97755 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 8px 20px -16px rgba(217,119,85,.72);
+  font-size: 12px;
+  font-weight: 720;
+  cursor: pointer;
+  transition: transform .18s var(--qbot-motion), filter .18s ease, box-shadow .18s ease;
+}
+.qbot-new-chat:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 10px 26px -15px rgba(217,119,85,.58);
+  transform: translateY(-1px);
+}
+.qbot-new-chat:active:not(:disabled) { transform: translateY(0) scale(.99); }
+.qbot-new-chat:disabled { opacity: .48; cursor: not-allowed; }
+.qbot-new-chat span { flex: 1; text-align: left; }
+.qbot-new-chat kbd {
+  padding: 3px 6px;
+  border: 1px solid rgba(255,255,255,.23);
+  border-radius: 5px;
+  color: rgba(255,255,255,.88);
+  background: rgba(67,31,21,.13);
+  font: 600 9px/1.1 Inter, sans-serif;
+}
+.qbot-rail-navigation { display: grid; flex: none; gap: 3px; padding: 0 0 13px; }
+.qbot-rail-link {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  gap: 11px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #d0cdca;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 520;
+  text-align: left;
+  cursor: pointer;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+.qbot-rail-link > svg { flex: 0 0 auto; color: #aaa6a1; }
+.qbot-rail-link:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,.04);
+  background: rgba(255,255,255,.045);
+}
+.qbot-rail-link.on {
+  color: #f3c7b5;
+  border-color: rgba(217,119,85,.17);
+  background: rgba(217,119,85,.085);
+}
+.qbot-rail-link.on > svg { color: var(--qbot-orange-light); }
+.qbot-history-search { flex: none; padding: 4px 0 11px; }
+.qbot-search-field {
+  display: flex;
+  height: 37px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 9px;
+  color: #88847f;
+  background: rgba(255,255,255,.025);
+}
+.qbot-search-field:focus-within {
+  border-color: rgba(217,119,85,.38);
+  background: rgba(255,255,255,.035);
+  box-shadow: 0 0 0 3px rgba(217,119,85,.065);
+}
+.qbot-search-field input {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100%;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  border-radius: 0 !important;
+  color: #eae6e1 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 11px !important;
+}
+.qbot-search-field input::placeholder { color: #77736f !important; }
+.qbot-search-field button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  color: #a29d97;
+  background: transparent;
+  cursor: pointer;
+}
+.qbot-search-field button:hover { color: #fff; background: rgba(255,255,255,.07); }
+.qbot-history-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 2px;
+  padding: 1px 0 8px;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.1) transparent;
+}
+.qbot-history-scroll::-webkit-scrollbar { width: 5px; }
+.qbot-history-scroll::-webkit-scrollbar-thumb { border-radius: 8px; background: rgba(255,255,255,.12); }
+.qbot-history-group { display: grid; gap: 2px; padding: 7px 0 9px; }
+.qbot-history-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 20px;
+  padding: 0 7px;
+  color: #7c7873;
+  font-size: 9px;
+  font-weight: 720;
+  letter-spacing: .1em;
+}
+.qbot-history-item.bci {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 31px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #d1ceca;
+  background: transparent;
+  cursor: pointer;
+  transition: color .16s ease, background .16s ease, border-color .16s ease;
+  outline: 0;
+}
+.qbot-history-item.bci:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,.045);
+  background: rgba(255,255,255,.045);
+}
+.qbot-history-item.bci.on {
+  color: #f2d0c2;
+  border-color: rgba(217,119,85,.15);
+  background: rgba(217,119,85,.085);
+}
+.qbot-history-item .cd { display: none !important; }
+.qbot-history-item .bct {
+  display: block;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: inherit;
+  font-size: 10.5px;
+  font-weight: 470;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qbot-history-item .bpn { color: var(--qbot-orange-light); }
+.qbot-history-item .bud { width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: var(--qbot-orange-light); }
+.qbot-history-item .bcm {
+  display: none;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  color: #a8a29c;
+  background: transparent;
+  cursor: pointer;
+}
+.qbot-history-item:hover .bcm,
+.qbot-history-item:focus-within .bcm,
+.qbot-history-item[aria-expanded="true"] .bcm { display: grid; }
+.qbot-history-item .bcm:hover { color: #fff; background: rgba(255,255,255,.08); }
+.qbot-history-item input {
+  min-width: 0 !important;
+  height: 26px !important;
+  padding: 0 6px !important;
+  border-color: rgba(217,119,85,.35) !important;
+  color: #fff !important;
+  background: #101010 !important;
+  font-size: 11px !important;
+}
+.qbot-history-empty { padding: 7px 8px; color: #77736f; font-size: 10px; line-height: 1.6; }
+.qbot-active-project {
+  display: flex;
+  min-height: 31px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 0 8px;
+  border: 1px solid rgba(217,119,85,.17);
+  border-radius: 8px;
+  color: #dfad98;
+  background: rgba(217,119,85,.075);
+  font-size: 10px;
+}
+.qbot-active-project span { display: flex; min-width: 0; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qbot-active-project button {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  color: #c7a18f;
+  background: transparent;
+  cursor: pointer;
+}
+.qbot-active-project button:hover { color: #fff; background: rgba(255,255,255,.07); }
+.qbot-archive-group { border-top: 1px solid rgba(255,255,255,.055); }
+.qbot-archive-toggle { width: 100%; border: 0; background: transparent; cursor: pointer; }
+.qbot-archive-toggle:hover { color: #d8d1ca; }
+.qbot-rail-footer {
+  display: grid;
+  flex: none;
+  gap: 8px;
+  padding: 12px 0 0;
+  border: 0 !important;
+  border-top: 1px solid rgba(255,255,255,.075) !important;
+  background: transparent !important;
+}
+.qbot-rail-footer .qbot-settings-link { min-height: 36px; }
+.qbot-account-card {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border: 1px solid rgba(255,255,255,.065) !important;
+  border-radius: 11px;
+  color: #eeeae5;
+  background: rgba(255,255,255,.025) !important;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease;
+}
+.qbot-account-card:hover { border-color: rgba(217,119,85,.24) !important; background: rgba(255,255,255,.045) !important; }
+.qbot-account-avatar { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; overflow: hidden; border-radius: 50%; background: #292929; }
+.qbot-account-avatar .av { width: 32px; height: 32px; margin: 0; }
+.qbot-account-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.qbot-account-copy b { overflow: hidden; color: #f0ece7; font-size: 11px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
+.qbot-account-copy small { color: #85817c; font-size: 9px; }
+
+/* Main workspace */
+#bot.qbot-reference-shell .bm {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 !important;
+  overflow: hidden;
+  color: var(--qbot-ink);
+  background: var(--qbot-canvas) !important;
+  box-shadow: none !important;
+}
+#bot.qbot-reference-shell .qbot-topbar {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex: 0 0 70px;
+  min-width: 0;
+  min-height: 70px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 clamp(18px, 2.2vw, 34px) !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 0 !important;
+  color: var(--qbot-ink);
+  background: #0b0b0b !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#bot.qbot-reference-shell .qbot-topbar::before { display: none !important; }
+.qbot-topbar-leading { display: flex; min-width: 0; align-items: center; gap: 13px; }
+.qbot-mobile-menu { width: 34px; height: 34px; flex-basis: 34px; }
+.qbot-workspace-switch {
+  display: inline-flex;
+  min-width: 0;
+  max-width: min(440px, 48vw);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border: 0;
+  color: #eeeae5;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 580;
+  letter-spacing: -.01em;
+  cursor: pointer;
+}
+.qbot-workspace-switch:hover { color: #fff; }
+.qbot-workspace-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qbot-workspace-switch > svg { flex: 0 0 auto; color: #89847e; }
+.qbot-topbar-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 7px; }
+.qbot-topbar-actions .qbot-icon-button {
+  width: 38px;
+  height: 38px;
+  border-color: rgba(255,255,255,.07);
+  background: rgba(255,255,255,.018);
+}
+.qbot-topbar-actions .qbot-icon-button:hover { border-color: rgba(255,255,255,.15); background: rgba(255,255,255,.055); }
+.qbot-topbar-actions .qbot-icon-button.on { color: #f0b49b; border-color: rgba(217,119,85,.25); background: rgba(217,119,85,.1); }
+.qbot-share-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  color: #e6e2dd;
+  background: rgba(255,255,255,.025);
+  font-size: 11px;
+  font-weight: 570;
+  cursor: pointer;
+  transition: color .18s ease, border-color .18s ease, background .18s ease;
+}
+.qbot-share-button:hover { color: #fff; border-color: rgba(217,119,85,.28); background: rgba(217,119,85,.08); }
+
+/* Conversation surface and empty state */
+#bot.qbot-reference-shell .qbot-conversation {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 22px clamp(18px, 4.3vw, 64px) 12px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.13) transparent;
+  background: #0a0a0a !important;
+}
+#bot.qbot-reference-shell .qbot-conversation::-webkit-scrollbar { width: 6px; }
+#bot.qbot-reference-shell .qbot-conversation::-webkit-scrollbar-thumb { border-radius: 8px; background: rgba(255,255,255,.13); }
+#bot.qbot-reference-shell .qbot-conversation.qbot-chat-surface { background: #0a0a0a !important; }
+.qbot-empty-state {
+  display: flex;
+  width: min(790px, 100%);
+  flex: 1 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin: auto;
+  padding: clamp(20px, 4.7vh, 58px) 12px clamp(20px, 3vh, 38px);
+  text-align: center;
+  animation: qbot-fade-up .58s var(--qbot-motion) both;
+}
+.qbot-intelligence-pill {
+  display: inline-flex;
+  min-height: 33px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid rgba(217,119,85,.2);
+  border-radius: 999px;
+  color: #e4b29d;
+  background: rgba(217,119,85,.075);
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: .14em;
+}
+.qbot-status-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--qbot-orange);
+  box-shadow: 0 0 10px rgba(217,119,85,.38);
+  animation: qbot-status-pulse 2.8s ease-in-out infinite;
+}
+.qbot-empty-mark {
+  display: grid;
+  width: 66px;
+  height: 70px;
+  place-items: center;
+  margin: 3px 0 0;
+  color: var(--qbot-orange-light);
+  filter: drop-shadow(0 7px 24px rgba(217,119,85,.22));
+  animation: qbot-mark-arrive .72s var(--qbot-motion) both;
+}
+.qbot-empty-mark .qbot-head-mark { width: 58px !important; height: 58px !important; }
+.qbot-empty-state h1 {
+  max-width: 800px;
+  color: #f4f1ed;
+  font-size: clamp(27px, 3.1vw, 43px) !important;
+  font-weight: 560 !important;
+  letter-spacing: -.052em !important;
+  line-height: 1.12 !important;
+  text-wrap: balance;
+}
+.qbot-empty-state p {
+  max-width: 510px;
+  margin: 0;
+  color: #89847f;
+  font-size: clamp(12px, 1.2vw, 14px);
+  line-height: 1.75;
+  text-wrap: balance;
+}
+
+/* Message transcript */
+#bot.qbot-reference-shell .ast-log {
+  display: flex;
+  width: min(900px, 100%);
+  flex-direction: column;
+  gap: 22px;
+  margin: 0 auto;
+  padding: 16px 0 26px;
+}
+#bot.qbot-reference-shell .am {
+  max-width: 100%;
+  color: #ebe7e1;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+#bot.qbot-reference-shell .am.mu {
+  align-self: flex-end;
+  max-width: min(78%, 650px);
+  padding: 12px 15px;
+  border: 1px solid rgba(217,119,85,.18);
+  border-radius: 15px 15px 5px 15px;
+  color: #f5dfd5;
+  background: rgba(217,119,85,.11);
+}
+#bot.qbot-reference-shell .am.ma { align-self: stretch; }
+.qbot-message-label { display: block; margin-bottom: 5px; color: #bc8f7b; font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.qbot-assistant-byline { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; color: #d1cbc5; font-size: 10px; }
+.qbot-assistant-byline b { color: #ece7e1; font-weight: 670; }
+.qbot-assistant-byline i { color: #77736f; font-size: 9px; font-style: normal; }
+.qbot-assistant-mark {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid rgba(217,119,85,.2);
+  border-radius: 8px;
+  color: var(--qbot-orange-light);
+  background: rgba(217,119,85,.09);
+}
+#bot.qbot-reference-shell .am.ma .mt { color: #e7e2dc; line-height: 1.82; }
+#bot.qbot-reference-shell .am.ma a { color: #e7a487; text-decoration-color: rgba(231,164,135,.35); }
+#bot.qbot-reference-shell .mact { display: flex; align-items: center; gap: 5px; margin-top: 10px; }
+#bot.qbot-reference-shell .mact button {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #85817c;
+  background: transparent;
+  font-size: 10px;
+  cursor: pointer;
+  transition: color .16s ease, background .16s ease;
+}
+#bot.qbot-reference-shell .mact button:hover { color: #f1c0aa; background: rgba(217,119,85,.08); }
+#bot.qbot-reference-shell .mact button:disabled { opacity: .4; cursor: default; }
+#bot.qbot-reference-shell .qbot-thinking-panel {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px solid rgba(217,119,85,.13);
+  border-radius: 12px;
+  background: rgba(217,119,85,.05);
+}
+.qbot-thinking-orbit { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 9px; color: #e48b67; background: rgba(217,119,85,.11); }
+.qbot-thinking-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; }
+.qbot-thinking-copy strong { color: #eaded6; font-size: 11px; font-weight: 630; }
+.qbot-thinking-copy small { color: #89827d; font-size: 10px; }
+.qbot-thinking-signal { display: flex; align-items: center; gap: 3px; }
+.qbot-thinking-signal i { width: 4px; height: 4px; border-radius: 50%; background: var(--qbot-orange-light); animation: qbot-thinking-dot 1s ease-in-out infinite; }
+.qbot-thinking-signal i:nth-child(2) { animation-delay: .13s; }
+.qbot-thinking-signal i:nth-child(3) { animation-delay: .26s; }
+.qbot-reference-shell .qbot-action {
+  width: min(740px, 100%);
+  margin: 12px auto 18px !important;
+  padding: 18px !important;
+  border: 1px solid rgba(217,119,85,.25) !important;
+  border-radius: 16px !important;
+  color: #eee8e2 !important;
+  background: linear-gradient(145deg, rgba(217,119,85,.1), rgba(25,24,23,.96)) !important;
+  box-shadow: 0 18px 42px -30px rgba(0,0,0,.8) !important;
+}
+.qbot-reference-shell .qbot-action h3 { margin: 6px 0 8px; color: #f2eae4; font-size: 15px; }
+.qbot-reference-shell .qbot-action p { color: #aaa29b; font-size: 11px; line-height: 1.65; }
+.qbot-reference-shell .qbot-action .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.qbot-reference-shell .qbot-action .btn { min-height: 38px; padding: 0 13px; border-radius: 9px; }
+
+/* Composer: one solid module with actions kept in the footer */
+#bot.qbot-reference-shell .qbot-composer-dock {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  width: min(790px, calc(100% - 52px));
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 auto;
+  padding: 6px 0 16px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.qbot-composer-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 13px 14px 10px !important;
+  border: 1px solid rgba(255,255,255,.105) !important;
+  border-radius: 20px !important;
+  background: #101010 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 16px 44px -35px rgba(0,0,0,.85) !important;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.qbot-composer-frame:focus-within {
+  border-color: rgba(217,119,85,.42) !important;
+  background: #11100f !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 0 0 3px rgba(217,119,85,.065), 0 18px 48px -34px rgba(0,0,0,.9) !important;
+}
+.qbot-composer-input-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+#bot.qbot-reference-shell .qbot-composer-frame textarea,
+#bot.qbot-reference-shell .qbot-composer-frame textarea:focus {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 76px;
+  max-height: 190px;
+  padding: 8px 7px 11px !important;
+  overflow-y: auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  color: #f3eee9 !important;
+  caret-color: var(--qbot-orange-light);
+  background: transparent !important;
+  box-shadow: none !important;
+  font: 400 14px/1.65 Inter, "SF Pro Display", -apple-system, sans-serif !important;
+  resize: vertical;
+}
+#bot.qbot-reference-shell .qbot-composer-frame textarea::placeholder { color: #77736f !important; }
+.qbot-composer-toolbar {
+  display: flex;
+  min-height: 43px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,.055);
+}
+.qbot-composer-tools,
+.qbot-composer-actions { display: flex; min-width: 0; align-items: center; gap: 7px; }
+.qbot-composer-tool {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px;
+  color: #aaa49e;
+  background: rgba(255,255,255,.025);
+  font-size: 10px;
+  font-weight: 560;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .16s ease, color .16s ease, background .16s ease;
+}
+.qbot-composer-tool:hover { color: #f2d0c0; border-color: rgba(217,119,85,.25); background: rgba(217,119,85,.07); }
+.qbot-composer-tool-accent {
+  color: #e2a186;
+  border-color: rgba(217,119,85,.23);
+  background: rgba(217,119,85,.075);
+}
+.qbot-composer-icon {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #8e8983;
+  background: transparent;
+  cursor: pointer;
+  transition: color .17s ease, background .17s ease, border-color .17s ease;
+}
+.qbot-composer-icon:hover,
+.qbot-composer-icon.active { color: #f1b398; border-color: rgba(217,119,85,.18); background: rgba(217,119,85,.09); }
+.qbot-send-button {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  border: 1px solid rgba(235,156,125,.43);
+  border-radius: 50%;
+  color: #21140f;
+  background: linear-gradient(180deg, #e48b66, #D97755);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 7px 18px -13px rgba(217,119,85,.74);
+  cursor: pointer;
+  transition: transform .18s ease, filter .18s ease, opacity .18s ease;
+}
+.qbot-send-button:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-1px); }
+.qbot-send-button:active:not(:disabled) { transform: scale(.95); }
+.qbot-send-button:disabled { opacity: .34; cursor: not-allowed; }
+.qbot-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+}
+.qbot-feature-card {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 112px;
+  grid-template-columns: 28px minmax(0, 1fr) 16px;
+  grid-template-rows: auto auto 1fr;
+  align-items: start;
+  column-gap: 9px;
+  row-gap: 5px;
+  padding: 14px 13px 12px;
+  border: 1px solid rgba(255,255,255,.055);
+  border-radius: 15px;
+  color: #f0ece7;
+  background: #191919;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .2s var(--qbot-motion), border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.qbot-feature-card:hover {
+  border-color: rgba(217,119,85,.25);
+  background: #1d1b1a;
+  box-shadow: 0 15px 35px -28px rgba(217,119,85,.32);
+  transform: translateY(-2px);
+}
+.qbot-feature-card:active { transform: translateY(0) scale(.99); }
+.qbot-feature-icon {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  grid-row: 1 / span 2;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px;
+  color: #d5c9c1;
+  background: rgba(255,255,255,.035);
+}
+.qbot-feature-card strong { align-self: center; color: #eae5df; font-size: 11px; font-weight: 630; line-height: 1.35; }
+.qbot-feature-card small { grid-column: 2 / 4; color: #88837e; font-size: 9.5px; line-height: 1.55; }
+.qbot-feature-card > svg:last-child { grid-column: 3; grid-row: 1; color: #77716b; }
+.qbot-disclaimer {
+  margin: -2px 0 0 !important;
+  color: #77726d !important;
+  font-size: 9px !important;
+  line-height: 1.5 !important;
+  text-align: center;
+}
+.qbot-tour-controls { display: flex; gap: 7px; margin-top: 9px; }
+.qbot-tour-controls button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(217,119,85,.2);
+  border-radius: 8px;
+  color: #e6b19b;
+  background: rgba(217,119,85,.08);
+  font-size: 10px;
+  cursor: pointer;
+}
+.qbot-command-picker {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 8px;
+  padding: 5px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 12px;
+  background: #121212;
+  box-shadow: 0 14px 32px rgba(0,0,0,.4);
+}
+.qbot-command-picker .bsi {
+  display: grid;
+  grid-template-columns: 20px 100px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #ddd7d1;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.qbot-command-picker .bsi:hover,
+.qbot-command-picker .bsi.on { border-color: rgba(217,119,85,.18); background: rgba(217,119,85,.09); }
+.qbot-command-picker .bsi span { overflow: hidden; color: #88817b; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Template page */
+.qbot-template-view { width: min(920px, 100%); margin: 18px auto 30px; padding: 8px 0 24px; animation: qbot-fade-up .4s var(--qbot-motion) both; }
+.qbot-view-heading { margin-bottom: 22px; }
+.qbot-view-heading > span { color: #c88d75; font-size: 9px; font-weight: 750; letter-spacing: .16em; }
+.qbot-view-heading h2 { margin: 8px 0 6px; color: #f1ece6; font-size: clamp(24px, 3vw, 32px); font-weight: 630; letter-spacing: -.045em; }
+.qbot-view-heading p { margin: 0; color: #8f8983; font-size: 12px; }
+.qbot-template-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 11px; }
+.qbot-template-card {
+  position: relative;
+  display: grid;
+  min-height: 126px;
+  grid-template-columns: 35px minmax(0,1fr) 17px;
+  grid-template-rows: auto auto 1fr;
+  gap: 7px 10px;
+  padding: 15px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 14px;
+  color: #f1ece6;
+  background: #151515;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.qbot-template-card:hover { border-color: rgba(217,119,85,.28); background: #1a1918; transform: translateY(-2px); }
+.qbot-template-icon { display: grid; width: 34px; height: 34px; grid-row: 1 / span 2; place-items: center; border: 1px solid rgba(217,119,85,.18); border-radius: 10px; color: #e4a185; background: rgba(217,119,85,.08); }
+.qbot-template-index { justify-self: end; color: #77716b; font-size: 9px; font-weight: 700; }
+.qbot-template-card strong { grid-column: 2 / 3; align-self: center; font-size: 12px; font-weight: 650; }
+.qbot-template-card small { grid-column: 2 / 4; color: #8f8983; font-size: 10px; line-height: 1.55; }
+.qbot-template-arrow { grid-column: 3; grid-row: 1; color: #8d8179; }
+
+/* Live speech dock and 3D visualizer */
+#bot.qbot-reference-shell .qbot-live-voice-dock {
+  display: flex;
+  width: min(790px, calc(100% - 52px));
+  min-height: 72px;
+  align-items: center;
+  gap: 13px;
+  margin: 0 auto 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(217,119,85,.19);
+  border-radius: 15px;
+  background: linear-gradient(110deg, rgba(217,119,85,.1), rgba(23,22,21,.92));
+}
+.qbot-live-orb-wrap { position: relative; display: grid; width: 47px; height: 47px; flex: 0 0 47px; place-items: center; overflow: hidden; border-radius: 50%; background: rgba(217,119,85,.09); }
+.qbot-live-orb-wrap .qbot-live-orb-glow { position: absolute; inset: 3px; border-radius: inherit; background: radial-gradient(circle, rgba(217,119,85,.3), transparent 72%); }
+.qbot-live-orb-wrap .ast-stage,
+.qbot-live-orb-wrap canvas { position: relative; width: 100%; height: 100%; }
+.qbot-live-voice-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.qbot-live-voice-copy strong { color: #f1e6df; font-size: 11px; font-weight: 670; }
+.qbot-live-voice-copy span { color: #9d8f87; font-size: 10px; }
+.qbot-live-end {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid rgba(217,119,85,.23);
+  border-radius: 9px;
+  color: #e7ad95;
+  background: rgba(217,119,85,.075);
+  font-size: 10px;
+  cursor: pointer;
+}
+.qbot-live-end:hover { background: rgba(217,119,85,.14); }
+#bot.qbot-reference-shell .bstage,
+#bot.qbot-reference-shell .ast-stage {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(217,119,85,.24) !important;
+  border-radius: 19px !important;
+  background: radial-gradient(ellipse at 50% 36%, rgba(217,119,85,.12), transparent 68%), #141414 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 22px 52px -36px rgba(217,119,85,.3) !important;
+  overflow: hidden;
+}
+#bot.qbot-reference-shell .bstage canvas,
+#bot.qbot-reference-shell .ast-stage canvas { display: block; width: 100%; height: 100%; }
+
+/* Other Bot views use the same dark, solid product language. */
+#bot.qbot-reference-shell .qbot-conversation:not(.qbot-chat-surface) {
+  display: block;
+  padding: clamp(22px, 3vw, 38px) clamp(18px, 3.6vw, 52px) 40px !important;
+}
+#bot.qbot-reference-shell .qbot-conversation .bvt {
+  margin: 2px 0 7px;
+  color: #f1ece6;
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -.045em;
+}
+#bot.qbot-reference-shell .qbot-conversation .mut { color: #99928b; }
+#bot.qbot-reference-shell .qbot-conversation .dim { color: #89827b; font-size: 11px; }
+#bot.qbot-reference-shell .qbot-conversation .glass {
+  border: 1px solid rgba(255,255,255,.075) !important;
+  border-radius: 14px !important;
+  color: #eae4de !important;
+  background: #151515 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+#bot.qbot-reference-shell .qbot-conversation .pad { padding: 18px !important; }
+#bot.qbot-reference-shell .qbot-conversation .glass::before,
+#bot.qbot-reference-shell .qbot-conversation .glass::after { display: none !important; }
+#bot.qbot-reference-shell .qbot-conversation .btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 9px;
+  color: #ddd6cf;
+  background: rgba(255,255,255,.035);
+  font-size: 11px;
+}
+#bot.qbot-reference-shell .qbot-conversation .btn.p {
+  border-color: rgba(217,119,85,.4);
+  color: #21140f;
+  background: linear-gradient(180deg, #e48b66, #D97755);
+}
+#bot.qbot-reference-shell .qbot-conversation .acts { display: flex; flex-wrap: wrap; gap: 8px; }
+#bot.qbot-reference-shell .qbot-conversation .field { display: block; margin-top: 15px; }
+#bot.qbot-reference-shell .qbot-conversation .field > span { display: block; margin-bottom: 6px; color: #b9b1a9; font-size: 10px; }
+#bot.qbot-reference-shell .qbot-conversation :is(input, textarea, select) {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 9px;
+  color: #f1ece6;
+  background: #0d0d0d;
+  box-shadow: none;
+  font-size: 12px;
+}
+#bot.qbot-reference-shell .qbot-conversation :is(input, textarea, select):focus {
+  border-color: rgba(217,119,85,.42);
+  box-shadow: 0 0 0 3px rgba(217,119,85,.065);
+}
+#bot.qbot-reference-shell .qbot-conversation .bgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 10px;
+}
+#bot.qbot-reference-shell .qbot-conversation .bsk {
+  display: flex;
+  min-width: 0;
+  min-height: 102px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 13px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 12px;
+  color: #ece7e1;
+  background: #151515;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+#bot.qbot-reference-shell .qbot-conversation .bsk:hover { border-color: rgba(217,119,85,.24); background: #1b1918; transform: translateY(-1px); }
+#bot.qbot-reference-shell .qbot-conversation .bski { display: grid; width: 33px; height: 33px; place-items: center; border: 1px solid rgba(217,119,85,.19); border-radius: 9px; color: #e3a084; background: rgba(217,119,85,.08); }
+#bot.qbot-reference-shell .qbot-conversation .bsk b { color: #f0eae4; font-size: 11px; font-weight: 650; }
+#bot.qbot-reference-shell .qbot-conversation .bsk .dim { color: #948b84; font-size: 10px; line-height: 1.5; }
+#bot.qbot-reference-shell .qbot-conversation .csr {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 15px 0;
+  border-top: 1px solid rgba(255,255,255,.07);
+  color: #e8e1da;
+  font-size: 11px;
+}
+#bot.qbot-reference-shell .qbot-conversation .tg {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 42px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px;
+  background: #2a2a2a;
+}
+#bot.qbot-reference-shell .qbot-conversation .tg i { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #aaa; transition: left .18s ease; }
+#bot.qbot-reference-shell .qbot-conversation .tg.on { border-color: rgba(217,119,85,.45); background: rgba(217,119,85,.35); }
+#bot.qbot-reference-shell .qbot-conversation .tg.on i { left: 21px; background: #f4b195; }
+#bot.qbot-reference-shell .qbot-conversation .bvgrid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+#bot.qbot-reference-shell .qbot-conversation .bvc {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 13px;
+  color: #eae5df;
+  background: #151515;
+  text-align: left;
+  cursor: pointer;
+}
+#bot.qbot-reference-shell .qbot-conversation .bvc.on { border-color: rgba(217,119,85,.35); background: rgba(217,119,85,.08); }
+#bot.qbot-reference-shell .qbot-conversation .bvc b { font-size: 12px; }
+#bot.qbot-reference-shell .qbot-conversation .bvc .dim { font-size: 10px; }
+#bot.qbot-reference-shell .qbot-conversation .orb3d { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: rgba(217,119,85,.12); }
+#bot.qbot-reference-shell .qbot-conversation .cent { display: flex; min-height: 180px; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 28px; text-align: center; }
+#bot.qbot-reference-shell .qbot-conversation .cent h3 { color: #f0eae4; font-size: 15px; }
+#bot.qbot-reference-shell .qbot-conversation .qbot-voice-studio { width: min(860px,100%); }
+#bot.qbot-reference-shell .qbot-conversation .qbot-accent-picker { margin: 12px 0 14px; }
+#bot.qbot-reference-shell .qbot-conversation .vmeter { height: 5px; border-radius: 5px; background: rgba(255,255,255,.09); overflow: hidden; }
+#bot.qbot-reference-shell .qbot-conversation .vmeter > i { display: block; height: 100%; background: var(--qbot-orange); border-radius: inherit; }
+#bot.qbot-reference-shell .qbot-conversation .chip {
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  color: #c8c1ba;
+  background: rgba(255,255,255,.035);
+  font-size: 10px;
+  cursor: pointer;
+}
+#bot.qbot-reference-shell .qbot-conversation .chip.on { border-color: rgba(217,119,85,.28); color: #eab59e; background: rgba(217,119,85,.09); }
+
+/* Chat context menu */
+.qbot-reference-shell .cmx-backdrop { position: fixed; inset: 0; z-index: 140; background: transparent; }
+.qbot-reference-shell .cmx {
+  position: fixed;
+  z-index: 141;
+  min-width: 190px;
+  max-width: min(270px, calc(100vw - 20px));
+  padding: 5px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  color: #eee8e2;
+  background: #171717;
+  box-shadow: 0 18px 60px rgba(0,0,0,.62);
+  animation: qbot-menu-enter .14s var(--qbot-motion) both;
+}
+.qbot-reference-shell .cmh { padding: 8px 9px; color: #88817a; font-size: 9px; letter-spacing: .11em; }
+.qbot-reference-shell .cmx-r,
+.qbot-reference-shell .cmsub button {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  color: #e6e0d9;
+  background: transparent;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.qbot-reference-shell .cmx-r:hover,
+.qbot-reference-shell .cmsub button:hover { color: #fff; background: rgba(217,119,85,.1); }
+.qbot-reference-shell .cmx-r.danger { color: #e89a85; }
+.qbot-reference-shell .cmsub { padding: 5px; border-top: 1px solid rgba(255,255,255,.07); }
+
+/* Consistent scroll, focus and reduced motion */
+#bot.qbot-reference-shell button:focus-visible,
+#bot.qbot-reference-shell [role="button"]:focus-visible,
+#bot.qbot-reference-shell input:focus-visible,
+#bot.qbot-reference-shell textarea:focus-visible {
+  outline: 2px solid rgba(217,119,85,.82);
+  outline-offset: 2px;
+}
+@keyframes qbot-overlay-enter { from { opacity: 0 } to { opacity: 1 } }
+@keyframes qbot-window-enter { from { opacity: .7; transform: translateY(12px) scale(.992) } to { opacity: 1; transform: translateY(0) scale(1) } }
+@keyframes qbot-fade-up { from { opacity: 0; transform: translateY(11px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes qbot-mark-arrive { from { opacity: 0; transform: translateY(7px) scale(.92) } to { opacity: 1; transform: translateY(0) scale(1) } }
+@keyframes qbot-status-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(217,119,85,.1) } 50% { box-shadow: 0 0 0 5px rgba(217,119,85,0) } }
+@keyframes qbot-thinking-dot { 0%,80%,100% { opacity: .35; transform: translateY(0) } 40% { opacity: 1; transform: translateY(-3px) } }
+@keyframes qbot-menu-enter { from { opacity: 0; transform: translateY(5px) scale(.985) } to { opacity: 1; transform: translateY(0) scale(1) } }
+
+@media (max-width: 1040px) {
+  #ast.qbot-reference-overlay { padding: 12px; }
+  #ast .astp.qbot-reference-shell,
+  #ast .astp.qbot-reference-shell.m-full,
+  #ast .astp.qbot-reference-shell.m-large {
+    width: calc(100vw - 24px) !important;
+    height: calc(100dvh - 24px) !important;
+  }
+  #bot.qbot-reference-shell .qbot-rail {
+    flex-basis: 268px;
+    width: 268px;
+    min-width: 246px;
+  }
+  #bot.qbot-reference-shell .qbot-composer-dock { width: min(790px, calc(100% - 36px)); }
+  .qbot-feature-grid { gap: 8px; }
+  .qbot-feature-card { padding: 12px 10px; }
+}
+@media (max-width: 860px) {
+  #bot.qbot-reference-shell .qbot-rail {
+    position: absolute;
+    z-index: 30;
+    inset: 0 auto 0 0;
+    width: min(292px, 86vw);
+    max-width: calc(100% - 42px);
+    min-width: 0;
+    height: 100%;
+    border-right: 1px solid rgba(255,255,255,.1) !important;
+    box-shadow: 24px 0 70px rgba(0,0,0,.58) !important;
+    animation: qbot-drawer-enter .2s var(--qbot-motion) both;
+  }
+  .qbot-sidebar-scrim {
+    position: absolute;
+    z-index: 20;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(0,0,0,.58);
+    cursor: pointer;
+  }
+  #bot.qbot-reference-shell .bm { width: 100%; }
+  #bot.qbot-reference-shell .qbot-mobile-menu { display: inline-grid; }
+  #bot.qbot-reference-shell .qbot-composer-dock { width: min(790px, calc(100% - 28px)); }
+  #bot.qbot-reference-shell .qbot-conversation { padding-inline: 18px !important; }
+  #bot.qbot-reference-shell .qbot-feature-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@keyframes qbot-drawer-enter { from { opacity: .75; transform: translateX(-12px) } to { opacity: 1; transform: translateX(0) } }
+
+@media (max-width: 640px) {
+  #ast.qbot-reference-overlay { padding: 0; background: #080808; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  #ast .astp.qbot-reference-shell,
+  #ast .astp.qbot-reference-shell.m-full,
+  #ast .astp.qbot-reference-shell.m-large,
+  #ast .astp.qbot-reference-shell.m-compact {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  #bot.qbot-reference-shell .qbot-topbar { min-height: 58px; flex-basis: 58px; gap: 8px; padding-inline: 11px !important; }
+  .qbot-topbar-actions { gap: 2px; }
+  .qbot-topbar-actions .qbot-icon-button { width: 32px; height: 32px; flex-basis: 32px; }
+  .qbot-workspace-switch { max-width: 46vw; font-size: 11px; }
+  .qbot-share-button { min-height: 32px; gap: 5px; padding: 0 8px; font-size: 9px; }
+  .qbot-header-more, .qbot-header-link, .qbot-header-voice { display: none !important; }
+  #bot.qbot-reference-shell .qbot-conversation { padding: 14px 12px 6px !important; }
+  .qbot-empty-state { gap: 12px; padding: 15px 6px 18px; }
+  .qbot-empty-mark { width: 54px; height: 56px; }
+  .qbot-empty-mark .qbot-head-mark { width: 48px !important; height: 48px !important; }
+  .qbot-empty-state h1 { font-size: clamp(24px, 7vw, 33px) !important; }
+  .qbot-empty-state p { max-width: 340px; font-size: 11px; }
+  #bot.qbot-reference-shell .qbot-composer-dock { width: calc(100% - 20px); gap: 9px; padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; }
+  .qbot-composer-frame { padding: 9px 10px 8px !important; border-radius: 16px !important; }
+  #bot.qbot-reference-shell .qbot-composer-frame textarea,
+  #bot.qbot-reference-shell .qbot-composer-frame textarea:focus { min-height: 58px; padding: 5px 4px 8px !important; font-size: 13px !important; }
+  .qbot-composer-toolbar { min-height: 38px; padding-top: 6px; }
+  .qbot-composer-tools, .qbot-composer-actions { gap: 4px; }
+  .qbot-composer-tool { min-height: 28px; gap: 5px; padding-inline: 7px; font-size: 9px; }
+  .qbot-composer-icon { width: 29px; height: 29px; flex-basis: 29px; }
+  .qbot-send-button { width: 33px; height: 33px; flex-basis: 33px; }
+  .qbot-feature-grid { grid-template-columns: 1fr; gap: 7px; }
+  .qbot-feature-card { min-height: 65px; grid-template-columns: 30px minmax(0,1fr) 16px; grid-template-rows: auto auto; padding: 9px 10px; column-gap: 8px; row-gap: 2px; }
+  .qbot-feature-icon { width: 28px; height: 28px; grid-row: 1 / span 2; }
+  .qbot-feature-card strong { font-size: 10px; }
+  .qbot-feature-card small { font-size: 9px; }
+  .qbot-feature-card > svg:last-child { grid-column: 3; grid-row: 1; }
+  .qbot-disclaimer { font-size: 8px !important; }
+  .qbot-template-grid { grid-template-columns: 1fr; }
+  #bot.qbot-reference-shell .qbot-conversation .bgrid,
+  #bot.qbot-reference-shell .qbot-conversation .bvgrid { grid-template-columns: 1fr; }
+  #bot.qbot-reference-shell .am.mu { max-width: 92%; }
+  #bot.qbot-reference-shell .qbot-live-voice-dock { width: calc(100% - 20px); gap: 8px; padding: 8px; }
+}
+@media (max-width: 380px) {
+  .qbot-workspace-switch { max-width: 38vw; }
+  .qbot-header-size { display: none !important; }
+  .qbot-composer-tool span { display: none; }
+  .qbot-composer-tool { width: 30px; justify-content: center; padding: 0; }
+}
+@media (max-height: 720px) and (min-width: 641px) {
+  .qbot-empty-state { padding-block: 12px; gap: 9px; }
+  .qbot-empty-mark { height: 50px; }
+  .qbot-empty-mark .qbot-head-mark { width: 45px !important; height: 45px !important; }
+  #bot.qbot-reference-shell .qbot-composer-dock { gap: 8px; padding-bottom: 10px !important; }
+  .qbot-feature-card { min-height: 96px; padding: 11px; }
+  #bot.qbot-reference-shell .qbot-composer-frame textarea,
+  #bot.qbot-reference-shell .qbot-composer-frame textarea:focus { min-height: 58px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ast.qbot-reference-overlay,
+  #ast .astp.qbot-reference-shell,
+  #bot.qbot-reference-shell *,
+  #bot.qbot-reference-shell *::before,
+  #bot.qbot-reference-shell *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* 3D scene fallback and rich response surfaces */
+#bot.qbot-reference-shell .ast-fb {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--qbot-orange-light);
+}
+#bot.qbot-reference-shell .ast-fb .ast-ld { display:flex; gap:5px; align-items:center; }
+#bot.qbot-reference-shell .ast-fb .ast-ld i { width:5px; height:5px; border-radius:50%; background:var(--qbot-orange-light); animation:qbot-thinking-dot 1s ease-in-out infinite; }
+#bot.qbot-reference-shell .ast-fb .ast-ld i:nth-child(2) { animation-delay:.15s; }
+#bot.qbot-reference-shell .ast-fb .ast-ld i:nth-child(3) { animation-delay:.3s; }
+#bot.qbot-reference-shell .qbot-orb-fallback { display:grid; place-items:center; width:100%; height:100%; color:#e5a184; }
+#bot.qbot-reference-shell .qbot-orb-retry { border:1px solid rgba(217,119,85,.3); border-radius:8px; padding:7px 10px; color:#e5a184; background:#171311; cursor:pointer; }
+#bot.qbot-reference-shell .qbot-voice-studio .csr:first-child { border-top:0; }
+#bot.qbot-reference-shell .qbot-voice-studio .aiic,
+#bot.qbot-reference-shell .qbot-voice-studio .sw,
+#bot.qbot-reference-shell .qbot-voice-studio .kr { color:#e5ded6; }
+#bot.qbot-reference-shell .qbot-voice-studio .vmeter { margin-top:8px; }
+#bot.qbot-reference-shell .qbot-voice-studio .vmeter i { transition: width .12s ease; }
+@media (max-width:860px) {
+  #bot.qbot-reference-shell .qbot-sidebar-scrim { position:absolute; z-index:20; inset:0; display:block; width:100%; height:100%; border:0; background:rgba(0,0,0,.58); cursor:pointer; }
+}
