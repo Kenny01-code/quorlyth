@@ -1,13 +1,12 @@
 import { Community, Idea } from './types'
 
-/** Resolve the current owner, never treating historical createdBy metadata as ownership. */
+/** Match the backend owner rule: an explicit ownerId wins; createdBy is the legacy fallback. */
 export function communityOwnerLookup(
   communities: readonly Pick<Community, 'id' | 'ownerId' | 'createdBy'>[],
-  fallbackOwnerId?: string | null,
 ): Map<string, string> {
   return new Map(communities.map(community => [
     community.id,
-    community.ownerId || (!community.createdBy ? fallbackOwnerId || '' : ''),
+    community.ownerId || community.createdBy || '',
   ]))
 }
 

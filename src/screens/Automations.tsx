@@ -482,9 +482,10 @@ function AutomationWorkspace() {
       catch { throw new Error('The workflow definition was incomplete. Try again with a more specific request.') }
 
       const allowedTriggers = Object.keys(TRIGGER_INFO) as WorkflowTrigger[]
-      const chosenTrigger = aiFields.includes('trigger')
-        ? allowedTriggers.includes(spec.trigger as WorkflowTrigger) ? spec.trigger as WorkflowTrigger : 'idea.created'
-        : base.trigger
+      if (aiFields.includes('trigger') && !allowedTriggers.includes(spec.trigger as WorkflowTrigger)) {
+        throw new Error('Quorlyth could not match the request to a supported trigger. Your workflow is unchanged; choose a trigger or make the request more specific, then try again.')
+      }
+      const chosenTrigger = aiFields.includes('trigger') ? spec.trigger as WorkflowTrigger : base.trigger
       const baseGraph = workflowGraphFor(base)
       const previousTrigger = baseGraph.nodes.find((node): node is Extract<WorkflowNode, { type: 'trigger' }> => node.type === 'trigger')
       const previousCondition = baseGraph.nodes.find((node): node is Extract<WorkflowNode, { type: 'condition' }> => node.type === 'condition')

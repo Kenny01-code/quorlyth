@@ -41,7 +41,7 @@ function Mine() {
   const rc = my.reduce((n, i) => n + a.votesOf(i.id), 0)
   const communityIds = new Set(created.map(c => c.id))
   const communityIdeas = a.data.ideas.filter(i => communityIds.has(i.cid))
-  const ownersByCommunity = communityOwnerLookup(a.data.communities, a.owner ? me.id : undefined)
+  const ownersByCommunity = communityOwnerLookup(a.data.communities)
   const rankedCommunityIdeas = communityIdeas.filter(i => !isCommunityOwnerContribution(i, ownersByCommunity))
   const communityBackings = communityIdeas.reduce((n, i) => n + a.votesOf(i.id), 0)
   const shareReady = communityIdeas.filter(i => a.statusOf(i.id) === 'promoted').length
@@ -156,10 +156,14 @@ function Public({ id }: { id: string }) {
   const communities = [...created, ...jc]
   const activityCommunityIds = new Set(communities.map(c => c.id))
   const communityIdeas = a.data.ideas.filter(i => activityCommunityIds.has(i.cid))
-  const ownersByCommunity = communityOwnerLookup(a.data.communities, id === a.me?.id && a.owner ? id : undefined)
-  const rankedCommunityIdeas = communityIdeas.filter(i => !isCommunityOwnerContribution(i, ownersByCommunity))
-  const shareReady = communityIdeas.filter(i => a.statusOf(i.id) === 'promoted').length
-  const selectedIdeas = communityIdeas.filter(i => a.statusOf(i.id) === 'selected').length
+  const ownersByCommunity = communityOwnerLookup(a.data.communities)
+  const platformWideInsightsAccess = a.platformAdmin || a.platformOwner
+  const insightCommunities = platformWideInsightsAccess ? communities : communities.filter(c => c.ownerId === a.me?.id || c.createdBy === a.me?.id)
+  const insightCommunityIds = new Set(insightCommunities.map(c => c.id))
+  const insightIdeas = a.data.ideas.filter(idea => insightCommunityIds.has(idea.cid))
+  const rankedCommunityIdeas = insightIdeas.filter(i => !isCommunityOwnerContribution(i, ownersByCommunity))
+  const shareReady = insightIdeas.filter(i => a.statusOf(i.id) === 'promoted').length
+  const selectedIdeas = insightIdeas.filter(i => a.statusOf(i.id) === 'selected').length
   const communityBackings = communityIdeas.reduce((n, i) => n + a.votesOf(i.id), 0)
   const contributorStats = Object.values(rankedCommunityIdeas.reduce<Record<string, { id: string; ideas: number; backings: number }>>((acc, idea) => {
     const current = acc[idea.authorId] || { id: idea.authorId, ideas: 0, backings: 0 }
@@ -171,7 +175,7 @@ function Public({ id }: { id: string }) {
   const contributorSource = Object.fromEntries(contributorStats.map(person => [person.id, cs.top.m === 'backs' ? person.backings : person.ideas])) as Record<string, number>
   const contributorIds = Object.keys(contributorSource).sort((x, y) => contributorSource[y] - contributorSource[x]).slice(0, cs.top.n)
   const communityMemberIds = new Set<string>()
-  Object.entries(a.data.members).forEach(([uid, memberships]) => { if (Object.entries(memberships || {}).some(([cid, joined]) => joined && activityCommunityIds.has(cid))) communityMemberIds.add(uid) })
+  Object.entries(a.data.members).forEach(([uid, memberships]) => { if (Object.entries(memberships || {}).some(([cid, joined]) => joined && insightCommunityIds.has(cid))) communityMemberIds.add(uid) })
   const isPlatformAdmin = id === a.me?.id ? (a.platformAdmin || a.owner) : id === a.data.ownerId
   // Show the role badge even when the owner's communities are unlisted; never reveal those community names.
   const isCommunityCreator = a.data.communities.some(c => isCreatorOf(c))
@@ -207,22 +211,22 @@ function Public({ id }: { id: string }) {
       </section>}
       <h3 style={{ margin: '30px 0 14px' }}>Ideas</h3>
       {my.length ? <div className="grid g3">{my.map(i => <IdeaCard key={i.id} idea={i} />)}</div> : <Empty icon="idea" title="No ideas yet" text="Ideas this person shares will appear here." />}
-      <section className="myspace-live-insights public-live-insights" aria-label="Live community insights">
+      {insightCommunities.length > 0 && <section className="myspace-live-insights public-live-insights" aria-label="Live community insights">
         <div className="grid g2" style={{ marginBottom: 18 }}>
           <div className="glass pad">
             <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.heat}</h3><p className="dim">By day and time, all time</p></div></div>
-            <div className="chs"><Heat ideas={communityIdeas} val={cs.heat.val} /></div>
+            <div className="chs"><Heat ideas={insightIdeas} val={cs.heat.val} /></div>
           </div>
           <div className="glass pad">
             <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.fun}</h3><p className="dim">How people move through these visible community spaces</p></div></div>
-            <div className="chs"><Funnel rows={[['Members', communityMemberIds.size], ['Contributors', contributorStats.length], ['Ideas', communityIdeas.length], ['Selected', selectedIdeas + shareReady], ['Ready to share', a.data.promotions.filter(p => communityIdeas.some(i => i.id === p.ideaId)).length]]} o={cs.fun} /></div>
+            <div className="chs"><Funnel rows={[['Members', communityMemberIds.size], ['Contributors', contributorStats.length], ['Ideas', insightIdeas.length], ['Selected', selectedIdeas + shareReady], ['Ready to share', a.data.promotions.filter(p => insightIdeas.some(i => i.id === p.ideaId)).length]]} o={cs.fun} /></div>
           </div>
         </div>
         <div className="glass pad">
           <div className="head" style={{ marginBottom: 6 }}><div><h3>{TITLES.top}</h3><p className="dim">Your most active people in visible community spaces</p></div></div>
           <TopList ids={contributorIds} src={contributorSource} nm={a.nm} />
         </div>
-      </section>
+      </section>}
     </>
   )
 }

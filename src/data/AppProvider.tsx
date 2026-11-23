@@ -634,8 +634,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setData(EMPTY)
   }, [backend, demo])
 
+  // Build one vote index per vote snapshot. `votesOf` is called repeatedly by
+  // feeds, charts and workflow summaries; scanning every member record for each
+  // idea made those screens quadratic as communities grew.
+  const voteCounts = useMemo(() => {
+    const counts: Record<string, number> = Object.create(null)
+    for (const memberVotes of Object.values(data.votes)) {
+      if (!memberVotes) continue
+      for (const [ideaId, voted] of Object.entries(memberVotes)) {
+        if (voted) counts[ideaId] = (counts[ideaId] || 0) + 1
+      }
+    }
+    return counts
+  }, [data.votes])
+
   const app = useMemo<App>(() => {
-    const votesOf = (id: string) => Object.values(data.votes).filter(v => v && v[id]).length
+    const votesOf = (id: string) => voteCounts[id] || 0
     const w = async (fn: () => Promise<any>, ok?: string) => {
       try { await fn(); ok && toast(ok); return true }
       catch (e: any) {
@@ -1510,7 +1524,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       decide: (uid, status) => w(() => st!.set('decisions/' + uid, { status, at: Date.now() }), status === 'approved' ? 'Approved' : 'Declined'),
       useComments: () => [],
     }
-  }, [ready, dataReady, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, settingsLoaded, platformRolesReady, toast, toastMsg, toastKind, st])
+  }, [ready, dataReady, startupError, backend, me, owner, legacyOwner, platformAdmin, demo, enterDemo, exitDemo, signOut, data, voteCounts, settingsLoaded, platformRolesReady, toast, toastMsg, toastKind, st])
 
   return <Ctx.Provider value={app}>{children}</Ctx.Provider>
 }

@@ -78,7 +78,21 @@ function loadCorpus() {
 
 function buildIndex() {
   if (cachedIndex) return cachedIndex
-  const documents = loadCorpus()
+  const corpus = loadCorpus()
+  // The versioned snapshots contain many synthetic phrasing and audience
+  // variants with identical guidance. The ranker returns only one example per
+  // domain/intent anyway, so indexing every duplicate wastes cold-start CPU and
+  // memory without improving the retrieved response pattern. Keep the first
+  // audience/scenario tag and distinct guidance so tailored advice remains
+  // retrievable without indexing all ten phrasing variations.
+  const guidanceKeys = new Set()
+  const documents = corpus.filter(doc => {
+    const key = doc.version + '\u0000' + doc.domain + '\u0000' + doc.intent + '\u0000'
+      + (doc.tags[2] || '') + '\u0000' + doc.ideal_response
+    if (guidanceKeys.has(key)) return false
+    guidanceKeys.add(key)
+    return true
+  })
   const postings = new Map()
   let totalLength = 0
   for (let index = 0; index < documents.length; index += 1) {

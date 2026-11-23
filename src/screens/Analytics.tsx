@@ -73,7 +73,7 @@ function Inner() {
   const nav = useNavigate()
   const { data: rawData } = a
   const ownedCommunities = useMemo(
-    () => rawData.communities.filter(community => !!a.me?.id && community.ownerId === a.me.id),
+    () => rawData.communities.filter(community => !!a.me?.id && (community.ownerId === a.me.id || community.createdBy === a.me.id)),
     [rawData.communities, a.me?.id],
   )
   const data = useMemo(() => {
@@ -89,7 +89,7 @@ function Inner() {
       promotions: rawData.promotions.filter(p => ideaIds.has(p.ideaId)),
     }
   }, [rawData, a.owner, ownedCommunities])
-  const ownersByCommunity = useMemo(() => communityOwnerLookup(data.communities, a.owner ? a.me?.id : undefined), [data.communities, a.owner, a.me?.id])
+  const ownersByCommunity = useMemo(() => communityOwnerLookup(data.communities), [data.communities])
   const { cs, set, reset } = useChartSettings()
   const [rg, setRg] = useState(30)
   const [open, setOpen] = useState<ChartKey | null>(null)
