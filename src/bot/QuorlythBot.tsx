@@ -906,6 +906,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   async function send(text?: string, raw = false) {
     const t = (text ?? input).trim()
     if (!t || busy) return
+    if (!navigator.onLine) {
+      setInput('')
+      const draft = add(cur, { r: 'u', t })
+      persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: 'You’re offline right now. I saved your message on this device; QuorlythBot will need an internet connection to generate a reply.' }] })
+      return
+    }
     setInput('')
     if (!raw && t.startsWith('/')) { const m = t.match(/^\/(\w+)\s*(.*)$/s); if (m && SKILLS.some(s => s.id === m[1])) return skill(m[1], m[2]) }
     if (!raw && a.owner && /^(please\s+)?(can you\s+)?(run|start|do|perform|review|score)\b/i.test(t) && /\b(review|score|ideas?|queue)\b/i.test(t)) return skill('review')
@@ -2196,6 +2202,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   })
   const searchResults = [...new Map(shown.map(c => [c.id, c])).values()]
   const active = shown.filter(c => !c.arch), pinned = active.filter(c => c.pin), recent = active.filter(c => !c.pin), arch = shown.filter(c => c.arch)
+  const todayStart = new Date().setHours(0, 0, 0, 0)
+  const yesterdayStart = todayStart - 86_400_000
+  const recentGroups = new Map<string, Chat[]>()
+  recent.forEach(c => {
+    const at = Number(c.upd || c.at || 0)
+    const label = at >= todayStart ? 'Today' : at >= yesterdayStart ? 'Yesterday' : new Date(at).toLocaleDateString(undefined, { month: 'long' }).toUpperCase()
+    recentGroups.set(label, [...(recentGroups.get(label) || []), c])
+  })
   const item = (c: Chat) => {
     const T = THEMES.terracotta
     return (
@@ -3895,15 +3909,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   <span className="qbot-sidebar-primary-icon"><Icon name="plus" size={18} /></span>
                   <span className="qbot-sidebar-primary-copy"><b>New chat</b></span>
                 </button>
-                {([['skills', 'spark', 'Skills'], ['projects', 'folder', 'Projects'], ['library', 'book', 'Library'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio'], ['robot-studio', 'stage', 'Robot studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
+                {([['skills', 'spark', 'Explore AI'], ['library', 'book', 'Knowledge base'], ['projects', 'folder', 'Templates'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio'], ['robot-studio', 'stage', 'Robot studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
               </div>
               <div className="bs-s"><div className="iw"><Icon name="search" size={18} /><input placeholder="Search chats" aria-label="Search chats" value={q} onChange={e => setQ(e.target.value)} /></div></div>
               <div className="bs-l">
                 {project && <div className="bpj"><span><Icon name="folder" size={14} />{project.name}</span><button className="chip" onClick={() => setPj('')}>Clear</button></div>}
                 {query ? <><p className="bgh">Results</p>{searchResults.length ? searchResults.map(item) : <p className="dim" style={{ padding: '8px 10px' }}>No chats match.</p>}</> : <>
                   {pinned.length > 0 && <><p className="bgh">Pinned</p>{pinned.map(item)}</>}
-                  <p className="bgh">Recents</p>
-                  {recent.length ? recent.map(item) : <p className="dim" style={{ padding: '8px 10px' }}>No chats yet. Start one.</p>}
+                  {recentGroups.size ? [...recentGroups].map(([label, chats]) => <section key={label} className="qbot-chat-date-group"><p className="bgh">{label}</p>{chats.map(item)}</section>) : <><p className="bgh">Today</p><p className="dim" style={{ padding: '8px 10px' }}>No chats yet. Start one.</p></>}
                   {arch.length > 0 && <><button className="bgh bga" onClick={() => setShowArch(!showArch)}><Icon name="book" size={13} />Archived ({arch.length})<span>{showArch ? 'Hide' : 'Show'}</span></button>{showArch && arch.map(item)}</>}
                 </>}
               </div>
@@ -4070,20 +4083,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   !msgs.length ? (
                     <div className="bhero qbot-welcome">
                       <div className="qbot-welcome-mark"><Logo size={25} /></div>
-                      <p className="qbot-welcome-kicker"><span />CREATOR WORKSPACE <i>{role === 'owner' ? 'PLATFORM OWNER' : communityOwner ? 'COMMUNITY OWNER' : role === 'member' ? 'MEMBER' : 'VISITOR'}</i></p>
-                      <h3>{project ? <>Let’s move <em>{project.name}</em> forward.</> : <>Make the next<br /><em>idea count.</em></>}</h3>
-                      <p className="qbot-welcome-copy">Bring a question, shape an idea, or get a clear read on what your community needs next.</p>
-                      <div className="qbot-welcome-label"><span>START WITH</span><span>Choose a direction</span></div>
-                      <div className="bgrid sm qbot-welcome-grid">
-                        {SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 4).map((s, index) => (
-                          <button key={s.id} className="bsk qbot-welcome-card" onClick={() => skill(s.id)}>
-                            <span className="bski"><Icon name={s.icon} size={19} /></span>
-                            <span className="qbot-welcome-card-index">0{index + 1}</span>
-                            <div className="bsk-info"><b>{s.n}</b><span className="dim bsk-desc">{s.d}</span></div>
-                            <span className="bsk-arrow" aria-hidden="true"><Icon name="arrow-up-right" size={14} /></span>
-                          </button>
-                        ))}
-                      </div>
+                      <h3>{project ? <>Let's move <em>{project.name}</em> forward.</> : <>Let's start a smart conversation</>}</h3>
+                      <p className="qbot-welcome-copy">Ask Quorlyth anything, or choose a starting point below.</p>
                     </div>
                   ) : (
                     <div className="ast-log" aria-live="polite">
@@ -4270,6 +4271,15 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                       <button type="button" className="qbot-tool-pill qbot-tool-more" aria-label="More tools" title="More skills" onClick={() => setView('skills')}><Icon name="plus" size={14} /><span>All tools</span></button>
                     </div>
                   </div>
+                  {!msgs.length && <div className="qbot-reference-prompts" aria-label="Conversation starters">
+                    {SKILLS.filter(s => a.owner || !s.own || (communityOwner && s.id === 'analytics')).slice(0, 3).map(s => (
+                      <button key={s.id} className="qbot-reference-prompt" onClick={() => skill(s.id)}>
+                        <Icon name={s.icon} size={19} />
+                        <b>{s.id === 'brief' ? 'Summarize a community' : s.id === 'post' ? 'Creative writing' : 'Answer questions'}</b>
+                        <span>{s.id === 'brief' ? 'Turn a busy space into a clear picture.' : s.id === 'post' ? 'Shape a strong idea into a polished post.' : 'Get a thoughtful answer about your community.'}</span>
+                      </button>
+                    ))}
+                  </div>}
                   <p className="dim" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>QuorlythBot can make mistakes. Check important details.</p>
                 </div>
               )}

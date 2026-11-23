@@ -385,24 +385,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
           'workSubmissions', 'settings',
         ]
       : ['communities', 'ideas', 'profiles', 'ownerId']
-    const staged: Partial<Data> = {}
-    const received = new Set<keyof Data>()
-    let firstSnapshotPublished = false
+    const offlineKey = `quorlyth:workspace-cache:v1:${userId || 'public'}`
+    let cached: Data | null = null
+    try {
+      const value = localStorage.getItem(offlineKey)
+      if (value) cached = JSON.parse(value) as Data
+    } catch { cached = null }
+    const staged: Partial<Data> = cached ? { ...EMPTY, ...cached } : {}
+    const received = new Set<keyof Data>(cached ? requiredKeys : [])
+    let firstSnapshotPublished = !!cached
+    if (cached) {
+      setData({ ...EMPTY, ...cached })
+      setInitialDataSnapshot({ backend, userId, ready: true })
+      if (me) setSettingsSnapshot({ backend, userId: me.id, loaded: true })
+    }
 
     const publish = (key: keyof Data, value: any) => {
+      ;(staged as any)[key] = value
       if (!firstSnapshotPublished) {
-        ;(staged as any)[key] = value
         received.add(key)
         if (requiredKeys.every(required => received.has(required))) {
           firstSnapshotPublished = true
           // Publish the first complete account snapshot in one React commit.
           startTransition(() => {
-            setData({ ...EMPTY, ...staged })
+            const complete = { ...EMPTY, ...staged }
+            setData(complete)
             setInitialDataSnapshot({ backend, userId, ready: true })
+            try { localStorage.setItem(offlineKey, JSON.stringify(complete)) } catch { /* Offline cache is best effort when device storage is full. */ }
           })
         }
         return
       }
+      try { localStorage.setItem(offlineKey, JSON.stringify({ ...EMPTY, ...staged })) } catch { /* Keep the live view if the cache cannot be updated. */ }
       startTransition(() => setData(current => ({ ...current, [key]: value })))
     }
 

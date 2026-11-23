@@ -8,6 +8,24 @@ export interface LibItem { id: string; title: string; text: string; at: number }
 
 type UserDocs = { owner: string; docs: Record<string, any> }
 
+const cacheKey = (owner: string) => `quorlyth:bot-cache:v1:${owner}`
+const queueKey = (owner: string) => `quorlyth:bot-queue:v1:${owner}`
+function readLocalDocs(owner: string) {
+  try { return JSON.parse(localStorage.getItem(cacheKey(owner)) || '{}') as Record<string, any> } catch { return {} }
+}
+function writeLocalDocs(owner: string, docs: Record<string, any>) {
+  try { localStorage.setItem(cacheKey(owner), JSON.stringify(docs)); return true } catch { return false }
+}
+function readQueue(owner: string) {
+  try { return JSON.parse(localStorage.getItem(queueKey(owner)) || '{}') as Record<string, any | null> } catch { return {} }
+}
+function writeQueue(owner: string, queue: Record<string, any | null>) {
+  try {
+    if (Object.keys(queue).length) localStorage.setItem(queueKey(owner), JSON.stringify(queue))
+    else localStorage.removeItem(queueKey(owner))
+  } catch { /* Keep the latest conversation in memory if device storage is full. */ }
+}
+
 /** Everything the bot remembers about you, stored privately under data/users/<you>. */
 export function useBotData() {
   const { backend, me } = useApp()
@@ -25,13 +43,58 @@ export function useBotData() {
       return
     }
     const owner = 'data/users/' + me.id
-    return backend.store.subscribe(owner, rows => {
-      const next = Object.fromEntries(rows.map(row => [row.id, row.data]))
+    const queued = readQueue(owner)
+    const local = { ...readLocalDocs(owner) }
+    for (const [id, data] of Object.entries(queued)) {
+      if (data === null) delete local[id]
+      else local[id] = data
+    }
+    docsRef.current = local
+    setSnapshot({ owner, docs: local })
+    let active = true
+    let syncing = false
+    const syncQueued = async () => {
+      if (!active || syncing || !navigator.onLine) return
+      syncing = true
+      try {
+        const pending = readQueue(owner)
+        for (const [id, data] of Object.entries(pending)) {
+          if (!active || !navigator.onLine) break
+          try {
+            if (data === null) await backend.store.delete(`${owner}/${id}`)
+            else await backend.store.set(`${owner}/${id}`, data)
+            const latest = readQueue(owner)
+            if (Object.prototype.hasOwnProperty.call(latest, id) && JSON.stringify(latest[id]) === JSON.stringify(data)) {
+              delete latest[id]
+              writeQueue(owner, latest)
+            }
+          } catch { break }
+        }
+      } finally { syncing = false }
+    }
+    const unsubscribe = backend.store.subscribe(owner, rows => {
+      const remote = Object.fromEntries(rows.map(row => [row.id, row.data]))
+      const pending = readQueue(owner)
+      const next = { ...remote }
+      for (const [id, data] of Object.entries(pending)) {
+        if (data === null) delete next[id]
+        else next[id] = data
+      }
+      if (!active) return
       docsRef.current = next
       setSnapshot({ owner, docs: next })
+      writeLocalDocs(owner, next)
+      void syncQueued()
     }, () => {
-      // Keep the newest account-scoped snapshot visible across transient reconnects.
+      // The account-scoped local snapshot stays available through reconnects.
     })
+    window.addEventListener('online', syncQueued)
+    void syncQueued()
+    return () => {
+      active = false
+      window.removeEventListener('online', syncQueued)
+      unsubscribe()
+    }
   }, [backend, me?.id])
 
   const settings: BotSettings = { ...BOT_DEFAULTS, ...(docs.botset || {}) }
@@ -55,17 +118,16 @@ export function useBotData() {
       setSnapshot({ owner: base, docs: restored })
       return Promise.resolve(false)
     }
-    return backend.store.set(`${base}/${id}`, JSON.parse(serialized)).then(() => true).catch(() => {
-      setSnapshot(current => {
-        if (current.owner !== base || current.docs[id] !== data) return current
-        const next = { ...current.docs }
-        if (previous === undefined) delete next[id]
-        else next[id] = previous
-        docsRef.current = next
-        return { owner: base, docs: next }
-      })
-      return false
-    })
+    const clean = JSON.parse(serialized)
+    writeLocalDocs(base, optimistic)
+    const queue = readQueue(base)
+    queue[id] = clean
+    writeQueue(base, queue)
+    return backend.store.set(`${base}/${id}`, clean).then(() => {
+      const pending = readQueue(base)
+      if (JSON.stringify(pending[id]) === JSON.stringify(clean)) { delete pending[id]; writeQueue(base, pending) }
+      return true
+    }).catch(() => true)
   }, [backend, base])
 
   const remove = useCallback((id: string) => {
@@ -75,15 +137,15 @@ export function useBotData() {
     docsRef.current = optimistic
     setSnapshot({ owner: base, docs: optimistic })
     if (!backend) return Promise.resolve(false)
-    return backend.store.delete(`${base}/${id}`).then(() => true).catch(() => {
-      setSnapshot(current => {
-        if (current.owner !== base || current.docs[id] !== undefined) return current
-        const next = previous === undefined ? current.docs : { ...current.docs, [id]: previous }
-        docsRef.current = next
-        return { owner: base, docs: next }
-      })
-      return false
-    })
+    writeLocalDocs(base, optimistic)
+    const queue = readQueue(base)
+    queue[id] = null
+    writeQueue(base, queue)
+    return backend.store.delete(`${base}/${id}`).then(() => {
+      const pending = readQueue(base)
+      if (Object.prototype.hasOwnProperty.call(pending, id) && pending[id] === null) { delete pending[id]; writeQueue(base, pending) }
+      return true
+    }).catch(() => true)
   }, [backend, base])
 
   const saveSettings = useCallback((patch: Partial<BotSettings>) => {

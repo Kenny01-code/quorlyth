@@ -1,0 +1,23 @@
+.q-offline-status {
+  position: fixed;
+  z-index: 10000;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: min(720px, calc(100vw - 24px));
+  padding: 10px 15px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 151, 85, .36);
+  border-radius: 12px;
+  color: #fff3e9;
+  background: rgba(31, 24, 20, .96);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .32);
+  font-size: 12px;
+  font-weight: 650;
+  backdrop-filter: blur(18px);
+}
+.q-offline-status > span { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #ff9a57; box-shadow: 0 0 12px rgba(255, 154, 87, .55); }
+.q-offline-status i { color: #c9c0ba; font-size: 11px; font-style: normal; font-weight: 450; }
+@media (max-width: 600px) { .q-offline-status { align-items: flex-start; flex-wrap: wrap; gap: 4px 8px; } .q-offline-status i { flex-basis: 100%; padding-left: 15px; } }

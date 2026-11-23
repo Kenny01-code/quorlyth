@@ -661,3 +661,50 @@
     transition-duration: .01ms !important;
   }
 }
+
+/* Reference led chat landing, using Quorlyth identity and existing controls. */
+#bot.qbot-premium.m-full { border-radius: 26px !important; background: #181818 !important; }
+#bot.qbot-premium.m-full .bs { width: clamp(248px, 24vw, 318px); min-width: clamp(248px, 24vw, 318px); padding: 14px 12px !important; }
+#bot.qbot-premium.m-full .bs-t { min-height: 82px; padding: 0 14px !important; }
+#bot.qbot-premium.m-full .bs-n { padding: 15px 10px 12px !important; }
+#bot.qbot-premium.m-full .bs-n > .bsb:not(.qbot-sidebar-primary-action) { min-height: 46px; border-radius: 10px !important; }
+#bot.qbot-premium.m-full .qbot-sidebar-primary-action { min-height: 54px !important; border-radius: 10px !important; background: #ff812f !important; color: #fff !important; box-shadow: 0 8px 22px rgba(255, 129, 47, .16) !important; }
+#bot.qbot-premium.m-full .qbot-sidebar-primary-action b { font-size: 14px !important; font-weight: 640 !important; }
+#bot.qbot-premium.m-full .bs-s { padding: 10px 10px 4px !important; }
+#bot.qbot-premium.m-full .bs-l { padding: 12px 10px !important; }
+#bot.qbot-premium.m-full .bgh { margin: 12px 8px 8px !important; color: #929292 !important; font-size: 11px !important; letter-spacing: .035em !important; }
+#bot.qbot-premium.m-full .bci { min-height: 42px; padding-inline: 10px !important; font-size: 12px !important; }
+#bot.qbot-premium.m-full .bm { margin: 12px 12px 12px 0; overflow: hidden; border: 1px solid #242424 !important; border-radius: 22px !important; background: #0b0b0b !important; }
+#bot.qbot-premium.m-full .bh { flex-basis: 68px; min-height: 68px !important; padding: 0 24px !important; background: #0b0b0b !important; }
+#bot.qbot-premium.m-full .qbot-conversation.qbot-chat-surface { padding: 24px clamp(20px, 5vw, 78px) 18px !important; background: #0b0b0b !important; }
+#bot.qbot-premium.m-full .qbot-conversation.qbot-chat-surface:has(.qbot-welcome) { overflow: hidden; }
+#bot.qbot-premium.m-full .qbot-welcome { align-items: center !important; text-align: center !important; width: min(100%, 920px); padding: 20px 0 !important; }
+#bot.qbot-premium.m-full .qbot-welcome-mark { width: 58px; height: 58px; margin: 0 auto 30px; border: 0; border-radius: 0; color: #ff812f; background: transparent; box-shadow: none; }
+#bot.qbot-premium.m-full .qbot-welcome-mark .q-logo-mark { width: 52px !important; height: 52px !important; }
+#bot.qbot-premium.m-full .qbot-welcome h3 { max-width: 900px; font-size: clamp(34px, 4.1vw, 66px) !important; font-weight: 520 !important; letter-spacing: -.055em !important; line-height: 1.12 !important; }
+#bot.qbot-premium.m-full .qbot-welcome h3 em { color: #f2f0ed !important; }
+#bot.qbot-premium.m-full .qbot-welcome-copy { margin: 14px auto 0 !important; color: #aaa9a7 !important; font-size: 14px !important; }
+#bot.qbot-premium.m-full .bc { padding: 14px clamp(18px, 5vw, 78px) 16px !important; border-top: 0 !important; background: #0b0b0b !important; }
+#bot.qbot-premium.m-full .qbot-composer-label { display: none !important; }
+#bot.qbot-premium.m-full .ast-in { width: min(100%, 920px); min-height: 134px !important; padding: 12px 14px 10px !important; border-color: #303033 !important; border-radius: 20px !important; background: #111113 !important; }
+#bot.qbot-premium.m-full .ast-in > textarea { min-height: 66px !important; padding: 10px 12px !important; font-size: 15px !important; }
+#bot.qbot-premium.m-full .ast-in > .btn { border: 0 !important; background: transparent !important; color: #aaa9a7 !important; }
+#bot.qbot-premium.m-full .ast-in > .btn.p { width: 44px !important; min-width: 44px !important; height: 44px !important; min-height: 44px !important; border-radius: 50% !important; background: #ff812f !important; }
+#bot.qbot-premium.m-full .qbot-composer-toolbar { grid-column: 1 / 3; grid-row: 2; padding-top: 7px; border-top: 0; }
+#bot.qbot-premium.m-full .qbot-tool-pill { border-radius: 9px !important; background: #1d1d1f !important; }
+#bot.qbot-premium.m-full .qbot-reference-prompts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: min(100%, 920px); margin: 12px auto 0; }
+#bot.qbot-premium.m-full .qbot-reference-prompt { display: grid; grid-template-columns: 24px 1fr; align-content: start; gap: 8px 10px; min-height: 92px; padding: 14px 15px; border: 1px solid #28282a; border-radius: 14px; color: #f1efed; background: #151517; text-align: left; cursor: pointer; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
+#bot.qbot-premium.m-full .qbot-reference-prompt:hover { border-color: #59402f; background: #1d1916; transform: translateY(-1px); }
+#bot.qbot-premium.m-full .qbot-reference-prompt > svg { grid-row: 1 / span 2; color: #e8e5e1; }
+#bot.qbot-premium.m-full .qbot-reference-prompt b { font-size: 13px; font-weight: 570; }
+#bot.qbot-premium.m-full .qbot-reference-prompt span { grid-column: 2; color: #a8a6a3; font-size: 11px; line-height: 1.5; }
+#bot.qbot-premium.m-full .bc > p.dim { color: #858482 !important; }
+@media (max-width: 760px) {
+  #bot.qbot-premium.m-full .bm { margin: 0; border: 0 !important; border-radius: 0 !important; }
+  #bot.qbot-premium.m-full .qbot-reference-prompts { grid-template-columns: 1fr; gap: 7px; max-height: 170px; overflow-y: auto; }
+  #bot.qbot-premium.m-full .qbot-reference-prompt { min-height: 58px; grid-template-columns: 23px 1fr; padding: 10px 12px; }
+  #bot.qbot-premium.m-full .qbot-reference-prompt span { display: none; }
+  #bot.qbot-premium.m-full .qbot-welcome-mark { margin-bottom: 18px; }
+  #bot.qbot-premium.m-full .qbot-welcome h3 { font-size: clamp(32px, 9vw, 46px) !important; }
+  #bot.qbot-premium.m-full .bc { padding: 8px 12px 12px !important; }
+}
