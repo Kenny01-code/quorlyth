@@ -341,6 +341,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const [status, setStatus] = useState('Online')
   const [thinkingTask, setThinkingTask] = useState('')
   const [q, setQ] = useState('')
+  const [showMoreNav, setShowMoreNav] = useState(false)
   const [menu, setMenu] = useState<null | { id: string | null; x: number; y: number; leftBound?: number; rightBound?: number; anchor: HTMLElement; offsetX: number; offsetY: number }>(null)
   const [ren, setRen] = useState('')
   const [showArch, setShowArch] = useState(false)
@@ -3909,7 +3910,9 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                   <span className="qbot-sidebar-primary-icon"><Icon name="plus" size={18} /></span>
                   <span className="qbot-sidebar-primary-copy"><b>New chat</b></span>
                 </button>
-                {([['skills', 'spark', 'Explore AI'], ['library', 'book', 'Knowledge base'], ['projects', 'folder', 'Templates'], ['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio'], ['robot-studio', 'stage', 'Robot studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
+                {([['skills', 'spark', 'Explore AI'], ['library', 'book', 'Knowledge base'], ['projects', 'folder', 'Templates']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}
+                <button type="button" className={cn('bsb qbot-more-nav-toggle', showMoreNav && 'on')} aria-expanded={showMoreNav} onClick={() => setShowMoreNav(value => !value)}><Icon name="more" size={18} /><span>More tools</span><i aria-hidden="true">{showMoreNav ? '−' : '+'}</i></button>
+                {showMoreNav && <div className="qbot-more-nav-group">{([['custom', 'sliders', 'Customize'], ['voice', 'voice', 'Voice studio'], ['robot-studio', 'stage', 'Robot studio']] as [View, string, string][]).map(([v, ic, l]) => <button key={v} className={cn('bsb', view === v && 'on')} onClick={() => { stopLive(); stopVoice(); setView(v); if (!wide) setSide(false) }}><Icon name={ic} size={18} />{l}</button>)}</div>}
               </div>
               <div className="bs-s"><div className="iw"><Icon name="search" size={18} /><input placeholder="Search chats" aria-label="Search chats" value={q} onChange={e => setQ(e.target.value)} /></div></div>
               <div className="bs-l">
@@ -4033,9 +4036,16 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
               }}>
                 <button className="bib" aria-label="Sidebar" onClick={e => { e.stopPropagation(); setSide(!side) }}><Icon name="menu" size={18} /></button>
                 <div className="bht">
-                  {view === 'robot-studio' ? <div className="qbot-title-row"><span className="qbot-chat-title">Robot studio <i className="qrs-header-badge">DESIGN MODE</i></span></div> : <div className="qbot-title-row">
-                    <span className="qbot-chat-title">{cur?.title || (project ? project.name : 'New chat')}</span>
-                    <button className="qbot-title-edit" aria-label="Edit chat title" title="Edit title" onClick={e => { e.stopPropagation(); const next = prompt('Chat title:', cur?.title || ''); if (next && cur) { setCur({ ...cur, title: next }); bd.put('c_' + cur.id, { ...cur, title: next }) } }}><Icon name="pen" size={13} /></button>
+                  {view === 'chat' ? <div className="qbot-header-stack">
+                    <button type="button" className="qbot-core-selector" aria-label={`Response mode: ${bs.model === 'quick' ? 'Quick' : 'Smart'}. Click to switch.`} title="Switch response mode" onClick={() => { const model = bs.model === 'quick' ? 'smart' : 'quick'; void bd.saveSettings({ model }) }}>
+                      <span>Quorlyth Core</span><i>{bs.model === 'quick' ? 'QUICK' : 'SMART'}</i><span className="qbot-core-caret" aria-hidden="true" />
+                    </button>
+                    <div className="qbot-title-row">
+                      <span className="qbot-chat-title">{cur?.title || (project ? project.name : 'New conversation')}</span>
+                    </div>
+                  </div> : <div className="qbot-title-row">
+                    <span className="qbot-chat-title">{view === 'robot-studio' ? 'Robot studio' : cur?.title || (project ? project.name : 'QuorlythBot')}</span>
+                    {view === 'robot-studio' && <i className="qrs-header-badge">DESIGN MODE</i>}
                   </div>}
                 </div>
                 <div className="bha">
