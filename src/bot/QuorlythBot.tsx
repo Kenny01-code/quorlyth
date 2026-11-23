@@ -4070,7 +4070,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                     <Icon name="x" size={18} />
                   </button>
                 </div>
-              </header>     </header>
+              </header>
               {orbVisible && (
                 <div className={cn('bstage bot-orb-dock qbot-live-orb-stage', stage)} role="group" aria-label={live ? 'Live Talk voice visualizer' : 'QuorlythBot speaking visualizer'}>
                   <span className="qbot-orb-stage-halo" aria-hidden="true" />
