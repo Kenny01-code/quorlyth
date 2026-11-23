@@ -163,8 +163,8 @@ test('heavy feature styles are split from the initial global stylesheet', async 
   assert.match(messages, /styles\/messages\.css/)
   assert.match(messages, /styles\/messages-room\.css/)
   assert.match(chatMedia, /styles\/chat-media\.css/)
-  assert.match(bot, /styles\/bot\.css/)
-  assert.match(bot, /styles\/bot-room-theme\.css/)
+  assert.match(bot, /styles\/quorlythbot-reference\.css/)
+  assert.doesNotMatch(bot, /styles\/(?:bot|bot-room-theme|bot-liquid-glass|bot-obsidian-glass|bot-redesign)\.css/)
   assert.match(automations, /styles\/automations\.css/)
 })
 
@@ -219,10 +219,11 @@ test('the top navigation uses one active-state surface, not a duplicate animated
 })
 
 test('QuorlythBot sidebar uses a professional readable width without removing navigation', async () => {
-  const css = await readSource('src/styles/bot.css')
-  assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
-  assert.match(css, /width:\s*min\(304px, calc\(100% - 36px\)\)/)
-  assert.match(css, /\.bs-l/)
+  const css = await readSource('src/styles/quorlythbot-reference.css')
+  assert.match(css, /flex:\s*0 0 286px/)
+  assert.match(css, /width:\s*286px/)
+  assert.match(css, /\.qbot-history-scroll/)
+  assert.match(css, /\.qbot-history-item\.bci/)
 })
 
 
@@ -237,7 +238,7 @@ test('feature-only CSS is not loaded until its route or component is used', asyn
   assert.doesNotMatch(main, /styles\/(messages|bot|chat-media|automations|public-architecture)/)
   assert.match(architecture, /styles\/public-architecture\.css/)
   assert.match(messages, /styles\/messages\.css/)
-  assert.match(bot, /styles\/bot\.css/)
+  assert.match(bot, /styles\/quorlythbot-reference\.css/)
   assert.match(automation, /styles\/automations\.css/)
   const architecturePage = await readSource('src/screens/Architecture.tsx')
   const workspacesPage = await readSource('src/screens/StandaloneWorkspaces.tsx')
@@ -314,10 +315,11 @@ test('the 3D bot animation loop pauses when its view is inactive', async () => {
 
 test('QuorlythBot keeps a readable sidebar width and a lower GPU pixel ratio', async () => {
   const [css, renderer] = await Promise.all([
-    readSource('src/styles/bot.css'),
+    readSource('src/styles/quorlythbot-reference.css'),
     readSource('src/bot/robot3d.ts'),
   ])
-  assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
+  assert.match(css, /flex:\s*0 0 286px/)
+  assert.match(css, /\.qbot-history-scroll/)
   assert.ok(renderer.includes('window.devicePixelRatio||1,lowPower?0.9:1.0'))
   assert.ok(renderer.includes('1000/(lowPower?24:30)'))
 })
@@ -520,10 +522,10 @@ test('QuorlythBot keeps text streaming while applying a short voice deadline and
 
 test('QuorlythBot chat frame reduces expensive blur and offscreen transcript rendering', async () => {
   const [styles, robot] = await Promise.all([
-    readSource('src/styles/bot.css'),
+    readSource('src/styles/quorlythbot-reference.css'),
     readSource('src/bot/robot3d.ts'),
   ])
-  assert.match(styles, /\.bot \.ast-log > \.am[\s\S]{0,180}content-visibility: auto/)
+  assert.match(styles, /#bot\.qbot-reference-shell \.ast-log > \.am[\s\S]{0,180}content-visibility: auto/)
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]{0,240}backdrop-filter: none !important/)
   assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,lowPower\?0\.9:1\.0\)\)/)
   assert.match(robot, /if\(now-lastRender<1000\/\(lowPower\?24:30\)\)/)
@@ -771,15 +773,15 @@ test('visitor platform access submissions feed platform-admin notifications and 
 test('QuorlythBot launcher greeting and dark-surface writeups stay white without recolouring light cards', async () => {
   const [contrast, botTheme] = await Promise.all([
     readSource('src/styles/contrast-system.css'),
-    readSource('src/styles/bot-room-theme.css'),
+    readSource('src/styles/quorlythbot-reference.css'),
   ])
   assert.ok(contrast.includes('.glass:not(.bot)'))
   assert.ok(!contrast.includes(':is(.glass, .card'))
-  assert.ok(botTheme.includes('#astl.astl .astb {\n  color: #FFFFFF !important;'))
-  assert.ok(botTheme.includes('.qbot-conversation .am.ma,'))
-  assert.ok(botTheme.includes('.bhero :is(h1, h2, h3, h4, p, li, span, b, strong, em, small)'))
-  assert.ok(botTheme.includes('.bs .bsb {'))
-  assert.ok(botTheme.includes('color: var(--qbot-ink) !important;'))
-  assert.ok(botTheme.includes('.am.mu {'))
-  assert.ok(botTheme.includes('color: #211A17 !important;'))
+  assert.ok(botTheme.includes('--qbot-ink: #f2eee9'))
+  assert.ok(botTheme.includes('.qbot-assistant-byline'))
+  assert.ok(botTheme.includes('.qbot-empty-state h1'))
+  assert.ok(botTheme.includes('.qbot-rail-link'))
+  assert.ok(botTheme.includes('.qbot-history-item.bci'))
+  assert.ok(botTheme.includes('.qbot-feature-card'))
+  assert.ok(botTheme.includes('background: #0a0a0a !important;'))
 })
