@@ -321,20 +321,14 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const thinkingExitTimer = useRef<number | null>(null)
   const [open, setOpen] = useState(initialOpen)
   const [minimized, setMinimized] = useState(false)
+  const [launcherHidden, setLauncherHidden] = useState(() => {
+    try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
+  })
   useEffect(() => {
     const restoreLauncher = () => {
       try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
       setLauncherHidden(false)
     }
-    window.addEventListener('quorlyth:launcher-restore', restoreLauncher)
-    return () => window.removeEventListener('quorlyth:launcher-restore', restoreLauncher)
-  }, [])
-
-  const [launcherHidden, setLauncherHidden] = useState(() => {
-    try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
-  })
-  useEffect(() => {
-    const restoreLauncher = () => setLauncherHidden(false)
     window.addEventListener('quorlyth:launcher-restore', restoreLauncher)
     return () => window.removeEventListener('quorlyth:launcher-restore', restoreLauncher)
   }, [])
@@ -3952,10 +3946,11 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
             setLauncherHidden(false)
             window.dispatchEvent(new Event('quorlyth:launcher-restore'))
           }}
-          onContextMenu={event => {}
+          onContextMenu={event => {
             event.preventDefault()
             try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
             setLauncherHidden(false)
+            window.dispatchEvent(new Event('quorlyth:launcher-restore'))
           }}
         >
           <span className="qbot-launcher-restore-mark" aria-hidden="true" />
