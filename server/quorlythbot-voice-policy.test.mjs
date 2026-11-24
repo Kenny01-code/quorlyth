@@ -146,15 +146,20 @@ test('Normal chat starts ElevenLabs speech while the answer is still streaming',
   assert.match(bot, /preferElevenLabsVoice:\s*true/)
 })
 
-test('Automatic page-guide popups are removed and QuorlythBot opens after the welcome', async () => {
-  const app = await readSource('src/App.tsx')
+test('QuorlythBot stays lazy-loaded and uses the keyboard instead of a floating launcher', async () => {
+  const [app, bot] = await Promise.all([
+    readSource('src/App.tsx'),
+    readSource('src/bot/QuorlythBot.tsx'),
+  ])
   assert.doesNotMatch(app, /PageAssist|pageBotPrompt|page-assist|quorlyth:page-assist/)
   assert.doesNotMatch(app, /Warm the assistant chunk after the first paint/)
   assert.doesNotMatch(app, /setTimeout\(\(\) => \{\s*void loadQuorlythBot/)
-  assert.doesNotMatch(app, /id="astl"[\s\S]{0,320}onPointerEnter=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /onFocus=\{\(\) => \{ void loadQuorlythBot\(\)/)
-  assert.match(app, /onClick=\{\(\) => \{[\s\S]{0,180}openQuorlythBot\(\)/)
+  assert.match(app, /e\.key\.toLowerCase\(\) === 'j'/)
+  assert.match(app, /openQuorlythBot\(true\)/)
   assert.match(app, /const QuorlythBot = lazy\(loadQuorlythBot\)/)
+  assert.match(app, /openRequest=\{botOpenRequest\}/)
+  assert.doesNotMatch(app, /createPortal|data-quorlyth-launcher|id="astl"/)
+  assert.doesNotMatch(bot, /id="astl"|QuorlythBotHead|qbot-launcher-restore/)
   assert.doesNotMatch(app, /qbot-open-fallback/)
 })
 
