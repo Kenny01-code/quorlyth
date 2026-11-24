@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
 import { Projects } from './Projects'
 import { StandaloneWorkspaceList } from './StandaloneWorkspaces'
 import { Collaborations } from './Collaborations'
@@ -13,8 +14,9 @@ const VIEWS: Array<{ id: WorkView; label: string; description: string }> = [
   { id: 'collaborations', label: 'Collaborations', description: 'Find teammates, track applications and work together.' },
 ]
 
-export function Work({ onBuild }: { onBuild: () => void }) {
+export function Work({ onBuild }: { onBuild: (prompt: string) => void }) {
   const [params, setParams] = useSearchParams()
+  const [buildPrompt, setBuildPrompt] = useState('')
   const requested = params.get('view') as WorkView | null
   const active = VIEWS.some(view => view.id === requested) ? requested as WorkView : 'projects'
   const current = VIEWS.find(view => view.id === active)!
@@ -34,11 +36,30 @@ export function Work({ onBuild }: { onBuild: () => void }) {
           <h1>Ideas become outcomes.</h1>
           <p>Projects, independent workspaces and community collaborations now live under one Work destination. Your existing rooms, tasks, evidence and team access stay intact.</p>
         </div>
-        <button type="button" className="btn p work-hub__build" onClick={onBuild}>
-          <QuorlythGlyph name="brand" size={16} />
-          <span>Build with QuorlythBot</span>
-          <QuorlythGlyph name="arrow-up-right" size={14} />
-        </button>
+        <form className="work-hub__build-panel" onSubmit={event => { event.preventDefault(); const prompt = buildPrompt.trim(); if (prompt) onBuild(prompt) }}>
+          <label htmlFor="work-build-prompt">What do you want to build?</label>
+          <textarea
+            id="work-build-prompt"
+            value={buildPrompt}
+            onChange={event => setBuildPrompt(event.target.value)}
+            onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); const prompt = buildPrompt.trim(); if (prompt) onBuild(prompt) } }}
+            rows={2}
+            maxLength={2400}
+            placeholder="Describe an outcome, a project, a campaign, a workflow, or something you want Quorlyth to organise…"
+          />
+          <div className="work-hub__build-actions">
+            <button type="button" className="work-hub__surprise" onClick={() => setBuildPrompt('Surprise me. Review my current Work area and the records I am allowed to access. Choose one high-impact improvement, explain why it matters, then prepare a coordinated execution plan with a clear review preview. Preserve existing records, and do not publish externally or activate automations until I approve.')}>
+              <QuorlythGlyph name="sparkles" size={14} />
+              <span>Surprise me</span>
+            </button>
+            <button type="submit" className="btn p work-hub__build" disabled={!buildPrompt.trim()}>
+              <QuorlythGlyph name="brand" size={16} />
+              <span>Build with QuorlythBot</span>
+              <QuorlythGlyph name="arrow-up-right" size={14} />
+            </button>
+          </div>
+          <p className="work-hub__build-hint">QuorlythBot plans against your real permissions, shows its progress, and prepares a preview. External publishing and high-impact changes still need your approval.</p>
+        </form>
       </section>
       <div className="work-hub__nav" role="tablist" aria-label="Work areas">
         {VIEWS.map(view => (

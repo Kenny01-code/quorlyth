@@ -104,8 +104,14 @@ export default function App() {
   const [botInitialOpen, setBotInitialOpen] = useState(false)
   const [botOpenRequest, setBotOpenRequest] = useState(0)
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
-  const openQuorlythBot = useCallback(async (startLiveTalk = false) => {
+  const [botInitialPrompt, setBotInitialPrompt] = useState('')
+  const [botPromptRequest, setBotPromptRequest] = useState(0)
+  const openQuorlythBot = useCallback(async (startLiveTalk = false, prompt = '') => {
     setBotInitialOpen(true)
+    if (prompt.trim()) {
+      setBotInitialPrompt(prompt.trim())
+      setBotPromptRequest(current => current + 1)
+    }
     try {
       await loadQuorlythBot()
       setBotOpenRequest(current => current + 1)
@@ -326,7 +332,7 @@ export default function App() {
       <div id="sp" />
       {appNavigation}
       <main id="main" tabIndex={-1}><Landing /></main>
-      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} /></Suspense>}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} initialPrompt={botInitialPrompt} promptRequest={botPromptRequest} /></Suspense>}
     </>
   )
 
@@ -384,7 +390,7 @@ export default function App() {
               <Route path="/messages/*" element={<Navigate to="/dashboard" replace />} />
               <Route path="/idea/:id" element={<IdeaPage />} />
               <Route path="/queue" element={<Queue />} />
-              <Route path="/work" element={<Work onBuild={() => { void openQuorlythBot() }} />} />
+              <Route path="/work" element={<Work onBuild={prompt => { void openQuorlythBot(false, prompt) }} />} />
               <Route path="/projects" element={<Navigate to="/work?view=projects" replace />} />
               <Route path="/workspaces" element={<Navigate to="/work?view=workspaces" replace />} />
               <Route path="/workspaces/:id" element={<StandaloneWorkspaceDetail />} />
