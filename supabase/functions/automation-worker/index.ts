@@ -5,6 +5,7 @@ type WorkflowRunStatus = "running" | "success" | "failed" | "skipped";
 
 const MAX_WORKFLOW_ACTIONS = 128;
 const MAX_WORKFLOW_WEBHOOKS = 3;
+const MAX_WORKFLOW_PUBLISH_ACTIONS = 3;
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -231,6 +232,94 @@ async function runAction(
     return "Created \"" + title + "\" in the selected workspace.";
   }
 
+  if (action.type === "publish_social") {
+    const connectionId = String(action.connectionId || "").trim();
+    if (!/^[0-9a-f-]{36}$/i.test(connectionId)) throw new Error("Choose a valid connected social account.");
+    const caption = interpolate(action.text || "", workflow, event).slice(0, 3000);
+    if (!caption) throw new Error("Write the social post text before publishing.");
+    const mediaUrl = String(action.mediaUrl || "").trim();
+    const boardId = String(action.boardId || "").trim();
+    const provider = String(action.provider || "").trim();
+    if (provider === "instagram" || provider === "pinterest") {
+      let parsed: URL;
+      try { parsed = new URL(mediaUrl); } catch { throw new Error("Instagram and Pinterest require a valid public HTTPS image URL."); }
+      const host = parsed.hostname.toLowerCase();
+      if (parsed.protocol !== "https:" || parsed.username || parsed.password || !host.includes(".") || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host)) {
+        throw new Error("Instagram and Pinterest require a public HTTPS image URL.");
+      }
+    }
+    if (provider === "pinterest" && !boardId) throw new Error("Choose a Pinterest board before publishing.");
+    if (!supabaseUrl || !serviceRoleKey) throw new Error("Server-side social publishing is not configured.");
+    const publicationPath = "data/users/" + ownerId + "/automation-publications/" + actionKey;
+    const existingPublication = await getDoc(publicationPath);
+    if (existingPublication?.status === "published") {
+      return "Already published to " + String(existingPublication.accountName || "the connected account") + (existingPublication.postUrl ? ": " + existingPublication.postUrl : ".");
+    }
+    if (existingPublication) {
+      throw new Error("Quorlyth stopped a repeat publish because the previous result is still " + String(existingPublication.status || "unknown") + ". Check the social account before retrying to avoid a duplicate post.");
+    }
+    const claimed = await createDocOnce(publicationPath, {
+      status: "publishing",
+      workflowId: workflow.id,
+      workflowName: String(workflow.name || "Automation"),
+      actionId: nodeId,
+      eventId: event.id,
+      provider,
+      startedAt: at,
+    });
+    if (!claimed) {
+      const concurrent = await getDoc(publicationPath);
+      if (concurrent?.status === "published") return "Already published to " + String(concurrent.accountName || "the connected account") + (concurrent.postUrl ? ": " + concurrent.postUrl : ".");
+      throw new Error("A publish for this event is already in progress. Quorlyth will not send a duplicate post.");
+    }
+    try {
+      const response = await fetch(supabaseUrl.replace(/\\/+$/, "") + "/functions/v1/social-accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": serviceRoleKey,
+          "Authorization": "Bearer " + serviceRoleKey,
+        },
+        body: JSON.stringify({
+          action: "publishAutomation",
+          ownerId,
+          connectionId,
+          text: caption,
+          link: interpolate(action.link || "", workflow, event).slice(0, 1500),
+          mediaUrl,
+          boardId,
+          title: interpolate(action.title || "", workflow, event).slice(0, 100),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result?.ok !== true) throw new Error(String(result?.error || "The connected social platform did not accept this post.").slice(0, 400));
+      await saveDoc(publicationPath, {
+        status: "published",
+        workflowId: workflow.id,
+        workflowName: String(workflow.name || "Automation"),
+        actionId: nodeId,
+        eventId: event.id,
+        provider: result.provider || provider,
+        accountName: result.accountName || "",
+        postId: result.postId || "",
+        postUrl: result.postUrl || "",
+        publishedAt: Date.now(),
+      });
+      return "Published to " + String(result.accountName || result.provider || "the connected social account") + (result.postUrl ? ": " + result.postUrl : ".");
+    } catch (error) {
+      await saveDoc(publicationPath, {
+        status: "failed",
+        workflowId: workflow.id,
+        actionId: nodeId,
+        eventId: event.id,
+        provider,
+        error: error instanceof Error ? error.message.slice(0, 400) : "Publishing failed. Check the connected account before retrying.",
+        finishedAt: Date.now(),
+      });
+      throw error;
+    }
+  }
+
   if (action.type === "webhook") {
     const target = assertSafeWebhook(String(action.url || "").trim());
     const controller = new AbortController();
@@ -275,11 +364,15 @@ async function executeWorkflow(workflow: AnyRecord, ownerId: string, event: AnyR
   const { nodes, edges } = graphFor(workflow);
   const actionNodes = nodes.filter((node: AnyRecord) => node?.type === "action");
   const webhookNodes = actionNodes.filter((node: AnyRecord) => node?.action?.type === "webhook");
+  const publishNodes = actionNodes.filter((node: AnyRecord) => node?.action?.type === "publish_social");
   if (actionNodes.length > MAX_WORKFLOW_ACTIONS || nodes.length > MAX_WORKFLOW_ACTIONS + 2 || edges.length > MAX_WORKFLOW_ACTIONS + 1) {
     throw new Error("This workflow exceeds the server action-step limit. Reduce it to 128 action steps or fewer.");
   }
   if (webhookNodes.length > MAX_WORKFLOW_WEBHOOKS) {
     throw new Error("This workflow exceeds the server webhook limit. Use no more than 3 webhook actions per workflow.");
+  }
+  if (publishNodes.length > MAX_WORKFLOW_PUBLISH_ACTIONS) {
+    throw new Error("This workflow exceeds the server social publishing limit. Use no more than 3 social publishing actions per workflow.");
   }
   const runDocId = [workflowId, event.trigger_type, event.id].map(safeSegment).filter(Boolean).join("--").slice(0, 180);
   const runPath = "data/users/" + ownerId + "/automation-runs/" + runDocId;

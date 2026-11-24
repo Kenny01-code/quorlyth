@@ -243,6 +243,24 @@ Deno.serve(async (req: Request) => {
   if (!PROJECT_URL || !ANON_KEY || !SERVICE_KEY) return reply(req, 500, { error: "Social publishing is not configured on the server." });
 
   const authorization = req.headers.get("Authorization") || "";
+  if (SERVICE_KEY && authorization === "Bearer " + SERVICE_KEY) {
+    let internalBody: Json;
+    try { internalBody = await req.json(); } catch { return reply(req, 400, { error: "Send a valid JSON request." }); }
+    const internalAction = clean(internalBody.action, 30);
+    if (internalAction !== "publishAutomation") return reply(req, 403, { error: "This internal credential can only execute a verified automation publish." });
+    const ownerId = clean(internalBody.ownerId, 80);
+    const connectionId = clean(internalBody.connectionId, 80);
+    if (!/^[0-9a-f-]{36}$/i.test(ownerId) || !/^[0-9a-f-]{36}$/i.test(connectionId)) return reply(req, 400, { error: "The automation owner or connected account identifier is invalid." });
+    const admin = createClient(PROJECT_URL, SERVICE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    try {
+      const result = await publishToProvider(admin, ownerId, connectionId, internalBody);
+      return reply(req, 200, { ok: true, ...result });
+    } catch (error) {
+      const message = error instanceof Error ? error.message.slice(0, 450) : "Automated publishing failed.";
+      console.error("Quorlyth internal automation publish failed:", message);
+      return reply(req, 400, { error: message });
+    }
+  }
   if (!authorization.startsWith("Bearer ")) return reply(req, 401, { error: "Sign in to manage social accounts." });
   const userClient = createClient(PROJECT_URL, ANON_KEY, {
     global: { headers: { Authorization: authorization } },

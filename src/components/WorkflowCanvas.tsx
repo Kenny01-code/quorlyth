@@ -15,11 +15,13 @@ import {
   WorkflowTrigger,
   MAX_WORKFLOW_ACTIONS,
   MAX_WORKFLOW_WEBHOOKS,
+  MAX_WORKFLOW_PUBLISH_ACTIONS,
   newWorkflowId,
   workflowGraphFor,
   workflowWithGraph,
 } from '../lib/automation'
 import { QuorlythGlyph } from './QuorlythGlyph'
+import type { SocialConnection } from '../lib/socialAccounts'
 import { PositionedWorkflowNode, positionWorkflowNodes, workflowCanvasSize, workflowEdgePath, workflowNodeSize } from '../lib/workflowLayout'
 import '../styles/workflow-canvas.css'
 
@@ -37,7 +39,8 @@ function newAction(type: WorkflowActionType): WorkflowAction {
     taskDescription: 'Created by {{workflow.name}}.\n\nContext: {{event.body}}',
     acceptanceCriteria: '',
   }
-  return { id, type, title: ACTION_INFO.webhook.title, url: '' }
+  if (type === 'webhook') return { id, type, title: ACTION_INFO.webhook.title, url: '' }
+  return { id, type, title: ACTION_INFO.publish_social.title, connectionId: '', text: '', link: '', mediaUrl: '', boardId: '' }
 }
 
 function branchActions(nodes: WorkflowNode[], edges: WorkflowEdge[], branch: 'true' | 'false' | 'next') {
@@ -64,17 +67,19 @@ function statusClass(status?: RunStatus) {
 function NodeSymbol({ node }: { node: WorkflowNode }) {
   if (node.type === 'trigger') return <QuorlythGlyph name="start" size={18} />
   if (node.type === 'condition') return <QuorlythGlyph name="sliders" size={18} />
-  return <QuorlythGlyph name={node.action.type === 'create_task' ? 'workspace' : node.action.type === 'webhook' ? 'send' : 'bell'} size={18} />
+  return <QuorlythGlyph name={node.action.type === 'create_task' ? 'workspace' : node.action.type === 'webhook' || node.action.type === 'publish_social' ? 'send' : 'bell'} size={18} />
 }
 
 export function WorkflowCanvas({
   workflow,
   projects,
+  socialConnections = [],
   latestRun,
   onChange,
 }: {
   workflow: WorkflowDefinition
   projects: ProjectOption[]
+  socialConnections?: SocialConnection[]
   latestRun?: WorkflowRun | null
   onChange: (workflow: WorkflowDefinition) => void
 }) {
@@ -91,6 +96,8 @@ export function WorkflowCanvas({
   const latestSteps = new Map((latestRun?.steps || []).map(step => [step.nodeId || step.id, step]))
   const actionCount = nodes.filter(node => node.type === 'action').length
   const webhookCount = nodes.filter(node => node.type === 'action' && node.action.type === 'webhook').length
+  const publishCount = nodes.filter(node => node.type === 'action' && node.action.type === 'publish_social').length
+  const selectedSocialConnection = selected?.type === 'action' && selected.action.type === 'publish_social' ? socialConnections.find(connection => connection.connection_id === selected.action.connectionId) : undefined
   const hasCondition = Boolean(condition)
   const { width: canvasWidth, height: canvasHeight } = workflowCanvasSize(nodes)
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -382,11 +389,13 @@ export function WorkflowCanvas({
                   const subtitle = node.type === 'trigger' ? 'Quorlyth event'
                     : node.type === 'condition' ? CONDITION_OPERATOR_INFO[node.operator] + ' ' + (node.value || 'any value')
                       : node.action.type === 'webhook' ? 'HTTPS request'
-                        : node.action.type === 'create_task' ? 'Workspace action' : 'In-app notification'
+                        : node.action.type === 'publish_social' ? 'Connected social account'
+                          : node.action.type === 'create_task' ? 'Workspace action' : 'In-app notification'
                   const label = node.type === 'trigger' ? 'TRIGGER'
                     : node.type === 'condition' ? 'IF / ELSE ROUTER'
                       : node.action.type === 'webhook' ? 'WEBHOOK'
-                        : node.action.type === 'create_task' ? 'WORKSPACE ACTION' : 'NOTIFICATION ACTION'
+                        : node.action.type === 'publish_social' ? 'SOCIAL PUBLISH'
+                          : node.action.type === 'create_task' ? 'WORKSPACE ACTION' : 'NOTIFICATION ACTION'
                   return <div
                     key={node.id}
                     className={'wfc-node wfc-node-' + node.type + statusClass(status) + (selected?.id === node.id ? ' is-selected' : '')}
@@ -401,7 +410,7 @@ export function WorkflowCanvas({
                     <div className="wfc-node-main"><span className="wfc-node-icon"><NodeSymbol node={node} /></span><div><strong>{title}</strong><small>{subtitle}</small></div></div>
                     {node.type === 'trigger' && <div className="wfc-node-foot"><span>Event source</span><span className="wfc-port wfc-port-output" /></div>}
                     {node.type === 'condition' && <div className="wfc-condition-ports"><span className="wfc-port-label true">true <i /></span><span className="wfc-port-label false">false <i /></span></div>}
-                    {node.type === 'action' && <div className="wfc-node-foot"><span>{node.action.type === 'webhook' ? 'POST request' : node.action.type === 'create_task' ? 'Create record' : 'Save notification'}</span><span className="wfc-port wfc-port-output" /></div>}
+                    {node.type === 'action' && <div className="wfc-node-foot"><span>{node.action.type === 'webhook' ? 'POST request' : node.action.type === 'publish_social' ? 'Publish post' : node.action.type === 'create_task' ? 'Create record' : 'Save notification'}</span><span className="wfc-port wfc-port-output" /></div>}
                     <span className="wfc-port wfc-port-input" />
                   </div>
                 })}
@@ -431,9 +440,10 @@ export function WorkflowCanvas({
             <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={() => addAction(condition ? 'true' : 'next', 'notify')}><QuorlythGlyph name="bell" size={15} />Notify</button>
             <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} onClick={() => addAction(condition ? 'true' : 'next', 'create_task')}><QuorlythGlyph name="workspace" size={15} />Create task</button>
             <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS || webhookCount >= MAX_WORKFLOW_WEBHOOKS} onClick={() => addAction(condition ? 'true' : 'next', 'webhook')}><QuorlythGlyph name="send" size={15} />Webhook</button>
+            <button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS || publishCount >= MAX_WORKFLOW_PUBLISH_ACTIONS || !socialConnections.length} onClick={() => addAction(condition ? 'true' : 'next', 'publish_social')}><QuorlythGlyph name="send" size={15} />Publish</button>
             {condition && <><span className="wfc-palette-divider" /><button type="button" disabled={actionCount >= MAX_WORKFLOW_ACTIONS} className="wfc-false-add" onClick={() => addAction('false', 'notify')}>+ False route</button></>}
           </div>
-          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange | drag empty canvas to pan | Ctrl or Cmd + scroll to zoom | Fit shows the full workflow. Up to 128 actions; 3 webhooks.</p>
+          <p className="wfc-canvas-hint"><QuorlythGlyph name="arrow-up-right" size={13} /> Drag nodes to arrange | drag empty canvas to pan | Ctrl or Cmd + scroll to zoom | Fit shows the full workflow. Up to 128 actions, 3 webhooks and 3 social posts.</p>
         </section>
 
         <aside className="wfc-inspector">
@@ -464,6 +474,17 @@ export function WorkflowCanvas({
               <label className="wfc-field"><span>Definition of done</span><textarea value={selected.action.acceptanceCriteria || ''} onChange={event => updateAction(selected.id, { acceptanceCriteria: event.target.value })} rows={2} maxLength={1000} /></label>
             </>}
             {selected.action.type === 'webhook' && <label className="wfc-field"><span>HTTPS endpoint</span><input type="url" value={selected.action.url || ''} onChange={event => updateAction(selected.id, { url: event.target.value })} placeholder="https://your-service.com/webhooks/quorlyth" /><small>Only an HTTPS POST is sent. No account secrets or API keys are included.</small></label>}
+            {selected.action.type === 'publish_social' && <>
+              <label className="wfc-field"><span>Connected publishing account</span><select required value={selected.action.connectionId || ''} onChange={event => {
+                const connection = socialConnections.find(item => item.connection_id === event.target.value)
+                updateAction(selected.id, { connectionId: connection?.connection_id || '', provider: connection?.provider || '', boardId: connection?.metadata?.defaultBoardId || '' })
+              }}><option value="">Choose a connected account…</option>{socialConnections.map(connection => <option key={connection.connection_id} value={connection.connection_id}>{connection.provider === 'x' ? 'X' : connection.provider === 'linkedin' ? 'LinkedIn' : connection.provider === 'facebook' ? 'Facebook Page' : connection.provider === 'instagram' ? 'Instagram' : 'Pinterest'} · {connection.account_name || connection.username || 'Connected account'}</option>)}</select></label>
+              <label className="wfc-field"><span>Post text / caption</span><textarea required value={selected.action.text || ''} onChange={event => updateAction(selected.id, { text: event.target.value })} rows={4} maxLength={3000} placeholder="Write the post. Use {{event.title}} to personalise it." /></label>
+              <label className="wfc-field"><span>Destination link (optional)</span><input type="url" value={selected.action.link || ''} onChange={event => updateAction(selected.id, { link: event.target.value })} maxLength={1500} placeholder="https://your-site.com" /></label>
+              {selectedSocialConnection && ['instagram','pinterest'].includes(selectedSocialConnection.provider) && <label className="wfc-field"><span>Public HTTPS image URL</span><input type="url" value={selected.action.mediaUrl || ''} onChange={event => updateAction(selected.id, { mediaUrl: event.target.value })} placeholder="https://your-cdn.com/image.jpg" /><small>Instagram and Pinterest require a public image URL.</small></label>}
+              {selectedSocialConnection?.provider === 'pinterest' && <label className="wfc-field"><span>Pinterest board</span><select required value={selected.action.boardId || ''} onChange={event => updateAction(selected.id, { boardId: event.target.value })}><option value="">Choose a board…</option>{(selectedSocialConnection.metadata?.boards || []).map(board => <option key={board.id} value={board.id}>{board.name}</option>)}</select></label>}
+              <div className="wfc-info-block"><QuorlythGlyph name="lock" size={16} /><div><strong>External publishing</strong><p>This post only goes live after you review and explicitly activate the workflow. Quorlyth uses the selected account’s stored authorisation.</p></div></div>
+            </>}
             <div className="wfc-info-block"><QuorlythGlyph name="lock" size={16} /><div><strong>Runs with your permissions</strong><p>Task creation is still checked by your workspace access and Supabase row-level security.</p></div></div>
             <button className="wfc-remove-node" type="button" onClick={() => removeAction(selected.id)}><QuorlythGlyph name="trash" size={14} />Remove this action</button>
           </>}

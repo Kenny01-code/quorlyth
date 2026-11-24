@@ -1,7 +1,7 @@
 import type { DocStore } from '../data/docstore'
 
 export type WorkflowTrigger = 'manual' | 'idea.created' | 'task.started' | 'task.completed' | 'workspace.created' | 'milestone.started' | 'evidence.submitted' | 'evidence.reviewed' | 'deadline.reached'
-export type WorkflowActionType = 'notify' | 'create_task' | 'webhook'
+export type WorkflowActionType = 'notify' | 'create_task' | 'webhook' | 'publish_social'
 export type WorkflowConditionField = 'text' | 'title' | 'body' | 'summary' | 'event.type' | 'event.entityType'
 export type WorkflowConditionOperator = 'contains' | 'equals' | 'not_contains' | 'starts_with'
 export type WorkflowEdgeHandle = 'next' | 'true' | 'false'
@@ -16,6 +16,13 @@ export interface WorkflowAction {
   taskDescription?: string
   acceptanceCriteria?: string
   url?: string
+  connectionId?: string
+  provider?: string
+  text?: string
+  link?: string
+  mediaUrl?: string
+  boardId?: string
+  title?: string
 }
 
 export interface WorkflowNodePosition { x: number; y: number }
@@ -91,6 +98,7 @@ export const WORKFLOW_EVENT_NAME = 'quorlyth:workflow-event'
 
 export const MAX_WORKFLOW_ACTIONS = 128
 export const MAX_WORKFLOW_WEBHOOKS = 3
+export const MAX_WORKFLOW_PUBLISH_ACTIONS = 3
 
 export const TRIGGER_INFO: Record<WorkflowTrigger, { title: string; description: string }> = {
   manual: { title: 'Run manually', description: 'Start this workflow whenever you choose.' },
@@ -108,6 +116,7 @@ export const ACTION_INFO: Record<WorkflowActionType, { title: string; descriptio
   notify: { title: 'Send me a Quorlyth notification', description: 'Save an in-app automation notice and show a toast when Quorlyth is open.' },
   create_task: { title: 'Create a workspace task', description: 'Add a real task to one of your independent project workspaces.' },
   webhook: { title: 'Send a webhook', description: 'POST an event payload to a public HTTPS endpoint you configure. Webhook delivery is restricted and retried by the server worker.' },
+  publish_social: { title: 'Publish to a connected social account', description: 'Create a public post through an authorised account after you review and activate the workflow.' },
 }
 
 /** Client-side guard; the server worker independently validates every webhook before delivery. */
@@ -249,6 +258,7 @@ export function validateWorkflowGraph(workflow: WorkflowDefinition): string | nu
   if (!actions.length) return 'Connect at least one action node to the trigger or a decision branch.'
   if (actions.length > MAX_WORKFLOW_ACTIONS) return 'A workflow can contain up to ' + MAX_WORKFLOW_ACTIONS + ' action steps.'
   if (actions.filter(node => node.action.type === 'webhook').length > MAX_WORKFLOW_WEBHOOKS) return 'A workflow can contain up to ' + MAX_WORKFLOW_WEBHOOKS + ' webhook steps. Use native Quorlyth actions for the remaining steps.'
+  if (actions.filter(node => node.action.type === 'publish_social').length > MAX_WORKFLOW_PUBLISH_ACTIONS) return 'A workflow can contain up to ' + MAX_WORKFLOW_PUBLISH_ACTIONS + ' social publishing steps.'
   if (conditions.length && !conditions[0].value.trim()) return 'Give the decision node a condition to evaluate.'
 
   const byId = new Map(nodes.map(node => [node.id, node]))
@@ -353,6 +363,7 @@ export async function executeWorkflowActions(
   event: WorkflowEventDetail,
   notify?: (message: string) => void,
   onProgress?: (run: WorkflowRun) => Promise<void> | void,
+  onPublishSocial?: (action: WorkflowAction, workflow: WorkflowDefinition, event: WorkflowEventDetail) => Promise<string>,
 ): Promise<WorkflowRun> {
   const startedAt = Date.now()
   const steps: WorkflowRunStep[] = []
@@ -520,6 +531,10 @@ export async function executeWorkflowActions(
         })
         if (!response.ok) throw new Error('Webhook endpoint responded with HTTP ' + response.status + '.')
         await mark(node, 'success', 'Webhook accepted the request (HTTP ' + response.status + ').')
+      } else if (action.type === 'publish_social') {
+        if (!onPublishSocial) throw new Error('Social publishing requires a connected account and an authorised publishing session.')
+        const detail = await onPublishSocial(action, workflow, event)
+        await mark(node, 'success', detail || 'Published to the connected social account.')
       }
     } catch (error) {
       failed = true
