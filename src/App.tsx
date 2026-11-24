@@ -416,7 +416,7 @@ export default function App() {
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
       <Toast />
       {writingAssistantMounted && <Suspense fallback={null}><WritingAssistant /></Suspense>}
-      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} /></Suspense>}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} initialPrompt={botInitialPrompt} promptRequest={botPromptRequest} /></Suspense>}
     </>
   )
 }

@@ -49,7 +49,7 @@ export function Work({ onBuild }: { onBuild: (prompt: string) => void }) {
           />
           <div className="work-hub__build-actions">
             <button type="button" className="work-hub__surprise" onClick={() => setBuildPrompt('Surprise me. Review my current Work area and the records I am allowed to access. Choose one high-impact improvement, explain why it matters, then prepare a coordinated execution plan with a clear review preview. Preserve existing records, and do not publish externally or activate automations until I approve.')}>
-              <QuorlythGlyph name="sparkles" size={14} />
+              <QuorlythGlyph name="idea" size={14} />
               <span>Surprise me</span>
             </button>
             <button type="submit" className="btn p work-hub__build" disabled={!buildPrompt.trim()}>
