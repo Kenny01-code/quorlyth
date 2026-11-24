@@ -1,0 +1,16 @@
+.work-hub{display:grid;gap:18px;min-width:0}
+.work-hub__intro{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:22px 24px;border:1px solid rgba(255,255,255,.09);border-radius:22px;background:radial-gradient(ellipse at 0 0,rgba(239,120,75,.12),transparent 48%),linear-gradient(135deg,rgba(255,255,255,.055),rgba(255,255,255,.018))}
+.work-hub__copy{min-width:0;max-width:760px}
+.work-hub__eyebrow{margin:0 0 8px;color:var(--g4);font-size:10px;font-weight:650;letter-spacing:.17em}
+.work-hub__copy h1{margin:0;color:var(--g7);font-size:clamp(25px,3vw,36px);font-weight:470;letter-spacing:-.045em}
+.work-hub__copy>p:last-child{max-width:720px;margin:8px 0 0;color:var(--g4);font-size:13px;line-height:1.6}
+.work-hub__build{flex:none;display:inline-flex;align-items:center;gap:9px;padding:12px 16px;white-space:nowrap}
+.work-hub__nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.025)}
+.work-hub__nav button{display:grid;gap:5px;min-width:0;padding:12px 14px;border:1px solid transparent;border-radius:12px;background:transparent;color:var(--g5);text-align:left;cursor:pointer;transition:background .18s ease,border-color .18s ease,color .18s ease}
+.work-hub__nav button>span{font-size:13px;font-weight:600}
+.work-hub__nav button small{font-size:10px;line-height:1.4;color:var(--g3)}
+.work-hub__nav button.is-active{border-color:rgba(239,120,75,.27);background:linear-gradient(135deg,rgba(239,120,75,.14),rgba(239,120,75,.045));color:var(--g7)}
+.work-hub__nav button.is-active small{color:var(--g4)}
+.work-hub__nav button:focus-visible,.work-hub__build:focus-visible{outline:2px solid rgba(239,120,75,.75);outline-offset:3px}
+.work-hub__content{min-width:0}
+@media(max-width:760px){.work-hub__intro{align-items:flex-start;flex-direction:column;padding:18px}.work-hub__nav{grid-template-columns:1fr}.work-hub__nav button{grid-template-columns:minmax(95px,.4fr) minmax(0,1fr);align-items:center}.work-hub__build{width:100%;justify-content:center}}

@@ -17,10 +17,8 @@ const ITEMS: { path: string; label: string; icon: string; owner?: boolean; commu
   { path: '/growth', label: 'Growth', icon: 'timeline', platformAdminOnly: true },
   { path: '/communities', label: 'Communities', icon: 'community' },
   { path: '/queue', label: 'Review queue', icon: 'queue', owner: true },
-  { path: '/projects', label: 'Projects', icon: 'insight' },
-  { path: '/workspaces', label: 'Workspaces', icon: 'collab' },
+  { path: '/work', label: 'Work', icon: 'collab' },
   { path: '/automations', label: 'Automations', icon: 'timeline' },
-  { path: '/collaborations', label: 'Collaborations', icon: 'collab' },
   { path: '/promote', label: 'Promote', icon: 'promote', owner: true },
   { path: '/settings', label: 'Settings', icon: 'settings' },
   { path: '/me', label: 'My space', icon: 'member' },
@@ -47,6 +45,7 @@ function preloadRoute(path: string) {
     '/growth': () => import('../screens/Growth'),
     '/communities': () => import('../screens/Communities'),
     '/queue': () => import('../screens/Queue'),
+    '/work': () => import('../screens/Work'),
     '/projects': () => import('../screens/Projects'),
     '/workspaces': () => import('../screens/StandaloneWorkspaces'),
     '/automations': () => import('../screens/Automations'),
@@ -163,7 +162,6 @@ export function Nav({ onSearch, onBell, unread, pendingRequests, unreadRequests,
             if (me && (!app.dataReady || !app.platformRolesReady)) return false
             if (i.platformAdminOnly) return !!platformAdmin && !demo
             if (i.platformOwnerOnly) return !!platformOwner && !demo
-            if (i.path === '/projects' && !workspaceManager && !hasAccessibleProject) return false
             if (i.path === '/access' && me && app.data.decisions[me.id]?.status === 'approved' && !accessSent) return false
             if (demo) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)
             if (me) return !i.guest && (!i.owner || workspaceManager) && (!i.communityOwner || workspaceManager)

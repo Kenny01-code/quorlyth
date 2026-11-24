@@ -8,6 +8,7 @@ import { download } from './Analytics'
 import '../styles/growth.css'
 
 type Range = 7 | 30 | 90 | 0
+type TrendMetric = 'both' | 'active' | 'signups'
 
 const EVENT_LABEL: Record<GrowthEventName, string> = {
   account_created: 'Account created',
@@ -56,6 +57,7 @@ function GrowthDashboard() {
   const app = useApp()
   const [events, setEvents] = useState<GrowthEvent[]>([])
   const [range, setRange] = useState<Range>(30)
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>('both')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
@@ -137,13 +139,64 @@ function GrowthDashboard() {
       ? Math.round((activatedAfterSignup.length / periodSignups.length) * 100)
       : 0
 
-    const chartDays = 14
-    const daily = Array.from({ length: chartDays }, (_, index) => {
-      const date = new Date(now - (chartDays - index - 1) * dayMs)
-      const key = date.toISOString().slice(0, 10)
-      const dayEvents = allActiveDayEvents.filter(event => (event.event_key || event.occurred_at.slice(0, 10)) === key)
-      const signupEvents = signups.filter(event => event.occurred_at.slice(0, 10) === key)
-      return { key, label: date.toLocaleDateString(undefined, { weekday: 'short' }), active: uniqueUsers(dayEvents), signups: signupEvents.length }
+    // The selected range controls this trend: daily for 7/30 days, weekly for 90 days, monthly for all history.
+    const trendGranularity = range === 7 || range === 30 ? 'day' : range === 90 ? 'week' : 'month'
+    const trendStartDate = new Date(now)
+    let trendStart = now
+    let trendBucketCount = 0
+    let trendBucketMs = dayMs
+    if (trendGranularity === 'day') {
+      trendStartDate.setHours(0, 0, 0, 0)
+      trendStartDate.setDate(trendStartDate.getDate() - (range - 1))
+      trendStart = trendStartDate.getTime()
+      trendBucketCount = range
+    } else if (trendGranularity === 'week') {
+      trendStart = now - 90 * dayMs
+      trendBucketCount = 13
+      trendBucketMs = 7 * dayMs
+    } else {
+      const observedTimes = events.map(event => new Date(event.occurred_at).getTime()).filter(Number.isFinite)
+      const earliest = observedTimes.length ? Math.min(...observedTimes) : now - 365 * dayMs
+      const earliestDate = new Date(earliest)
+      const currentDate = new Date(now)
+      let monthOffset = (currentDate.getFullYear() - earliestDate.getFullYear()) * 12 + currentDate.getMonth() - earliestDate.getMonth()
+      monthOffset = Math.max(0, Math.min(119, monthOffset))
+      trendStartDate.setFullYear(currentDate.getFullYear(), currentDate.getMonth() - monthOffset, 1)
+      trendStartDate.setHours(0, 0, 0, 0)
+      trendStart = trendStartDate.getTime()
+      trendBucketCount = monthOffset + 1
+    }
+    trendBucketCount = Math.max(1, trendBucketCount)
+    const activeByTrendBucket = Array.from({ length: trendBucketCount }, () => new Set<string>())
+    const signupCountsByTrendBucket = Array.from({ length: trendBucketCount }, () => new Set<string>())
+    const trendBucketIndex = (value: string) => {
+      const date = new Date(value)
+      const at = date.getTime()
+      if (!Number.isFinite(at) || at < trendStart) return -1
+      if (trendGranularity === 'month') {
+        const first = new Date(trendStart)
+        return (date.getFullYear() - first.getFullYear()) * 12 + date.getMonth() - first.getMonth()
+      }
+      return Math.floor((at - trendStart) / trendBucketMs)
+    }
+    for (const event of allActiveDayEvents) {
+      const index = trendBucketIndex(event.occurred_at)
+      if (index >= 0 && index < activeByTrendBucket.length) activeByTrendBucket[index].add(event.user_id || event.id)
+    }
+    for (const event of signups) {
+      const index = trendBucketIndex(event.occurred_at)
+      if (index >= 0 && index < signupCountsByTrendBucket.length) signupCountsByTrendBucket[index].add(event.user_id || event.id)
+    }
+    const trend = Array.from({ length: trendBucketCount }, (_, index) => {
+      const bucketDate = new Date(trendStart)
+      if (trendGranularity === 'month') bucketDate.setMonth(bucketDate.getMonth() + index)
+      else bucketDate.setTime(trendStart + index * trendBucketMs)
+      const label = trendGranularity === 'day'
+        ? (range === 7 ? bucketDate.toLocaleDateString(undefined, { weekday: 'short' }) : dateLabel(bucketDate.toISOString(), { month: 'short', day: 'numeric' }))
+        : trendGranularity === 'week'
+          ? dateLabel(bucketDate.toISOString(), { month: 'short', day: 'numeric' })
+          : bucketDate.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
+      return { key: trendGranularity + '-' + index, label, active: activeByTrendBucket[index].size, signups: signupCountsByTrendBucket[index].size }
     })
 
     const allTime = [
@@ -161,7 +214,7 @@ function GrowthDashboard() {
     })).filter(item => item.count > 0).sort((a, b) => b.count - a.count)
 
     return {
-      allTime, maxFunnel, recent, daily, eventCounts,
+      allTime, maxFunnel, recent, trend, trendGranularity, eventCounts,
       totalUsers: signupCount,
       newUsers: periodSignups.length,
       activated: activatedAfterSignup.length,
@@ -178,6 +231,14 @@ function GrowthDashboard() {
       startedOnboarding,
     }
   }, [events, range])
+
+  const chartWidth = Math.max(620, derived.trend.length * 48)
+  const chartHeight = 236
+  const chartMax = Math.max(1, ...derived.trend.map(point => Math.max(point.active, point.signups)))
+  const chartX = (index: number) => 34 + (derived.trend.length <= 1 ? 0 : index * (chartWidth - 68) / (derived.trend.length - 1))
+  const chartY = (value: number) => 188 - (value / chartMax) * 142
+  const activeLine = derived.trend.map((point, index) => chartX(index) + ',' + chartY(point.active)).join(' ')
+  const signupLine = derived.trend.map((point, index) => chartX(index) + ',' + chartY(point.signups)).join(' ')
 
   const exportCsv = () => {
     const quote = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"'
@@ -239,22 +300,41 @@ function GrowthDashboard() {
 
           <div className="grid g2 growth-panels">
             <section className="glass pad">
-              <div className="growth-section-heading"><div><p className="dim">ACTIVITY</p><h3>Daily account activity</h3><p className="mut">Active days and new signups over the last two weeks</p></div></div>
-              <div className="growth-daily-chart-scroll">
-                <div className="growth-daily-chart">
-                {derived.daily.map(day => {
-                  const max = Math.max(1, ...derived.daily.map(item => Math.max(item.active, item.signups)))
-                  return <div className="growth-daily-column" key={day.key} title={day.key + ': ' + day.active + ' active, ' + day.signups + ' signups'}>
-                    <div className="growth-daily-bars">
-                      <i className="active" style={{ height: Math.max(3, day.active / max * 100) + '%' }} />
-                      <i className="signup" style={{ height: Math.max(3, day.signups / max * 100) + '%' }} />
-                    </div>
-                    <span>{day.label}</span>
-                  </div>
-                })}
-                </div>
+              <div className="growth-section-heading"><div><p className="dim">GROWTH TRENDS</p><h3>Momentum over time</h3><p className="mut">{derived.trendGranularity === 'day' ? 'Daily' : derived.trendGranularity === 'week' ? 'Weekly' : 'Monthly'} active-account and signup trends for the selected range</p></div></div>
+              <div className="growth-trend-controls" role="group" aria-label="Filter trend metrics">
+                {([
+                  ['both', 'All trends'],
+                  ['active', 'Active accounts'],
+                  ['signups', 'New signups'],
+                ] as Array<[TrendMetric, string]>).map(([value, label]) => (
+                  <button key={value} type="button" className={trendMetric === value ? 'is-active' : ''} aria-pressed={trendMetric === value} onClick={() => setTrendMetric(value)}>{label}</button>
+                ))}
               </div>
-              <div className="growth-legend"><span><i className="active" />Active accounts</span><span><i className="signup" />New signups</span></div>
+              <div className="growth-trend-scroll">
+                <svg className="growth-trend-chart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} width={chartWidth} height={chartHeight} role="img" aria-label="Line chart of active accounts and new signups over time">
+                  <title>Quorlyth growth trends</title>
+                  {[0, 1, 2, 3].map(tick => {
+                    const y = 188 - tick * (142 / 3)
+                    const value = Math.round(chartMax * tick / 3)
+                    return <g key={tick}>
+                      <line x1="34" x2={chartWidth - 34} y1={y} y2={y} className="growth-trend-gridline" />
+                      <text x="26" y={y + 4} textAnchor="end" className="growth-trend-axis-label">{value}</text>
+                    </g>
+                  })}
+                  {trendMetric !== 'signups' && <polyline points={activeLine} className="growth-trend-line is-active-users" />}
+                  {trendMetric !== 'active' && <polyline points={signupLine} className="growth-trend-line is-signups" />}
+                  {derived.trend.map((point, index) => <g key={point.key}>
+                    {trendMetric !== 'signups' && <circle cx={chartX(index)} cy={chartY(point.active)} r="3.5" className="growth-trend-point is-active-users"><title>{point.label}: {point.active} active accounts</title></circle>}
+                    {trendMetric !== 'active' && <circle cx={chartX(index)} cy={chartY(point.signups)} r="3.5" className="growth-trend-point is-signups"><title>{point.label}: {point.signups} new signups</title></circle>}
+                    {(index === 0 || index === derived.trend.length - 1 || index === Math.floor((derived.trend.length - 1) / 2)) && <text x={chartX(index)} y="218" textAnchor="middle" className="growth-trend-x-label">{point.label}</text>}
+                  </g>)}
+                </svg>
+              </div>
+              <div className="growth-trend-legend">
+                {trendMetric !== 'signups' && <span><i className="is-active-users" />Active accounts</span>}
+                {trendMetric !== 'active' && <span><i className="is-signups" />New signups</span>}
+                <small>Counts are deduplicated by account within each time bucket.</small>
+              </div>
             </section>
 
             <section className="glass pad">

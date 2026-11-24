@@ -12,6 +12,7 @@ const Dashboard = lazy(() => import('./screens/Dashboard').then(m => ({ default:
 const Communities = lazy(() => import('./screens/Communities').then(m => ({ default: m.Communities })))
 const IdeaPage = lazy(() => import('./screens/IdeaPage').then(m => ({ default: m.IdeaPage })))
 const Queue = lazy(() => import('./screens/Queue').then(m => ({ default: m.Queue })))
+const Work = lazy(() => import('./screens/Work').then(m => ({ default: m.Work })))
 const Projects = lazy(() => import('./screens/Projects').then(m => ({ default: m.Projects })))
 const StandaloneWorkspaceList = lazy(() => import('./screens/StandaloneWorkspaces').then(m => ({ default: m.StandaloneWorkspaceList })))
 const StandaloneWorkspaceDetail = lazy(() => import('./screens/StandaloneWorkspaces').then(m => ({ default: m.StandaloneWorkspaceDetail })))
@@ -383,11 +384,12 @@ export default function App() {
               <Route path="/messages/*" element={<Navigate to="/dashboard" replace />} />
               <Route path="/idea/:id" element={<IdeaPage />} />
               <Route path="/queue" element={<Queue />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/workspaces" element={<StandaloneWorkspaceList />} />
+              <Route path="/work" element={<Work onBuild={() => { void openQuorlythBot() }} />} />
+              <Route path="/projects" element={<Navigate to="/work?view=projects" replace />} />
+              <Route path="/workspaces" element={<Navigate to="/work?view=workspaces" replace />} />
               <Route path="/workspaces/:id" element={<StandaloneWorkspaceDetail />} />
               <Route path="/automations" element={<Automations />} />
-              <Route path="/collaborations" element={<Collaborations />} />
+              <Route path="/collaborations" element={<Navigate to="/work?view=collaborations" replace />} />
               <Route path="/collaboration/:id" element={<CollaborationWorkspace />} />
               <Route path="/promote" element={<Promote />} />
               <Route path="/analytics" element={<Analytics />} />
