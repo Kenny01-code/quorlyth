@@ -22,7 +22,6 @@ export interface WorkflowAction {
   link?: string
   mediaUrl?: string
   boardId?: string
-  title?: string
 }
 
 export interface WorkflowNodePosition { x: number; y: number }

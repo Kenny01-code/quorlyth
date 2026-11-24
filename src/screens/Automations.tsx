@@ -101,7 +101,7 @@ function isSafeWorkflowMediaUrl(raw: string): boolean {
     const host = target.hostname.toLowerCase()
     return target.protocol === 'https:' && !target.username && !target.password && host.includes('.')
       && host !== 'localhost' && !host.endsWith('.localhost') && !host.endsWith('.local') && !host.endsWith('.internal')
-      && !/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host)
+      && !/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)
   } catch { return false }
 }
 
@@ -439,7 +439,7 @@ function AutomationWorkspace() {
           'event.entityType': String(currentEvent.payload.entityType || ''),
           'workflow.name': flow.name,
         }
-        const fill = (value?: string) => String(value || '').replace(/\\{\\{\\s*([a-zA-Z.]+)\\s*\\}\\}/g, (whole, key: string) => values[key] ?? whole).trim()
+        const fill = (value?: string) => String(value || '').replace(/\{\{\s*([a-zA-Z.]+)\s*\}\}/g, (whole, key: string) => values[key] ?? whole).trim()
         const result = await socialAccountsRequest<{ provider?: string; postUrl?: string; accountName?: string }>(app.backend, {
           action: 'publish', connectionId: action.connectionId, text: fill(action.text), link: fill(action.link),
           mediaUrl: action.mediaUrl, boardId: action.boardId, title: fill(action.title),

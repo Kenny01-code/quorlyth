@@ -244,7 +244,7 @@ async function runAction(
       let parsed: URL;
       try { parsed = new URL(mediaUrl); } catch { throw new Error("Instagram and Pinterest require a valid public HTTPS image URL."); }
       const host = parsed.hostname.toLowerCase();
-      if (parsed.protocol !== "https:" || parsed.username || parsed.password || !host.includes(".") || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || /^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host)) {
+      if (parsed.protocol !== "https:" || parsed.username || parsed.password || !host.includes(".") || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal") || /^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) {
         throw new Error("Instagram and Pinterest require a public HTTPS image URL.");
       }
     }
@@ -273,7 +273,7 @@ async function runAction(
       throw new Error("A publish for this event is already in progress. Quorlyth will not send a duplicate post.");
     }
     try {
-      const response = await fetch(supabaseUrl.replace(/\\/+$/, "") + "/functions/v1/social-accounts", {
+      const response = await fetch(supabaseUrl.replace(/\/+$/, "") + "/functions/v1/social-accounts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
