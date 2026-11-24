@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Av } from './ui'
-import { QuorlythGlyph } from './QuorlythGlyph'
+import { Icon } from '../lib/Icon'
 import { ChatAttachment, ChatAttachmentList } from './ChatMedia'
 import { when } from '../lib/util'
 import '../styles/discussion-thread.css'
@@ -42,7 +42,7 @@ export function DiscussionThread<T extends DiscussionEntry>({ comments, authorNa
             <p className="q-writeup qth-discussion-entry__text">{comment.text}</p>
             {comment.attachments?.length ? <ChatAttachmentList attachments={comment.attachments} /> : null}
             {!!comment.mentionedUserIds?.length && <p className="qth-discussion-entry__mentions">Tagged: {comment.mentionedEveryone ? '@everyone' : comment.mentionedUserIds.map(userId => authorName(userId)).join(', ')}</p>}
-            {onReply && <button type="button" className="chip qth-discussion-reply" onClick={() => onReply(comment.id)}><QuorlythGlyph name="message" size={13} />Reply</button>}
+            {onReply && <button type="button" className="chip qth-discussion-reply" onClick={() => onReply(comment.id)}><Icon name="message-square" size={13} />Reply</button>}
           </div>
         </div>
         {replies.map(reply => renderEntry(reply, depth + 1))}
@@ -52,7 +52,7 @@ export function DiscussionThread<T extends DiscussionEntry>({ comments, authorNa
 
   return (
     <div className="qth-discussion-thread" aria-label="Discussion messages">
-      {roots.length ? roots.map(comment => renderEntry(comment)) : <div className="qth-discussion-empty"><QuorlythGlyph name="message" size={20} /><span>{emptyText}</span></div>}
+      {roots.length ? roots.map(comment => renderEntry(comment)) : <div className="qth-discussion-empty"><Icon name="message-square" size={20} /><span>{emptyText}</span></div>}
     </div>
   )
 }
