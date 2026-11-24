@@ -102,6 +102,8 @@ export default function App() {
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
   const [botMounted, setBotMounted] = useState(false)
+  const [botLoading, setBotLoading] = useState(false)
+  const launcherWasHiddenRef = useRef(false)
   const [botInitialOpen, setBotInitialOpen] = useState(false)
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
   const [botLoadError, setBotLoadError] = useState(false)
@@ -111,6 +113,7 @@ export default function App() {
   const openQuorlythBot = useCallback(async (startLiveTalk = false) => {
     setBotLoadError(false)
     setBotInitialOpen(true)
+    setBotLoading(true)
     try {
       await loadQuorlythBot()
       if (startLiveTalk) setBotVoiceRequest(current => current + 1)
@@ -118,7 +121,19 @@ export default function App() {
     } catch (error) {
       console.error('QuorlythBot could not be loaded:', error)
       setBotLoadError(true)
+    } finally {
+      setBotLoading(false)
     }
+  }, [])
+
+  useEffect(() => {
+    const restoreLauncher = () => {
+      launcherWasHiddenRef.current = false
+      try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
+      setBotLauncherHidden(false)
+    }
+    window.addEventListener('quorlyth:launcher-restore', restoreLauncher)
+    return () => window.removeEventListener('quorlyth:launcher-restore', restoreLauncher)
   }, [])
 
   // Load the AI writing helper only when someone actually focuses a textarea.
@@ -322,43 +337,44 @@ export default function App() {
     />
   )
 
-  const botLauncherPortal = createPortal(
+  const launcherWasHidden = launcherWasHiddenRef.current
+  const botLauncherPortal = !intro && !botLoading && !botMounted && createPortal(
     <div className="qbot-launcher-portal">
-      {!botMounted && (
-        botLauncherHidden ? (
-          <button
-            type="button"
-            className="qbot-launcher-restore"
-            aria-label="Restore QuorlythBot launcher"
-            title="Restore QuorlythBot"
-            onClick={() => {
-              try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-              setBotLauncherHidden(false)
-            }}
-          >
-            <span className="qbot-launcher-restore-mark" aria-hidden="true" />
-            <span className="qbot-launcher-restore-tip">Restore QuorlythBot</span>
-          </button>
-        ) : (
-          <button
-            id="astl"
-            type="button"
-            className="astl"
-            aria-label="Open QuorlythBot"
-            aria-expanded={botMounted}
-            data-quorlyth-launcher
-            title="Ask QuorlythBot"
-            onFocus={() => { void loadQuorlythBot() }}
-            onClick={() => { void openQuorlythBot() }}
-            onContextMenu={event => {
-              event.preventDefault()
-              try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
-              setBotLauncherHidden(true)
-            }}
-          >
-            <span className="astm"><QuorlythBotHead size={38} /></span>
-          </button>
-        )
+      {launcherWasHidden || botLauncherHidden ? (
+        <button
+          type="button"
+          className="qbot-launcher-restore"
+          aria-label="Restore QuorlythBot launcher"
+          title="Right-click or click to show QuorlythBot"
+          onClick={() => window.dispatchEvent(new Event('quorlyth:launcher-restore'))}
+          onContextMenu={event => {
+            event.preventDefault()
+            window.dispatchEvent(new Event('quorlyth:launcher-restore'))
+          }}
+        >
+          <span className="qbot-launcher-restore-mark" aria-hidden="true" />
+          <span className="qbot-launcher-restore-tip">Right-click or click to show QuorlythBot</span>
+        </button>
+      ) : (
+        <button
+          id="astl"
+          type="button"
+          className="astl"
+          aria-label="Open QuorlythBot"
+          aria-expanded={botMounted}
+          data-quorlyth-launcher
+          title="Ask QuorlythBot. Right-click to hide this launcher."
+          onFocus={() => { void loadQuorlythBot() }}
+          onClick={() => { void openQuorlythBot() }}
+          onContextMenu={event => {
+            event.preventDefault()
+            launcherWasHiddenRef.current = true
+            try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
+            setBotLauncherHidden(true)
+          }}
+        >
+          <span className="astm"><QuorlythBotHead size={38} /></span>
+        </button>
       )}
       {botLoadError && (
         <div className="qbot-launcher-load-error" role="alert">
@@ -366,7 +382,14 @@ export default function App() {
           <button type="button" onClick={() => { void openQuorlythBot() }}>Retry</button>
         </div>
       )}
-      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} voiceRequest={botVoiceRequest} /></Suspense>}
+    </div>,
+    document.body
+  )
+  const botLauncherLoadingPortal = !intro && botLoading && !botMounted && createPortal(
+    <div className="qbot-launcher-portal">
+      <button id="astl" type="button" className="astl qbot-launcher-loading" aria-label="Loading QuorlythBot" aria-busy="true" disabled title="Loading QuorlythBot">
+        <span className="astm"><QuorlythBotHead size={38} /></span>
+      </button>
     </div>,
     document.body
   )
@@ -379,7 +402,7 @@ export default function App() {
       <div id="sp" />
       {appNavigation}
       <main id="main" tabIndex={-1}><Landing /></main>
-      {botLauncherPortal}
+      {botLauncherPortal}{botLauncherLoadingPortal}{botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} voiceRequest={botVoiceRequest} /></Suspense>}
     </>
   )
 

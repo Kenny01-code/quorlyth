@@ -321,6 +321,15 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const thinkingExitTimer = useRef<number | null>(null)
   const [open, setOpen] = useState(initialOpen)
   const [minimized, setMinimized] = useState(false)
+  useEffect(() => {
+    const restoreLauncher = () => {
+      try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
+      setLauncherHidden(false)
+    }
+    window.addEventListener('quorlyth:launcher-restore', restoreLauncher)
+    return () => window.removeEventListener('quorlyth:launcher-restore', restoreLauncher)
+  }, [])
+
   const [launcherHidden, setLauncherHidden] = useState(() => {
     try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
   })
@@ -371,7 +380,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const theme = 'pearl'
   // Keep the voice orb out of ordinary chat and transcript playback. Live Talk
   // gets a dedicated dock; the robot preference still controls Voice Studio.
-  const orbVisible = bs.robot && view !== 'chat' && view !== 'robot-studio' && (speechState === 'playing' || voiceStudioSpeaking)
+  const orbVisible = bs.robot && (!!live || speechState === 'playing' || voiceStudioSpeaking)
   const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
   const wide = !narrow
 
@@ -3941,15 +3950,16 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
           onClick={() => {
             try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
             setLauncherHidden(false)
+            window.dispatchEvent(new Event('quorlyth:launcher-restore'))
           }}
-          onContextMenu={event => {
+          onContextMenu={event => {}
             event.preventDefault()
             try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
             setLauncherHidden(false)
           }}
         >
           <span className="qbot-launcher-restore-mark" aria-hidden="true" />
-          <span className="qbot-launcher-restore-tip">Right-click to show QuorlythBot</span>
+          <span className="qbot-launcher-restore-tip">Right-click or click to show QuorlythBot</span>
         </button>
       ) : (
         <button

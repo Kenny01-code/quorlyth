@@ -330,6 +330,8 @@ export function WorkflowCanvas({
         <div className="wfc-active-switch"><span>{workflow.status === 'active' ? 'Active' : 'Draft'}</span><input type="checkbox" checked={workflow.status === 'active'} onChange={event => onChange({ ...workflow, status: event.target.checked ? 'active' : 'draft' })} /><i /></div>
       </div>
 
+      <p className="wfc-step-capacity-note">Up to 128 action steps are supported. Keep each connected branch clear so the team can review exactly what will happen.</p>
+
       <div className="wfc-workspace">
         <section className={'wfc-canvas-column' + (isExpanded ? ' is-expanded' : '')}>
           <header className="wfc-canvas-toolbar">
