@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
@@ -32,9 +33,16 @@ const WritingAssistant = lazy(() => import('./components/WritingAssistant').then
 const Palette = lazy(() => import('./components/Palette').then(m => ({ default: m.Palette })))
 const Shortcuts = lazy(() => import('./components/Shortcuts').then(m => ({ default: m.Shortcuts })))
 const NotifPanel = lazy(() => import('./components/NotifPanel').then(m => ({ default: m.NotifPanel })))
+
+// Keep the full conversational assistant outside the initial application chunk.
+function loadQuorlythBot() {
+  return import('./bot/QuorlythBot').then(module => ({ default: module.QuorlythBot }))
+}
+const QuorlythBot = lazy(loadQuorlythBot)
 import { useApp } from './data/AppProvider'
 import { useUserState } from './lib/userState'
 import { chime, useNotifs } from './lib/notifs'
+import { QuorlythBotHead } from './bot/QuorlythBotHead'
 
 function DemoRedirect({ onBeforeRedirect }: { onBeforeRedirect: () => void }) {
   const a = useApp()
@@ -93,6 +101,25 @@ export default function App() {
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission)
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
+  const [botMounted, setBotMounted] = useState(false)
+  const [botInitialOpen, setBotInitialOpen] = useState(false)
+  const [botVoiceRequest, setBotVoiceRequest] = useState(0)
+  const [botLoadError, setBotLoadError] = useState(false)
+  const [botLauncherHidden, setBotLauncherHidden] = useState(() => {
+    try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
+  })
+  const openQuorlythBot = useCallback(async (startLiveTalk = false) => {
+    setBotLoadError(false)
+    setBotInitialOpen(true)
+    try {
+      await loadQuorlythBot()
+      if (startLiveTalk) setBotVoiceRequest(current => current + 1)
+      setBotMounted(true)
+    } catch (error) {
+      console.error('QuorlythBot could not be loaded:', error)
+      setBotLoadError(true)
+    }
+  }, [])
 
   // Load the AI writing helper only when someone actually focuses a textarea.
   // This keeps its AI/streaming client out of the initial application bundle.
@@ -238,6 +265,8 @@ export default function App() {
       const typing = !!el && (/INPUT|TEXTAREA/.test(el.tagName) || el.isContentEditable)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette(true); return }
       if (e.key === 'Escape') { setPalette(false); setKeys(false); setBell(false); return }
+      // Cmd/Ctrl+J opens Live Talk through the same lazy-load gate as the launcher.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') { e.preventDefault(); void openQuorlythBot(true); return }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return
       if (e.key === '/') { e.preventDefault(); setPalette(true); return }
       if (e.key === '?') { setKeys(true); return }
@@ -245,7 +274,7 @@ export default function App() {
       if (e.key === 'g') g.current = Date.now()
     }
     addEventListener('keydown', h); return () => removeEventListener('keydown', h)
-  }, [nav])
+  }, [nav, openQuorlythBot])
 
   // Keep the page progress indicator in sync without intercepting browser zoom controls.
   useEffect(() => {
@@ -293,6 +322,54 @@ export default function App() {
     />
   )
 
+  const botLauncherPortal = createPortal(
+    <div className="qbot-launcher-portal">
+      {!botMounted && (
+        botLauncherHidden ? (
+          <button
+            type="button"
+            className="qbot-launcher-restore"
+            aria-label="Restore QuorlythBot launcher"
+            title="Restore QuorlythBot"
+            onClick={() => {
+              try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
+              setBotLauncherHidden(false)
+            }}
+          >
+            <span className="qbot-launcher-restore-mark" aria-hidden="true" />
+            <span className="qbot-launcher-restore-tip">Restore QuorlythBot</span>
+          </button>
+        ) : (
+          <button
+            id="astl"
+            type="button"
+            className="astl"
+            aria-label="Open QuorlythBot"
+            aria-expanded={botMounted}
+            data-quorlyth-launcher
+            title="Ask QuorlythBot"
+            onClick={() => { void openQuorlythBot() }}
+            onContextMenu={event => {
+              event.preventDefault()
+              try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
+              setBotLauncherHidden(true)
+            }}
+          >
+            <span className="astm"><QuorlythBotHead size={38} /></span>
+          </button>
+        )
+      )}
+      {botLoadError && (
+        <div className="qbot-launcher-load-error" role="alert">
+          <span>QuorlythBot could not load. Check your connection and try again.</span>
+          <button type="button" onClick={() => { void openQuorlythBot() }}>Retry</button>
+        </div>
+      )}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} voiceRequest={botVoiceRequest} /></Suspense>}
+    </div>,
+    document.body
+  )
+
   // The public homepage is useful before auth is ready, and now shares the same
   // instantly-mounted navigation shell as every private route.
   if (!a.ready && loc.pathname === '/') return (
@@ -301,6 +378,7 @@ export default function App() {
       <div id="sp" />
       {appNavigation}
       <main id="main" tabIndex={-1}><Landing /></main>
+      {botLauncherPortal}
     </>
   )
 
@@ -314,6 +392,7 @@ export default function App() {
       <main className="app-startup" aria-busy="true">
         <span className="sr" role="status">Connecting to Quorlyth…</span>
       </main>
+      {botLauncherPortal}
     </>
   )
   if (a.startupError) return (
@@ -383,6 +462,7 @@ export default function App() {
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
       <Toast />
       {writingAssistantMounted && <Suspense fallback={null}><WritingAssistant /></Suspense>}
+      {botLauncherPortal}
     </>
   )
 }

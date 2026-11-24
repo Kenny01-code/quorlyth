@@ -2863,3 +2863,39 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   color: #000000 !important;
   opacity: .68;
 }
+
+
+/* Small restore hotspot for the deferred QuorlythBot launcher. */
+.qbot-launcher-restore {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(239,120,75,.58);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(17,13,11,.94);
+  box-shadow: 0 10px 28px rgba(0,0,0,.4), 0 0 20px rgba(239,120,75,.16);
+  cursor: pointer;
+}
+.qbot-launcher-restore-mark { width: 9px; height: 9px; border: 1.5px solid #F2AF91; border-radius: 50%; }
+.qbot-launcher-restore-tip {
+  position: absolute;
+  right: calc(100% + 10px);
+  white-space: nowrap;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  color: rgba(255,255,255,.92);
+  background: rgba(7,7,8,.94);
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+}
+.qbot-launcher-restore:hover .qbot-launcher-restore-tip,
+.qbot-launcher-restore:focus-visible .qbot-launcher-restore-tip { opacity: 1; }
