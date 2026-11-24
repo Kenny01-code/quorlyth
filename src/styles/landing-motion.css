@@ -271,3 +271,75 @@
   #root #main .hero .hero-title,
   #root #main .hero .hero-copy { animation: none !important; }
 }
+
+
+/* Three distinct creator silhouettes move independently in the landing hero. */
+@keyframes qth-character-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-.35deg); }
+  50% { transform: translate3d(0, -11px, 0) rotate(.35deg); }
+}
+#root #main .qth-creator-stage {
+  width: min(60%, 690px);
+  right: -1%;
+}
+.qth-creator-stage__art img.qth-character {
+  bottom: -1%;
+  right: auto;
+  left: auto;
+  height: 78%;
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  object-position: center bottom;
+  transform-origin: center bottom;
+  animation: qth-character-float 7.8s ease-in-out infinite, qth-creator-orbit 8.6s ease-in-out infinite;
+}
+.qth-creator-stage__art img.qth-character--left {
+  left: -5%;
+  height: 69%;
+  z-index: 1;
+  opacity: .93;
+  animation-delay: -2.8s, -1.4s;
+}
+.qth-creator-stage__art img.qth-character--middle {
+  left: 27%;
+  height: 82%;
+  z-index: 2;
+  opacity: .97;
+  animation-delay: -4.4s, -3.1s;
+}
+.qth-creator-stage__art img.qth-character--lead {
+  left: auto;
+  right: -5%;
+  height: 96%;
+  z-index: 3;
+  opacity: 1;
+  animation-delay: -1.1s, -5s;
+}
+@media (max-width: 1040px) {
+  #root #main .qth-creator-stage { width: 64%; right: -3%; }
+  .qth-creator-stage__art img.qth-character--left { height: 61%; left: -6%; }
+  .qth-creator-stage__art img.qth-character--middle { height: 73%; left: 23%; }
+  .qth-creator-stage__art img.qth-character--lead { height: 86%; right: -7%; }
+}
+@media (max-width: 760px) {
+  #root #main .qth-creator-stage {
+    top: 32%;
+    right: -18%;
+    width: 92%;
+    height: 66%;
+    opacity: .3;
+  }
+  .qth-creator-stage__art img.qth-character--left { height: 49%; left: -1%; opacity: .75; }
+  .qth-creator-stage__art img.qth-character--middle { height: 57%; left: 25%; opacity: .8; }
+  .qth-creator-stage__art img.qth-character--lead { height: 67%; right: -4%; opacity: .9; }
+}
+@media (max-width: 460px) {
+  #root #main .qth-creator-stage { right: -26%; width: 102%; opacity: .25; }
+  .qth-creator-stage__art img.qth-character--left { height: 43%; }
+  .qth-creator-stage__art img.qth-character--middle { height: 51%; }
+  .qth-creator-stage__art img.qth-character--lead { height: 61%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qth-creator-stage__art img.qth-character { animation: none !important; }
+}

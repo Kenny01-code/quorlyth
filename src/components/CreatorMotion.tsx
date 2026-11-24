@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
 const CREATOR_ART = '/creator-hero.webp'
+const COMPANION_ONE = '/creator-companion-01.svg'
+const COMPANION_TWO = '/creator-companion-02.svg'
 
 export function HeroCreator() {
   const stageRef = useRef<HTMLDivElement>(null)
@@ -27,7 +29,9 @@ export function HeroCreator() {
   return (
     <div ref={stageRef} className="qth-creator-stage" data-visible={visible ? 'true' : 'false'} aria-hidden="true">
       <div className="qth-creator-stage__art">
-        <img src={CREATOR_ART} width="430" height="722" alt="" loading="eager" decoding="async" />
+        <img className="qth-character qth-character--left" src={COMPANION_ONE} width="460" height="760" alt="" loading="eager" decoding="async" />
+        <img className="qth-character qth-character--middle" src={COMPANION_TWO} width="460" height="760" alt="" loading="eager" decoding="async" />
+        <img className="qth-character qth-character--lead" src={CREATOR_ART} width="430" height="722" alt="" loading="eager" decoding="async" />
       </div>
     </div>
   )

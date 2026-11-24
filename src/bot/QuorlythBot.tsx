@@ -9,7 +9,6 @@ import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BotIcon as Icon } from './BotIcon'
 import { Logo } from '../lib/Logo'
-import { QuorlythBotHead } from './QuorlythBotHead'
 import { Av } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { userFacingMutationError } from '../lib/userFacingErrors'
@@ -293,7 +292,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
   }
 }
 
-export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialPrompt = '', promptRequest = 0 }: { initialOpen?: boolean; voiceRequest?: number; initialPrompt?: string; promptRequest?: number }) {
+export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest = 0, initialPrompt = '', promptRequest = 0 }: { initialOpen?: boolean; openRequest?: number; voiceRequest?: number; initialPrompt?: string; promptRequest?: number }) {
   const a = useApp()
   const nav = useNavigate()
   const loc = useLocation()
@@ -321,17 +320,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const thinkingExitTimer = useRef<number | null>(null)
   const [open, setOpen] = useState(initialOpen)
   const [minimized, setMinimized] = useState(false)
-  const [launcherHidden, setLauncherHidden] = useState(() => {
-    try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
-  })
-  useEffect(() => {
-    const restoreLauncher = () => {
-      try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-      setLauncherHidden(false)
-    }
-    window.addEventListener('quorlyth:launcher-restore', restoreLauncher)
-    return () => window.removeEventListener('quorlyth:launcher-restore', restoreLauncher)
-  }, [])
   const [mode, setMode] = useState<'compact' | 'large' | 'full' | 'custom'>('full')
   const [viewportNarrow, setViewportNarrow] = useState(() => window.innerWidth <= 980)
   const [side, setSide] = useState(() => window.innerWidth > 980)
@@ -352,7 +340,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
   const [pend, setPend] = useState('')
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [tour, setTour] = useState(-1)
-  const [greet, setGreet] = useState('')
   const [size, setSize] = useState<null | { w: number; h: number }>(null)
   const [position, setPosition] = useState<null | { x: number; y: number }>(() => {
     try {
@@ -424,14 +411,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     if (Object.keys(updates).length) bd.saveSettings(updates)
   }, [a.me?.id, bd.doc('botset')?.model])
 
-  // greeting bubble on the launcher, first time visitors get a wave when opened
-  useEffect(() => {
-    if (!a.ready) return
-    const first = !localStorage.getItem('qseen')
-    setGreet(first ? 'Hi, I am QuorlythBot' : a.me ? `Welcome back, ${a.me.name.split(' ')[0]}` : '')
-    const t = setTimeout(() => setGreet(''), 7000)
-    return () => clearTimeout(t)
-  }, [a.ready, a.me?.id])
   const latestMessageText = cur ? cur.msgs[cur.msgs.length - 1]?.t : undefined
   useEffect(() => {
     const scroller = log.current
@@ -447,6 +426,12 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     })
     return () => window.cancelAnimationFrame(frame)
   }, [cur?.msgs.length, latestMessageText, busy, live?.user, live?.bot])
+  useEffect(() => {
+    if (openRequest <= 0) return
+    setOpen(true)
+    setMinimized(false)
+  }, [openRequest])
+
   useEffect(() => {
     if (voiceRequest <= 0) return
     setOpen(true)
@@ -497,8 +482,8 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     say(greeting.text)
   }
 
-  // The app defers loading this module until the lightweight launcher is clicked.
-  // On that first click, open directly and preserve the normal welcome interaction.
+  // The app defers loading this module until Ctrl/Cmd+J is pressed.
+  // On first open, greet once; later keyboard opens restore the existing panel.
   useEffect(() => {
     if (!initialOpen || initialOpenHandled.current) return
     initialOpenHandled.current = true
@@ -3935,46 +3920,6 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
 
   return (
     <>
-      {launcherHidden ? (
-        <button
-          type="button"
-          className="qbot-launcher-restore"
-          aria-label="Restore QuorlythBot launcher"
-          title="Right-click or click to show QuorlythBot"
-          onClick={() => {
-            try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-            setLauncherHidden(false)
-            window.dispatchEvent(new Event('quorlyth:launcher-restore'))
-          }}
-          onContextMenu={event => {
-            event.preventDefault()
-            try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-            setLauncherHidden(false)
-            window.dispatchEvent(new Event('quorlyth:launcher-restore'))
-          }}
-        >
-          <span className="qbot-launcher-restore-mark" aria-hidden="true" />
-          <span className="qbot-launcher-restore-tip">Right-click or click to show QuorlythBot</span>
-        </button>
-      ) : (
-        <button
-          id="astl"
-          type="button"
-          className={cn('astl', open && 'hide')}
-          aria-label="Open QuorlythBot"
-          aria-expanded={open}
-          aria-controls="ast"
-          title="Ask QuorlythBot. Right-click to hide this launcher."
-          onClick={openPanel}
-          onContextMenu={event => {
-            event.preventDefault()
-            try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
-            setLauncherHidden(true)
-          }}
-        >
-          <span className="astm"><QuorlythBotHead size={38} /></span>{greet && <span className="astb">{greet}</span>}
-        </button>
-      )}
       {open && (
         <div id="ast">
           <div id="bot" className={cn('astp glass bot qbot-sidebar-compact-v2 qbot-premium', 'm-' + mode, sideShown && 'side-on', !wide && 'narrow', live && 'live', accent && 'tinted')} style={{ ...style, ...(size && mode === 'custom' ? { width: size.w, height: size.h, ['--qbot-custom-width' as any]: size.w + 'px', ['--qbot-custom-height' as any]: size.h + 'px' } : {}), ...(position && mode !== 'full' ? { position: 'fixed', left: position.x, top: position.y, right: 'auto', bottom: 'auto', transform: 'none', margin: 0 } : {}) }} ref={panel} role="dialog" aria-label="QuorlythBot">
@@ -4056,7 +4001,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
                 <div className="bha">
                   {view === 'chat' && <button className="qbot-share-pill" aria-label="Share" title="Share conversation" onClick={() => { if (!msgs.length) return a.toast('No messages to share'); const text = msgs.map(m => (m.r === 'u' ? 'You: ' : 'Quorlyth: ') + m.t).join('\n\n'); navigator.clipboard.writeText(text).then(() => a.toast('Chat transcript copied')) }}><Icon name="share" size={13} /><span>Share</span></button>}
                   {view === 'chat' && <button className={cn('bib', bs.voice && 'on')} aria-label="Voice" title="Voice" onClick={() => bd.saveSettings({ voice: !bs.voice })}><Icon name="voice" size={18} /></button>}
-                  <button className="bib" aria-label="Minimize QuorlythBot" title="Minimize to launcher" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
+                  <button className="bib" aria-label="Hide QuorlythBot. Press Ctrl+J to reopen." title="Hide QuorlythBot · press Ctrl+J to reopen" onClick={() => { setMinimized(true); setSide(false); setOpen(false) }}><Icon name="minimize" size={18} /></button>
                   <button className="bib" aria-label="Resize" title="Expand" onClick={() => { const next = mode === 'compact' ? 'large' : mode === 'large' ? 'full' : 'compact'; setSize(null); setPosition(null); setMode(next) }}><Icon name={mode === 'full' ? 'shrink' : 'expand'} size={18} /></button>
                   <button className="bib" aria-label="Close" title="Close QuorlythBot" onClick={() => { setMinimized(false); stopLive(); stopVoice(); setOpen(false) }}><Icon name="decline" size={18} /></button>
                 </div>

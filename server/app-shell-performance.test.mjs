@@ -21,47 +21,26 @@ test('lazy route navigation shows a reduced-motion-aware loading surface instead
   assert.match(styles, /@media\(prefers-reduced-motion:reduce\)[\s\S]*qth-route-loading/)
 })
 
-test('QuorlythBot stays closed until a user deliberately opens the launcher', async () => {
+test('QuorlythBot stays closed until a user deliberately opens it with Ctrl/Cmd+J', async () => {
   const app = await readSource('src/App.tsx')
   assert.ok(app.includes('const QuorlythBot = lazy(loadQuorlythBot)'))
   assert.ok(app.includes('const openQuorlythBot = useCallback'))
   assert.doesNotMatch(app, /botAutoOpenedForRef|Open QuorlythBot automatically/)
-  assert.match(app, /onClick=\{\(\) => \{ void openQuorlythBot\(\) \}\}/)
+  assert.match(app, /e\.key\.toLowerCase\(\) === 'j'/)
   assert.match(app, /void openQuorlythBot\(true\)/)
+  assert.match(app, /openRequest=\{botOpenRequest\}/)
   assert.match(app, /\{botMounted && <Suspense fallback=\{null\}><QuorlythBot initialOpen/)
 })
-
-test('the QuorlythBot launcher stays visible in a body portal until its lazy-loaded module is ready', async () => {
-  const [app, css, bot] = await Promise.all([
+test('QuorlythBot never renders a floating launcher, portal, or restore hotspot', async () => {
+  const [app, bot] = await Promise.all([
     readSource('src/App.tsx'),
-    readSource('src/styles/app.css'),
     readSource('src/bot/QuorlythBot.tsx'),
   ])
-  const openStart = app.indexOf('const openQuorlythBot = useCallback')
-  assert.ok(openStart >= 0, 'the shared launcher opener exists')
-  const helper = app.slice(openStart, app.indexOf('// Load the AI writing helper', openStart))
-  assert.ok(helper.indexOf('await loadQuorlythBot()') < helper.indexOf('setBotMounted(true)'), 'the bot mounts only after its module resolves')
-  assert.ok(app.includes('createPortal('))
-  assert.ok(app.includes('document.body'))
-  assert.ok(app.includes('data-quorlyth-launcher'))
-  assert.ok(app.includes('botLauncherHidden ? ('))
-  assert.ok(app.includes('qbot-launcher-restore'))
-  assert.ok(app.includes('qbot-launcher-load-error'))
-  assert.ok(!app.includes('deferredLauncherHidden') && !app.includes('deferredHoldTimer'))
-  assert.ok(app.includes('onContextMenu='))
-  assert.ok(app.includes('qbot-launcher-hidden-v1'))
-  assert.ok(css.includes('#astl.astl'))
-  assert.ok(css.includes('#astl.astl::before'))
-  const launcherStart = bot.indexOf('id="astl"')
-  const launcherEnd = bot.indexOf('</button>', launcherStart)
-  assert.ok(launcherStart >= 0 && launcherEnd > launcherStart, 'the mounted bot renders its own persistent launcher')
-  const launcher = bot.slice(launcherStart, launcherEnd)
-  assert.ok(launcher.includes('onClick={openPanel}'))
-  assert.ok(launcher.includes('onContextMenu='))
-  assert.ok(!launcher.includes('onPointerDown') && !launcher.includes('onPointerUp'))
-  assert.ok(bot.includes('launcherHidden ? ('))
-  assert.ok(bot.includes('setLauncherHidden(true)'))
-  assert.ok(!bot.includes('startLauncherHold') && !bot.includes('launcherLongPressTriggered'))
+  assert.doesNotMatch(app, /createPortal|qbot-launcher-portal|qbot-launcher-restore|data-quorlyth-launcher|botLauncherPortal/)
+  assert.doesNotMatch(bot, /id="astl"|launcherHidden|qbot-launcher-restore|QuorlythBotHead|Minimize to launcher/)
+  assert.match(bot, /if \(openRequest <= 0\) return/)
+  assert.match(bot, /openRequest=|openRequest/)
+  assert.match(bot, /setOpen\(true\)/)
 })
 test('the landing page rotates both approved support lines with the editorial reveal', async () => {
   const [landing, styles] = await Promise.all([
@@ -77,7 +56,7 @@ test('the landing page rotates both approved support lines with the editorial re
   assert.match(styles, /qthEditorialWordReveal/)
 })
 
-test('the Live Talk hotkey uses the same safe launcher handoff', async () => {
+test('the Live Talk hotkey uses the keyboard-only bot handoff', async () => {
   const app = await readSource('src/App.tsx')
   assert.match(app, /void openQuorlythBot\(true\)/)
   assert.doesNotMatch(app, /setBotMounted\(true\)[\s\S]{0,120}loadQuorlythBot\(\)\.catch/)
@@ -447,26 +426,17 @@ test('automation run history can be cleared without deleting workflows or notifi
   assert.match(automations, /Your workflows, active\/draft status, and automation notifications will remain/)
 })
 
-test('the QuorlythBot launcher toggles visibility by right-click, with a reversible restore hotspot', async () => {
+test('Ctrl/Cmd+J reopens a hidden QuorlythBot panel without a restore icon', async () => {
   const [app, bot] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
   ])
-  assert.ok(app.includes('const [botLauncherHidden, setBotLauncherHidden]'))
-  assert.ok(app.includes('!intro && !botLoading && !botMounted && createPortal('))
-  assert.ok(app.includes('botLauncherHidden ? ('))
-  assert.ok(app.includes('className="qbot-launcher-restore"'))
-  assert.ok(app.includes('Right-click or click to show QuorlythBot'))
-  assert.ok(app.includes('onContextMenu='))
-  assert.ok(app.includes('launcherWasHidden || botLauncherHidden'))
-  assert.ok(app.includes('quorlyth:launcher-restore'))
-  assert.ok(bot.includes('const [launcherHidden, setLauncherHidden]'))
-  assert.ok(bot.includes('launcherHidden ? ('))
-  assert.ok(bot.includes('className="qbot-launcher-restore"'))
-  assert.ok(bot.includes('Right-click or click to show QuorlythBot'))
-  assert.ok(bot.includes('onContextMenu='))
-  assert.ok(bot.includes("sessionStorage.setItem('qbot-launcher-hidden-v1', '1')"))
-  assert.ok(bot.includes("sessionStorage.removeItem('qbot-launcher-hidden-v1')"))
+  assert.match(app, /setBotOpenRequest\(current => current \+ 1\)/)
+  assert.match(app, /openRequest=\{botOpenRequest\}/)
+  assert.match(bot, /if \(openRequest <= 0\) return/)
+  assert.match(bot, /setOpen\(true\)/)
+  assert.match(bot, /Press Ctrl\+J to reopen/)
+  assert.doesNotMatch(bot, /qbot-launcher-restore|launcherHidden|id="astl"/)
 })
 test('search palette keeps its original surface with black result copy and visible icons', async () => {
   const [palette, styles] = await Promise.all([
@@ -651,21 +621,15 @@ test('QuorlythBot typing helper displays only the compact robot head', async () 
   assert.ok(head.includes('url(#'))
   assert.doesNotMatch(writing, /import \{ Logo \} from '\.\.\/lib\/Logo'/)
 })
-test('QuorlythBot launchers retain the compact orange robot-head mark', async () => {
-  const [app, bot, head, css] = await Promise.all([
+test('the compact robot-head asset is not mounted as a floating control', async () => {
+  const [app, bot, head] = await Promise.all([
     readSource('src/App.tsx'),
     readSource('src/bot/QuorlythBot.tsx'),
     readSource('src/bot/QuorlythBotHead.tsx'),
-    readSource('src/styles/app.css'),
   ])
-  assert.match(app, /QuorlythBotHead size=\{38\}/)
-  assert.match(bot, /QuorlythBotHead size=\{38\}/)
   assert.match(head, /qbhead-shell/)
-  assert.match(head, /qbhead-face/)
-  assert.match(head, /#D06A40/)
-  assert.doesNotMatch(head, /#EF784B|#F68B59|#FFAC79/)
-  assert.match(css, /rgba\(208,106,64,\.34\)/)
-  assert.match(css, /#astl\.astl \.astm \.qbot-head-mark/)
+  assert.doesNotMatch(app, /QuorlythBotHead|data-quorlyth-launcher/)
+  assert.doesNotMatch(bot, /QuorlythBotHead|id="astl"/)
 })
 
 test('Automation starter cards render every label and trigger in high-contrast editorial ink', async () => {

@@ -8,7 +8,7 @@ import { speakText, type SpeechPlayback } from '../ai/client'
 import { useRef } from 'react'
 import '../styles/signin-performance.css'
 
-function Stage({ greeting }: { greeting: string }) {
+function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: boolean }) {
   const r = useRef<RobotApi | null>(null)
   const { toast } = useApp()
   const [first] = useState(() => {
@@ -19,6 +19,8 @@ function Stage({ greeting }: { greeting: string }) {
   const helloController = useRef<AbortController | null>(null)
   const helloPlayback = useRef<SpeechPlayback | null>(null)
   const helloStartTimer = useRef<number | null>(null)
+  const helloAutoStartTimer = useRef<number | null>(null)
+  const autoHelloStarted = useRef(false)
   const helloRun = useRef(0)
 
   function preferredVoice() {
@@ -56,7 +58,9 @@ function Stage({ greeting }: { greeting: string }) {
     setHelloStatus('Voice preview stopped.')
   }
 
-  async function hello() {
+  async function hello(automatic = false) {
+    autoHelloStarted.current = true
+    if (helloAutoStartTimer.current !== null) { window.clearTimeout(helloAutoStartTimer.current); helloAutoStartTimer.current = null }
     clearHelloTimer()
     helloController.current?.abort()
     helloController.current = null
@@ -68,7 +72,7 @@ function Stage({ greeting }: { greeting: string }) {
     let usedBrowserFallback = false
     let didStart = false
     let failureReported = false
-    const reportFailure = (message: string) => {
+    const reportFailure = (message: string, quiet = automatic) => {
       if (run !== helloRun.current || controller.signal.aborted || failureReported) return
       failureReported = true
       clearHelloTimer()
@@ -78,7 +82,7 @@ function Stage({ greeting }: { greeting: string }) {
       r.current?.talk(false)
       setHelloState('error')
       setHelloStatus(message)
-      toast(message)
+      if (!quiet) toast(message)
     }
 
     setHelloState('loading')
@@ -87,7 +91,7 @@ function Stage({ greeting }: { greeting: string }) {
     // Start the hard deadline before any provider request so a stuck buffered retry cannot leave the control loading forever.
     helloStartTimer.current = window.setTimeout(() => {
       if (run === helloRun.current && !failureReported) {
-        reportFailure('Voice playback timed out before audio started. Tap Hear a hello to retry, and check your device audio.')
+        reportFailure(automatic ? 'The greeting did not start automatically. Tap Hear a hello to try again.' : 'Voice playback timed out before audio started. Tap Hear a hello to retry, and check your device audio.')
       }
     }, 10_000)
     try {
@@ -124,7 +128,15 @@ function Stage({ greeting }: { greeting: string }) {
             usedBrowserFallback = true
             if (run === helloRun.current) setHelloStatus('Switching to your device voice…')
           },
-          onPlaybackError: error => reportFailure(error.message || 'Your device could not start voice playback. Check its audio output and try again.'),
+          onPlaybackError: error => {
+            const blocked = error?.name === 'NotAllowedError' || /not allowed|user gesture|user activation/i.test(error?.message || '')
+            const message = automatic
+              ? blocked
+                ? 'Your browser blocked automatic audio. Tap Hear a hello to start the greeting.'
+                : 'QuorlythBot could not start audio automatically. Tap Hear a hello to try again.'
+              : error?.message || 'Your device could not start voice playback. Check its audio output and try again.'
+            reportFailure(message, automatic)
+          },
         },
       )
       if (run !== helloRun.current || controller.signal.aborted || failureReported) {
@@ -135,16 +147,24 @@ function Stage({ greeting }: { greeting: string }) {
       if (!didStart) setHelloStatus('Waiting for audio…')
     } catch (error) {
       if (run !== helloRun.current || controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
-      reportFailure(error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.')
+      const blocked = error instanceof Error && (error.name === 'NotAllowedError' || /not allowed|user gesture|user activation/i.test(error.message))
+      const message = automatic
+        ? blocked
+          ? 'Your browser blocked automatic audio. Tap Hear a hello to start the greeting.'
+          : 'QuorlythBot could not start audio automatically. Tap Hear a hello to try again.'
+        : error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
+      reportFailure(message, automatic)
     } finally {
       if (helloController.current === controller) helloController.current = null
     }
   }
 
-  // Do not make an AI/network request just because the sign-in page opened.
-  // The visitor's explicit click starts voice playback and can fall back to device speech.
+  // The sign-in form attempts its welcome once after the robot is ready. Browsers
+  // may block audible autoplay; the visible control then becomes the one-tap fallback.
   useEffect(() => () => {
     helloRun.current += 1
+    if (helloAutoStartTimer.current !== null) window.clearTimeout(helloAutoStartTimer.current)
+    helloAutoStartTimer.current = null
     clearHelloTimer()
     helloController.current?.abort()
     helloController.current = null
@@ -155,17 +175,27 @@ function Stage({ greeting }: { greeting: string }) {
 
   return (
     <div className="glass stage ok" id="stg">
-      <Robot ref={r} defer onReady={() => { setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400) }} />
+      <Robot ref={r} defer onReady={() => {
+        if (autoSpeak) {
+          if (autoHelloStarted.current) return
+          helloAutoStartTimer.current = window.setTimeout(() => {
+            helloAutoStartTimer.current = null
+            if (!autoHelloStarted.current) void hello(true)
+          }, 350)
+          return
+        }
+        window.setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400)
+      }} />
       <div className="c1 glass"><span className="chip"><Icon name="private" size={12} />Private session</span></div>
       <button
         type="button"
         className="chip hello"
         disabled={helloState === 'loading'}
-        aria-label={helloState === 'playing' ? 'Stop voice preview' : helloState === 'loading' ? 'Starting voice preview' : 'Hear a hello'}
+        aria-label={helloState === 'playing' ? 'Stop voice preview' : helloState === 'loading' ? 'Starting voice preview' : helloState === 'error' ? 'Tap to hear hello' : 'Hear a hello'}
         onClick={() => helloState === 'playing' ? stopHello() : void hello()}
       >
         <Icon name="voice" size={14} />
-        {helloState === 'loading' ? 'Starting voice…' : helloState === 'playing' ? 'Stop hello' : 'Hear a hello'}
+        {helloState === 'loading' ? 'Starting voice…' : helloState === 'playing' ? 'Stop hello' : helloState === 'error' ? 'Tap to hear hello' : 'Hear a hello'}
       </button>
       {helloStatus && <p className={helloState === 'error' ? 'q-signin-hello-status is-error' : 'q-signin-hello-status'} role="status" aria-live="polite">{helloStatus}</p>}
       <div className="cap"><p className="dim">QuorlythBot</p><h3 style={{ fontSize: 22, fontWeight: 200, marginTop: 4 }}>{first ? 'Your room is ready.' : 'Welcome back to your room.'}</h3></div>
@@ -313,7 +343,7 @@ export function SignIn() {
     <div className="lg">
       <Stage greeting={firstWelcome
         ? "Hello and welcome to Quorlyth, where your fans, in order, become a community."
-        : "Welcome back to Quorlyth. Your space is ready whenever you are."} />
+        : "Welcome back to Quorlyth. Your space is ready whenever you are."} autoSpeak={mode === 'signin'} />
       <div className="glass fm">
         {notice ? (
           <div className="done"><div className="score"><Icon name="mail" size={30} /></div>

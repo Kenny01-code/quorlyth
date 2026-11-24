@@ -18,7 +18,7 @@ var hd=new Group(),sk=M(new SphereGeometry(.95,96,64),shell);sk.scale.set(1,1.05
 var eyes=new Group();[-1,1].forEach(function(d){var e=M(new SphereGeometry(.1,32,16),glow,d*.3,.12,.94);e.scale.set(1,1.6,.3);eyes.add(e)});hd.add(eyes);
 var vb=new Group(),bars=[];for(var i=0;i<9;i++){var x=(i-4)*.08,z=Math.sqrt(Math.max(.975*.975-x*x-.3*.3,.2))*.99,b=M(new BoxGeometry(.045,1,.02),glow,x,-.28,z);b.scale.y=.04;vb.add(b);bars.push(b)}hd.add(vb);
 [-1,1].forEach(function(d){var e=M(new CylinderGeometry(.22,.22,.14,48),chr,d*.97,0,0);e.rotation.z=Math.PI/2;hd.add(e)});
-var faceTrim=M(new TorusGeometry(.79,.026,20,128),rimGlow,0,0,.875);hd.add(faceTrim);hd.position.y=1.35;root.add(hd);
+hd.position.y=1.35;root.add(hd);var headHalo=M(new TorusGeometry(.82,.026,20,128),rimGlow,0,2.39,0);headHalo.rotation.x=Math.PI/2;root.add(headHalo);
 root.add(M(new CylinderGeometry(.28,.34,.5,48),arm,0,.5,0));var tor=M(new SphereGeometry(1,96,64),shell,0,-.5,0);tor.scale.set(1.55,1.2,.85);root.add(tor);var col=M(new TorusGeometry(.55,.09,32,96),blk,0,.6,0);col.rotation.x=Math.PI/2;root.add(col);
 var disc=M(new CylinderGeometry(.56,.56,.05,96),blk,0,-.4,.9);disc.rotation.x=Math.PI/2;root.add(disc);root.add(M(new TorusGeometry(.56,.018,16,96),chr,0,-.4,.925));
 var lg3=new Group(),ar=M(new TorusGeometry(.3,.034,24,120,Math.PI*1.78),glow);ar.rotation.z=-.436;lg3.add(ar,M(new SphereGeometry(.12,48,32),glow));var tl=M(new CylinderGeometry(.034,.034,.41,24),glow,.255,-.255,0);tl.rotation.z=-Math.PI*.75;lg3.add(tl,M(new SphereGeometry(.034,24,16),glow,.4,-.4,0));lg3.position.set(-.05,-.35,.95);root.add(lg3);
@@ -47,7 +47,7 @@ var hx=tgt.h[0],hy=tgt.h[1],hz=tgt.h[2];cur.h[0]=L(cur.h[0],hx,k);cur.h[1]=L(cur
 hd.rotation.y+=((m.x*.5+cur.h[0])-hd.rotation.y)*.07+Math.sin(t*34)*sh*.014;hd.rotation.x+=((m.y*.3+cur.h[1]+(talking?Math.sin(t*3.1)*.05*amp:0)+(thinking?-.12:0))-hd.rotation.x)*.07;hd.rotation.z+=((cur.h[2]+(listen?.12:0))-hd.rotation.z)*.07;hd.position.y=1.35+Math.sin(t*1.2)*.04;
 var bl=(t%4.3>4.15)?.1:1,sy=(thinking?.7:1)*(listen?1.15:1)*(mood?.62:1)*bl;eyes.scale.y+=(sy-eyes.scale.y)*.35;eyes.position.x=m.x*.06+(thinking?.08:0);eyes.position.y=-m.y*.04+(thinking?.06:0);
 bars.forEach(function(b,i){var c=1-Math.abs(i-4)/6,h=talking?.05+amp*c*(.28+.72*Math.abs(Math.sin(t*14+i*1.3))):.04;b.scale.y+=(h-b.scale.y)*.45});
-var br=Math.sin(t*1.4);tor.scale.set(1.55+br*.015,1.2+br*.02,.85);faceTrim.scale.setScalar(1+amp*.012);
+var br=Math.sin(t*1.4);tor.scale.set(1.55+br*.015,1.2+br*.02,.85);headHalo.scale.setScalar(1+amp*.012);headHalo.position.y=2.39+Math.sin(t*1.2)*.018;
 var ph=.5-.5*Math.cos(t*6.2832/6.5);lg3.scale.setScalar(.93+.19*ph);if(hs)hs.material.opacity=.15+.55*ph+amp*.3;if(aura)aura.material.opacity+=((talking?.12+amp*.3:thinking?.1:0)-aura.material.opacity)*.15;
 r.render(sc,cam)}
 R.theme(opt.theme||"terracotta");document.addEventListener("visibilitychange",onVisibility);scheduleFrame();return R}

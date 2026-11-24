@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { Nav } from './components/Nav'
 import { Toast } from './components/ui'
 import { Intro } from './components/Intro'
@@ -42,7 +41,6 @@ const QuorlythBot = lazy(loadQuorlythBot)
 import { useApp } from './data/AppProvider'
 import { useUserState } from './lib/userState'
 import { chime, useNotifs } from './lib/notifs'
-import { QuorlythBotHead } from './bot/QuorlythBotHead'
 
 function DemoRedirect({ onBeforeRedirect }: { onBeforeRedirect: () => void }) {
   const a = useApp()
@@ -102,39 +100,21 @@ export default function App() {
   const us = useUserState()
   const notifs = useNotifs(a, us.st)
   const [botMounted, setBotMounted] = useState(false)
-  const [botLoading, setBotLoading] = useState(false)
-  const launcherWasHiddenRef = useRef(false)
   const [botInitialOpen, setBotInitialOpen] = useState(false)
+  const [botOpenRequest, setBotOpenRequest] = useState(0)
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
-  const [botLoadError, setBotLoadError] = useState(false)
-  const [botLauncherHidden, setBotLauncherHidden] = useState(() => {
-    try { return sessionStorage.getItem('qbot-launcher-hidden-v1') === '1' } catch { return false }
-  })
   const openQuorlythBot = useCallback(async (startLiveTalk = false) => {
-    setBotLoadError(false)
     setBotInitialOpen(true)
-    setBotLoading(true)
     try {
       await loadQuorlythBot()
+      setBotOpenRequest(current => current + 1)
       if (startLiveTalk) setBotVoiceRequest(current => current + 1)
       setBotMounted(true)
     } catch (error) {
       console.error('QuorlythBot could not be loaded:', error)
-      setBotLoadError(true)
-    } finally {
-      setBotLoading(false)
+      a.toast('QuorlythBot could not load. Check your connection and try again.')
     }
-  }, [])
-
-  useEffect(() => {
-    const restoreLauncher = () => {
-      launcherWasHiddenRef.current = false
-      try { sessionStorage.removeItem('qbot-launcher-hidden-v1') } catch {}
-      setBotLauncherHidden(false)
-    }
-    window.addEventListener('quorlyth:launcher-restore', restoreLauncher)
-    return () => window.removeEventListener('quorlyth:launcher-restore', restoreLauncher)
-  }, [])
+  }, [a.toast])
 
   // Load the AI writing helper only when someone actually focuses a textarea.
   // This keeps its AI/streaming client out of the initial application bundle.
@@ -337,63 +317,6 @@ export default function App() {
     />
   )
 
-  const launcherWasHidden = launcherWasHiddenRef.current
-  const botLauncherPortal = !intro && !botLoading && !botMounted && createPortal(
-    <div className="qbot-launcher-portal">
-      {launcherWasHidden || botLauncherHidden ? (
-        <button
-          type="button"
-          className="qbot-launcher-restore"
-          aria-label="Restore QuorlythBot launcher"
-          title="Right-click or click to show QuorlythBot"
-          onClick={() => window.dispatchEvent(new Event('quorlyth:launcher-restore'))}
-          onContextMenu={event => {
-            event.preventDefault()
-            window.dispatchEvent(new Event('quorlyth:launcher-restore'))
-          }}
-        >
-          <span className="qbot-launcher-restore-mark" aria-hidden="true" />
-          <span className="qbot-launcher-restore-tip">Right-click or click to show QuorlythBot</span>
-        </button>
-      ) : (
-        <button
-          id="astl"
-          type="button"
-          className="astl"
-          aria-label="Open QuorlythBot"
-          aria-expanded={botMounted}
-          data-quorlyth-launcher
-          title="Ask QuorlythBot. Right-click to hide this launcher."
-          onFocus={() => { void loadQuorlythBot() }}
-          onClick={() => { void openQuorlythBot() }}
-          onContextMenu={event => {
-            event.preventDefault()
-            launcherWasHiddenRef.current = true
-            try { sessionStorage.setItem('qbot-launcher-hidden-v1', '1') } catch {}
-            setBotLauncherHidden(true)
-          }}
-        >
-          <span className="astm"><QuorlythBotHead size={38} /></span>
-        </button>
-      )}
-      {botLoadError && (
-        <div className="qbot-launcher-load-error" role="alert">
-          <span>QuorlythBot could not load. Check your connection and try again.</span>
-          <button type="button" onClick={() => { void openQuorlythBot() }}>Retry</button>
-        </div>
-      )}
-    </div>,
-    document.body
-  )
-  const botLauncherLoadingPortal = !intro && botLoading && !botMounted && createPortal(
-    <div className="qbot-launcher-portal">
-      <button id="astl" type="button" className="astl qbot-launcher-loading" aria-label="Loading QuorlythBot" aria-busy="true" disabled title="Loading QuorlythBot">
-        <span className="astm"><QuorlythBotHead size={38} /></span>
-      </button>
-    </div>,
-    document.body
-  )
-
   // The public homepage is useful before auth is ready, and now shares the same
   // instantly-mounted navigation shell as every private route.
   if (!a.ready && loc.pathname === '/') return (
@@ -402,7 +325,7 @@ export default function App() {
       <div id="sp" />
       {appNavigation}
       <main id="main" tabIndex={-1}><Landing /></main>
-      {botLauncherPortal}{botLauncherLoadingPortal}{botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} voiceRequest={botVoiceRequest} /></Suspense>}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} /></Suspense>}
     </>
   )
 
@@ -416,7 +339,6 @@ export default function App() {
       <main className="app-startup" aria-busy="true">
         <span className="sr" role="status">Connecting to Quorlyth…</span>
       </main>
-      {botLauncherPortal}
     </>
   )
   if (a.startupError) return (
@@ -486,7 +408,7 @@ export default function App() {
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
       <Toast />
       {writingAssistantMounted && <Suspense fallback={null}><WritingAssistant /></Suspense>}
-      {botLauncherPortal}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} /></Suspense>}
     </>
   )
 }

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="760" viewBox="0 0 460 760" fill="none">
+  <defs>
+    <linearGradient id="skin" x1="136" y1="160" x2="306" y2="490" gradientUnits="userSpaceOnUse"><stop stop-color="#9D563B"/><stop offset=".52" stop-color="#743B2D"/><stop offset="1" stop-color="#4F2924"/></linearGradient>
+    <linearGradient id="face" x1="174" y1="92" x2="279" y2="245" gradientUnits="userSpaceOnUse"><stop stop-color="#A96549"/><stop offset=".55" stop-color="#824331"/><stop offset="1" stop-color="#5D3028"/></linearGradient>
+    <linearGradient id="hair" x1="143" y1="45" x2="310" y2="230" gradientUnits="userSpaceOnUse"><stop stop-color="#241714"/><stop offset=".55" stop-color="#120F0E"/><stop offset="1" stop-color="#3B211B"/></linearGradient>
+    <linearGradient id="jacket" x1="112" y1="260" x2="350" y2="512" gradientUnits="userSpaceOnUse"><stop stop-color="#C56D4C"/><stop offset=".5" stop-color="#8D452F"/><stop offset="1" stop-color="#572B25"/></linearGradient>
+    <linearGradient id="shirt" x1="196" y1="260" x2="270" y2="490" gradientUnits="userSpaceOnUse"><stop stop-color="#F1E6D6"/><stop offset="1" stop-color="#C8B39D"/></linearGradient>
+    <linearGradient id="trousers" x1="170" y1="447" x2="302" y2="716" gradientUnits="userSpaceOnUse"><stop stop-color="#302B2B"/><stop offset="1" stop-color="#171719"/></linearGradient>
+    <linearGradient id="shoe" x1="150" y1="692" x2="318" y2="732" gradientUnits="userSpaceOnUse"><stop stop-color="#E7D6C1"/><stop offset="1" stop-color="#92745F"/></linearGradient>
+    <filter id="shadow" x="48" y="691" width="362" height="61" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="10"/></filter>
+  </defs>
+  <ellipse cx="230" cy="723" rx="150" ry="15" fill="#2E1B17" opacity=".22" filter="url(#shadow)"/>
+  <path d="M178 438c-7 72-16 154-19 254l-3 27c22 11 53 9 73 0l15-217 9 217c21 9 51 8 70-3l-4-31c-5-94-11-174-20-247z" fill="url(#trousers)"/>
+  <path d="M157 701c-13 7-27 15-34 25-4 6 1 12 10 12h100c10 0 16-7 14-15l-3-15c-28 8-57 8-87-7zM261 704c-10 7-19 15-25 23-4 6 0 12 10 12h104c11 0 16-7 12-15l-8-17c-29 9-59 8-93-3z" fill="url(#shoe)"/>
+  <path d="M158 700c28 8 56 8 86 0M261 704c31 8 62 7 91-1" stroke="#FFF0DE" stroke-opacity=".48" stroke-width="3" stroke-linecap="round"/>
+  <path d="M194 210h72v69c-16 26-56 26-72 0z" fill="url(#skin)"/>
+  <path d="M157 286c-17 31-27 79-36 126-6 29-9 58-7 87 1 15 12 24 25 20 11-3 14-14 14-25l6-68 35-101z" fill="url(#skin)"/>
+  <path d="M299 283c22 27 36 74 46 122 8 37 11 69 6 100-2 14-14 22-26 16-10-5-11-17-9-29l-4-62-42-102z" fill="url(#skin)"/>
+  <path d="M111 493c-10 5-18 14-18 25l-1 21c0 8 7 12 13 7l10-11 4 19c2 9 12 10 15 2l4-23c3-17-6-35-27-40zM348 494c11 4 19 13 19 24l-1 22c0 8-8 11-14 5l-9-12-6 18c-3 8-13 8-15 0l-1-24c-1-17 9-34 27-33z" fill="url(#skin)"/>
+  <path d="M178 255c18-15 38-22 57-22s40 7 59 22l43 46-26 177c-46 26-123 26-170-1l-9-176z" fill="url(#shirt)"/>
+  <path d="M181 255c-26 10-45 25-59 49l-28 89 28 18 33-62-13 126c36 25 60 31 91 31l-14-223-15-28z" fill="url(#jacket)"/>
+  <path d="M278 255c28 10 48 28 64 52l29 87-28 20-34-65 12 124c-26 20-59 31-91 33l15-223 17-28z" fill="url(#jacket)"/>
+  <path d="M209 263l22 43 20-43-5 210h-31z" fill="url(#shirt)"/>
+  <path d="M230 306l-16 41 14 27 15-27z" fill="#B98D77" opacity=".58"/>
+  <path d="M126 304c-12 25-20 55-27 86M324 302c13 24 21 55 29 85" stroke="#E99B75" stroke-opacity=".46" stroke-width="5" stroke-linecap="round"/>
+  <path d="M143 447c-4 16-6 34-5 53M311 447c3 17 6 35 5 53" stroke="#E6A07D" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/>
+  <path d="M169 131c0-54 25-87 62-87 41 0 65 37 62 91l-8 63c-7 35-30 60-55 60s-47-25-55-60z" fill="url(#face)"/>
+  <path d="M168 138c-13-28-13-65 2-89 15-24 41-36 68-33 36 3 64 28 72 61 4 17 2 35-3 51-5-14-11-24-22-32-8 22-34 31-61 31-17 0-34-5-47-15-1 11-4 20-9 26z" fill="url(#hair)"/>
+  <g stroke="#4A2923" stroke-width="13" stroke-linecap="round"><path d="M176 91c-7 29-5 64 1 91M193 62c-10 35-10 79-3 112M211 50c-8 44-6 84 2 122M232 46c-4 43-3 83 4 124M254 53c2 35 9 73 19 107M276 69c4 32 13 55 22 73"/></g>
+  <g fill="#7B4433" opacity=".65"><circle cx="180" cy="187" r="7"/><circle cx="201" cy="180" r="7"/><circle cx="228" cy="176" r="7"/><circle cx="256" cy="172" r="7"/></g>
+  <path d="M174 129c-7 27-4 56 3 78 6 20 17 35 29 43M287 124c8 27 5 56-3 78-6 20-17 35-29 43" stroke="#B06A4C" stroke-opacity=".4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M190 151c10-6 20-6 30 0M243 151c10-6 20-6 29 0" stroke="#2B1714" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="207" cy="163" rx="4" ry="3" fill="#17100F"/><ellipse cx="258" cy="163" rx="4" ry="3" fill="#17100F"/>
+  <path d="M231 162l-7 30 10 4" stroke="#5B3028" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M211 211c12 9 28 9 41 0" stroke="#4A211F" stroke-width="5" stroke-linecap="round"/>
+  <path d="M184 183c6 5 13 7 21 7M258 190c8-1 15-4 20-9" stroke="#D18A6A" stroke-opacity=".28" stroke-width="4" stroke-linecap="round"/>
+  <path d="M179 105c11-24 34-39 59-38" stroke="#D19A7A" stroke-opacity=".26" stroke-width="4" stroke-linecap="round"/>
+</svg>
