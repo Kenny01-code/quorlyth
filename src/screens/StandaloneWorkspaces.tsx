@@ -1,17 +1,19 @@
 import '../styles/standalone-workspaces.css'
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Gate } from '../components/Gate'
 import { Av, Head } from '../components/ui'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { EvidencePreview } from '../components/EvidencePreview'
+import { DiscussionThread } from '../components/DiscussionThread'
+import { TaskStartGuide } from '../components/TaskStartGuide'
 import { useApp } from '../data/AppProvider'
 import { askJson } from '../ai/client'
 import { isPastDateChange, isPastDateInput, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 import { emitWorkflowEvent } from '../lib/automation'
 import { userFacingMutationError } from '../lib/userFacingErrors'
 import { WorkSubmission } from '../lib/types'
-import { ChatAttachment, ChatAttachmentList, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
+import { ChatAttachment, ChatMediaComposer, VoiceNoteDraft } from '../components/ChatMedia'
 
 type WorkspaceTab = 'overview' | 'tasks' | 'evidence' | 'team'
 type WorkspaceProject = {
@@ -145,7 +147,7 @@ type GithubRepository = {
   defaultBranch: string; language?: string; stars: number; openIssues: number; sourceVerified: boolean
   lastSyncedAt: number; docId?: string
 }
-type WorkspaceComment = { id: string; projectId: string; authorId: string; text: string; at: number; attachments?: ChatAttachment[]; mentionedUserIds?: string[]; mentionedEveryone?: boolean; docId?: string }
+type WorkspaceComment = { id: string; projectId: string; authorId: string; text: string; at: number; parentId?: string | null; attachments?: ChatAttachment[]; mentionedUserIds?: string[]; mentionedEveryone?: boolean; docId?: string }
 
 function LinkedWorkSubmissionCard({ submission, milestoneTitle, ideaId }: {
   submission: WorkSubmission
@@ -415,6 +417,8 @@ export function StandaloneWorkspaceDetail() {
 
 function WorkspaceProjectView() {
   const { id = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  const deepLinkedTaskId = searchParams.get('task')
   const a = useApp()
   const nav = useNavigate()
   const projects = useWorkspaceCollection<WorkspaceProject>('standaloneProjects')
@@ -486,7 +490,7 @@ function WorkspaceProjectView() {
   const doneCount = projectTasks.filter(task => task.status === 'done').length
   const progress = projectTasks.length ? Math.round(doneCount / projectTasks.length * 100) : 0
   const pendingReviews = projectArtifacts.filter(item => item.status === 'submitted').length
-  const [tab, setTab] = useState<WorkspaceTab>('team')
+  const [tab, setTab] = useState<WorkspaceTab>(() => deepLinkedTaskId ? 'tasks' : 'team')
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [taskTitle, setTaskTitle] = useState('')
@@ -513,6 +517,7 @@ function WorkspaceProjectView() {
   const [commentVoiceNote, setCommentVoiceNote] = useState<VoiceNoteDraft | null>(null)
   const [commentMentionedUserIds, setCommentMentionedUserIds] = useState<string[]>([])
   const [commentMentionedEveryone, setCommentMentionedEveryone] = useState(false)
+  const [commentReplyTo, setCommentReplyTo] = useState<string | null>(null)
   const [mentionQuery, setMentionQuery] = useState<{ start: number; end: number; query: string } | null>(null)
   const commentInput = useRef<HTMLTextAreaElement>(null)
   // Keep discussion interactions consistent with the collaboration workspace panel.
@@ -521,6 +526,15 @@ function WorkspaceProjectView() {
   const [projectTitle, setProjectTitle] = useState('')
   const [projectSummary, setProjectSummary] = useState('')
   const [projectDueDate, setProjectDueDate] = useState('')
+
+  useEffect(() => {
+    if (!deepLinkedTaskId) return
+    setTab('tasks')
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('sw-task-' + deepLinkedTaskId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [deepLinkedTaskId, projectTasks.length])
 
   useEffect(() => {
     setProjectTitle(project?.title || '')
@@ -1127,6 +1141,12 @@ function WorkspaceProjectView() {
     })
   }
 
+  function beginCommentReply(commentId: string) {
+    setCommentReplyTo(commentId)
+    setTab('team')
+    window.setTimeout(() => commentInput.current?.focus(), 0)
+  }
+
   async function postComment(event: FormEvent) {
     event.preventDefault()
     if (!a.backend || !a.me) return
@@ -1160,6 +1180,7 @@ function WorkspaceProjectView() {
         ])]
         const comment: WorkspaceComment = {
           id: commentId, projectId: id, authorId: a.me!.id, text, at: now,
+          ...(commentReplyTo ? { parentId: commentReplyTo } : {}),
           ...(attachments.length ? { attachments } : {}),
           ...(mentionedUserIds.length ? { mentionedUserIds } : {}),
           ...(explicitEveryone ? { mentionedEveryone: true } : {}),
@@ -1170,6 +1191,7 @@ function WorkspaceProjectView() {
         setCommentVoiceNote(null)
         setCommentMentionedUserIds([])
         setCommentMentionedEveryone(false)
+        setCommentReplyTo(null)
         setMentionQuery(null)
         a.toast('Team update posted.')
       } catch (error) {
@@ -1292,11 +1314,12 @@ function WorkspaceProjectView() {
         const taskEvidence = projectArtifacts.filter(artifact => artifact.taskId===task.id)
         const approved = taskEvidence.filter(artifact=>artifact.status==='approved'&&((artifact.provider==='github'&&artifact.verificationStatus==='source_verified')||(artifact.provider==='manual'&&artifact.verificationStatus==='submitted_evidence'))).length
         const currentAssignee = assignedTaskIds(task).includes(a.me?.id || '')
-        return <article className="sw-task" key={task.id}>
+        return <article className="sw-task" id={'sw-task-' + task.id} key={task.id}>
           <div className="sw-task__top"><span className={'sw-task-check '+(task.status==='done'?'is-done':'')}>{task.status==='done'?<QuorlythGlyph name="check" size={14}/>:null}</span><div className="sw-task__title"><p className="ql-eyebrow">{task.status==='todo'?'QUEUED':task.status==='in_progress'?'IN PROGRESS':'APPROVED COMPLETE'}</p><h4>{task.title}</h4></div><span className={'sw-task-status '+(task.status==='done'?'is-done':'')}>{task.status==='done'?'Complete':task.status==='in_progress'?'Active':'Open'}</span></div>
           {task.description && <p className="sw-task__description q-writeup">{task.description}</p>}
           {task.milestoneId && <p className="sw-task__description"><QuorlythGlyph name="link" size={13}/> Linked milestone: {linkedMilestones.find(milestone => milestone.id === task.milestoneId)?.title || 'Community milestone'} </p>}
           {task.acceptanceCriteria && <div className="sw-criteria"><span><QuorlythGlyph name="check" size={14}/></span><div><strong>Definition of done</strong><p>{task.acceptanceCriteria}</p></div></div>}
+          {task.status !== 'done' && (currentAssignee || assignedTaskIds(task).length === 0) && <TaskStartGuide title={task.title} description={task.description} acceptanceCriteria={task.acceptanceCriteria} />}
           <div className="sw-task__meta"><span><QuorlythGlyph name="person" size={13}/>{assignedTaskIds(task).length ? assignedTaskIds(task).length + ' assigned · ' + assignedTaskIds(task).map(uid => a.nm(uid)).join(', ') : 'Unassigned'}</span><span><QuorlythGlyph name="calendar" size={13}/>{task.dueAt?localDate(task.dueAt):'No deadline'}</span><button type="button" className="sw-link-button" onClick={()=>{setArtifactTask(task.id);setTab('evidence')}}><QuorlythGlyph name="link" size={13}/>{taskEvidence.length} evidence item{taskEvidence.length===1?'':'s'}</button></div>
           {canManage && project.status==='active' && task.status!=='done' && <details className="sw-task-reassign">
             <summary>{'Assign to teammates · ' + (assignedTaskIds(task).length || 'none') + ' selected'}</summary>
@@ -1462,7 +1485,7 @@ function WorkspaceProjectView() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             <p className="ql-eyebrow" style={{ marginBottom: 4 }}>TEAM DISCUSSION</p>
-            <h3 style={{ fontSize: 19 }}>Project room <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}>· {projectComments.length}</span></h3>
+            <h3 style={{ fontSize: 19 }}>Discussion <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}>· {projectComments.length}</span></h3>
             {discussionMode !== 'minimized' && <p className="mut" style={{ marginTop: 5, fontSize: 12 }}>Share decisions, blockers and next steps with your project team.</p>}
           </div>
           <div className="acts" style={{ margin: 0, gap: 5, flexShrink: 0 }}>
@@ -1487,21 +1510,9 @@ function WorkspaceProjectView() {
               overscrollBehavior: 'contain',
             }}
           >
-            {projectComments.length
-              ? projectComments.map(comment => <article className="sw-comment" key={comment.id}>
-                  <Av id={comment.authorId} size={30} />
-                  <div>
-                    <div className="sw-comment__meta">
-                      <strong>{a.nm(comment.authorId)}</strong>
-                      <small>{new Date(comment.at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</small>
-                    </div>
-                    <p className="q-writeup">{comment.text}</p>
-                    {!!comment.mentionedUserIds?.length && <div className="sw-comment-mentions" aria-label="Tagged teammates"><span>Tagged</span>{comment.mentionedEveryone ? <b>@everyone</b> : comment.mentionedUserIds.map(userId => <b key={userId}>@{a.nm(userId)}</b>)}</div>}
-                    <ChatAttachmentList attachments={comment.attachments} />
-                  </div>
-                </article>)
-              : <div className="sw-empty-inline"><QuorlythGlyph name="message" size={20}/><strong>No discussion yet</strong><p>Post a decision, blocker or next step to get the conversation started.</p></div>}
+            <DiscussionThread comments={projectComments} authorName={a.nm} onReply={beginCommentReply} emptyText="No discussion yet. Post the first project update." />
           </div>
+          {commentReplyTo && <div className="chip qth-discussion-replying">Replying to {a.nm(projectComments.find(comment => comment.id === commentReplyTo)?.authorId || '')}<button type="button" className="lk" onClick={() => setCommentReplyTo(null)}>Cancel</button></div>}
           {canContribute && <form className="sw-comment-form" onSubmit={postComment} style={{ marginTop: 'auto' }}>
             <label className="sw-field"><span>Message the team</span><div className="sw-comment-editor">
               <textarea ref={commentInput} value={commentText} onChange={e=>updateCommentDraft(e.target.value, e.currentTarget.selectionStart)} onKeyDown={event => {

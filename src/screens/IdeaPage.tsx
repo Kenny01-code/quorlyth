@@ -13,6 +13,7 @@ import { reviewIdeas } from '../ai/review'
 import { useDraftState } from '../lib/useDraftState'
 import { PromotionPreview } from '../components/PromotionPreview'
 import { ShareCard } from '../components/ShareCard'
+import { DiscussionThread } from '../components/DiscussionThread'
 
 export function IdeaPage() {
   return <Gate><Inner /></Gate>
@@ -167,24 +168,6 @@ function Inner() {
       setReplying(false)
     }
   }
-  const topLevelComments = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
-  const renderComment = (comment: (typeof comments)[number], nested = false): import('react').ReactNode => {
-    const replies = comments.filter(item => item.parentId === comment.id)
-    return <div key={comment.id} className="idea-discussion-comment" style={{ marginLeft: nested ? 18 : 0, marginTop: 12, paddingLeft: nested ? 12 : 0, borderLeft: nested ? '1px solid var(--line, rgba(255,255,255,.12))' : undefined }}>
-      <div className="msg" style={{ alignItems: 'flex-start' }}><Av id={comment.authorId} size={30} />
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <h3 style={{ fontSize: 15 }}><button className="lk idea-discussion-author" onClick={() => nav('/me/' + comment.authorId)}>{a.nm(comment.authorId)}</button> <span className="dim">{when(comment.at)}</span></h3>
-          <p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{comment.text}</p>
-          {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 12, marginTop: 5 }}>Tagged: {comment.mentionedUserIds.map(uid => a.nm(uid)).join(', ')}</p> : null}
-          <div className="acts" style={{ marginTop: 7, gap: 8 }}>
-            <button className="chip" type="button" onClick={() => startReply(comment.id)}><Icon name="reply" size={13} />Reply</button>
-          </div>
-        </div>
-      </div>
-      {replies.map(reply => renderComment(reply, true))}
-    </div>
-  }
-
   return (
     <>
       <div className="head">
@@ -240,7 +223,7 @@ function Inner() {
           </div>}
           {r?.score != null && <div className="reason" style={{ marginTop: 26 }}><span className="dim">AI review {r.score}</span><p className="q-writeup">{r.reason}</p></div>}
           <h3 style={{ margin: '26px 0 4px' }}>Discussion</h3>
-          {comments.length ? topLevelComments.map(comment => renderComment(comment)) : <p className="mut" style={{ padding: '14px 0' }}>No replies yet. Start the conversation.</p>}
+          <DiscussionThread comments={comments} authorName={a.nm} onReply={startReply} emptyText="No replies yet. Start the conversation." />
           {replyTo && <div className="chip" style={{ marginTop: 14, display: 'inline-flex', gap: 8 }}>Replying to {a.nm(comments.find(comment => comment.id === replyTo)?.authorId || '')} <button type="button" className="lk" onClick={() => setReplyTo(null)}>Cancel</button></div>}
           <div className="discussion-reply-compose">
             <label className="field"><span>Reply</span><textarea id="idea-discussion-reply" value={text} maxLength={1000} onChange={e => updateReplyText(e.target.value, e.currentTarget.selectionStart ?? e.target.value.length)} rows={3} placeholder="Write a reply… Type @ to mention someone in this community." /></label>

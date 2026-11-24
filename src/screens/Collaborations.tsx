@@ -9,6 +9,7 @@ import { Av, Head } from '../components/ui'
 import { MilestoneBoard } from '../components/MilestoneBoard'
 import { QuorlythGlyph } from '../components/QuorlythGlyph'
 import { EvidencePreview } from '../components/EvidencePreview'
+import { DiscussionThread } from '../components/DiscussionThread'
 import { useApp, useComments } from '../data/AppProvider'
 import { when } from '../lib/util'
 import { AIProjectPlan, generateProjectPlan } from '../ai/projectPlan'
@@ -767,36 +768,6 @@ function Workspace() {
     }
   }
 
-  const topLevelDiscussion = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
-  const renderDiscussionComment = (comment: Comment, depth = 0): import('react').ReactNode => {
-    const responses = comments.filter(item => item.parentId === comment.id)
-    return <div key={comment.id} style={{
-      marginLeft: depth ? Math.min(depth, 4) * 13 : 0,
-      marginTop: 11,
-      paddingLeft: depth ? 11 : 0,
-      borderLeft: depth ? '1px solid var(--line, rgba(255,255,255,.13))' : undefined,
-      minWidth: 0,
-    }}>
-      <div className="msg" style={{ alignItems: 'flex-start', gap: 9 }}>
-        <Av id={comment.authorId} size={29} />
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap' }}>
-            <button type="button" className="lk" onClick={() => nav('/me/' + comment.authorId)}><strong>{a.nm(comment.authorId)}</strong></button>
-            <span className="dim" style={{ fontSize: 11 }}>{when(comment.at)}</span>
-            {comment.parentId ? <span className="dim" style={{ fontSize: 11 }}>Reply</span> : null}
-          </p>
-          <p className="mut q-writeup" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 4 }}>{comment.text}</p>
-          <ChatAttachmentList attachments={comment.attachments} />
-          {comment.mentionedUserIds?.length ? <p className="dim" style={{ fontSize: 11, marginTop: 5 }}>Mentioned: {comment.mentionedUserIds.map(userId => a.nm(userId)).join(', ')}</p> : null}
-          <div className="acts" style={{ marginTop: 6, gap: 6 }}>
-            <button className="chip" type="button" onClick={() => beginDiscussionReply(comment.id)}><QuorlythGlyph name="message" size={12} />Reply</button>
-          </div>
-        </div>
-      </div>
-      {responses.map(response => renderDiscussionComment(response, depth + 1))}
-    </div>
-  }
-
   return <>
     <div className="head" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
       <div><button className="chip" onClick={() => nav('/collaborations')}><QuorlythGlyph name="back" size={14} /> All collaborations</button></div>
@@ -1039,7 +1010,7 @@ function Workspace() {
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <h3 style={{ fontSize: 19 }}>Team discussion <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}>· {comments.length}</span></h3>
+              <h3 style={{ fontSize: 19 }}>Discussion <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}>· {comments.length}</span></h3>
               {discussionMode !== 'minimized' && <p className="mut" style={{ marginTop: 5, fontSize: 12 }}>Shared with the original idea discussion, so decisions and context stay connected.</p>}
             </div>
             <div className="acts" style={{ margin: 0, gap: 5, flexShrink: 0 }}>
@@ -1067,9 +1038,7 @@ function Workspace() {
                 overscrollBehavior: 'contain',
               }}
             >
-              {comments.length
-                ? topLevelDiscussion.map(comment => renderDiscussionComment(comment))
-                : <p className="mut" style={{ padding: '12px 0' }}>No discussion yet. Share the first update.</p>}
+              <DiscussionThread comments={comments} authorName={a.nm} onReply={beginDiscussionReply} emptyText="No discussion yet. Share the first update." />
             </div>
 
             <form onSubmit={postReply} style={{ marginTop: 'auto', paddingTop: 8 }}>

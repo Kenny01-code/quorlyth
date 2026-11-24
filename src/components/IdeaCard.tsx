@@ -7,6 +7,7 @@ import { Idea, IdeaAttachment, STATUS_LABEL } from '../lib/types'
 import { when } from '../lib/util'
 import { PromotionPreview } from './PromotionPreview'
 import { isIdeaVideo } from '../lib/ideaMedia'
+import { ImageLightbox } from './ImageLightbox'
 
 export function Tags({ tags }: { tags?: string[] }) {
   if (!tags?.length) return null
@@ -16,6 +17,7 @@ export function Tags({ tags }: { tags?: string[] }) {
 export function IdeaMediaGallery({ idea, compact = false }: { idea: Idea; compact?: boolean }) {
   const a = useApp()
   const [urls, setUrls] = useState<Record<string, string | null>>({})
+  const [activeImage, setActiveImage] = useState<{ src: string; alt: string } | null>(null)
   const attachments = idea.attachments || []
   const attachmentKey = attachments.map(attachment => attachment.path).join('\n')
 
@@ -58,13 +60,14 @@ export function IdeaMediaGallery({ idea, compact = false }: { idea: Idea; compac
                   ? <span className="idea-media-state">Attachment unavailable</span>
                   : isIdeaVideo(attachment.mimeType)
                     ? <video src={url} controls preload="metadata" aria-label={'Play ' + attachment.name} />
-                    : <img src={url} alt={attachment.name} loading="lazy" />}
+                    : <button type="button" className="idea-media-image-open" onClick={() => setActiveImage({ src: url, alt: attachment.name })} aria-label={'Open image ' + attachment.name}><img src={url} alt={attachment.name} loading="lazy" /></button>}
               <span className="idea-media-name">{attachment.name}</span>
             </div>
           )
         })}
       </div>
       {attachments.length > visible.length && <span className="idea-media-more">+{attachments.length - visible.length} more</span>}
+      {activeImage && <ImageLightbox src={activeImage.src} alt={activeImage.alt} onClose={() => setActiveImage(null)} />}
     </div>
   )
 }

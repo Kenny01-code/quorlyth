@@ -36,8 +36,10 @@ export function NotifPanel({ list, sound, onSound, desktopPermission, onDesktop,
                 n.kind === 'collab-request' ? '/queue?idea=' + encodeURIComponent(n.target || '') :
                 n.kind === 'collaboration' ? '/idea/' + (n.target || n.id || '') :
                 n.kind === 'message' || n.kind === 'call' ? '/dashboard' :
-                n.kind === 'workspace' || n.kind === 'task' ? '/workspaces/' + (n.target || n.id || '') :
-                n.kind === 'project' || n.kind === 'milestone' ? '/collaboration/' + (n.target || n.id || '') :
+                n.kind === 'workspace' ? '/workspaces/' + (n.target || n.id || '') :
+                n.kind === 'task' ? '/workspaces/' + (n.target || '') + (n.id ? '?task=' + encodeURIComponent(n.id) : '') :
+                n.kind === 'project' ? '/collaboration/' + (n.target || n.id || '') :
+                n.kind === 'milestone' ? '/collaboration/' + (n.target || '') + '?tab=plan' + (n.id ? '&milestone=' + encodeURIComponent(n.id) : '') :
                 n.kind === 'community' ? '/communities/' + (n.target || n.id || '') :
                 n.kind === 'announcement' ? '/dashboard' :
                 n.kind === 'promo' ? '/idea/' + (n.target || n.id || '') : '/communities'

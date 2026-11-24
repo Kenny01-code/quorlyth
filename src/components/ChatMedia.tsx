@@ -3,6 +3,7 @@ import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Icon } from '../lib/Icon'
 import type { ChatAttachment as ChatAttachmentData } from '../lib/types'
 import { useApp } from '../data/AppProvider'
+import { ImageLightbox } from './ImageLightbox'
 
 export type ChatAttachment = ChatAttachmentData
 export type VoiceNoteDraft = { file: File; durationMs: number }
@@ -208,6 +209,7 @@ function ChatAttachmentItem({ attachment }: { attachment: ChatAttachment }) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(true)
   const [unavailable, setUnavailable] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   useEffect(() => {
     let active = true
     setUrl('')
@@ -236,11 +238,17 @@ function ChatAttachmentItem({ attachment }: { attachment: ChatAttachment }) {
       {url ? <audio controls preload="metadata" src={url} aria-label="Voice note" /> : <small className="chat-media-muted">{loading ? 'Loading audio…' : unavailable ? 'Audio unavailable' : ''}</small>}
     </div>
   }
-  return <div className="chat-media-attachment">
-    <span className="chat-media-file-icon"><Icon name={attachment.mimeType.startsWith('image/') ? 'image' : 'file'} size={15} /></span>
-    <div className="chat-media-attachment-copy"><b title={attachment.name}>{attachment.name}</b><small>{formatBytes(attachment.size)} · {attachment.mimeType || 'File'}</small></div>
-    {url ? <a href={url} target="_blank" rel="noreferrer" download={attachment.name}>Open file <Icon name="arrow-up-right" size={12} /></a> : <small className="chat-media-muted">{loading ? 'Preparing secure link…' : unavailable ? 'File unavailable' : ''}</small>}
-  </div>
+  const isImage = attachment.mimeType.startsWith('image/')
+  return <>
+    <div className={'chat-media-attachment' + (isImage ? ' is-image' : '')}>
+      {isImage && url
+        ? <button type="button" className="chat-media-image-open" onClick={() => setPreviewOpen(true)} aria-label={'Preview image ' + attachment.name}><img src={url} alt={attachment.name} loading="lazy" /></button>
+        : <span className="chat-media-file-icon"><Icon name={isImage ? 'image' : 'file'} size={15} /></span>}
+      <div className="chat-media-attachment-copy"><b title={attachment.name}>{attachment.name}</b><small>{formatBytes(attachment.size)} · {attachment.mimeType || 'File'}</small></div>
+      {url ? <a href={url} target="_blank" rel="noreferrer" download={attachment.name}>Open file <Icon name="arrow-up-right" size={12} /></a> : <small className="chat-media-muted">{loading ? 'Preparing secure link…' : unavailable ? 'File unavailable' : ''}</small>}
+    </div>
+    {isImage && url && previewOpen && <ImageLightbox src={url} alt={attachment.name} onClose={() => setPreviewOpen(false)} />}
+  </>
 }
 
 export function ChatAttachmentList({ attachments }: { attachments?: ChatAttachment[] }) {

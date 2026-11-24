@@ -6,6 +6,7 @@ import { useApp } from '../data/AppProvider'
 import { Idea, Milestone, MilestonePriority } from '../lib/types'
 import { isPastDateChange, minimumDateInput, PAST_DATE_MESSAGE } from '../lib/workspaceDates'
 import { userFacingMutationError } from '../lib/userFacingErrors'
+import { TaskStartGuide } from './TaskStartGuide'
 
 type FilterKey = 'all' | 'open' | 'mine' | 'overdue' | 'blocked'
 type MilestoneDraft = {
@@ -355,6 +356,11 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                 </div>
               </details>}
               {milestone.acceptanceCriteria && <div className="ql-acceptance"><QuorlythGlyph name="document" size={15} /><div><strong>Definition of done</strong><p>{milestone.acceptanceCriteria}</p></div></div>}
+              {(() => {
+                const assignees = getMilestoneAssigneeIds(milestone)
+                const currentUserCanStart = canCollaborate && active && milestone.status !== 'done' && !milestone.blocked && (!assignees.length || assignees.includes(a.me?.id || ''))
+                return currentUserCanStart ? <TaskStartGuide title={milestone.title} description={milestone.description} acceptanceCriteria={milestone.acceptanceCriteria} /> : null
+              })()}
               {milestone.blocked && milestone.status !== 'done' && <div className="ql-blocker-note"><QuorlythGlyph name="blocked" size={16} /><div><strong>Blocked</strong><p>{milestone.blockedNote || 'Waiting on a dependency or decision.'}</p></div></div>}
               {(() => { const assignedIds = getMilestoneAssigneeIds(milestone); const canStart = canCollaborate && active && milestone.status === 'todo' && !milestone.blocked && (!assignedIds.length || assignedIds.includes(a.me?.id || '')); return (canEdit || canManage || canStart) ? <div className="ql-milestone-actions">
                 {canEdit && <button type="button" className="ql-quiet-action" disabled={!!busyId} onClick={() => beginEdit(milestone)}><QuorlythGlyph name="plan" size={14} />Edit details</button>}
