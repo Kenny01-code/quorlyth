@@ -48,7 +48,7 @@ export function Work({ onBuild }: { onBuild: (prompt: string) => void }) {
             placeholder="Describe an outcome, a project, a campaign, a workflow, or something you want Quorlyth to organise…"
           />
           <div className="work-hub__build-actions">
-            <button type="button" className="work-hub__surprise" onClick={() => setBuildPrompt('Surprise me. Review my current Work area and the records I am allowed to access. Choose one high-impact improvement, explain why it matters, then prepare a coordinated execution plan with a clear review preview. Preserve existing records, and do not publish externally or activate automations until I approve.')}>
+            <button type="button" className="work-hub__surprise" onClick={() => setBuildPrompt('Review my current projects, workspaces and collaborations using only records I am allowed to access. Find one high-impact improvement, explain why it matters, and prepare a coordinated execution plan with exact targets and a review preview. Preserve existing records. Do not publish externally or activate automations until I approve.')}>
               <QuorlythGlyph name="idea" size={14} />
               <span>Surprise me</span>
             </button>
