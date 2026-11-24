@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Av } from './ui'
 import { QuorlythGlyph } from './QuorlythGlyph'
@@ -25,7 +26,7 @@ export function DiscussionThread<T extends DiscussionEntry>({ comments, authorNa
   const nav = useNavigate()
   const roots = comments.filter(comment => !comment.parentId || !comments.some(parent => parent.id === comment.parentId))
 
-  const renderEntry = (comment: T, depth = 0): React.ReactNode => {
+  const renderEntry = (comment: T, depth = 0): ReactNode => {
     const replies = comments.filter(item => item.parentId === comment.id)
     const name = authorName(comment.authorId) || 'Quorlyth member'
     return (

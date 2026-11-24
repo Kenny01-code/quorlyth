@@ -50,8 +50,8 @@ export function TaskStartGuide({ title, description = '', acceptanceCriteria = '
   return (
     <section className="qth-task-start-guide">
       <button type="button" className="qth-task-start-guide__trigger" onClick={() => void openGuide()} aria-expanded={open}>
-        <span><QuorlythGlyph name="spark" size={15} />{loading ? 'Preparing your first steps…' : steps.length ? 'Your starting plan' : 'Help me get started'}</span>
-        <QuorlythGlyph name={open ? 'chevron-up' : 'arrow'} size={14} />
+        <span><QuorlythGlyph name="idea" size={15} />{loading ? 'Preparing your first steps…' : steps.length ? 'Your starting plan' : 'Help me get started'}</span>
+        <QuorlythGlyph name={open ? 'shrink' : 'arrow'} size={14} />
       </button>
       {open && <div className="qth-task-start-guide__body">
         {loading ? <p className="qth-task-start-guide__loading">QuorlythBot is turning the brief into practical first steps…</p> : <>
