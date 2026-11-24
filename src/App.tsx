@@ -348,6 +348,7 @@ export default function App() {
             aria-expanded={botMounted}
             data-quorlyth-launcher
             title="Ask QuorlythBot"
+            onFocus={() => { void loadQuorlythBot() }}
             onClick={() => { void openQuorlythBot() }}
             onContextMenu={event => {
               event.preventDefault()

@@ -368,7 +368,7 @@ export function QuorlythBot({ initialOpen = false, voiceRequest = 0, initialProm
     window.requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>('#bot .ast-in textarea')?.focus())
   }
   const project = bd.projects.find(p => p.id === pj) || null
-  const theme = bs.theme || 'pearl'
+  const theme = 'pearl'
   // Keep the voice orb out of ordinary chat and transcript playback. Live Talk
   // gets a dedicated dock; the robot preference still controls Voice Studio.
   const orbVisible = bs.robot && view !== 'chat' && view !== 'robot-studio' && (speechState === 'playing' || voiceStudioSpeaking)

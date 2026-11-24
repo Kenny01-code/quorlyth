@@ -408,10 +408,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           firstSnapshotPublished = true
           // Publish the first complete account snapshot in one React commit.
           startTransition(() => {
-            const complete = { ...EMPTY, ...staged }
-            setData(complete)
+            setData({ ...EMPTY, ...staged })
             setInitialDataSnapshot({ backend, userId, ready: true })
-            try { localStorage.setItem(offlineKey, JSON.stringify(complete)) } catch { /* Offline cache is best effort when device storage is full. */ }
+            try { localStorage.setItem(offlineKey, JSON.stringify({ ...EMPTY, ...staged })) } catch { /* Offline cache is best effort when device storage is full. */ }
           })
         }
         return

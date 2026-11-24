@@ -17,10 +17,11 @@ export type DiscussionEntry = {
   mentionedEveryone?: boolean
 }
 
-export function DiscussionThread<T extends DiscussionEntry>({ comments, authorName, onReply, emptyText = 'No discussion yet.' }: {
+export function DiscussionThread<T extends DiscussionEntry>({ comments, authorName, onReply, renderAuthor, emptyText = 'No discussion yet.' }: {
   comments: T[]
   authorName: (userId: string) => string
   onReply?: (commentId: string) => void
+  renderAuthor?: (comment: T) => ReactNode
   emptyText?: string
 }) {
   const nav = useNavigate()
@@ -35,7 +36,7 @@ export function DiscussionThread<T extends DiscussionEntry>({ comments, authorNa
           <Av id={comment.authorId} size={30} />
           <div className="qth-discussion-entry__content">
             <div className="qth-discussion-entry__meta">
-              <button type="button" className="lk idea-discussion-author" onClick={() => nav('/me/' + comment.authorId)}>{name}</button>
+              {renderAuthor ? renderAuthor(comment) : <button type="button" className="lk idea-discussion-author" onClick={() => nav('/me/' + comment.authorId)}>{name}</button>}
               <span className="dim">{when(comment.at)}</span>
               {comment.parentId ? <span className="qth-discussion-entry__reply-label">Reply</span> : null}
             </div>

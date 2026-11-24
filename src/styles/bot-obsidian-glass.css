@@ -703,15 +703,15 @@
   margin:3px 0 13px !important;
   padding:9px 12px !important;
   overflow:hidden;
-  border:1px solid rgba(255,160,88,.88) !important;
+  border:1px solid rgba(255,255,255,.94) !important;
   border-radius:17px !important;
-  background:linear-gradient(135deg,#ff9848 0%,#ff812f 56%,#ed681e 100%) !important;
-  color:#21140d !important;
+  background:linear-gradient(145deg,#fff 0%,#f3f4f7 48%,#dfe3eb 100%) !important;
+  color:#08090c !important;
   text-align:left;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.24),
-    inset 0 -1px 0 rgba(75,31,7,.16),
-    0 12px 26px -18px rgba(255,129,47,.62),
+    inset 0 1px 0 rgba(255,255,255,.98),
+    inset 0 -1px 0 rgba(146,153,166,.16),
+    0 12px 26px -18px rgba(255,255,255,.72),
     0 10px 24px -18px rgba(0,0,0,.9) !important;
   -webkit-backdrop-filter:none !important;
   backdrop-filter:none !important;
@@ -777,7 +777,7 @@
 :is(#ast .astp.bot, body > .qbot-drawer-portal.bot) .bs .qbot-sidebar-primary-action:is(:hover,:focus-visible) {
   transform:translateY(-2px);
   border-color:#fff !important;
-  background:linear-gradient(145deg,#fff 0%,#f8f9fb 48%,#e5e9f1 100%) !important;
+  background:linear-gradient(145deg,#fff 0%,#f3f4f7 48%,#dfe3eb 100%) !important;
   color:#050609 !important;
   box-shadow:
     inset 0 1px 0 #fff,

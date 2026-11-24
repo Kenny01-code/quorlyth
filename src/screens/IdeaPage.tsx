@@ -168,6 +168,9 @@ function Inner() {
       setReplying(false)
     }
   }
+  const renderDiscussionAuthor = (comment: { authorId: string }) => (
+    <button type="button" className="lk idea-discussion-author" onClick={() => nav('/me/' + comment.authorId)}>{a.nm(comment.authorId)}</button>
+  )
   return (
     <>
       <div className="head">
@@ -223,7 +226,7 @@ function Inner() {
           </div>}
           {r?.score != null && <div className="reason" style={{ marginTop: 26 }}><span className="dim">AI review {r.score}</span><p className="q-writeup">{r.reason}</p></div>}
           <h3 style={{ margin: '26px 0 4px' }}>Discussion</h3>
-          <DiscussionThread comments={comments} authorName={a.nm} onReply={startReply} emptyText="No replies yet. Start the conversation." />
+          <div className="idea-discussion-comment"><DiscussionThread comments={comments} authorName={a.nm} renderAuthor={renderDiscussionAuthor} onReply={startReply} emptyText="No replies yet. Start the conversation." /></div>
           {replyTo && <div className="chip" style={{ marginTop: 14, display: 'inline-flex', gap: 8 }}>Replying to {a.nm(comments.find(comment => comment.id === replyTo)?.authorId || '')} <button type="button" className="lk" onClick={() => setReplyTo(null)}>Cancel</button></div>}
           <div className="discussion-reply-compose">
             <label className="field"><span>Reply</span><textarea id="idea-discussion-reply" value={text} maxLength={1000} onChange={e => updateReplyText(e.target.value, e.currentTarget.selectionStart ?? e.target.value.length)} rows={3} placeholder="Write a reply… Type @ to mention someone in this community." /></label>
