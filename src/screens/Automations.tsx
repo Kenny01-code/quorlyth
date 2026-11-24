@@ -968,7 +968,7 @@ function AutomationWorkspace() {
             <em>Connected</em>
           </div>) : <div className="wa-connected-empty">{socialConnectionsReady ? 'No social publishing accounts are connected yet.' : 'Checking your connected accounts…'}</div>}
         </div>
-        <p className="wa-connected-services-note"><b>Publishing capability:</b> Quorlyth can prepare posts for the exact connected account you select. Background publishing stays disabled until the isolated preview worker is deployed; this protects the shared live backend. Instagram and Pinterest need a public HTTPS image URL, and Pinterest also needs a board.</p>
+        <p className="wa-connected-services-note"><b>Capability boundary:</b> Quorlyth can prepare posts for the exact connected account you select. Background publishing stays disabled until the isolated preview worker is deployed; this protects the shared live backend. Instagram and Pinterest need a public HTTPS image URL, and Pinterest also needs a board.</p>
       </section>
       <section className="wa-ai-architect glass pad" aria-labelledby="wa-ai-architect-title">
         <div className="wa-ai-architect-head">
@@ -1023,7 +1023,7 @@ function AutomationWorkspace() {
           <button type="button" className="btn p" onClick={() => void buildWorkflowWithAI()} disabled={aiBuildStatus === 'generating' || aiBuildStatus === 'filling' || !aiFields.length}>
             <QuorlythGlyph name="idea" size={15} />{aiBuildStatus === 'generating' || aiBuildStatus === 'filling' ? 'Building your automation…' : aiTargetWorkflowId ? 'Build my changes' : 'Build my automation'}
           </button>
-          <span>Up to 128 action steps, 3 webhook calls and 3 social posts. Quorlyth builds the plan live; external publishing starts only after you review and activate it.</span>
+          <span>Up to 128 action steps, 3 webhook calls and 3 social posts. Quorlyth builds the plan live. Review the complete draft before it can run. Nothing starts running until you turn it on. External publishing starts only after you review and activate it.</span>
         </div>
         {aiBuildStatus !== 'idle' && <div className={'wa-ai-build-status is-' + aiBuildStatus} role="status" aria-live="polite">
           <div className="wa-ai-build-status-head"><span className="wa-ai-pulse" /><strong>{aiBuildStatus === 'ready' ? 'Workflow ready for review' : aiBuildStatus === 'error' ? 'Workflow build needs attention' : aiBuildMessage || 'Quorlyth is working'}</strong><span>{aiBuildStatus.toUpperCase()}</span></div>
