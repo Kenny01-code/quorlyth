@@ -255,6 +255,7 @@ function AutomationWorkspace() {
   const runCount = allRuns.length
   const failedCount = allRuns.filter(run => run.status === 'failed').length
   const isPersistentRuntime = app.backend?.auth.mode === 'supabase' && !app.demo
+  const backgroundSocialPublishingEnabled = import.meta.env.VITE_QUORLYTH_AUTOMATION_PUBLISH_ENABLED === 'true'
   const aiLiveName = partialJsonString(aiBuildText, 'name')
   const aiLiveDescription = partialJsonString(aiBuildText, 'description')
   const aiLiveTrigger = partialJsonString(aiBuildText, 'trigger')
@@ -300,6 +301,9 @@ function AutomationWorkspace() {
         if (['instagram','pinterest'].includes(connection.provider) && !isSafeWorkflowMediaUrl(action.mediaUrl || '')) return setError('Instagram and Pinterest need a publicly reachable HTTPS image URL.')
         if (connection.provider === 'pinterest' && !(connection.metadata?.boards || []).some(board => board.id === action.boardId)) return setError('Choose a Pinterest board belonging to the selected connected account.')
       }
+    }
+    if (activate && editing.actions.some(action => action.type === 'publish_social') && !backgroundSocialPublishingEnabled) {
+      return setError('Background social publishing is not enabled on this connected backend yet. You can keep this workflow as a draft while the isolated preview backend is prepared.')
     }
     if (activate && editing.actions.some(action => action.type === 'publish_social')) {
       const targets = editing.actions.filter(action => action.type === 'publish_social').map(action => publishableSocialConnections.find(connection => connection.connection_id === action.connectionId)?.account_name || 'connected account')
@@ -385,6 +389,12 @@ function AutomationWorkspace() {
           app.toast(message)
           return
         }
+      }
+      if (publishActions.length && !backgroundSocialPublishingEnabled) {
+        const message = 'Background social publishing is not enabled on this connected backend yet. Save this workflow as a draft while the isolated preview backend is prepared.'
+        setError(message)
+        app.toast(message)
+        return
       }
       if (publishActions.length && !window.confirm('Activate this workflow with automatic social publishing?\\n\\nQuorlyth will publish publicly to the connected account when the trigger fires. You can pause the workflow at any time.')) return
     }
@@ -958,7 +968,7 @@ function AutomationWorkspace() {
             <em>Connected</em>
           </div>) : <div className="wa-connected-empty">{socialConnectionsReady ? 'No social publishing accounts are connected yet.' : 'Checking your connected accounts…'}</div>}
         </div>
-        <p className="wa-connected-services-note"><b>Publishing capability:</b> active server-side workflows can publish through the exact connected account you select. Review the post and account before activation; published post results appear in run history. Instagram and Pinterest need a public HTTPS image URL, and Pinterest also needs a board.</p>
+        <p className="wa-connected-services-note"><b>Publishing capability:</b> Quorlyth can prepare posts for the exact connected account you select. Background publishing stays disabled until the isolated preview worker is deployed; this protects the shared live backend. Instagram and Pinterest need a public HTTPS image URL, and Pinterest also needs a board.</p>
       </section>
       <section className="wa-ai-architect glass pad" aria-labelledby="wa-ai-architect-title">
         <div className="wa-ai-architect-head">
