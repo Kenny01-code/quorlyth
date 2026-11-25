@@ -1,45 +1,36 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('character motion enhances the existing Quorlyth hero without replacing its copy', async () => {
-  const [landing, creator] = await Promise.all([
+test('homepage creator character animations are not mounted', async () => {
+  const [landing, main] = await Promise.all([
     source('src/screens/Landing.tsx'),
-    source('src/components/CreatorMotion.tsx'),
+    source('src/main.tsx'),
   ])
 
   assert.match(landing, /Make your community part of what comes next\./)
-  assert.match(landing, /<HeroCreator\s*\/>/)
-  assert.match(landing, /<PreviewCreator\s*\/>/)
-  assert.match(creator, /\/creator-hero\.webp/)
-  assert.match(creator, /creator-companion-01\.svg/)
-  assert.match(creator, /creator-companion-02\.svg/)
-  assert.match(creator, /qth-character--left/)
-  assert.match(creator, /qth-character--middle/)
-  assert.match(creator, /aria-hidden="true"/)
-  assert.match(creator, /IntersectionObserver/)
+  assert.doesNotMatch(landing, /HeroCreator|PreviewCreator|CreatorMotion|creator-hero|creator-companion/)
+  assert.doesNotMatch(main, /CreatorMotion|landing-motion\.css|creator-hero|creator-companion/)
 })
 
-test('landing character and card motion include responsive and reduced-motion fallbacks', async () => {
-  const motion = await source('src/styles/landing-motion.css')
-  assert.match(motion, /@keyframes qth-creator-drift/)
-  assert.match(motion, /@keyframes qth-creator-orbit/)
-  assert.match(motion, /@keyframes qth-character-float/)
-  assert.match(motion, /qth-character--middle/)
-  assert.match(motion, /@media \(max-width: 760px\)/)
-  assert.match(motion, /@media \(prefers-reduced-motion: reduce\)/)
-  assert.match(motion, /animation: none !important/)
-})
-
-test('the character artwork is present as optimized transparent web assets', async () => {
-  const [lead, companionOne, companionTwo] = await Promise.all([
-    stat(new URL('../public/creator-hero.webp', import.meta.url)),
-    stat(new URL('../public/creator-companion-01.svg', import.meta.url)),
-    stat(new URL('../public/creator-companion-02.svg', import.meta.url)),
+test('the remaining editorial text reveal respects reduced-motion preferences', async () => {
+  const [landing, styles] = await Promise.all([
+    source('src/screens/Landing.tsx'),
+    source('src/styles/extra.css'),
   ])
-  assert.ok(lead.size > 10000 && lead.size < 100000)
-  assert.ok(companionOne.size > 1000 && companionOne.size < 20000)
-  assert.ok(companionTwo.size > 1000 && companionTwo.size < 20000)
+
+  assert.match(landing, /function EditorialReveal/)
+  assert.match(landing, /qth-editorial-word/)
+  assert.match(styles, /@keyframes qthEditorialWordReveal/)
+  assert.match(styles, /prefers-reduced-motion:reduce[\s\S]*?\.qth-editorial-word/)
+})
+
+test('homepage copy remains present without creator character artwork', async () => {
+  const landing = await source('src/screens/Landing.tsx')
+
+  assert.match(landing, /Make your community part of what comes next\./)
+  assert.match(landing, /Good ideas find their people\./)
+  assert.doesNotMatch(landing, /<HeroCreator\s*\/>|<PreviewCreator\s*\/>/)
 })
