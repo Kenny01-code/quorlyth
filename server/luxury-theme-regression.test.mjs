@@ -13,7 +13,7 @@ test('warm editorial palette is loaded after the existing page themes and stays 
   assert.match(theme, /--q-lux-page:\s*#f5f1e9/)
   assert.match(theme, /--q-lux-orange:\s*#bf5532/)
   assert.match(theme, /--q-lux-bone:\s*#efe7dc/)
-  assert.match(theme, /#nav\.nav-item\.on/)
+  assert.match(theme, /#nav\s+\.nav-item\.on/)
   assert.match(theme, /#root #main \.q-writeup/)
   assert.match(theme, /overflow-wrap:\s*anywhere/)
   assert.doesNotMatch(theme, /#bot|qbot-premium|qbot-conversation/)
