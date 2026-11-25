@@ -495,7 +495,7 @@ test('QuorlythBot chat frame reduces expensive blur and offscreen transcript ren
   ])
   assert.match(styles, /\.bot \.ast-log > \.am[\s\S]{0,180}content-visibility: auto/)
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]{0,240}backdrop-filter: none !important/)
-  assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,lowPower\?0\.9:1\.0\)\)/)
+  assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,lowPower\?0\.85:1\.5\)\)/)
   assert.match(robot, /if\(now-lastRender<1000\/\(lowPower\?24:30\)\)/)
   assert.match(robot, /if\(!lowPower\)addEventListener\(["']pointermove["']/)
 })
