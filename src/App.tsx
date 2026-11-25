@@ -343,7 +343,7 @@ export default function App() {
       <div id="sp" />
       {appNavigation}
       <main id="main" tabIndex={-1}><Landing /></main>
-      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} initialPrompt={botInitialPrompt} promptRequest={botPromptRequest} fullPage={loc.pathname === '/bot'} onClose={() => { setBotInitialOpen(false); nav(botReturnToRef.current || '/work', { replace: true }) }} /></Suspense>}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} initialPrompt={botInitialPrompt} promptRequest={botPromptRequest} fullPage={false} onClose={() => { setBotInitialOpen(false); nav(botReturnToRef.current || '/work', { replace: true }) }} /></Suspense>}
     </>
   )
 
