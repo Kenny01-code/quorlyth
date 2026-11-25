@@ -997,7 +997,7 @@ details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7
   height: 9px;
   border: solid #FFFCF6;
   border-width: 0 2px 2px 0;
-  transform: translate(-50%, -60%) rotate(45deg);
+  transform: translate(-50%, -50%) rotate(45deg);
   opacity: 0;
   pointer-events: none;
 }
