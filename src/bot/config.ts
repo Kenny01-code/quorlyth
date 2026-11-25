@@ -21,8 +21,24 @@ export const VOICE_ACCENTS: { id: VoiceAccent; name: string; description: string
   { id: 'international', name: 'International English', description: 'Clear, broadly neutral English' },
 ]
 
-export interface BotSettings { tone: string; len: string; emo: boolean; about: string; voice: boolean; calm: boolean; robot: boolean; model: 'quick' | 'smart'; vid: string; accent: VoiceAccent; theme: string }
-export const BOT_DEFAULTS: BotSettings = { tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: false, model: 'smart', vid: 'aria', accent: 'auto', theme: 'pearl' }
+export interface BusinessProfile {
+  name: string
+  industry: string
+  offer: string
+  audience: string
+  goal: string
+  constraint: string
+}
+
+export interface BotSettings {
+  tone: string; len: string; emo: boolean; about: string; voice: boolean; calm: boolean; robot: boolean
+  model: 'quick' | 'smart'; vid: string; accent: VoiceAccent; theme: string; businessProfile?: BusinessProfile
+}
+export const BOT_DEFAULTS: BotSettings = {
+  tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: false,
+  model: 'smart', vid: 'aria', accent: 'auto', theme: 'pearl',
+  businessProfile: { name: '', industry: '', offer: '', audience: '', goal: '', constraint: '' },
+}
 
 export const SKILLS: { id: string; n: string; icon: string; d: string; own: boolean }[] = [
   { id: 'brief', n: 'Community briefing', icon: 'insight', d: 'Themes, demand and next steps from your ideas.', own: true },
