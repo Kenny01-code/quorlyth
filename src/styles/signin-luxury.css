@@ -1,0 +1,235 @@
+/* Quorlyth sign-in: premium obsidian stage, burnished robot and warm bone form. */
+#root #main .lg {
+  width: min(1120px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  margin: clamp(16px, 3.6vh, 42px) auto;
+}
+
+#root #main .lg > .stage {
+  min-width: 0;
+  min-height: 600px;
+  border: 1px solid rgba(195, 83, 48, .42) !important;
+  background:
+    radial-gradient(ellipse 58% 48% at 52% 42%, rgba(190, 76, 42, .26), transparent 70%),
+    radial-gradient(ellipse 65% 64% at 50% 105%, rgba(98, 34, 20, .25), transparent 75%),
+    linear-gradient(148deg, #19120f 0%, #0c0a09 58%, #080807 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 202, 170, .16),
+    inset 0 -1px 0 rgba(0, 0, 0, .7),
+    0 32px 90px -48px rgba(62, 26, 14, .8),
+    0 0 54px -42px rgba(193, 79, 43, .55) !important;
+}
+
+#root #main .lg > .stage:before {
+  background:
+    radial-gradient(ellipse 54% 40% at 50% 2%, rgba(255, 164, 111, .12), transparent 76%),
+    linear-gradient(120deg, rgba(255, 255, 255, .035), transparent 34%, transparent 70%, rgba(220, 105, 64, .08)) !important;
+}
+
+#root #main .lg > .stage:after,
+#root #main .lg > .fm:after {
+  background: linear-gradient(128deg, rgba(255, 225, 205, .13), transparent 20%, transparent 72%, rgba(203, 100, 63, .07)) !important;
+  opacity: .8;
+}
+
+#root #main .lg > .stage canvas {
+  filter: saturate(1.18) contrast(1.08);
+}
+
+#root #main .lg > .stage .c1 .chip,
+#root #main .lg > .stage .hello {
+  border-color: rgba(238, 141, 102, .38) !important;
+  background: linear-gradient(145deg, rgba(255, 188, 143, .15), rgba(93, 39, 25, .24)) !important;
+  color: #ffe0cf !important;
+  box-shadow: inset 0 1px 0 rgba(255, 230, 211, .13), 0 8px 25px -18px rgba(0, 0, 0, .9);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+#root #main .lg > .stage .cap {
+  color: #fff4eb;
+  text-shadow: 0 5px 25px rgba(0, 0, 0, .8);
+}
+
+#root #main .lg > .stage .cap .dim {
+  color: #d6a48d !important;
+}
+
+#root #main .lg .q-signin-hello-status {
+  color: #f5d6c6;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .8);
+}
+
+#root #main .lg .q-signin-hello-status.is-error {
+  color: #ffb8a3;
+}
+
+#root #main .lg > .fm {
+  min-width: 0;
+  padding: clamp(26px, 3.6vw, 46px);
+  border: 1px solid rgba(65, 43, 30, .16) !important;
+  border-radius: 30px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(201, 112, 74, .09), transparent 46%),
+    linear-gradient(145deg, #fffefa 0%, #f7f0e7 52%, #efe5d8 100%) !important;
+  color: #191512 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .98), 0 28px 75px -44px rgba(54, 37, 25, .5) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+#root #main .lg .fm :is(h1, h2, h3, h4, h5, h6, p, label, small, strong, span, .mut, .dim) {
+  color: #191512 !important;
+  -webkit-text-fill-color: #191512;
+  text-shadow: none !important;
+  opacity: 1 !important;
+}
+
+#root #main .lg .fm .mut,
+#root #main .lg .fm .dim,
+#root #main .lg .fm .field > span {
+  color: #6d5d50 !important;
+  -webkit-text-fill-color: #6d5d50 !important;
+}
+
+#root #main .lg .fm .field {
+  margin-top: 20px;
+}
+
+#root #main .lg .fm .field > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .035em;
+}
+
+#root #main .lg .fm .iw {
+  min-width: 0;
+  border: 1px solid rgba(58, 42, 31, .19) !important;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fffefa, #f2eadf) !important;
+  box-shadow: inset 0 1px 0 #fff, 0 8px 22px -19px rgba(45, 30, 20, .48) !important;
+}
+
+#root #main .lg .fm .iw:focus-within {
+  border-color: #b65030 !important;
+  box-shadow: 0 0 0 3px rgba(191, 85, 50, .12), inset 0 1px 0 #fff !important;
+}
+
+#root #main .lg .fm .iw input {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  padding: 13px 44px 13px 48px;
+  border: 0 !important;
+  outline: 0;
+  border-radius: inherit;
+  background: transparent !important;
+  color: #191512 !important;
+  -webkit-text-fill-color: #191512 !important;
+  box-shadow: none !important;
+  font-size: 16px;
+}
+
+#root #main .lg .fm .iw input::placeholder {
+  color: #8c7b6d !important;
+  -webkit-text-fill-color: #8c7b6d !important;
+  opacity: 1;
+}
+
+#root #main .lg .fm .iw > .ic,
+#root #main .lg .fm .eye {
+  color: #8d482e !important;
+}
+
+#root #main .lg .fm .eye:hover {
+  color: #632814 !important;
+}
+
+#root #main .lg .fm .btn {
+  min-height: 48px;
+  border-radius: 14px;
+  border-color: rgba(71, 45, 30, .16) !important;
+  background: linear-gradient(145deg, #fffefa, #efe6db) !important;
+  color: #231912 !important;
+  box-shadow: inset 0 1px 0 #fff, 0 10px 25px -21px rgba(56, 35, 20, .55) !important;
+}
+
+#root #main .lg .fm .btn.p {
+  border-color: #95391f !important;
+  background: linear-gradient(135deg, #cb6742 0%, #b54c2b 58%, #8e351e 100%) !important;
+  color: #fff9f3 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 230, 212, .4), 0 14px 28px -20px rgba(142, 53, 30, .6) !important;
+}
+
+#root #main .lg .fm .btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.035);
+}
+
+#root #main .lg .fm .chip {
+  background: rgba(244, 235, 223, .82) !important;
+  border-color: rgba(61, 41, 27, .16) !important;
+  color: #32241a !important;
+}
+
+#root #main .lg .fm .chip:hover {
+  border-color: rgba(161, 69, 38, .45) !important;
+  background: #efdfd1 !important;
+}
+
+#root #main .lg .fm .done .score {
+  border-color: rgba(184, 78, 45, .28) !important;
+  color: #a24427 !important;
+  background: linear-gradient(145deg, #fffefa, #f1e2d4) !important;
+}
+
+#root #main .lg .fm .acts {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#root #main .lg .fm form {
+  width: 100%;
+  min-width: 0;
+}
+
+#root #main .lg .fm :is(.field, .iw, input, button) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 860px) {
+  #root #main .lg > .stage {
+    min-height: clamp(260px, 42svh, 360px);
+  }
+  #root #main .lg > .fm {
+    padding: clamp(22px, 4.5vw, 32px);
+  }
+}
+
+@media (max-width: 540px) {
+  #root #main .lg {
+    width: 100%;
+    margin: 8px auto 22px;
+  }
+  #root #main .lg > .stage {
+    min-height: clamp(235px, 36svh, 290px);
+    border-radius: 22px;
+  }
+  #root #main .lg > .fm {
+    padding: 23px 17px;
+    border-radius: 22px;
+  }
+  #root #main .lg .fm h2 {
+    font-size: clamp(29px, 8vw, 35px) !important;
+    line-height: 1.1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root #main .lg * {
+    transition-duration: .01ms !important;
+  }
+}

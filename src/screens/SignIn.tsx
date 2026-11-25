@@ -7,6 +7,7 @@ import { Robot, RobotApi } from '../bot/Robot'
 import { speakText, type SpeechPlayback } from '../ai/client'
 import { useRef } from 'react'
 import '../styles/signin-performance.css'
+import '../styles/signin-luxury.css'
 
 function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: boolean }) {
   const r = useRef<RobotApi | null>(null)
@@ -175,7 +176,7 @@ function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: 
 
   return (
     <div className="glass stage ok" id="stg">
-      <Robot ref={r} defer onReady={() => {
+      <Robot ref={r} defer theme="burnished" onReady={() => {
         if (autoSpeak) {
           if (autoHelloStarted.current) return
           helloAutoStartTimer.current = window.setTimeout(() => {

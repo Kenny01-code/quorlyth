@@ -1,0 +1,294 @@
+/* QUORLYTH — warm editorial site system.
+   This layer styles the surrounding product pages only. The QuorlythBot UI has its own
+   isolated stylesheet stack and is intentionally not targeted here. */
+:root {
+  --q-lux-page: #f5f1e9;
+  --q-lux-paper: #fffefa;
+  --q-lux-bone: #efe7dc;
+  --q-lux-bone-deep: #e6dacb;
+  --q-lux-ink: #191512;
+  --q-lux-ink-soft: #51463d;
+  --q-lux-muted: #74685e;
+  --q-lux-orange: #bf5532;
+  --q-lux-orange-deep: #923c23;
+  --q-lux-line: rgba(35, 25, 19, .14);
+  --q-lux-shadow: 0 24px 64px -42px rgba(35, 25, 19, .4);
+}
+
+html {
+  background: var(--q-lux-page) !important;
+  color-scheme: light;
+}
+
+body {
+  background: var(--q-lux-page) !important;
+  color: var(--q-lux-ink) !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body:before {
+  background:
+    radial-gradient(ellipse 58% 42% at 82% -8%, rgba(191, 85, 50, .085), transparent 72%),
+    radial-gradient(ellipse 46% 36% at 5% 100%, rgba(214, 193, 166, .24), transparent 72%),
+    radial-gradient(ellipse 32% 28% at 52% 45%, rgba(255, 255, 255, .78), transparent 72%) !important;
+}
+
+#root {
+  min-width: 320px;
+  color: var(--q-lux-ink);
+}
+
+#root main#main {
+  width: 100%;
+  max-width: 1440px;
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(28px, 4vw, 58px) clamp(16px, 3vw, 38px) 112px;
+  color: var(--q-lux-ink) !important;
+}
+
+#root #main > section,
+#root #main > section.on {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: visible;
+  color: var(--q-lux-ink) !important;
+}
+
+#root #main :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--q-lux-ink) !important;
+  text-shadow: none !important;
+}
+
+#root #main :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow, .aistat) {
+  color: var(--q-lux-muted) !important;
+  opacity: 1 !important;
+}
+
+#root #main :is(.glass:not(.bot):not(.stage):not(.fm), .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]) {
+  min-width: 0;
+  max-width: 100%;
+  border-color: var(--q-lux-line) !important;
+  background: linear-gradient(145deg, var(--q-lux-paper) 0%, #f6f0e7 100%) !important;
+  color: var(--q-lux-ink) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .94), var(--q-lux-shadow) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+#root #main :is(.glass:not(.bot):not(.stage):not(.fm), .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]) :is(h1, h2, h3, h4, h5, h6, p, li, dd, dt, blockquote, figcaption, label, small, span, b, strong, em, time, output, summary, .mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow) {
+  color: var(--q-lux-ink) !important;
+  -webkit-text-fill-color: var(--q-lux-ink);
+  opacity: 1 !important;
+}
+
+#root #main :is(.glass:not(.bot):not(.stage):not(.fm), .card, .panel, .lift, .idea, .post, .sheet, .dialog, .popover, .dropdown, .menu, [class*="surface-card"], [class*="panel-card"]) :is(.mut, .dim, .muted, .subtle, .hint, .helper, .caption, .eyebrow, small, figcaption, time) {
+  color: var(--q-lux-muted) !important;
+  -webkit-text-fill-color: var(--q-lux-muted);
+}
+
+#root #main .q-writeup,
+#root #main .idea-feed-writeup,
+#root #main .idea-card-title,
+#root #main .ql-project-deadline {
+  color: #17120f !important;
+  -webkit-text-fill-color: #17120f !important;
+  font-family: Inter, "Avenir Next", Avenir, "Segoe UI", sans-serif !important;
+  font-weight: 480;
+  line-height: 1.76;
+  letter-spacing: .002em;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+#root #main :is(input, textarea, select) {
+  min-width: 0;
+  max-width: 100%;
+  border-color: rgba(45, 32, 23, .2) !important;
+  background: #fffefa !important;
+  color: #17120f !important;
+  -webkit-text-fill-color: #17120f !important;
+  box-shadow: inset 0 1px 2px rgba(35, 25, 19, .045) !important;
+  color-scheme: light;
+}
+
+#root #main :is(input, textarea, select)::placeholder {
+  color: #81756a !important;
+  -webkit-text-fill-color: #81756a !important;
+  opacity: 1 !important;
+}
+
+#root #main :is(input, textarea, select):focus-visible {
+  outline: 2px solid var(--q-lux-orange) !important;
+  outline-offset: 2px !important;
+  border-color: var(--q-lux-orange) !important;
+  box-shadow: 0 0 0 4px rgba(191, 85, 50, .12) !important;
+}
+
+#root #main .btn {
+  max-width: 100%;
+  border-color: rgba(45, 32, 23, .18) !important;
+  background: linear-gradient(145deg, #fffefa, #f0e8dc) !important;
+  color: var(--q-lux-ink) !important;
+  box-shadow: 0 8px 22px -19px rgba(35, 25, 19, .42);
+}
+
+#root #main .btn.p {
+  border-color: #a94728 !important;
+  background: linear-gradient(135deg, #c76540 0%, #b54c2b 56%, #963c22 100%) !important;
+  color: #fffaf4 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 235, 220, .34), 0 12px 28px -18px rgba(145, 54, 29, .5) !important;
+}
+
+#root #main .btn.p:hover {
+  background: linear-gradient(135deg, #ce704b 0%, #bd5532 56%, #a34628 100%) !important;
+  box-shadow: 0 14px 30px -18px rgba(145, 54, 29, .55) !important;
+}
+
+#root #main :is(button.chip, .chip) {
+  max-width: 100%;
+  border-color: rgba(45, 32, 23, .16) !important;
+  background: #f5eee4 !important;
+  color: #322820 !important;
+}
+
+#root #main :is(button.chip, .chip).on {
+  border-color: var(--q-lux-orange) !important;
+  background: #f2e1d5 !important;
+  color: #71321f !important;
+}
+
+#root #main :is(.bar, .steps i) {
+  background-color: rgba(35, 25, 19, .1) !important;
+}
+
+#root #main .bar i,
+#root #main .steps i.on {
+  background: linear-gradient(90deg, #9b3e24, #d77950) !important;
+  box-shadow: 0 0 14px rgba(191, 85, 50, .22) !important;
+}
+
+#root #main .sk,
+#root #main .qth-route-loading-kicker,
+#root #main .qth-route-loading-title,
+#root #main .qth-route-loading-description,
+#root #main .qth-route-loading-panel,
+#root #main .qth-route-loading-grid span {
+  border-color: rgba(45, 32, 23, .1) !important;
+  background: linear-gradient(100deg, #eee5d9 0%, #fffefa 48%, #eadfd2 100%) !important;
+  background-size: 220% 100% !important;
+}
+
+#root #main .sk {
+  animation: q-lux-skeleton 1.7s ease-in-out infinite;
+}
+
+@keyframes q-lux-skeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -120% 0; }
+}
+
+#root #main :where(.head, .acts, .row, .stat, .field) {
+  min-width: 0;
+}
+
+#root #main :where(.head, .acts) {
+  flex-wrap: wrap;
+}
+
+#root #main :where(.grid, .g2, .g3, .g5, [class*="grid"]) > * {
+  min-width: 0;
+}
+
+#root #main :where(.glass, .card, .panel, .idea, .post, .sheet, .dialog, [class*="panel-card"]) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#root #main :where(p, li, td, th, figcaption, .q-writeup, .mut, .dim) {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+#root #main :where(img, video, canvas, svg) {
+  max-width: 100%;
+}
+
+#root #main .glass:not(.stage):not(.fm):not(:has(img, video, canvas, .media-frame)) {
+  overflow: visible !important;
+}
+
+#nav.glass {
+  border-color: rgba(45, 32, 23, .13) !important;
+  background: rgba(255, 254, 250, .94) !important;
+  color: var(--q-lux-ink) !important;
+  box-shadow: 0 14px 40px -30px rgba(40, 27, 18, .4), inset 0 1px 0 #fff !important;
+  -webkit-backdrop-filter: blur(24px) saturate(145%) !important;
+  backdrop-filter: blur(24px) saturate(145%) !important;
+}
+
+#nav.glass:before {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .95), transparent) !important;
+}
+
+#nav :is(.nav-wordmark, .nav-wordmark span, .bl, .srch, .navav) {
+  color: var(--q-lux-ink) !important;
+}
+
+#nav .nav-item {
+  color: #64594f !important;
+}
+
+#nav .nav-item:hover {
+  color: #1a1511 !important;
+  background: #f3ece3 !important;
+}
+
+#nav .nav-item.on {
+  color: #fffaf4 !important;
+  background: linear-gradient(135deg, #c76540, #ad4828) !important;
+  box-shadow: 0 6px 17px -12px rgba(145, 54, 29, .68) !important;
+}
+
+#nav .nav-item.on :is(svg, .ic, span) {
+  color: #fffaf4 !important;
+  stroke: currentColor;
+}
+
+#nav .nsl {
+  background: rgba(35, 25, 19, .12) !important;
+}
+
+#nav .nsl i {
+  background: #bd5532 !important;
+}
+
+#nav .bl:hover,
+#nav .srch:hover,
+#nav .navav:hover {
+  background: #f0e7dc !important;
+}
+@media (max-width: 900px) {
+  #root main#main {
+    padding-top: 32px;
+  }
+}
+@media (max-width: 680px) {
+  #root main#main {
+    padding: 22px 12px calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+  #root #main :where(.head, .acts) {
+    gap: 9px;
+  }
+  #root #main :where(.btn, button.chip, .chip) {
+    white-space: normal;
+    text-align: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root #main .sk {
+    animation: none !important;
+  }
+}

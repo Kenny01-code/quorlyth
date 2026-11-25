@@ -1,4 +1,38 @@
 export const THEMES = {
+  // Dedicated sign-in finish: deep kiln-fired orange with polished copper hardware.
+  burnished: {
+    n: 'Burnished Ember',
+    p: 0xc15a37,
+    b: 0x17120f,
+    c: 0x8f4329,
+    g: 0xffbc88,
+    r: 0xffd0a6,
+    e: 0x542113,
+    ei: 0.07,
+    roughness: 0.24,
+    metalness: 0.18,
+    clearcoat: 0.96,
+    clearcoatRoughness: 0.105,
+    envMapIntensity: 0.9,
+    armRoughness: 0.255,
+    armMetalness: 0.17,
+    armClearcoat: 0.94,
+    armClearcoatRoughness: 0.11,
+    armEnvMapIntensity: 0.84,
+    faceRoughness: 0.22,
+    faceMetalness: 0.38,
+    faceClearcoat: 0.88,
+    faceClearcoatRoughness: 0.12,
+    faceEnvMapIntensity: 0.76,
+    trimRoughness: 0.24,
+    trimMetalness: 0.58,
+    trimClearcoat: 0.9,
+    trimClearcoatRoughness: 0.11,
+    trimEnvMapIntensity: 0.82,
+    g1: '#C15A37',
+    g2: '#542113',
+    cr: '193,90,55',
+  },
   // The robot shell uses the exact uploaded Quorlyth orange swatch (#D06A40).
   // Its highlights and shadows stay in the same orange family; the deep-ink faceplate is unchanged.
   terracotta: {
