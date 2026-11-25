@@ -64,6 +64,8 @@ test('security migration locks creator data and supports the real collaboration-
   await db.exec(migration)
   const managerGrant = await readFile(new URL('../supabase/migrations/20261015070600_grant_manage_community_rls_exec.sql', import.meta.url), 'utf8')
   await db.exec(managerGrant)
+  const ownerOnlyIdeaDelete = await readFile(new URL('../supabase/migrations/20261125120000_community_owner_only_idea_deletion.sql', import.meta.url), 'utf8')
+  await db.exec(ownerOnlyIdeaDelete)
   await t.test('community request RLS helper can run for authenticated users but not anonymous visitors', async () => {
     const { rows } = await db.query("select has_function_privilege('authenticated', 'private.can_manage_community(text)', 'EXECUTE') as authenticated_can_execute, has_function_privilege('anon', 'private.can_manage_community(text)', 'EXECUTE') as anon_can_execute")
     assert.equal(rows[0].authenticated_can_execute, true)
@@ -351,6 +353,32 @@ test('security migration locks creator data and supports the real collaboration-
     await assert.rejects(insertDoc('ideas/anon-idea', {
       title: 'anonymous', body: 'no', cid: communityId, authorId: IDS.outsider, tags: [], at: 13,
     }))
+  })
+
+  await t.test('only the owning community account can delete an idea, not its author or a platform admin', async () => {
+    await db.exec('reset role')
+    await db.query(
+      "insert into private.platform_roles(user_id,role,created_by) values ($1,'admin',$2) on conflict (user_id) do update set role='admin'",
+      [IDS.outsider, IDS.owner],
+    )
+
+    await assume(IDS.member)
+    await insertDoc('ideas/owner-only-delete-guard', {
+      title: 'Owner-only deletion guard',
+      body: 'The author must not be able to delete this idea.',
+      cid: communityId,
+      authorId: IDS.member,
+      tags: [],
+      at: 50,
+    })
+    await assert.rejects(deleteDoc('ideas/owner-only-delete-guard'), /Delete denied by row-level security/)
+
+    await assume(IDS.outsider)
+    await assert.rejects(deleteDoc('ideas/owner-only-delete-guard'), /Delete denied by row-level security/)
+
+    await assume(IDS.owner)
+    await deleteDoc('ideas/owner-only-delete-guard')
+    assert.equal(await count('ideas/owner-only-delete-guard'), 0)
   })
 })
 
