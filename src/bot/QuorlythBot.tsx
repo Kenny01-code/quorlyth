@@ -454,6 +454,12 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
   }, [fullPage])
 
   useEffect(() => {
+    if (fullPage || !open) return
+    setOpen(false)
+    setMinimized(false)
+  }, [fullPage])
+
+  useEffect(() => {
     if (voiceRequest <= 0) return
     setOpen(true)
     setMinimized(false)
