@@ -183,7 +183,7 @@ test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', 
   assert.ok(robot3d.includes('1000/(lowPower?24:30)'))
   assert.match(robot3d, /document\.visibilityState/)
   assert.match(robot3d, /document\.removeEventListener\(["']visibilitychange["']/)
-  assert.ok(robot3d.includes('window.devicePixelRatio||1,lowPower?0.9:1.0'))
+  assert.ok(robot3d.includes('window.devicePixelRatio||1,lowPower?0.85:1.5'))
   assert.match(robot3d, /powerPreference:lowPower\?'low-power':'high-performance'/)
 })
 
