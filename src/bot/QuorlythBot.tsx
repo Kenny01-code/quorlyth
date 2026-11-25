@@ -4,6 +4,7 @@ import '../styles/bot-liquid-glass.css'
 import '../styles/bot-obsidian-glass.css'
 import '../styles/bot-redesign.css'
 import '../styles/robot-studio.css'
+import '../styles/bot-operating-system.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -22,6 +23,7 @@ import type { RobotApi } from './Robot'
 import { Orb } from './Orb'
 import { ChatMenu } from './ChatMenu'
 import { BotViews } from './views'
+import { BotOperatingViews } from './BotOperatingViews'
 import { SKILLS, THEMES, TOUR_MEMBER, TOUR_OWNER, VOICES } from './config'
 import { buildContext } from './context'
 import { createBotGreeting } from './greetings'
@@ -158,7 +160,8 @@ function playPreparedSpeechBlob(
   })
 }
 
-type View = 'chat' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'robot-studio' | 'settings'
+type View = 'chat' | 'intelligence' | 'work' | 'network' | 'skills' | 'projects' | 'library' | 'custom' | 'voice' | 'robot-studio' | 'settings'
+type BotActivityStep = { id: string; label: string; detail: string; state: 'complete' | 'active' | 'error'; at: number }
 type Live = null | { state: string; user: string; bot: string }
 type SocialPublishProvider = Exclude<SocialProvider, 'meta'>
 type SocialTargetOption = { connectionId: string; provider: SocialPublishProvider; accountName: string; username: string; boards: Array<{ id: string; name: string }>; defaultBoardId: string }
@@ -292,7 +295,7 @@ function pendingActionDetail(action: PendingAction, communities: { id: string; n
   }
 }
 
-export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest = 0, initialPrompt = '', promptRequest = 0 }: { initialOpen?: boolean; openRequest?: number; voiceRequest?: number; initialPrompt?: string; promptRequest?: number }) {
+export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest = 0, initialPrompt = '', promptRequest = 0, fullPage = false, onClose }: { initialOpen?: boolean; openRequest?: number; voiceRequest?: number; initialPrompt?: string; promptRequest?: number; fullPage?: boolean; onClose?: () => void }) {
   const a = useApp()
   const nav = useNavigate()
   const loc = useLocation()
@@ -331,6 +334,13 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
   const [stage, setStage] = useState<'std' | 'big'>('std')
   const [status, setStatus] = useState('Online')
   const [thinkingTask, setThinkingTask] = useState('')
+  const [activitySteps, setActivitySteps] = useState<BotActivityStep[]>([])
+  const recordActivity = (label: string, detail: string, state: BotActivityStep['state'] = 'active') => {
+    setActivitySteps(current => {
+      const settled = current.map(step => step.state === 'active' ? { ...step, state: 'complete' as const } : step)
+      return [...settled, { id: Date.now().toString(36) + '-' + label.toLowerCase().replace(/[^a-z0-9]+/g, '-'), label, detail, state, at: Date.now() }].slice(-5)
+    })
+  }
   const [q, setQ] = useState('')
   const [showMoreNav, setShowMoreNav] = useState(false)
   const [menu, setMenu] = useState<null | { id: string | null; x: number; y: number; leftBound?: number; rightBound?: number; anchor: HTMLElement; offsetX: number; offsetY: number }>(null)
@@ -431,6 +441,16 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
     setOpen(true)
     setMinimized(false)
   }, [openRequest])
+
+  useEffect(() => {
+    if (!fullPage) return
+    setOpen(true)
+    setMinimized(false)
+    setMode('full')
+    setSize(null)
+    setPosition(null)
+    setSide(window.innerWidth > 760)
+  }, [fullPage])
 
   useEffect(() => {
     if (voiceRequest <= 0) return
