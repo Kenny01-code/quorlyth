@@ -933,3 +933,119 @@ details.sw-task-reassign{display:block;padding:8px 0 0;color:rgba(241,241,244,.7
 .sw-review-controls .sw-field>span{
   letter-spacing:.01em;
 }
+
+
+/* Unified warm selection treatment for milestone and workspace task assignees. */
+#root .ql-assignee-option,
+#root .sw-assignee-option {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid rgba(25, 18, 12, .18);
+  border-radius: 11px;
+  background: #FFFCF6;
+  color: #080807;
+  -webkit-text-fill-color: #080807;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+#root .ql-assignee-option:hover,
+#root .sw-assignee-option:hover {
+  border-color: rgba(184, 77, 39, .58);
+}
+#root .ql-assignee-option.is-selected,
+#root .sw-assignee-option.is-selected {
+  background: #FBE5D7;
+  border-color: #B84D27;
+  box-shadow: inset 0 0 0 1px rgba(184, 77, 39, .12);
+}
+#root .ql-assignee-option > input[type="checkbox"],
+#root .sw-assignee-option > input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: block;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid rgba(25, 18, 12, .38);
+  border-radius: 6px;
+  background: #FFFCF6;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+#root .ql-assignee-option > input[type="checkbox"]:checked,
+#root .sw-assignee-option > input[type="checkbox"]:checked {
+  border-color: #B84D27;
+  background: #B84D27;
+  box-shadow: 0 0 0 3px rgba(184, 77, 39, .12);
+}
+#root .ql-assignee-option > input[type="checkbox"]::after,
+#root .sw-assignee-option > input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 9px;
+  border: solid #FFFCF6;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+  opacity: 0;
+  pointer-events: none;
+}
+#root .ql-assignee-option > input[type="checkbox"]:checked::after,
+#root .sw-assignee-option > input[type="checkbox"]:checked::after {
+  opacity: 1;
+}
+#root .ql-assignee-option > input[type="checkbox"]:focus-visible,
+#root .sw-assignee-option > input[type="checkbox"]:focus-visible {
+  outline: 2px solid rgba(184, 77, 39, .62);
+  outline-offset: 3px;
+}
+#root .ql-assignee-option > input[type="checkbox"]:disabled,
+#root .sw-assignee-option > input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+#root .ql-assignee-option > span,
+#root .sw-assignee-option > span {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #080807;
+  -webkit-text-fill-color: #080807;
+}
+#root .ql-assignee-option small,
+#root .sw-assignee-option small {
+  color: rgba(8, 8, 7, .64);
+  -webkit-text-fill-color: rgba(8, 8, 7, .64);
+  font-size: 10px;
+}
+#root .ql-assignee-option:has(input:disabled),
+#root .sw-assignee-option:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: .76;
+}
+#root .ql-assignee-option:has(input:disabled):hover,
+#root .sw-assignee-option:has(input:disabled):hover {
+  border-color: rgba(25, 18, 12, .18);
+}
+@media (prefers-reduced-motion: reduce) {
+  #root .ql-assignee-option,
+  #root .sw-assignee-option,
+  #root .ql-assignee-option > input[type="checkbox"],
+  #root .sw-assignee-option > input[type="checkbox"] {
+    transition: none;
+  }
+}
