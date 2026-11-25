@@ -178,12 +178,14 @@ test('community manager access keeps its editorial black-ink glass treatment', a
   assert.match(main, /styles\/request-access-editorial\.css/)
 })
 
-test('the 3D Bot renderer is frame-limited and pauses while the tab is hidden', async () => {
+test('the 3D Bot renderer reserves premium density and finish for the login robot', async () => {
   const robot3d = await readSource('src/bot/robot3d.ts')
   assert.ok(robot3d.includes('1000/(lowPower?24:30)'))
   assert.match(robot3d, /document\.visibilityState/)
   assert.match(robot3d, /document\.removeEventListener\(["']visibilitychange["']/)
-  assert.ok(robot3d.includes('window.devicePixelRatio||1,lowPower?0.85:1.5'))
+  assert.ok(robot3d.includes('var premium=opt.theme==="burnished"'))
+  assert.ok(robot3d.includes('var dprCap=premium?1.5:1.0,lowPowerCap=premium?0.85:0.9'))
+  assert.ok(robot3d.includes('window.devicePixelRatio||1,lowPower?lowPowerCap:dprCap'))
   assert.match(robot3d, /powerPreference:lowPower\?'low-power':'high-performance'/)
 })
 
@@ -297,7 +299,8 @@ test('QuorlythBot keeps a readable sidebar width and a lower GPU pixel ratio', a
     readSource('src/bot/robot3d.ts'),
   ])
   assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
-  assert.ok(renderer.includes('window.devicePixelRatio||1,lowPower?0.85:1.5'))
+  assert.ok(renderer.includes('window.devicePixelRatio||1,lowPower?lowPowerCap:dprCap'))
+  assert.ok(renderer.includes('var dprCap=premium?1.5:1.0,lowPowerCap=premium?0.85:0.9'))
   assert.ok(renderer.includes('1000/(lowPower?24:30)'))
 })
 
@@ -495,7 +498,7 @@ test('QuorlythBot chat frame reduces expensive blur and offscreen transcript ren
   ])
   assert.match(styles, /\.bot \.ast-log > \.am[\s\S]{0,180}content-visibility: auto/)
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]{0,240}backdrop-filter: none !important/)
-  assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,lowPower\?0\.85:1\.5\)\)/)
+  assert.match(robot, /setPixelRatio\(Math\.min\(window\.devicePixelRatio\|\|1,lowPower\?lowPowerCap:dprCap\)\)/)
   assert.match(robot, /if\(now-lastRender<1000\/\(lowPower\?24:30\)\)/)
   assert.match(robot, /if\(!lowPower\)addEventListener\(["']pointermove["']/)
 })

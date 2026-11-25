@@ -31,7 +31,7 @@ test('sign-in robot uses the dedicated burnished-orange material preset', async 
   assert.match(style, /#b54c2b/)
   assert.match(presets, /burnished:\s*\{/)
   assert.match(presets, /clearcoat:\s*0\.96/)
-  assert.match(robot, /lowPower\?0\.85:1\.5/)
+  assert.match(robot, /lowPower\?lowPowerCap:dprCap/)
   assert.match(robot, /new TorusGeometry\(\.94,\.012,16,160\)/)
   assert.match(robot, /shell\.clearcoat=coat/)
 })
