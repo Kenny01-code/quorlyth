@@ -1,4 +1,6 @@
 /* QuorlythBot operating environment - authoritative dark-first layout and surfaces. */
+#ast { inset:0 !important; display:block !important; padding:0 !important; overflow:hidden !important; background:#090909 !important; }
+#ast #bot.qbot-ultra > .bs .qbot-sidebar-section-label { padding: 9px 11px 3px; color:#77736c; font-size:9px; font-weight:800; letter-spacing:.12em; }
 #ast #bot.qbot-ultra {
   width: min(100vw, 100%);
   height: 100dvh;
