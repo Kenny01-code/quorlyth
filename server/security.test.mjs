@@ -362,15 +362,20 @@ test('security migration locks creator data and supports the real collaboration-
       [IDS.outsider, IDS.owner],
     )
 
+    await db.exec('reset role')
+    await db.query(
+      "insert into public.docs(path,data) values ($1,$2::jsonb)",
+      ['ideas/owner-only-delete-guard', JSON.stringify({
+        title: 'Owner-only deletion guard',
+        body: 'The author must not be able to delete this idea.',
+        cid: communityId,
+        authorId: IDS.member,
+        tags: [],
+        at: 50,
+      })],
+    )
+
     await assume(IDS.member)
-    await insertDoc('ideas/owner-only-delete-guard', {
-      title: 'Owner-only deletion guard',
-      body: 'The author must not be able to delete this idea.',
-      cid: communityId,
-      authorId: IDS.member,
-      tags: [],
-      at: 50,
-    })
     await assert.rejects(deleteDoc('ideas/owner-only-delete-guard'), /Delete denied by row-level security/)
 
     await assume(IDS.outsider)
