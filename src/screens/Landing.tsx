@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
-import { HeroCreator, PreviewCreator } from '../components/CreatorMotion'
 import { Bar } from '../components/ui'
 import { useApp } from '../data/AppProvider'
 import { useReveal } from '../lib/hooks'
@@ -94,7 +93,6 @@ export function Landing() {
           event.currentTarget.style.setProperty('--qth-orbit-x', '0deg')
           event.currentTarget.style.setProperty('--qth-orbit-y', '0deg')
         }}>
-        <HeroCreator />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
         <h1 className="hero-title"><EditorialReveal text={HERO_COPY.headline} /></h1>
@@ -132,7 +130,6 @@ export function Landing() {
             <span className="chip">Illustrative demo</span>
             <span className="dim">Idea review</span>
           </div>
-          <PreviewCreator />
           <h3>What should our community build next?</h3>
           <p className="mut">A community-led concept, ready for review.</p>
           <div className="preview-divider" />
