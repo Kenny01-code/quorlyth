@@ -17,7 +17,7 @@ const FIELD_COPY: Array<{ key: ProfileField; label: string; placeholder: string;
   { key: 'offer', label: 'What do you offer?', placeholder: 'Products, services or outcomes customers pay you for', multiline: true },
   { key: 'audience', label: 'Who do you serve?', placeholder: 'Your best-fit customers, members or audience', multiline: true },
   { key: 'goal', label: 'Your most important goal', placeholder: 'The result you want to achieve next', multiline: true },
-  { key: 'constraint', label: 'What's slowing you down?', placeholder: 'The biggest current bottleneck', multiline: true },
+  { key: 'constraint', label: 'What is slowing you down?', placeholder: 'The biggest current bottleneck', multiline: true },
 ]
 
 function profileFrom(value?: Partial<BusinessProfile>): BusinessProfile {
