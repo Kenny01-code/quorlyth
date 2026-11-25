@@ -140,28 +140,32 @@ test('voice studio previews and voice matching also activate and release the par
   assert.match(views, /Voice preview finished\./)
 })
 
-test('the reference sidebar layout uses white-glass primary action and Quorlyth orange icons', async () => {
-  const [bot, glass] = await Promise.all([
+test('the reference sidebar and chat surfaces follow the shared landing and conversation layouts', async () => {
+  const [bot, operatingSystem] = await Promise.all([
     source('src/bot/QuorlythBot.tsx'),
-    source('src/styles/bot-obsidian-glass.css'),
+    source('src/styles/bot-operating-system.css'),
   ])
 
-  for (const region of ['bs-t', 'bs-n', 'bs-s', 'bs-l', 'bs-f']) assert.ok(bot.includes('className="' + region + '"'))
+  assert.match(bot, /fullPage && 'qbot-reference-layout'/)
+  assert.match(bot, /fullPage && view === 'chat' && !msgs\.length && 'qbot-empty-chat'/)
+  assert.match(bot, /fullPage && view === 'chat' && !!msgs\.length && 'qbot-has-messages'/)
+  assert.match(bot, /qbot-reference-tabs/)
+  assert.match(bot, /className="bs-t"/)
+  assert.match(bot, /className="bs-n"/)
+  assert.match(bot, /className=\{cn\('bs-s', searchOpen && 'is-open'\)\}/)
+  assert.match(bot, /className="bs-l"/)
+  assert.match(bot, /className="bs-f"/)
   assert.match(bot, /qbot-sidebar-primary-action/)
-  assert.match(glass, /--qbot-orange: #F97316/)
-  assert.match(glass, /\.bs \.bs-n > \.bsb/)
-  assert.match(glass, /\.bs \.bs-n > \.bsb :is\(svg,\.ic\)/)
-  assert.match(glass, /linear-gradient\(145deg,#fff 0%,#f1f2f5 55%,#e2e5eb 100%\)/)
-  assert.match(glass, /\.bs-f \.bsu/)
-})
+  assert.match(bot, /qbot-reference-composer/)
+  assert.match(bot, /qbot-composer-plus/)
+  assert.match(bot, /qbot-model-switch/)
+  assert.match(bot, /qbot-disclaimer/)
 
-test('Projects, Library, Customize and Voice Studio get high-contrast black copy on white glass', async () => {
-  const glass = await source('src/styles/bot-obsidian-glass.css')
-
-  assert.match(glass, /\.qbot-conversation:not\(\.qbot-chat-surface\) \.glass\.pad/)
-  assert.match(glass, /color:#111216 !important/)
-  assert.match(glass, /\.glass\.pad :is\(input,textarea,select\)/)
-  assert.match(glass, /\.qbot-conversation:not\(\.qbot-chat-surface\) :is\(\.bsk,\.bvc\)/)
-  assert.match(glass, /\.qbot-conversation:not\(\.qbot-chat-surface\) \.btn\.p/)
-  assert.match(glass, /\.qbot-chat-surface :is\(svg,\.ic,\.quorlyth-glyph\)/)
+  assert.match(operatingSystem, /\.qbot-reference-layout\s*\{[\s\S]*?grid-template-columns: 205px minmax\(0, 1fr\)/)
+  assert.match(operatingSystem, /\.qbot-reference-layout > \.bs[\s\S]*?background: #111 !important/)
+  assert.match(operatingSystem, /\.qbot-reference-tabs/)
+  assert.match(operatingSystem, /\.qbot-empty-chat[\s\S]*?background: #080808/)
+  assert.match(operatingSystem, /\.qbot-has-messages\s*\{[\s\S]*?background: #f1f0ee/)
+  assert.match(operatingSystem, /\.qbot-reference-composer-home/)
+  assert.match(operatingSystem, /\.qbot-has-messages \.qbot-conversation > \.ast-log/)
 })
