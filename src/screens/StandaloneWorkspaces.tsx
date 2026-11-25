@@ -1300,8 +1300,7 @@ function WorkspaceProjectView() {
             <div className="sw-assignee-picker__list">
               {taskAssignees.map(member => <label className={'sw-assignee-option' + (taskAssigneeDraft.includes(member.userId) ? ' is-selected' : '')} key={member.userId}>
                 <input type="checkbox" checked={taskAssigneeDraft.includes(member.userId)} aria-label={'Assign ' + a.nm(member.userId)} onChange={e => setTaskAssigneeDraft(current => e.target.checked ? [...new Set([...current, member.userId])] : current.filter(uid => uid !== member.userId))} />
-                <span>{a.nm(member.userId)}<small>{member.role}{member.userId===a.me?.id?' · You':''} · {taskAssigneeDraft.includes(member.userId) ? 'Selected' : 'Not selected'}</small></span>
-                {taskAssigneeDraft.includes(member.userId) && <span className="sw-assignee-selected-label"><QuorlythGlyph name="check" size={12}/>Selected</span>}
+                <span>{a.nm(member.userId)}<small>{member.role}{member.userId===a.me?.id?' · You':''}</small></span>
               </label>)}
             </div>
             <small className="sw-muted">{taskAssigneeDraft.length} selected · viewers are read-only and cannot be assigned work.</small>
@@ -1340,8 +1339,7 @@ function WorkspaceProjectView() {
                     const next = e.target.checked ? [...assignedIds, member.userId] : assignedIds.filter(uid => uid !== member.userId)
                     void reassignTask(task, next)
                   }} />
-                  <span>{a.nm(member.userId)}<small>{eligible ? member.role : 'no longer eligible'} · {checked ? 'Selected' : 'Not selected'}</small></span>
-                  {checked && <span className="sw-assignee-selected-label"><QuorlythGlyph name="check" size={12}/>Selected</span>}
+                  <span>{a.nm(member.userId)}<small>{eligible ? member.role : 'no longer eligible'}</small></span>
                 </label>
               })}
             </div>
