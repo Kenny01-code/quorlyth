@@ -664,7 +664,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // different, explicitly assigned owner.
       if (c.ownerId) return c.ownerId === me.id
       if (c.createdBy) return c.createdBy === me.id
-      return platformOwner
+      return false
     })
     const canManageCommunity = (cid: string) => !!me && (platformOwner || platformAdmin || ownsCommunity(cid))
     const canCollaborateOnIdea = (ideaId: string) => {
