@@ -2929,7 +2929,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
     const ideaMention = /\b(?:idea|post)\b/i.test(s) && !/\b(?:milestone|submission|submitted work|deliverable|evidence)\b/i.test(s)
     if (a.me && isDeleteRequest && ideaMention) {
       const idea = targetIdea
-      if (idea && a.canManageCommunity(idea.cid)) {
+      if (idea && a.ownsCommunity(idea.cid)) {
         return {
           type: 'deleteIdea',
           ideaId: idea.id,
@@ -2938,7 +2938,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
           communityName: a.data.communities.find(community => community.id === idea.cid)?.name || 'Community',
         }
       }
-      if (idea) a.toast('Only the community owner or a platform administrator can delete this idea and its linked workspace.')
+      if (idea) a.toast('Only the owner of this community can delete its ideas and linked workspace records.')
     }
 
     const editVerb = /\b(edit|update|change|rename|rewrite|replace|revise)\b/i.test(s)
@@ -3541,7 +3541,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
         ok = await a.updateIdea(action.ideaId, action.patch)
       } else if (action.type === 'deleteIdea') {
         const idea = a.data.ideas.find(item => item.id === action.ideaId)
-        if (!idea || idea.cid !== action.cid || !a.canManageCommunity(idea.cid)) throw new Error('Only the community owner or platform administrator can delete this idea and its linked workspace.')
+        if (!idea || idea.cid !== action.cid || !a.ownsCommunity(idea.cid)) throw new Error('Only the owner of this community can delete its ideas and linked workspace records.')
         ok = await a.deleteIdea(action.ideaId)
       } else if (action.type === 'updateCommunity') {
         if (!a.canManageCommunity(action.cid) || !a.data.communities.some(item => item.id === action.cid)) throw new Error('Only this community’s owner or a platform administrator can edit its settings.')
