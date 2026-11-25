@@ -229,9 +229,10 @@ test('Promotion studio live post placeholder stays black on its light preview su
 
 
 test('milestone bulk assignee actions use black text in create, edit, and per-milestone reassign controls', async () => {
-  const [board, styles, main] = await Promise.all([
+  const [board, styles, sharedStyles, main] = await Promise.all([
     source('src/components/MilestoneBoard.tsx'),
     source('src/styles/precision-contrast-polish.css'),
+    source('src/styles/standalone-workspaces.css'),
     source('src/main.tsx'),
   ])
 
@@ -243,7 +244,14 @@ test('milestone bulk assignee actions use black text in create, edit, and per-mi
   assert.ok(board.includes("WebkitTextFillColor: '#000000'"))
   assert.ok(board.includes("background: '#fffdf8'"))
   assert.ok(board.includes("background: '#f0e7da'"))
-  assert.ok(board.includes("background: selected ? '#fbe5d7' : '#fffdf8'"))
+  assert.ok(board.includes('className={"ql-assignee-option" + (selected ? " is-selected" : "")}'))
+  assert.ok(board.includes('className={"ql-assignee-option" + (checked ? " is-selected" : "")}'))
+  assert.ok(sharedStyles.includes('#root .ql-assignee-option.is-selected'))
+  assert.ok(sharedStyles.includes('background: #FBE5D7'))
+  assert.ok(sharedStyles.includes('#root .ql-assignee-option > input[type="checkbox"]:checked::after'))
+  assert.ok(sharedStyles.includes('left: 50%'))
+  assert.ok(sharedStyles.includes('top: 50%'))
+  assert.ok(sharedStyles.includes('transform: translate(-50%, -60%) rotate(45deg)'))
   assert.ok(board.includes("{person.name}{person.id === a.me?.id ? ' (you)' : ''}"))
   assert.ok(board.includes('className="ql-quiet-action ql-milestone-assignee-action"'))
 
@@ -258,9 +266,10 @@ test('milestone bulk assignee actions use black text in create, edit, and per-mi
 })
 
 test('milestone creation renders black bulk actions and black teammate names directly in the form', async () => {
-  const [board, styles] = await Promise.all([
+  const [board, styles, sharedStyles] = await Promise.all([
     source('src/components/MilestoneBoard.tsx'),
     source('src/styles/precision-contrast-polish.css'),
+    source('src/styles/standalone-workspaces.css'),
   ])
 
   for (const text of ['Select everyone ({people.length})', 'Clear selection', '(you)']) {
@@ -270,7 +279,14 @@ test('milestone creation renders black bulk actions and black teammate names dir
   assert.ok(board.includes("background: '#fffdf8'"))
   assert.ok(board.includes("background: '#f0e7da'"))
   assert.ok(board.includes("color: '#000000', WebkitTextFillColor: '#000000', fontWeight: 700"))
-  assert.ok(board.includes("background: selected ? '#fbe5d7' : '#fffdf8'"))
+  assert.ok(board.includes('className={"ql-assignee-option" + (selected ? " is-selected" : "")}'))
+  assert.ok(board.includes('className={"ql-assignee-option" + (checked ? " is-selected" : "")}'))
+  assert.ok(sharedStyles.includes('#root .ql-assignee-option.is-selected'))
+  assert.ok(sharedStyles.includes('background: #FBE5D7'))
+  assert.ok(sharedStyles.includes('#root .ql-assignee-option > input[type="checkbox"]:checked::after'))
+  assert.ok(sharedStyles.includes('left: 50%'))
+  assert.ok(sharedStyles.includes('top: 50%'))
+  assert.ok(sharedStyles.includes('transform: translate(-50%, -60%) rotate(45deg)'))
   assert.ok(styles.includes('#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option > span'))
   assert.ok(styles.includes('#root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action'))
 })
