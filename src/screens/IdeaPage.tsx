@@ -63,7 +63,7 @@ function Inner() {
   const myApplication = a.data.volunteers.filter(v => v.ideaId === idea.id && v.applicantId === a.me?.id).sort((x, y) => y.at - x.at)[0]
   const acceptedCollaborator = myApplication?.status === 'accepted'
   const canOpenWorkspace = communityOwner || acceptedCollaborator || idea.authorId === a.me?.id
-  const canDeleteIdea = communityOwner || idea.authorId === a.me?.id || a.platformAdmin || a.platformOwner
+  const canDeleteIdea = a.ownsCommunity(idea.cid)
   const backers = Object.entries(a.data.votes)
     .filter(([, ideas]) => !!ideas?.[idea.id])
     .map(([uid]) => uid)
