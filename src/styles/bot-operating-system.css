@@ -1407,3 +1407,8 @@
     display: none !important;
   }
 }
+
+/* The reference composer uses the native plus/model/mic/send controls only. */
+#ast #bot.qbot-ultra.qbot-reference-layout .qbot-composer-toolbar {
+  display: none !important;
+}
