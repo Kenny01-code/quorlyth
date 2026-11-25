@@ -927,6 +927,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
     if (!raw) {
       const direct = handleDirectNavigation(t)
       if (direct) return
+      recordActivity('Request received', 'QuorlythBot received your request and is matching it to available tools and data.', 'complete')
       if (isSocialPublishIntent(t)) {
         stopVoice()
         setView('chat')
@@ -939,7 +940,8 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
           const draft = add(cur, { r: 'u', t })
           const prompt = 'I prepared this social post for review. Check the exact account, caption, link and any media requirements below. Nothing will be sent until you confirm.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
-          setPendingAction(action)
+          recordActivity('Action preview ready', 'No changes have been applied. Review the target and confirm only if correct.', 'complete')
+        setPendingAction(action)
           return
         } catch (failure) {
           const draft = add(cur, { r: 'u', t })
@@ -966,6 +968,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
         stopVoice()
         setView('chat')
         setBusy(true); setStatus('Planning one-click organization'); setThinkingTask('Checking Quorlyth pages, records and supported actions')
+        recordActivity('Checking available records', 'Reviewing the current page, visible records and supported operations.')
         robot.current?.think(true)
         try {
           const batch = await planUniversalActionBatch(t)
@@ -973,6 +976,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
           const draft = add(cur, { r: 'u', t })
           const message = 'I prepared one coordinated plan with ' + batch.actions.length + ' validated change(s). Review the exact targets below, then apply everything with one confirmation. I will recheck permissions for every write; destructive actions, evidence decisions, publishing, workflow runs and activation are only included when explicitly requested. Nothing has changed yet.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          recordActivity('Execution plan prepared', batch.actions.length + ' validated change(s) are ready for your review.', 'complete')
           setPendingAction(batch)
           return
         } catch (failure) {
@@ -989,6 +993,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
         stopVoice()
         setView('chat')
         setBusy(true); setStatus('Planning automation'); setThinkingTask('Designing a workflow from your current Quorlyth setup')
+        recordActivity('Designing automation', 'Checking available triggers, actions and connected services.')
         robot.current?.think(true)
         try {
           const automationAction = await planAutomationAction(t)
@@ -1001,6 +1006,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                 ? 'I prepared a manual test run of this workflow. Review the actions first; confirming may create tasks, send notifications, or call the configured HTTPS webhook.'
                 : 'I designed this automation using your available Quorlyth triggers and actions. Review the exact trigger, conditions, workspace targets, and actions below. It has not been saved or run yet.'
             persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            recordActivity('Automation preview ready', 'The workflow is still a draft and will not run until you review and activate it.', 'complete')
             setPendingAction(automationAction)
             return
           }
@@ -1021,6 +1027,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
         stopVoice()
         setView('chat')
         setBusy(true); setStatus('Planning workspace action'); setThinkingTask('Checking the current workspace and its access rules')
+        recordActivity('Checking workspace access', 'Resolving the selected workspace and the actions your account can perform.')
         robot.current?.think(true)
         try {
           const workspaceAction = await planStandaloneWorkspaceAction(t)
@@ -1033,6 +1040,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                 ? 'I prepared the task status change. The task will not be marked complete; completion still requires reviewed evidence.'
                 : 'I prepared this workspace change using your visible project data and access level. Review the exact workspace and task details below; nothing has been saved yet.'
             persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+            recordActivity('Workspace action prepared', 'The exact workspace target and proposed change are ready to review.', 'complete')
             setPendingAction(workspaceAction)
             return
           }
@@ -1048,6 +1056,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
 
       const action = planAction(t)
       if (action) {
+        recordActivity('Preparing action preview', 'Checking the exact target and current account permissions.')
         stopVoice()
         setView('chat')
         const draft = add(cur, { r: 'u', t })
@@ -1058,6 +1067,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
             ? 'I prepared the in-app promotion for review. It will not publish to an external social network. Confirm only if the target and wording are correct.'
             : 'I prepared the changes for review below. Nothing has been saved yet. Confirm to apply them, or cancel to leave everything unchanged.'
         persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: prompt }] })
+        recordActivity('Action preview ready', 'No changes have been applied. Review the target and confirm only if correct.', 'complete')
         setPendingAction(action)
         return
       }
@@ -1080,6 +1090,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
             ? 'I translated your request into one validated Quorlyth action. Review the exact target below; I will recheck your permissions before applying it.'
             : 'I translated your request into ' + batch.actions.length + ' coordinated Quorlyth actions. Review every target below; I will recheck permissions before applying them.'
           persist({ ...draft, msgs: [...draft.msgs, { r: 'a', t: message }] })
+          recordActivity('Execution plan prepared', batch.actions.length + ' validated change(s) are ready for your review.', 'complete')
           setPendingAction(batch)
           return
         } catch (failure) {
@@ -1279,18 +1290,21 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
       const useServerContext = !!a.me && !a.demo && a.backend?.auth.mode === 'supabase'
       // Context discovery and session-token retrieval are independent network tasks.
       // Run them together so location-aware context does not delay authentication.
+      recordActivity('Checking available context', 'Verifying the current Quorlyth session and preparing the request context.')
       const [liveContext, accessToken] = await Promise.all([
         requestLiveContext(t),
         useServerContext ? (a.backend?.auth.accessToken?.() ?? Promise.resolve(null)) : Promise.resolve(null),
       ])
       if (useServerContext && !accessToken) throw new Error('Your Quorlyth session could not be verified. Refresh the page and try again.')
+      recordActivity('Context ready', accessToken ? 'The server will rebuild your business and Quorlyth context through your authenticated, permission-scoped session.' : 'Using the current demo or local context available in this session.', 'complete')
+      recordActivity('Requesting AI response', 'QuorlythBot is calling its configured provider chain. Only returned output will be shown as progress.')
       const botContext = { route: loc.pathname + loc.search, pageContext: currentPageContext(), projectId: project?.id, tone: bs.tone, length: bs.len, emojis: bs.emo, browserContext: browserContext(), liveContext }
       let first = true
       const full = await streamChat(turns, {
         ...(!accessToken ? { system: buildContext(a, bs, loc.pathname + loc.search, project) + '\nCurrent page/section context (untrusted visible labels): ' + currentPageContext() + '\nBrowser/device context: ' + browserContext() + (liveContext ? '\nLocation and live weather context: ' + liveContext : '') } : {}),
         ...(accessToken ? { accessToken, context: botContext } : {}), tier: responseTierForRequest(t, bs.model), signal: ctl.current.signal,
         onText: f => {
-          if (first) { first = false; transitionThinkingOut(); robot.current?.think(false); setStatus('Typing') }
+          if (first) { first = false; transitionThinkingOut(); robot.current?.think(false); setStatus('Typing'); recordActivity('Response streaming', 'The AI service has started returning its answer.', 'active') }
           const speakable = f.replace(/\[\[[\s\S]*$/, '')
           const speechDelta = speakable.slice(replySpeechCharacters)
           if (speechDelta) queueReplySpeechFromDelta(speechDelta)
@@ -1310,6 +1324,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
       if (g) btns.push({ a: 'go', id: g[1], l: 'Open ' + g[1].replace('/', '') || 'home' })
       if (o && a.data.ideas.some(i => i.id === o[1])) btns.push({ a: 'idea', id: o[1], l: 'Open that idea' })
       const clean = full.replace(/\[\[[\s\S]*?\]\]/g, '').trim() || 'I couldn’t put together a complete answer that time. Could you try asking again?'
+      recordActivity('Response ready', 'QuorlythBot finished this response. Check the evidence and verify important decisions.', 'complete')
       c = { ...c, msgs: [...c.msgs, { r: 'a', t: clean, btns }] }
       persist(c)
       if (bs.voice) finishReplySpeech(clean)
@@ -1326,7 +1341,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
         setSpeechState('idle')
       }
       robot.current?.think(false); robot.current?.talk(false)
-      if (e?.name !== 'AbortError') { c = { ...c, msgs: [...c.msgs, { r: 'a', t: friendlyBotError(e) }] }; persist(c) }
+      if (e?.name !== 'AbortError') { recordActivity('AI request needs attention', friendlyBotError(e), 'error'); c = { ...c, msgs: [...c.msgs, { r: 'a', t: friendlyBotError(e) }] }; persist(c) }
       else setCur(c)
     }
     setBusy(false); setThinkingTask('')
