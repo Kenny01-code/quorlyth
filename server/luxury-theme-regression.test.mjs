@@ -31,9 +31,11 @@ test('sign-in robot uses the dedicated burnished-orange material preset', async 
   assert.match(style, /#b54c2b/)
   assert.match(presets, /burnished:\s*\{/)
   assert.match(presets, /clearcoat:\s*0\.96/)
-  assert.match(robot, /lowPower\?lowPowerCap:dprCap/)
+  assert.match(robot, /premium=opt\.theme==="burnished"/)
+  assert.match(robot, /var dprCap=premium\?1\.5:1\.0,lowPowerCap=premium\?0\.85:0\.9/)
+  assert.match(robot, /if\(premium\)\{var headSeam/)
   assert.match(robot, /new TorusGeometry\(\.94,\.012,16,160\)/)
-  assert.match(robot, /shell\.clearcoat=coat/)
+  assert.match(robot, /shell\.clearcoat=T\.clearcoat/)
 })
 
 test('Build with QuorlythBot still opens the approved full-page bot route with the task prompt', async () => {
