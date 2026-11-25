@@ -19,7 +19,8 @@ test('idea deletion requires the actual owner of the linked community throughout
   assert.match(migration, /create policy docs_delete_idea_owner_only[\s\S]*?as restrictive[\s\S]*?for delete to authenticated/i)
   assert.match(migration, /private\.is_community_owner_of_idea\(split_part/)
   assert.match(migration, /coalesce\([\s\S]*?nullif\(community\.data->>'ownerId', ''\)[\s\S]*?community\.data->>'createdBy'/)
-  assert.doesNotMatch(migration, /private\.is_platform_admin\(\)/)
+  assert.doesNotMatch(migration, /private\.can_manage_community|private\.is_platform_admin/)
+  assert.match(provider, /if \(c\.createdBy\) return c\.createdBy === me\.id[\s\S]*?return false/)
 })
 
 test('automation field selection uses the orange, centred checkmark treatment', async () => {
