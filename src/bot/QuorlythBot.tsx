@@ -2275,7 +2275,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
   const slash = input.startsWith('/') && !input.includes(' ') ? SKILLS.filter(s => (a.owner || !s.own || (communityOwner && s.id === 'analytics')) && (s.id.startsWith(input.slice(1).toLowerCase()) || s.n.toLowerCase().includes(input.slice(1).toLowerCase()))).slice(0, 6) : []
   const msgs = cur?.msgs || []
   const sideShown = side
-  const greetingName = a.me ? a.nm(a.me.id).trim().split(/\\s+/)[0] : 'there'
+  const greetingName = a.me ? a.nm(a.me.id).trim().split(/\s+/)[0] : 'there'
   const currentHour = new Date().getHours()
   const greetingTime = currentHour < 12 ? 'Morning' : currentHour < 18 ? 'Afternoon' : 'Evening'
 
@@ -4280,7 +4280,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                 </div>
               )}
               {view === 'chat' && (
-                <div className={cn('bc', !msgs.length && 'qbot-home-composer')}>
+                <div className={cn('bc', 'qbot-home-composer')}>
                   {slash.length > 0 && <div className="bsl">{slash.map((s, i) => <button key={s.id} className={cn('bsi', i === slashSel && 'on')} onClick={() => { setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) }}><Icon name={s.icon} size={16} /><b>/{s.id}</b><span className="dim">{s.d}</span></button>)}</div>}
                   <div className="ast-q">
                     {tour >= 0 && <><button className="chip on" onClick={() => { const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; setTour(tour + 1); step(steps, tour + 1) }}>Next</button><button className="chip" onClick={() => { setTour(-1); robot.current?.set('rest') }}>End tour</button></>}
