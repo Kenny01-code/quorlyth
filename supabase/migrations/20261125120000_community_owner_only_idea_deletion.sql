@@ -2,7 +2,7 @@ begin;
 
 -- Community idea deletion is more restrictive than other community management.
 -- Moderators, idea authors, and platform administrators must not inherit this permission.
-create or replace function private.is_community_owner(p_cid text)
+create or replace function private.is_community_owner_of_idea(p_idea_id text)
 returns boolean
 language sql
 stable
@@ -11,12 +11,15 @@ set search_path = ''
 set row_security = 'off'
 as $function$
   select
-    p_cid is not null
+    p_idea_id is not null
     and (select auth.uid()) is not null
     and exists (
       select 1
-      from public.docs community
-      where community.path = 'communities/' || p_cid
+      from public.docs idea
+      join public.docs community
+        on community.path = 'communities/' || (idea.data->>'cid')
+      where idea.path = 'ideas/' || p_idea_id
+        and (idea.data->>'cid') is not null
         and coalesce(
           nullif(community.data->>'ownerId', ''),
           community.data->>'createdBy'
@@ -24,8 +27,8 @@ as $function$
     );
 $function$;
 
-revoke all on function private.is_community_owner(text) from public, anon, authenticated;
-grant execute on function private.is_community_owner(text) to authenticated;
+revoke all on function private.is_community_owner_of_idea(text) from public, anon, authenticated;
+grant execute on function private.is_community_owner_of_idea(text) to authenticated;
 
 -- Restrictive policies are ANDed with the existing permissive delete policies.
 -- This owner check therefore overrides their broader author/admin/manager grants
@@ -38,7 +41,7 @@ for delete
 to authenticated
 using (
   path !~ '^ideas/[^/]+$'
-  or private.is_community_owner(private.idea_community_id(split_part(path, '/', 2)))
+  or private.is_community_owner_of_idea(split_part(path, '/', 2))
 );
 
 commit;
