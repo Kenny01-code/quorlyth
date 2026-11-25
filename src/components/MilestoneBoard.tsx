@@ -290,7 +290,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
               ].map(person => {
                 const eligible = people.some(candidate => candidate.id === person.id)
                 const selected = draft.assigneeIds.includes(person.id)
-                return <label className="ql-assignee-option" key={person.id} style={{ background: selected ? '#fbe5d7' : '#fffdf8', borderColor: selected ? '#b84d27' : 'rgba(28, 21, 17, .2)', color: '#000000' }}>
+                return <label className={"ql-assignee-option" + (selected ? " is-selected" : "")} key={person.id}>
                   <input type="checkbox" checked={selected} disabled={!eligible && !selected} onChange={event => toggleDraftAssignee(person.id, event.target.checked)} />
                   <span style={{ color: '#000000', WebkitTextFillColor: '#000000', fontWeight: 700 }}>{person.name}{person.id === a.me?.id ? ' (you)' : ''}{!eligible && <small style={{ color: '#000000', WebkitTextFillColor: '#000000' }}> · no longer eligible</small>}</span>
                 </label>
@@ -345,7 +345,7 @@ export function MilestoneBoard({ idea, projectId, projectStatus, milestones, tea
                     const assignedIds = getMilestoneAssigneeIds(milestone)
                     const checked = assignedIds.includes(person.id)
                     const eligible = people.some(candidate => candidate.id === person.id)
-                    return <label className="ql-assignee-option" key={person.id} style={{ background: checked ? '#fbe5d7' : '#fffdf8', borderColor: checked ? '#b84d27' : 'rgba(28, 21, 17, .2)', color: '#000000' }}>
+                    return <label className={"ql-assignee-option" + (checked ? " is-selected" : "")} key={person.id}>
                       <input type="checkbox" checked={checked} disabled={!!busyId || (!eligible && !checked)} onChange={event => {
                         const next = event.target.checked ? [...assignedIds, person.id] : assignedIds.filter(id => id !== person.id)
                         void changeAssignees(milestone, next)
