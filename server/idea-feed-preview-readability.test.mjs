@@ -251,7 +251,7 @@ test('milestone bulk assignee actions use black text in create, edit, and per-mi
   assert.ok(sharedStyles.includes('#root .ql-assignee-option > input[type="checkbox"]:checked::after'))
   assert.ok(sharedStyles.includes('left: 50%'))
   assert.ok(sharedStyles.includes('top: 50%'))
-  assert.ok(sharedStyles.includes('transform: translate(-50%, -60%) rotate(45deg)'))
+  assert.ok(sharedStyles.includes('transform: translate(-50%, -50%) rotate(45deg)'))
   assert.ok(board.includes("{person.name}{person.id === a.me?.id ? ' (you)' : ''}"))
   assert.ok(board.includes('className="ql-quiet-action ql-milestone-assignee-action"'))
 
@@ -286,7 +286,7 @@ test('milestone creation renders black bulk actions and black teammate names dir
   assert.ok(sharedStyles.includes('#root .ql-assignee-option > input[type="checkbox"]:checked::after'))
   assert.ok(sharedStyles.includes('left: 50%'))
   assert.ok(sharedStyles.includes('top: 50%'))
-  assert.ok(sharedStyles.includes('transform: translate(-50%, -60%) rotate(45deg)'))
+  assert.ok(sharedStyles.includes('transform: translate(-50%, -50%) rotate(45deg)'))
   assert.ok(styles.includes('#root .ql-milestone-board .ql-assignee-picker__list .ql-assignee-option > span'))
   assert.ok(styles.includes('#root .ql-milestone-board .ql-assignee-picker__actions .ql-milestone-assignee-action'))
 })
