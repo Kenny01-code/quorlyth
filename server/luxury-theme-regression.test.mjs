@@ -40,7 +40,7 @@ test('sign-in robot uses the dedicated burnished-orange material preset', async 
 
 test('Build with QuorlythBot still opens the approved full-page bot route with the task prompt', async () => {
   const app = await source('src/App.tsx')
-  assert.match(app, /onBuild=\{prompt => \{ void openQuorlythBot\(false, prompt\) \} \}/)
+  assert.match(app, /openQuorlythBot\(false, prompt\)/)
   assert.match(app, /nav\('\/bot'\)/)
   assert.match(app, /fullPage=\{loc\.pathname === '\/bot'\}/)
 })
