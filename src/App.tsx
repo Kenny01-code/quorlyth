@@ -106,7 +106,18 @@ export default function App() {
   const [botVoiceRequest, setBotVoiceRequest] = useState(0)
   const [botInitialPrompt, setBotInitialPrompt] = useState('')
   const [botPromptRequest, setBotPromptRequest] = useState(0)
+  const botReturnToRef = useRef('/work')
+  useEffect(() => {
+    if (loc.pathname === '/bot' && a.ready && (!a.me || (a.dataReady && a.platformRolesReady))) {
+      setBotInitialOpen(true)
+      setBotMounted(true)
+    }
+  }, [loc.pathname, a.ready, a.me?.id, a.dataReady, a.platformRolesReady])
   const openQuorlythBot = useCallback(async (startLiveTalk = false, prompt = '') => {
+    if (loc.pathname !== '/bot') {
+      botReturnToRef.current = loc.pathname + loc.search || '/work'
+      nav('/bot')
+    }
     setBotInitialOpen(true)
     if (prompt.trim()) {
       setBotInitialPrompt(prompt.trim())
@@ -121,7 +132,7 @@ export default function App() {
       console.error('QuorlythBot could not be loaded:', error)
       a.toast('QuorlythBot could not load. Check your connection and try again.')
     }
-  }, [a.toast])
+  }, [a.toast, loc.pathname, loc.search, nav])
 
   // Load the AI writing helper only when someone actually focuses a textarea.
   // This keeps its AI/streaming client out of the initial application bundle.
@@ -309,7 +320,7 @@ export default function App() {
   // lightweight skeleton until auth resolves, then upgrades in place to the
   // correct guest or account navigation without delaying the page shell.
   const navigationLoading = !a.ready || (!!a.me && (!a.dataReady || !a.platformRolesReady))
-  const appNavigation = (
+  const appNavigation = loc.pathname === '/bot' ? null : (
     <Nav
       onSearch={() => setPalette(true)}
       onBell={() => setBell(b => !b)}
@@ -332,7 +343,7 @@ export default function App() {
       <div id="sp" />
       {appNavigation}
       <main id="main" tabIndex={-1}><Landing /></main>
-      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} initialPrompt={botInitialPrompt} promptRequest={botPromptRequest} /></Suspense>}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} initialPrompt={botInitialPrompt} promptRequest={botPromptRequest} fullPage={loc.pathname === '/bot'} onClose={() => { setBotInitialOpen(false); nav(botReturnToRef.current || '/work', { replace: true }) }} /></Suspense>}
     </>
   )
 
@@ -361,7 +372,7 @@ export default function App() {
     <>
       <a className="skip-link" href="#main">Skip to main content</a>
       <div id="sp" />
-      {intro && <Intro replay={replay} onDone={() => {
+      {intro && loc.pathname !== '/bot' && <Intro replay={replay} onDone={() => {
         setIntro(false)
         try { localStorage.setItem('qintro', '1') } catch {}
         try { sessionStorage.setItem('qintro', '1') } catch {}
@@ -391,6 +402,7 @@ export default function App() {
               <Route path="/idea/:id" element={<IdeaPage />} />
               <Route path="/queue" element={<Queue />} />
               <Route path="/work" element={<Work onBuild={prompt => { void openQuorlythBot(false, prompt) }} />} />
+              <Route path="/bot" element={<div className="qbot-route-placeholder" aria-hidden="true" />} />
               <Route path="/projects" element={<Navigate to="/work?view=projects" replace />} />
               <Route path="/workspaces" element={<Navigate to="/work?view=workspaces" replace />} />
               <Route path="/workspaces/:id" element={<StandaloneWorkspaceDetail />} />
@@ -416,7 +428,7 @@ export default function App() {
       {keys && <Suspense fallback={null}><Shortcuts onClose={() => setKeys(false)} /></Suspense>}
       <Toast />
       {writingAssistantMounted && <Suspense fallback={null}><WritingAssistant /></Suspense>}
-      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} initialPrompt={botInitialPrompt} promptRequest={botPromptRequest} /></Suspense>}
+      {botMounted && <Suspense fallback={null}><QuorlythBot initialOpen={botInitialOpen} openRequest={botOpenRequest} voiceRequest={botVoiceRequest} initialPrompt={botInitialPrompt} promptRequest={botPromptRequest} fullPage={loc.pathname === '/bot'} onClose={() => { setBotInitialOpen(false); nav(botReturnToRef.current || '/work', { replace: true }) }} /></Suspense>}
     </>
   )
 }
