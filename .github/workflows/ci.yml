@@ -3,7 +3,7 @@ name: Quorlyth CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, preview/work-intelligence-growth-20261124]
 
 permissions:
   contents: read
