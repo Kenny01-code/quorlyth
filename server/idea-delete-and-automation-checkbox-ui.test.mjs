@@ -17,7 +17,7 @@ test('idea deletion requires the actual owner of the linked community throughout
   assert.match(bot, /if \(idea && a\.ownsCommunity\(idea\.cid\)\)/)
   assert.match(bot, /!a\.ownsCommunity\(idea\.cid\).*Only the owner of this community can delete/)
   assert.match(migration, /create policy docs_delete_idea_owner_only[\s\S]*?as restrictive[\s\S]*?for delete to authenticated/i)
-  assert.match(migration, /private\\.is_community_owner_of_idea\\(split_part/)
+  assert.match(migration, /private\.is_community_owner_of_idea\(split_part/)
   assert.match(migration, /coalesce\([\s\S]*?nullif\(community\.data->>'ownerId', ''\)[\s\S]*?community\.data->>'createdBy'/)
   assert.doesNotMatch(migration, /private\.is_platform_admin\(\)/)
 })
