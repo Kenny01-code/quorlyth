@@ -297,7 +297,7 @@ test('QuorlythBot keeps a readable sidebar width and a lower GPU pixel ratio', a
     readSource('src/bot/robot3d.ts'),
   ])
   assert.match(css, /grid-template-columns:\s*minmax\(248px, 264px\) minmax\(0, 1fr\)/)
-  assert.ok(renderer.includes('window.devicePixelRatio||1,lowPower?0.9:1.0'))
+  assert.ok(renderer.includes('window.devicePixelRatio||1,lowPower?0.85:1.5'))
   assert.ok(renderer.includes('1000/(lowPower?24:30)'))
 })
 
