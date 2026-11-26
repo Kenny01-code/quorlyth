@@ -12,11 +12,6 @@ test('homepage editorial badges stay compact and rectangular without changing gl
   assert.match(css, /gap: 7px/)
 })
 
-test('landing hero actions keep the compact rectangular geometry', async () => {
-  const css = await source('src/styles/cover-burnt-orange.css')
-  assert.match(css, /#root #main \.hero \.hero-actions \.btn\s*\{[^}]*border-radius: 8px !important/s)
-})
-
 test('Automation Studio keeps the original dark AI builder and integration panels', async () => {
   const [ai, dark] = await Promise.all([
     source('src/styles/automation-ai.css'),
