@@ -140,32 +140,49 @@ test('voice studio previews and voice matching also activate and release the par
   assert.match(views, /Voice preview finished\./)
 })
 
-test('the reference sidebar and chat surfaces follow the shared landing and conversation layouts', async () => {
+test('the first dark reference interface remains consistent through empty chat, messages and Work', async () => {
   const [bot, operatingSystem] = await Promise.all([
     source('src/bot/QuorlythBot.tsx'),
     source('src/styles/bot-operating-system.css'),
   ])
 
   assert.match(bot, /fullPage && 'qbot-reference-layout'/)
-  assert.match(bot, /fullPage && view === 'chat' && !msgs\.length && 'qbot-empty-chat'/)
-  assert.match(bot, /fullPage && view === 'chat' && !!msgs\.length && 'qbot-has-messages'/)
-  assert.match(bot, /qbot-reference-tabs/)
-  assert.match(bot, /className="bs-t"/)
-  assert.match(bot, /className="bs-n"/)
-  assert.match(bot, /className=\{cn\('bs-s', searchOpen && 'is-open'\)\}/)
-  assert.match(bot, /className="bs-l"/)
-  assert.match(bot, /className="bs-f"/)
+  assert.match(bot, /fullPage && view === 'chat' && !msgs\\.length && 'qbot-empty-chat'/)
+  assert.match(bot, /fullPage && view === 'chat' && !!msgs\\.length && 'qbot-has-messages'/)
+  assert.match(bot, /fullPage && \\(view === 'chat' \\|\\| view === 'work'\\)/)
+  assert.match(bot, /className=\\{cn\\('ast-in', 'qbot-reference-composer', 'qbot-reference-composer-home'\\)\\}/)
+  assert.doesNotMatch(bot, /!msgs\\.length && 'qbot-reference-composer-home'/)
+  for (const region of ['bs-t', 'bs-n', 'bs-s', 'bs-l', 'bs-f']) assert.match(bot, new RegExp('className="[^"]*' + region + '"'))
   assert.match(bot, /qbot-sidebar-primary-action/)
-  assert.match(bot, /qbot-reference-composer/)
-  assert.match(bot, /qbot-composer-plus/)
   assert.match(bot, /qbot-model-switch/)
   assert.match(bot, /qbot-disclaimer/)
 
-  assert.match(operatingSystem, /\.qbot-reference-layout\s*\{[\s\S]*?grid-template-columns: 205px minmax\(0, 1fr\)/)
-  assert.match(operatingSystem, /\.qbot-reference-layout > \.bs[\s\S]*?background: #111 !important/)
-  assert.match(operatingSystem, /\.qbot-reference-tabs/)
-  assert.match(operatingSystem, /\.qbot-empty-chat[\s\S]*?background: #080808/)
-  assert.match(operatingSystem, /\.qbot-has-messages\s*\{[\s\S]*?background: #f1f0ee/)
-  assert.match(operatingSystem, /\.qbot-reference-composer-home/)
-  assert.match(operatingSystem, /\.qbot-has-messages \.qbot-conversation > \.ast-log/)
+  assert.match(operatingSystem, /\\.qbot-reference-layout \\{[\\s\\S]*?grid-template-columns: minmax\\(0, 1fr\\)/)
+  assert.match(operatingSystem, /\\.qbot-empty-chat[\\s\\S]*?background: #080808/)
+  assert.match(operatingSystem, /qbot-has-messages \\{[\\s\\S]*?background: #080808 !important/)
+  assert.match(operatingSystem, /qbot-has-messages > \\.bs[\\s\\S]*?background: #111 !important/)
+  assert.match(operatingSystem, /qbot-has-messages \\.qbot-user-message[\\s\\S]*?background: linear-gradient/)
+  assert.match(operatingSystem, /qbot-has-messages \\.qbot-assistant-message[\\s\\S]*?color: #f0ece5 !important/)
+  assert.match(operatingSystem, /qbot-has-messages \\.ast-in\\.qbot-reference-composer-home[\\s\\S]*?background: #171717 !important/)
+  assert.match(operatingSystem, /qbot-has-messages \\.qbot-reference-tabs\\s*\\{[\\s\\S]*?display: grid !important/)
+  assert.doesNotMatch(operatingSystem, /qbot-has-messages\\s*\\{[^}]*background: #f1f0ee/)
 })
+
+test('full-page Bot sidebar collapses cleanly, restores focus, and closes from backdrop or Escape', async () => {
+  const [bot, operatingSystem] = await Promise.all([
+    source('src/bot/QuorlythBot.tsx'),
+    source('src/styles/bot-operating-system.css'),
+  ])
+
+  assert.match(bot, /const sidebarToggleRef = useRef<HTMLButtonElement>\\(null\\)/)
+  assert.match(bot, /const closeSidebar = \\(\\) =>/)
+  assert.match(bot, /className="bsscrim"/)
+  assert.match(bot, /onClick=\\{closeSidebar\\}/)
+  assert.match(bot, /aria-expanded=\\{sideShown\\}/)
+  assert.match(bot, /aria-controls="qbot-sidebar"/)
+  assert.match(bot, /event.key !== 'Escape'/)
+  assert.match(bot, /setSide\\(window.innerWidth > 980\\)/)
+  assert.match(operatingSystem, /qbot-sidebar-compact-v2\\.qbot-reference-layout:not\\(\\.narrow\\)\\.side-on/)
+  assert.match(operatingSystem, /qbot-sidebar-compact-v2\\.qbot-reference-layout:not\\(\\.narrow\\) > \\.bm/)
+})
+

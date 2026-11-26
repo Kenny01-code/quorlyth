@@ -362,6 +362,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
     } catch { return null }
   })
   const panel = useRef<HTMLDivElement>(null)
+  const sidebarToggleRef = useRef<HTMLButtonElement>(null)
   const initialOpenHandled = useRef(false)
   const initialPromptHandled = useRef(0)
   const ph = usePlaceholder(role, open && view === 'chat' && !input)
@@ -376,6 +377,10 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
   const orbVisible = bs.robot && (!!live || speechState === 'playing' || voiceStudioSpeaking)
   const narrow = mode === 'compact' || viewportNarrow || (mode === 'custom' && !!size && size.w <= 900)
   const wide = !narrow
+  const closeSidebar = () => {
+    setSide(false)
+    window.requestAnimationFrame(() => sidebarToggleRef.current?.focus())
+  }
 
   useEffect(() => {
     const resize = () => {
@@ -411,6 +416,17 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
   useEffect(() => {
     if (narrow) setSide(false)
   }, [narrow])
+
+  useEffect(() => {
+    if (!narrow || !side) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      closeSidebar()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [narrow, side])
 
   useEffect(() => {
     if (!a.me || !bd.doc('botset')) return
@@ -451,7 +467,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
     setMode('full')
     setSize(null)
     setPosition(null)
-    setSide(window.innerWidth > 760)
+    setSide(window.innerWidth > 980)
   }, [fullPage])
 
   useEffect(() => {
@@ -3937,13 +3953,13 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
 
   // Portal narrow sidebar outside the centered bot panel to anchor it to the viewport.
   const sidebar = (
-            <aside className={cn("bs", narrow && "qbot-sidebar-drawer", searchOpen && "qbot-search-open")}>
+            <aside id="qbot-sidebar" className={cn("bs", narrow && "qbot-sidebar-drawer", searchOpen && "qbot-search-open")}>
               <div className="bs-t">
                 <span className="astm2"><Logo size={22} /></span>
                 <b className="bwm">{wm('Quorlyth')}</b>
                 <div className="qbot-sidebar-head-actions">
                   <button className="bib" aria-label="Search chats" title="Search chats" onClick={() => setSearchOpen(value => !value)}><Icon name="search" size={15} /></button>
-                  <button className="bib" aria-label="Collapse sidebar" title="Collapse sidebar" onClick={() => setSide(false)}><Icon name="panel" size={15} /></button>
+                  <button className="bib" aria-label="Collapse sidebar" title="Collapse sidebar" onClick={closeSidebar}><Icon name="panel" size={15} /></button>
                 </div>
               </div>
               <div className="bs-n">
@@ -4015,6 +4031,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
               addEventListener('pointerup', up)
               addEventListener('pointercancel', up)
             }} />}
+            {narrow && sideShown && <button type="button" className="bsscrim" aria-label="Close sidebar" onClick={closeSidebar} />}
             {sideShown && sidebar}
             <section className={cn('bm', view === 'chat' && 'qbot-chat-mode')}>
               <header className="bh" onPointerDown={e => {
@@ -4044,7 +4061,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                 window.addEventListener('pointerup', end)
                 window.addEventListener('pointercancel', end)
               }}>
-                <button className="bib" aria-label="Sidebar" onClick={e => { e.stopPropagation(); setSide(!side) }}><Icon name="menu" size={18} /></button>
+                <button ref={sidebarToggleRef} type="button" className="bib" aria-label={sideShown ? 'Collapse sidebar' : 'Open sidebar'} title={sideShown ? 'Collapse sidebar' : 'Open sidebar'} aria-expanded={sideShown} aria-controls="qbot-sidebar" onClick={e => { e.stopPropagation(); setSide(value => !value) }}><Icon name="menu" size={18} /></button>
                 <div className="bht">
                   {view === 'chat' ? <div className="qbot-header-stack">
                     <button type="button" className="qbot-core-selector" aria-label={`Response mode: ${bs.model === 'quick' ? 'Quick' : 'Smart'}. Click to switch.`} title="Switch response mode" onClick={() => { const model = bs.model === 'quick' ? 'smart' : 'quick'; void bd.saveSettings({ model }) }}>
@@ -4058,7 +4075,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                     {view === 'robot-studio' && <i className="qrs-header-badge">DESIGN MODE</i>}
                   </div>}
                 </div>
-                {fullPage && ((view === 'chat' && !msgs.length) || view === 'work') && <nav className="qbot-reference-tabs" aria-label="QuorlythBot mode">
+                {fullPage && (view === 'chat' || view === 'work') && <nav className="qbot-reference-tabs" aria-label="QuorlythBot mode">
                   <button type="button" className={cn(view === 'chat' && 'is-active')} aria-pressed={view === 'chat'} onClick={() => setView('chat')}>Chat</button>
                   <button type="button" className={cn(view === 'work' && 'is-active')} aria-pressed={view === 'work'} onClick={() => setView('work')}>Work</button>
                 </nav>}
@@ -4285,7 +4302,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                   <div className="ast-q">
                     {tour >= 0 && <><button className="chip on" onClick={() => { const steps = a.owner ? TOUR_OWNER : TOUR_MEMBER; setTour(tour + 1); step(steps, tour + 1) }}>Next</button><button className="chip" onClick={() => { setTour(-1); robot.current?.set('rest') }}>End tour</button></>}
                   </div>
-                  <div className={cn('ast-in', 'qbot-reference-composer', !msgs.length && 'qbot-reference-composer-home')}>
+                  <div className={cn('ast-in', 'qbot-reference-composer', 'qbot-reference-composer-home')}>
                     <button type="button" className="qbot-composer-plus" aria-label="Open Quorlyth plugins" title="Plugins and tools" onClick={() => { stopLive(); stopVoice(); setView('skills') }}><Icon name="plus" size={17} /></button>
                     <textarea rows={1} value={input} placeholder={ph || 'How can I help you today?'} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
