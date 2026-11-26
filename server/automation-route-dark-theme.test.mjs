@@ -37,7 +37,9 @@ test('Automation Studio activates a route-level dark theme on the full app shell
   assert.ok(baseTheme.includes(':root{--k:#000;--w:#fff;'), 'the base palette stays black and white')
   assert.ok(baseTheme.includes('body{background:var(--k);color:var(--w);'), 'the body keeps the original dark canvas and light text')
 
-  assert.match(app, /loc\.pathname === '\/automations' \? 'q-automation-route' : undefined/)
+  assert.ok(app.includes("const automationRouteActive = loc.pathname.replace(/\\/+$/, '') === '/automations'"))
+  assert.ok(app.includes("const active = automationRouteActive"))
+  assert.ok(app.includes("className={automationRouteActive ? 'q-automation-route' : undefined}"))
   assert.match(app, /document\.documentElement\.classList\.toggle\('q-automation-route-active', active\)/)
   assert.match(app, /document\.body\.classList\.toggle\('q-automation-route-active', active\)/)
   assert.match(app, /<Route path="\/automations" element=\{<Automations \/>\} \/>/)
