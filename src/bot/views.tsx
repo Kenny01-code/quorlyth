@@ -284,7 +284,7 @@ export function BotViews(p: P) {
           <button key={v.id} className={cn('bvc', cur.id === v.id && 'on')} style={{ ['--c1' as any]: T.g1, ['--c2' as any]: T.g2, ['--cr' as any]: T.cr } as any} aria-pressed={cur.id === v.id} onClick={() => pick(v)}>
             <span className="orb3d"><i /></span><b>{v.n}</b><span className="dim">{v.g === 'f' ? 'Female' : 'Male'}, {v.d}</span></button>) })}</div>
         <div className="glass pad" style={{ padding: '12px 18px', marginBottom: 12 }}>
-          <div className="csr"><span><b style={{ fontWeight: 400 }}>Orb finish</b><br /><span className="dim">Cobalt glass with a flowing pearl-white lower surface</span></span><i className="sw" aria-label="Cobalt pearl glass orb finish" style={{ background: 'linear-gradient(145deg, #9fc2ff 0%, #285bd8 48%, #eaf0ff 70%, #ffffff 100%)' }} /></div>
+          <div className="csr"><span><b style={{ fontWeight: 400 }}>Orb finish</b><br /><span className="dim">Burnished copper glass with a warm pearl highlight</span></span><i className="sw" aria-label="Cobalt pearl glass orb finish" style={{ background: 'linear-gradient(145deg, #ffe1c8 0%, #db8059 30%, #ad4e2c 66%, #552719 100%)' }} /></div>
           <div className="csr" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 10 }}><span><b style={{ fontWeight: 400 }}>Hear a hello</b><br /><span className="dim">Uses the same speech pipeline as chat: ElevenLabs first, configured cloud providers next, then device speech when enabled.</span></span>
             <textarea rows={2} style={{ width: '100%' }} value={sample} onChange={e => setSample(e.target.value)} aria-label="Try a line" />
             <div className="acts" style={{ margin: 0 }}>
@@ -309,7 +309,6 @@ export function BotViews(p: P) {
   return (
     <><h3 className="bvt">Settings</h3><p className="mut" style={{ margin: '6px 0 14px' }}>Advanced controls for QuorlythBot.</p>
       <div className="glass pad" style={{ padding: '6px 18px', marginBottom: 14 }}>
-        <Chips label="Thinking" desc="Thorough takes longer and is more careful" value={s.model} onPick={v => bd.saveSettings({ model: v as any })} list={[['quick', 'Quick'], ['smart', 'Thorough']]} />
         <Chips label="Size" value={p.mode} onPick={v => p.setMode(v)} list={[['compact', 'Compact'], ['large', 'Large'], ['full', 'Full']]} />
         <Chips label="Orb scale" value={p.stage} onPick={v => p.setStage(v)} list={[['std', 'Standard'], ['big', 'Immersive']]} />
       </div>
@@ -319,6 +318,6 @@ export function BotViews(p: P) {
           <button className="btn" onClick={() => { if (del !== 'all') return setDel('all'); bd.chats.forEach(c => bd.remove(c.id)); setDel(''); a.toast('Chats deleted') }}>{del === 'all' ? 'Confirm delete all' : 'Delete all chats'}</button></div></div>
       <div className="glass pad" style={{ padding: 18 }}><h3 style={{ fontSize: 15 }}>Shortcuts</h3>
         {[['Send', 'Enter'], ['New line', 'Shift Enter'], ['Skills', '/'], ['Close menus', 'Esc']].map(([k, v]) => <div key={k} className="kr"><span className="mut">{k}</span><kbd>{v}</kbd></div>)}
-        <div className="acts"><button className="btn" onClick={() => { bd.saveSettings({ tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'smart', vid: 'aria', accent: 'auto', theme: 'pearl' }); p.robot.current?.theme('pearl'); a.toast('Customization reset') }}><Icon name="rotate" size={16} />Reset customization</button></div></div></>
+        <div className="acts"><button className="btn" onClick={() => { bd.saveSettings({ tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: true, model: 'quick', vid: 'aria', accent: 'auto', theme: 'pearl' }); p.robot.current?.theme('pearl'); a.toast('Customization reset') }}><Icon name="rotate" size={16} />Reset customization</button></div></div></>
   )
 }
