@@ -509,15 +509,15 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
     const lastOpenedKey = `qbot:last-opened-at:v2:${identity}`
     const now = Date.now()
     let lastOpenedAt = 0
-    let firstTime = true
+    const accountCreatedAt = Number(a.me?.createdAt || 0)
+    const accountIsNew = accountCreatedAt > 0
+      && now >= accountCreatedAt
+      && now - accountCreatedAt < 24 * 60 * 60 * 1000
+    let firstTime = !a.me || accountIsNew
     try {
       // Keep the first welcome per account and use a quiet window for repeat opens.
       // This keeps visitors and signed-in members from consuming one another's greeting.
       lastOpenedAt = Number(localStorage.getItem(lastOpenedKey) || 0) || 0
-      const accountCreatedAt = Number(a.me?.createdAt || 0)
-      const accountIsNew = accountCreatedAt > 0
-        && now >= accountCreatedAt
-        && now - accountCreatedAt < 24 * 60 * 60 * 1000
       // Existing accounts stay returning users even when they sign in on a new device.
       firstTime = localStorage.getItem(guideKey) !== '1'
         && lastOpenedAt === 0
