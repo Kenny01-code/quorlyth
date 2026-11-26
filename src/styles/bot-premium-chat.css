@@ -817,7 +817,7 @@
   box-shadow: none !important;
 }
 #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus:hover,
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-plus:focus-visible,
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus:focus-visible,
 #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:hover,
 #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:focus-visible {
   border-color: rgba(217, 119, 85, .58) !important;
