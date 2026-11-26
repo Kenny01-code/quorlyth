@@ -1,5 +1,6 @@
 import '../styles/evidence-preview.css'
-import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type EvidencePreviewProps = {
   url: string
@@ -101,6 +102,9 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
   const type = parsed ? classify(parsed, mimeType, name) : 'link'
   const githubApi = useMemo(() => parsed && type === 'github' ? githubApiUrl(parsed) : null, [parsed, type])
   const [viewerOpen, setViewerOpen] = useState(false)
+  const viewerPanelRef = useRef<HTMLElement | null>(null)
+  const viewerCloseRef = useRef<HTMLButtonElement | null>(null)
+  const viewerOpenerRef = useRef<HTMLElement | null>(null)
   const [githubPreview, setGithubPreview] = useState<GithubPreviewState>({ status: 'idle', data: null, content: '', error: '' })
 
   useEffect(() => {
@@ -157,15 +161,52 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
 
   useEffect(() => {
     if (!viewerOpen) return
-    const previousOverflow = document.body.style.overflow
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setViewerOpen(false)
-    }
+
+    const previousBodyOverflow = document.body.style.overflow
+    const previousRootOverflow = document.documentElement.style.overflow
     document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+
+    const focusFrame = window.requestAnimationFrame(() => viewerCloseRef.current?.focus())
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setViewerOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const panel = viewerPanelRef.current
+      if (!panel) return
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], iframe, video[controls], audio[controls], [tabindex]:not([tabindex="-1"])',
+      )).filter(element => element.getClientRects().length > 0)
+      if (!focusable.length) {
+        event.preventDefault()
+        panel.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
     window.addEventListener('keydown', onKeyDown)
     return () => {
-      document.body.style.overflow = previousOverflow
+      window.cancelAnimationFrame(focusFrame)
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousRootOverflow
       window.removeEventListener('keydown', onKeyDown)
+      window.requestAnimationFrame(() => {
+        if (viewerOpenerRef.current?.isConnected) viewerOpenerRef.current.focus()
+      })
     }
   }, [viewerOpen])
 
@@ -198,20 +239,21 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
         <strong title={title}>{title}</strong>
         <small>{host}</small>
       </div>
-      {!compact && type === 'image' && <button type="button" className="ql-evidence-preview__media ql-evidence-preview__media-button" onClick={() => setViewerOpen(true)} aria-label={'Preview ' + name + ' inside Quorlyth'}><img src={parsed.href} alt={name} loading="lazy" /></button>}
+      {!compact && type === 'image' && <button type="button" className="ql-evidence-preview__media ql-evidence-preview__media-button" onClick={event => { viewerOpenerRef.current = event.currentTarget; setViewerOpen(true) }} aria-label={'Preview ' + name + ' inside Quorlyth'}><img src={parsed.href} alt={name} loading="lazy" /></button>}
       {!compact && type === 'video' && <video className="ql-evidence-preview__media" controls preload="metadata" src={parsed.href}>Your browser cannot play this video.</video>}
       {!compact && type === 'audio' && <audio className="ql-evidence-preview__audio" controls preload="metadata" src={parsed.href}>Your browser cannot play this audio.</audio>}
       {!compact && type === 'pdf' && <iframe className="ql-evidence-preview__pdf" src={parsed.href + '#view=FitH'} title={'PDF preview: ' + name} loading="lazy" />}
       {!compact && embed && <div className="ql-evidence-preview__embed"><iframe src={embed} title={type + ' preview: ' + name} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen /></div>}
       {!compact && type === 'github' && <p className="ql-evidence-preview__note">Public GitHub metadata, source file text, commit details and pull request information can be previewed here when the API allows it.</p>}
       {!compact && ['figma', 'google-docs', 'notion', 'document', 'link'].includes(type) && <p className="ql-evidence-preview__note">{type === 'figma' ? 'Figma design preview.' : type === 'google-docs' ? 'Google Drive preview. The file must be shared with this account or publicly available to render.' : type === 'notion' ? 'Notion preview. Workspace permissions and the source site may restrict embedding.' : type === 'document' ? 'Document preview opens inside Quorlyth. Some office/archive formats are not natively renderable in a browser.' : 'Website preview stays inside Quorlyth. Some websites block embedded viewing for security.'}</p>}
-      <button type="button" className="ql-evidence-preview__open" onClick={() => setViewerOpen(true)} aria-haspopup="dialog">Preview in Quorlyth <span aria-hidden="true">↗</span></button>
+      <button type="button" className="ql-evidence-preview__open" onClick={event => { viewerOpenerRef.current = event.currentTarget; setViewerOpen(true) }} aria-haspopup="dialog">Preview in Quorlyth <span aria-hidden="true">↗</span></button>
     </section>
-    {viewerOpen && <div className="ql-evidence-viewer" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setViewerOpen(false) }}>
-      <section className="ql-evidence-viewer__panel" role="dialog" aria-modal="true" aria-label={'Preview: ' + title}>
+    {viewerOpen && typeof document !== 'undefined' && createPortal(
+      <div className="ql-evidence-viewer" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setViewerOpen(false) }}>
+      <section ref={viewerPanelRef} className="ql-evidence-viewer__panel" role="dialog" aria-modal="true" aria-label={'Preview: ' + title} tabIndex={-1}>
         <header className="ql-evidence-viewer__header">
           <div className="ql-evidence-viewer__title"><span className="ql-evidence-preview__type">{label}</span><strong>{title}</strong><small>{host}</small></div>
-          <button type="button" className="ql-evidence-viewer__close" onClick={() => setViewerOpen(false)} aria-label="Close evidence preview">×</button>
+          <button ref={viewerCloseRef} type="button" className="ql-evidence-viewer__close" onClick={() => setViewerOpen(false)} aria-label="Close evidence preview">×</button>
         </header>
         <div className="ql-evidence-viewer__body">
           {type === 'image' && <img className="ql-evidence-viewer__image" src={parsed.href} alt={name} />}
@@ -242,6 +284,8 @@ export function EvidencePreview({ url: rawUrl, name = 'Evidence', mimeType = '',
         </div>
         <footer className="ql-evidence-viewer__footer"><span>Evidence preview · does not open a new tab</span><button type="button" className="btn p" onClick={() => setViewerOpen(false)}>Done</button></footer>
       </section>
-    </div>}
+      </div>,
+      document.body,
+    )}
   </>
 }
