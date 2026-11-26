@@ -20,8 +20,8 @@ test('Automation Studio activates a route-level dark theme on the full app shell
   assert.ok(baseThemeIndex >= 0, 'the original app-wide dark theme remains the base layer')
   assert.equal(lightThemeImportedGlobally, false, 'the editorial light override must not be applied globally')
   assert.ok(darkThemeIndex > baseThemeIndex, 'the Automation dark route layer loads after the app base styles')
-  assert.match(baseTheme, /:root\\s*\\{[^}]*--k:\\s*#000[^}]*--w:\\s*#fff/s)
-  assert.match(baseTheme, /body\\s*\\{background:\\s*var\\(--k\\);color:\\s*var\\(--w\\);/)
+  assert.ok(baseTheme.includes(':root{--k:#000;--w:#fff;'), 'the base palette stays black and white')
+  assert.ok(baseTheme.includes('body{background:var(--k);color:var(--w);'), 'the body keeps the original dark canvas and light text')
 
   assert.match(app, /loc\.pathname === '\/automations' \? 'q-automation-route' : undefined/)
   assert.match(app, /document\.documentElement\.classList\.toggle\('q-automation-route-active', active\)/)
