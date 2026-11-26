@@ -163,6 +163,16 @@ export default function App() {
 
 
   useEffect(() => {
+    const active = loc.pathname.replace(/\\/+$/, '') === '/automations'
+    document.documentElement.classList.toggle('q-automation-route-active', active)
+    document.body.classList.toggle('q-automation-route-active', active)
+    return () => {
+      document.documentElement.classList.remove('q-automation-route-active')
+      document.body.classList.remove('q-automation-route-active')
+    }
+  }, [loc.pathname])
+
+  useEffect(() => {
     // Keep route changes instant while ordinary document scrolling remains smooth.
     const root = document.documentElement
     const previousBehavior = root.style.scrollBehavior
