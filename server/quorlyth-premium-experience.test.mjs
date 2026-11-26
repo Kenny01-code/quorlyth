@@ -29,7 +29,7 @@ test('the Bot composer keeps Live Talk visible, evenly spaced and independent on
   assert.match(bot, /className=\{cn\('btn', 'qbot-compose-live'/)
   assert.match(css, /grid-template-columns: 42px minmax\(0,1fr\) 42px 42px 46px/)
   assert.match(css, /\.qbot-compose-live[\s\S]*?display: inline-grid !important;/)
-  assert.match(css, /qbot-compose-live:is\(:hover,:focus-visible\)/)
+  assert.match(css, /qbot-compose-live:is\(:hover,:focus-visible,.rec\)/)
   assert.match(css, /qbot-compose-mic[\s\S]*?transform: none !important;/)
   assert.match(css, /qbot-compose-send:is\(:hover,:focus-visible\):not\(:disabled\)/)
   assert.match(css, /@media \(max-width: 390px\)/)
