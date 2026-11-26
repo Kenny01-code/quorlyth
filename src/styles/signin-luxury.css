@@ -233,3 +233,154 @@
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Live sign-in context HUD - true device time, time-zone region and connectivity. */
+#root #main .lg > .stage {
+  position: relative;
+  overflow: hidden;
+}
+#root #main .lg > .stage .q-signin-live-context {
+  position: absolute;
+  z-index: 5;
+  top: 22px;
+  right: 22px;
+  width: min(226px, calc(100% - 44px));
+  padding: 14px 15px 12px;
+  border: 1px solid rgba(237, 151, 115, .28);
+  border-radius: 17px;
+  color: #f5e6dc;
+  text-align: left;
+  background:
+    radial-gradient(ellipse 90% 70% at 100% 0%, rgba(198, 91, 55, .19), transparent 75%),
+    linear-gradient(145deg, rgba(40, 24, 18, .88), rgba(13, 11, 10, .84));
+  box-shadow: inset 0 1px 0 rgba(255, 227, 209, .12), 0 18px 42px -30px rgba(0, 0, 0, .86);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+  pointer-events: none;
+}
+#root #main .lg .q-signin-context-head,
+#root #main .lg .q-signin-context-live,
+#root #main .lg .q-signin-context-network {
+  display: flex;
+  align-items: center;
+}
+#root #main .lg .q-signin-context-head {
+  justify-content: space-between;
+  gap: 8px;
+  color: #d59a7e;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+#root #main .lg .q-signin-context-live {
+  gap: 5px;
+  color: #e3aa8e;
+  letter-spacing: .12em;
+}
+#root #main .lg .q-signin-context-live i,
+#root #main .lg .q-signin-context-network i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #7ed5a0;
+  box-shadow: 0 0 10px rgba(126, 213, 160, .7);
+}
+#root #main .lg .q-signin-context-time {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 7px 0 10px;
+}
+#root #main .lg .q-signin-context-time strong {
+  color: #fff4eb !important;
+  font-size: 26px;
+  font-weight: 620;
+  letter-spacing: -.06em;
+  font-variant-numeric: tabular-nums;
+}
+#root #main .lg .q-signin-context-time span {
+  color: #c6a18c !important;
+  font-size: 9px;
+}
+#root #main .lg .q-signin-context-place {
+  display: grid;
+  gap: 2px;
+  padding: 9px 0 8px;
+  border-top: 1px solid rgba(239, 184, 155, .12);
+}
+#root #main .lg .q-signin-context-place > span {
+  color: #b9846a !important;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+#root #main .lg .q-signin-context-place strong {
+  color: #fff0e6 !important;
+  font-size: 13px;
+  font-weight: 650;
+}
+#root #main .lg .q-signin-context-place small {
+  color: #bda99c !important;
+  font-size: 8px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+#root #main .lg .q-signin-context-network {
+  gap: 7px;
+  color: #e4d0c3 !important;
+  font-size: 9px;
+  font-weight: 580;
+}
+#root #main .lg .q-signin-context-network .is-offline,
+#root #main .lg .q-signin-context-live .is-offline {
+  background: #ff9b72;
+  box-shadow: 0 0 10px rgba(255, 125, 83, .55);
+}
+#root #main .lg .q-signin-context-note {
+  margin: 7px 0 0 !important;
+  color: #ffc0a4 !important;
+  font-size: 9px !important;
+  line-height: 1.4 !important;
+}
+#root #main .lg .q-signin-context-foot {
+  margin: 7px 0 0 !important;
+  color: rgba(209, 185, 169, .62) !important;
+  font-size: 7px !important;
+  line-height: 1.4 !important;
+}
+@media (max-width: 860px) {
+  #root #main .lg > .stage {
+    min-height: clamp(320px, 44svh, 390px);
+  }
+  #root #main .lg > .stage .q-signin-live-context {
+    top: 16px;
+    right: 16px;
+  }
+}
+@media (max-width: 540px) {
+  #root #main .lg > .stage {
+    min-height: clamp(300px, 42svh, 350px);
+  }
+  #root #main .lg > .stage .q-signin-live-context {
+    top: 11px;
+    right: 11px;
+    width: min(190px, calc(100% - 22px));
+    padding: 9px 10px 8px;
+    border-radius: 13px;
+  }
+  #root #main .lg .q-signin-context-time {
+    margin: 4px 0 6px;
+  }
+  #root #main .lg .q-signin-context-time strong { font-size: 21px; }
+  #root #main .lg .q-signin-context-time span { font-size: 8px; }
+  #root #main .lg .q-signin-context-place { padding: 6px 0; }
+  #root #main .lg .q-signin-context-place strong { font-size: 11px; }
+  #root #main .lg .q-signin-context-place small { font-size: 7px; }
+  #root #main .lg .q-signin-context-foot { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root #main .lg .q-signin-live-context * { animation: none !important; transition: none !important; }
+}
