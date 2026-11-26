@@ -1136,6 +1136,33 @@
   color: #5f5c57 !important;
 }
 
+/* Restore the menu only when the clean empty-chat sidebar has been dismissed. */
+#ast #bot.qbot-ultra.qbot-reference-layout.qbot-empty-chat:not(.side-on) .bh > .bib {
+  position: absolute !important;
+  top: 7px;
+  left: 8px;
+  z-index: 18;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 33px !important;
+  min-width: 33px !important;
+  height: 33px !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 9px !important;
+  color: #d7cfc4 !important;
+  background: rgba(255,255,255,.035) !important;
+}
+#ast #bot.qbot-ultra.qbot-reference-layout.qbot-empty-chat:not(.side-on) .bh > .bib:hover {
+  color: #fff !important;
+  border-color: rgba(201,102,66,.34) !important;
+  background: rgba(201,102,66,.12) !important;
+}
+#ast #bot.qbot-ultra.qbot-reference-layout.qbot-empty-chat:not(.side-on) .bh > .bib:focus-visible {
+  outline: 2px solid #c76540 !important;
+  outline-offset: 2px !important;
+}
+
 /* Active conversation: retain the same dark QuorlythBot room.
    A message reveals the transcript and controls, but never switches to a second theme. */
 #ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages {

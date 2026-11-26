@@ -180,6 +180,7 @@ test('full-page Bot sidebar collapses cleanly, restores focus, and closes from b
   assert.ok(bot.includes('aria-controls="qbot-sidebar"'))
   assert.ok(bot.includes("event.key !== 'Escape'"))
   assert.ok(bot.includes('setSide(window.innerWidth > 980)'))
+  assert.ok(operatingSystem.includes('qbot-empty-chat:not(.side-on) .bh > .bib'))
   assert.ok(operatingSystem.includes('qbot-sidebar-compact-v2.qbot-reference-layout:not(.narrow).side-on'))
   assert.ok(operatingSystem.includes('qbot-sidebar-compact-v2.qbot-reference-layout:not(.narrow) > .bm'))
 })
