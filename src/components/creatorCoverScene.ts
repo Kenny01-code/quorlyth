@@ -68,7 +68,6 @@ export function mountCreatorCoverScene(canvas: HTMLCanvasElement, host: HTMLElem
     roughness: 0.22,
     clearcoat: 1,
     clearcoatRoughness: 0.12,
-    reflectivity: 0.9,
   })
   const brightCopper = new MeshPhysicalMaterial({
     color: new Color(0xd16a3e),
