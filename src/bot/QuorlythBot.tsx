@@ -3431,7 +3431,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
       persist(next)
       setPendingAction(null)
       const createdWorkflow = successes.find((item): item is Extract<PendingAction, { type: 'createAutomation' | 'duplicateAutomation' }> => item.type === 'createAutomation' || item.type === 'duplicateAutomation')
-      if (createdWorkflow) nav('/architecture?automationCreated=' + encodeURIComponent(createdWorkflow.workflow.id) + '#arch-system-title')
+      if (createdWorkflow) nav('/automations?created=' + encodeURIComponent(createdWorkflow.workflow.id) + '#arch-system-title')
       else {
         const createdWorkspace = successes.find((item): item is Extract<PendingAction, { type: 'createStandaloneWorkspace' }> => item.type === 'createStandaloneWorkspace')
         if (createdWorkspace) nav('/workspaces/' + createdWorkspace.workspaceId)
@@ -3930,7 +3930,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
           if (action.type === 'community' || action.type === 'deleteCommunity') nav('/communities')
           if (action.type === 'idea') nav('/communities/' + action.cid)
           if (action.type === 'deleteIdea') nav('/communities/' + action.cid)
-          if (action.type === 'createAutomation' || action.type === 'duplicateAutomation') nav('/architecture?automationCreated=' + encodeURIComponent(action.workflow.id) + '#arch-system-title')
+          if (action.type === 'createAutomation' || action.type === 'duplicateAutomation') nav('/automations?created=' + encodeURIComponent(action.workflow.id) + '#arch-system-title')
           if (action.type === 'createStandaloneWorkspace') nav('/workspaces/' + action.workspaceId)
           if (action.type === 'deleteStandaloneWorkspace') nav('/workspaces')
           if (action.type === 'createStandaloneTask' || action.type === 'updateStandaloneTask' || action.type === 'startStandaloneTask' || action.type === 'assignStandaloneTask' || action.type === 'deleteStandaloneTask') nav('/workspaces/' + action.workspaceId)
