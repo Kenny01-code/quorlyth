@@ -847,16 +847,29 @@
 #ast #bot.qbot-ultra.qbot-reference-layout .bh {
   position: relative;
   z-index: 12;
-  min-height: 42px !important;
-  padding: 0 8px !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  min-width: 0;
+  min-height: 66px !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 8px clamp(12px, 2vw, 24px) !important;
   border: 0 !important;
+  border-bottom: 1px solid rgba(239,222,204,.11) !important;
   border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  background: #090a0c !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
 }
 #ast #bot.qbot-ultra.qbot-reference-layout .bh > .bib {
-  border: 0 !important;
-  background: transparent !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  border: 1px solid rgba(236,221,204,.14) !important;
+  border-radius: 11px !important;
+  color: #efa17b !important;
+  background: #141619 !important;
   box-shadow: none !important;
 }
 #ast #bot.qbot-ultra.qbot-reference-layout .qbot-reference-tabs {
@@ -970,9 +983,11 @@
   top: 43.5%;
   left: 50%;
   z-index: 5;
-  width: min(620px, calc(100% - 42px));
+  width: min(900px, calc(100% - 42px));
+  max-width: 100%;
   margin: 0 !important;
   padding: 0 !important;
+  background: #090a0c !important;
   transform: translateX(-50%);
 }
 #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer:not(.qbot-reference-composer-home) {
@@ -1259,9 +1274,15 @@
   background: #121212;
   color: #d3ccc2 !important;
 }
-#ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .qbot-activity-heading,
+#ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .qbot-activity-heading {
+  color: #d88965 !important;
+}
 #ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .qbot-activity-step {
-  color: #a49d93 !important;
+  color: #d9cec2 !important;
+}
+#ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .qbot-activity-step :is(span,small) {
+  color: #d9cec2 !important;
+  opacity: 1 !important;
 }
 #ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .qbot-user-message {
   width: fit-content;
@@ -1440,7 +1461,7 @@
 }
 #ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .qbot-disclaimer {
   margin-top: 7px !important;
-  color: #89857e !important;
+  color: #92877c !important;
   font-size: 8px !important;
 }
 #ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .qbot-reference-tabs {
