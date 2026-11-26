@@ -73,3 +73,71 @@ test('landing hero loads its premium copper Three.js sculpture only near the vie
   assert.match(entry, /styles\/cover-burnt-orange\.css/)
   assert.doesNotMatch(entry, /from ['"]\.\/components\/creatorCoverScene['"]/)
 })
+
+
+test('Sign-in robot recognizes account-specific returns and shows live local context safely', async () => {
+  const [signIn, bot, signInCss] = await Promise.all([
+    source('src/screens/SignIn.tsx'),
+    source('src/bot/QuorlythBot.tsx'),
+    source('src/styles/signin-luxury.css'),
+  ])
+
+  assert.match(signIn, /function signinWelcomeKey\(identity\?: string\)/)
+  assert.match(signIn, /quorlyth:signin-welcomed:v2:/)
+  assert.match(signIn, /function LocalContextPreview\(\)/)
+  assert.match(signIn, /setInterval\(\(\) => setNow\(Date\.now\(\)\), 1000\)/)
+  assert.match(signIn, /addEventListener\('online', sync\)/)
+  assert.match(signIn, /addEventListener\('offline', sync\)/)
+  assert.match(signIn, /Region comes from your device time zone\. Precise location is not accessed\./)
+  assert.match(signIn, /firstTimeOverride=\{!!me\.createdAt/)
+  assert.match(signIn, /signedInUser\.createdAt|signedInUser\.id/)
+  assert.match(signIn, /navigator\.onLine/)
+  assert.match(bot, /accountCreatedAt = Number\(a\.me\?\.createdAt \|\| 0\)/)
+  assert.match(bot, /accountIsNew/)
+  assert.match(bot, /qbot:welcomed:v1:/)
+  assert.match(bot, /quorlyth:signin-welcomed:v2:/)
+  assert.match(signInCss, /\.q-signin-live-context/)
+  assert.match(signInCss, /@media \(max-width: 540px\)/)
+})
+
+test('QuorlythBot keeps Live Talk distinct and reports connection state on every assistant page', async () => {
+  const [bot, css] = await Promise.all([
+    source('src/bot/QuorlythBot.tsx'),
+    source('src/styles/bot-premium-chat.css'),
+  ])
+
+  assert.match(bot, /networkOnline, setNetworkOnline/)
+  assert.match(bot, /addEventListener\('online', syncNetwork\)/)
+  assert.match(bot, /addEventListener\('offline', syncNetwork\)/)
+  assert.match(bot, /qbot-network-indicator/)
+  assert.match(bot, /aria-label=\{live \? 'End Live Talk' : 'Start Live Talk'\}/)
+  assert.match(bot, /Icon name=\{live \? 'mic' : 'audio-lines'\}/)
+  assert.match(css, /\.qbot-compose-mic:hover/)
+  assert.match(css, /\.qbot-compose-live:hover/)
+  assert.match(css, /\.qbot-compose-send:hover:not\(:disabled\)/)
+  assert.match(css, /\.qbot-network-indicator\.is-offline/)
+  assert.match(css, /grid-template-columns: 36px minmax\(0, 1fr\) 36px 36px 40px/)
+  assert.match(css, /background: #fffefa !important/)
+  assert.match(css, /qbot-conversation:not\(\.qbot-chat-surface\):not\(\.qbot-robot-studio-shell\)/)
+})
+
+test('burnt-orange Three.js cover adds sculptural depth without removing performance guards', async () => {
+  const [scene, coverCss, stage] = await Promise.all([
+    source('src/components/creatorCoverScene.ts'),
+    source('src/styles/cover-burnt-orange.css'),
+    source('src/components/CreatorCoverStage.tsx'),
+  ])
+
+  assert.match(scene, /signalCore/)
+  assert.match(scene, /orbitTrace/)
+  assert.match(scene, /satelliteGeometry/)
+  assert.match(scene, /lowPower \? 24 : 40/)
+  assert.match(scene, /prefers-reduced-motion/)
+  assert.match(scene, /document\.visibilityState/)
+  assert.match(scene, /renderer\.dispose\(\)/)
+  assert.match(coverCss, /\.qth-cover-stage::before/)
+  assert.match(coverCss, /@media \(max-width: 760px\)/)
+  assert.match(coverCss, /@media \(prefers-reduced-motion: reduce\)/)
+  assert.match(stage, /IntersectionObserver/)
+  assert.match(stage, /import\('\.\/creatorCoverScene'\)/)
+})
