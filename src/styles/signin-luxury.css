@@ -422,3 +422,75 @@
 @media (prefers-reduced-motion: reduce) {
   #root #main .lg .q-signin-live-context * { animation: none !important; transition: none !important; }
 }
+
+
+/* Compact ivory map badge, deliberately paired with the Private session chip. */
+#root #main .lg > .stage .q-signin-live-context {
+  top: 11px;
+  right: 11px;
+  width: min(194px, calc(100% - 22px));
+  grid-template-columns: minmax(0, 1fr) 68px;
+  gap: 6px 8px;
+  padding: 8px 9px 7px;
+  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(255,253,248,.97), rgba(244,236,226,.95));
+  box-shadow: 0 10px 25px -20px rgba(0,0,0,.68), inset 0 1px 0 rgba(255,255,255,.96);
+}
+#root #main .lg .q-signin-mini-map {
+  width: 68px;
+  height: 46px;
+  border-radius: 9px;
+  background:
+    radial-gradient(ellipse at 76% 23%, rgba(224,137,101,.22), transparent 38%),
+    linear-gradient(135deg,#ebe5dc,#f7f1e8);
+}
+#root #main .lg .q-signin-mini-map svg {
+  stroke: rgba(112,104,94,.34);
+  stroke-width: 2.2;
+}
+#root #main .lg .q-signin-mini-map svg .q-signin-map-water {
+  fill: rgba(174,194,195,.65);
+  stroke: none;
+}
+#root #main .lg .q-signin-mini-map svg .q-signin-map-road {
+  stroke: rgba(108,99,88,.42);
+  stroke-width: 2;
+}
+#root #main .lg .q-signin-mini-map svg .q-signin-map-route {
+  stroke: #b95435;
+  stroke-width: 3.2;
+}
+#root #main .lg .q-signin-mini-map svg .q-signin-map-label {
+  fill: rgba(93,74,59,.72);
+  stroke: none;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: .8px;
+}
+#root #main .lg .q-signin-mini-map .q-signin-map-pin {
+  left: 55%;
+  top: 48%;
+  width: 13px;
+  height: 13px;
+}
+#root #main .lg .q-signin-context-kicker { font-size: 6.5px; }
+#root #main .lg .q-signin-context-copy > strong { font-size: 12px; }
+#root #main .lg .q-signin-context-time { font-size: 9px; }
+#root #main .lg .q-signin-context-copy > small { font-size: 6.5px; }
+#root #main .lg .q-signin-context-status { padding-top: 5px; }
+#root #main .lg .q-signin-context-status > span,
+#root #main .lg .q-signin-context-status > small { font-size: 6px; }
+@media (max-width: 540px) {
+  #root #main .lg > .stage .q-signin-live-context {
+    top: 8px;
+    right: 8px;
+    width: min(166px, calc(100% - 16px));
+    grid-template-columns: minmax(0,1fr) 56px;
+    gap: 5px 6px;
+    padding: 7px 7px 6px;
+  }
+  #root #main .lg .q-signin-mini-map {
+    width: 56px;
+    height: 39px;
+  }
+}
