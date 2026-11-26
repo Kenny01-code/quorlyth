@@ -36,7 +36,7 @@ export interface BotSettings {
 }
 export const BOT_DEFAULTS: BotSettings = {
   tone: 'warm', len: 'short', emo: false, about: '', voice: true, calm: false, robot: false,
-  model: 'smart', vid: 'aria', accent: 'auto', theme: 'pearl',
+  model: 'quick', vid: 'aria', accent: 'auto', theme: 'pearl',
   businessProfile: { name: '', industry: '', offer: '', audience: '', goal: '', constraint: '' },
 }
 
