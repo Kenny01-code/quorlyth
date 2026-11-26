@@ -518,9 +518,21 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
       // Keep the first welcome per account and use a quiet window for repeat opens.
       // This keeps visitors and signed-in members from consuming one another's greeting.
       lastOpenedAt = Number(localStorage.getItem(lastOpenedKey) || 0) || 0
+      // A welcome spoken on the sign-in screen is shared by account email.
+      const welcomedIdentifiers = [a.me?.id, a.me?.email]
+        .map(identifier => String(identifier || '').trim().toLowerCase())
+        .filter(Boolean)
+      const alreadyWelcomed = welcomedIdentifiers.some(value => {
+        let identityHash = 2166136261
+        for (let index = 0; index < value.length; index += 1) {
+          identityHash = Math.imul(identityHash ^ value.charCodeAt(index), 16777619)
+        }
+        return localStorage.getItem('quorlyth:signin-welcomed:v2:' + (identityHash >>> 0).toString(36)) === '1'
+      })
       // Existing accounts stay returning users even when they sign in on a new device.
       firstTime = localStorage.getItem(guideKey) !== '1'
         && lastOpenedAt === 0
+        && !alreadyWelcomed
         && (!a.me || accountIsNew)
       localStorage.setItem(guideKey, '1')
       localStorage.setItem(lastOpenedKey, String(now))
