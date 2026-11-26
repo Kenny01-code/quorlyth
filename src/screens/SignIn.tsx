@@ -188,7 +188,11 @@ function Stage({
     // Start the hard deadline before any provider request so a stuck buffered retry cannot leave the control loading forever.
     helloStartTimer.current = window.setTimeout(() => {
       if (run === helloRun.current && !failureReported) {
-        reportFailure(automatic ? 'The greeting did not start automatically. Tap Hear a hello to try again.' : 'Voice playback timed out before audio started. Tap Hear a hello to retry, and check your device audio.')
+        reportFailure(!navigator.onLine
+          ? 'You are offline. Reconnect to sign in. You can still retry the greeting with your device voice.'
+          : automatic
+            ? 'The greeting did not start automatically. Tap Hear a hello to try again.'
+            : 'Voice playback timed out before audio started. Tap Hear a hello to retry, and check your device audio.')
       }
     }, 10_000)
     try {
@@ -229,11 +233,13 @@ function Stage({
           },
           onPlaybackError: error => {
             const blocked = error?.name === 'NotAllowedError' || /not allowed|user gesture|user activation/i.test(error?.message || '')
-            const message = automatic
-              ? blocked
-                ? 'Your browser blocked automatic audio. Tap Hear a hello to start the greeting.'
-                : 'QuorlythBot could not start audio automatically. Tap Hear a hello to try again.'
-              : error?.message || 'Your device could not start voice playback. Check its audio output and try again.'
+            const message = !navigator.onLine
+              ? 'You are offline. Reconnect to sign in. You can still retry the greeting with your device voice.'
+              : automatic
+                ? blocked
+                  ? 'Your browser blocked automatic audio. Tap Hear a hello to start the greeting.'
+                  : 'QuorlythBot could not start audio automatically. Tap Hear a hello to try again.'
+                : error?.message || 'Your device could not start voice playback. Check its audio output and try again.'
             reportFailure(message, automatic)
           },
         },
@@ -352,7 +358,7 @@ export function SignIn() {
   if (me && mode !== 'recovery' && mode !== 'otp') {
     return (
       <div className="lg"><Stage
-        accountKey={me.id}
+        accountKey={me.email}
         firstTimeOverride={!!me.createdAt && Date.now() - me.createdAt < 24 * 60 * 60 * 1000}
         greeting={`Welcome to your new Quorlyth space, ${me.name.split(' ')[0]}.`}
         returningGreeting={`Welcome back, ${me.name.split(' ')[0]}. Your Quorlyth space is ready.`}
@@ -408,11 +414,6 @@ export function SignIn() {
       } else {
         if (password.length < 8) throw new Error('Use a password with at least 8 characters.')
         await backend!.auth.signInEmail(email.trim(), password)
-        const signedInUser = await backend!.auth.current()
-        if (signedInUser) {
-          markSigninWelcome(signedInUser.id)
-          markSigninWelcome(email.trim().toLowerCase())
-        }
         nav(dest(), { replace: true })
       }
     } catch (er: any) {
@@ -453,8 +454,9 @@ export function SignIn() {
     <div className="lg">
       <Stage
         accountKey={email.trim().toLowerCase()}
-        greeting="Hello and welcome to Quorlyth. I’m your community copilot. I can help you find your way around, surface promising ideas, and keep collaborations moving."
-        returningGreeting="Welcome back to Quorlyth. I can help you catch up on what has changed and pick up where you left off."
+        firstTimeOverride={mode === 'signup'}
+        greeting="Welcome to Quorlyth. I’m your community copilot. I can help you find your way around, surface promising ideas, and keep collaborations moving."
+        returningGreeting="Hello. I’m QuorlythBot. I can help you catch up on what has changed and pick up where you left off."
         autoSpeak={mode === 'signin'}
       />
       <div className="glass fm">
