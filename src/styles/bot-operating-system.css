@@ -1139,9 +1139,9 @@
   color: #b6b1a8 !important;
 }
 #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic {
-  grid-column: 4;
-  grid-row: 2;
-  color: #c8c3bb !important;
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  color: #e8d9ca !important;
 }
 #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live {
   display: inline-grid !important;
@@ -1444,9 +1444,9 @@
   color: #b6b1a8 !important;
 }
 #ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .ast-in.qbot-reference-composer-home .qbot-compose-mic {
-  grid-column: 4;
-  grid-row: 2;
-  color: #c8c3bb !important;
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  color: #e8d9ca !important;
 }
 #ast #bot.qbot-ultra.qbot-reference-layout.qbot-has-messages .ast-in.qbot-reference-composer-home .qbot-compose-live {
   display: inline-grid !important;
