@@ -167,7 +167,7 @@ function start() {
     if (!process.env.AI_ALLOWED_ORIGINS?.trim()) {
       console.warn('AI_ALLOWED_ORIGINS is unset; using the production Quorlyth origin plus local development origins when not in production.')
     }
-    if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY && !process.env.XAI_API_KEY) {
+    if (!process.env.DEEPSEEK_API_KEY && !process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY && !process.env.XAI_API_KEY) {
       console.warn('No text AI provider key is configured. Add provider keys in the cloud service variables.')
     }
   })
