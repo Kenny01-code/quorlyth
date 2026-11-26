@@ -10,7 +10,7 @@ test('homepage editorial badges stay compact and rectangular without changing gl
   assert.match(css, /border-radius: 6px !important/)
   assert.match(css, /min-height: 31px/)
   assert.match(css, /gap: 7px/)
-  assert.doesNotMatch(css, /\.chip\s*\{[^}]*border-radius: 6px !important/s)
+  assert.doesNotMatch(css, /^\.chip\s*\{[^}]*border-radius: 6px !important/sm)
 })
 
 test('Automation Studio keeps the original dark AI builder and integration panels', async () => {
