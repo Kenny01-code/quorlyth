@@ -430,15 +430,11 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
   }, [narrow, side])
 
   useEffect(() => {
-    if (!a.me || !bd.doc('botset')) return
-    const modelKey = 'qbot-smart-default-v1:' + a.me.id
-    const updates: any = {}
-    if (!localStorage.getItem(modelKey)) {
-      if (bs.model === 'quick') updates.model = 'smart'
-      localStorage.setItem(modelKey, '1')
-    }
-    if (Object.keys(updates).length) bd.saveSettings(updates)
-  }, [a.me?.id, bd.doc('botset')?.model])
+    // Thorough/Smart mode is temporarily hidden while the response experience is
+    // consolidated. Migrate existing saved preferences to the supported Quick mode.
+    if (!a.me || !bd.doc('botset') || bs.model === 'quick') return
+    void bd.saveSettings({ model: 'quick' })
+  }, [a.me?.id, bd.doc('botset')?.model, bs.model, bd.saveSettings])
 
   const latestMessageText = cur ? cur.msgs[cur.msgs.length - 1]?.t : undefined
   useEffect(() => {
@@ -4065,9 +4061,9 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                 <button ref={sidebarToggleRef} type="button" className="bib" aria-label={sideShown ? 'Collapse sidebar' : 'Open sidebar'} title={sideShown ? 'Collapse sidebar' : 'Open sidebar'} aria-expanded={sideShown} aria-controls="qbot-sidebar" onClick={e => { e.stopPropagation(); setSide(value => !value) }}><Icon name="menu" size={18} /></button>
                 <div className="bht">
                   {view === 'chat' ? <div className="qbot-header-stack">
-                    <button type="button" className="qbot-core-selector" aria-label={`Response mode: ${bs.model === 'quick' ? 'Quick' : 'Smart'}. Click to switch.`} title="Switch response mode" onClick={() => { const model = bs.model === 'quick' ? 'smart' : 'quick'; void bd.saveSettings({ model }) }}>
-                      <span>QuorlythBot</span><i>{bs.model === 'quick' ? 'QUICK' : 'SMART'}</i><span className="qbot-core-caret" aria-hidden="true" />
-                    </button>
+                    <div className="qbot-core-brand">
+                      <span>QuorlythBot</span><i>ASSISTANT</i>
+                    </div>
                     <div className="qbot-title-row">
                       <span className="qbot-chat-title">{cur?.title || (project ? project.name : 'New conversation')}</span>
                     </div>
@@ -4307,7 +4303,6 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                     <button type="button" className="qbot-composer-plus" aria-label="Open Quorlyth plugins" title="Plugins and tools" onClick={() => { stopLive(); stopVoice(); setView('skills') }}><Icon name="plus" size={17} /></button>
                     <textarea rows={1} value={input} placeholder={ph || 'How can I help you today?'} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
-                    <button type="button" className="qbot-model-switch" aria-label={`Switch response mode. Current: ${bs.model === 'quick' ? 'Quick' : 'Smart'}`} title="Switch response mode" onClick={() => { const model = bs.model === 'quick' ? 'smart' : 'quick'; void bd.saveSettings({ model }) }}><span>{bs.model === 'quick' ? 'Quorlyth Quick' : 'Quorlyth Smart'}</span><Icon name="chevron-down" size={12} /></button>
                     <button className={cn('btn', 'qbot-compose-mic', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording - click to stop and send' : 'Record a voice note'} onClick={dictate}><Icon name="mic" size={16} /></button>
                     <button className={cn('btn', 'qbot-compose-live', live && 'rec')} aria-label={live ? 'End voice conversation' : 'Start voice conversation'} title={live ? 'End voice conversation' : 'Start voice conversation'} onClick={startLive}><Icon name={live ? 'mic' : 'audio-lines'} size={16} /></button>
                     <button className="btn p qbot-compose-send" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} onClick={() => send()}><Icon name="arrow-up" size={17} /></button>
