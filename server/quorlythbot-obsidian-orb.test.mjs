@@ -155,15 +155,25 @@ test('the first dark reference interface remains consistent through empty chat, 
   for (const region of ['bs-t', 'bs-n', 'bs-l', 'bs-f']) assert.ok(bot.includes('className="' + region + '"'))
   assert.ok(bot.includes("className={cn('bs-s', searchOpen && 'is-open')}"))
   assert.ok(bot.includes('qbot-sidebar-primary-action'))
-  assert.ok(bot.includes('qbot-model-switch'))
+  assert.ok(!bot.includes('qbot-model-switch'))
+  assert.ok(!bot.includes('qbot-core-selector'))
+  assert.ok(bot.includes('qbot-core-brand'))
+  assert.ok(bot.includes('qbot-compose-live'))
   assert.ok(bot.includes('qbot-disclaimer'))
 
   assert.ok(operatingSystem.includes('grid-template-columns: minmax(0, 1fr) !important;'))
-  assert.ok(operatingSystem.includes('qbot-has-messages {\n  background: #080808 !important;'))
-  assert.ok(operatingSystem.includes('qbot-has-messages > .bm {\n  background: #080808 !important;'))
   assert.ok(operatingSystem.includes('qbot-has-messages .ast-in.qbot-reference-composer-home'))
   assert.ok(operatingSystem.includes('qbot-has-messages .qbot-reference-tabs'))
   assert.ok(!operatingSystem.includes('#f1f0ee'))
+
+  const premium = await source('src/styles/bot-premium-chat.css')
+  assert.match(premium, /qbot-compose-live[\s\S]*?display: inline-grid !important/)
+  assert.match(premium, /grid-template-columns: 40px minmax\(0,1fr\) 40px 40px 44px/)
+  assert.match(premium, /qbot-chat-surface[\s\S]*?background:[\s\S]*?#f7f3ec/)
+  assert.match(premium, /qbot-conversation:not\(\.qbot-chat-surface\):not\(\.qbot-robot-studio-shell\)/)
+  assert.match(premium, /qbot-robot-studio-shell[\s\S]*?background: #08090b/)
+  assert.match(premium, /@media \(max-width: 390px\)/)
+  assert.match(premium, /@media \(prefers-reduced-motion: reduce\)/)
 })
 
 test('full-page Bot sidebar collapses cleanly, restores focus, and closes from backdrop or Escape', async () => {
