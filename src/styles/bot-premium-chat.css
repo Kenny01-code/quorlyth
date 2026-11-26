@@ -734,3 +734,245 @@
   background: #fffefa !important;
   box-shadow: 0 2px 9px rgba(61,40,26,.08) !important;
 }
+
+
+/* Final chat polish: firm paper reading panels, comfortable type and isolated controls. */
+#ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface {
+  background:
+    radial-gradient(ellipse 60% 26% at 50% 0%, rgba(185, 78, 44, .055), transparent 78%),
+    linear-gradient(180deg, #f8f4ee 0%, #f1ebe2 100%) !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(157, 76, 45, .28) transparent !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message {
+  width: min(100%, 860px) !important;
+  border: 1px solid rgba(57, 43, 32, .12) !important;
+  border-left: 3px solid #b65332 !important;
+  border-radius: 6px 19px 19px 19px !important;
+  background: #fffefa !important;
+  box-shadow: 0 16px 42px -34px rgba(46, 30, 19, .48), inset 0 1px 0 #fff !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt {
+  max-width: 100%;
+  color: #211913 !important;
+  font-size: clamp(14px, 1.04vw, 15.5px) !important;
+  line-height: 1.82 !important;
+  text-wrap: pretty;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-user-message {
+  max-width: min(86%, 700px) !important;
+  line-height: 1.72 !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact {
+  gap: 7px !important;
+  padding-top: 11px;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 10px !important;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button:hover {
+  border-color: rgba(154, 70, 39, .18) !important;
+  color: #87391f !important;
+  background: #f6e9de !important;
+}
+#ast #bot.qbot-ultra .qbot-home-composer {
+  padding: 11px clamp(13px, 3vw, 32px) 14px !important;
+  background: linear-gradient(180deg, #f3ede5 0%, #eae1d7 100%) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
+  grid-template-columns: 42px minmax(0, 1fr) 42px 42px 46px !important;
+  grid-template-rows: minmax(58px, auto) 42px auto !important;
+  gap: 9px 9px !important;
+  min-height: 132px !important;
+  padding: 11px 13px !important;
+  border-radius: 22px !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
+  position: relative;
+  isolation: isolate;
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: 12px !important;
+  outline: 0;
+  filter: none !important;
+  transform: none !important;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus:not(:hover):not(:focus-visible),
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic:not(:hover):not(:focus-visible):not(.rec),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:not(:hover):not(:focus-visible),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic:not(:hover):not(:focus-visible):not(.rec) {
+  border-color: rgba(240, 225, 211, .17) !important;
+  color: #e8d9ca !important;
+  background: rgba(255, 255, 255, .055) !important;
+  box-shadow: none !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus:hover,
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-plus:focus-visible,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:hover,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:focus-visible {
+  border-color: rgba(217, 119, 85, .58) !important;
+  color: #ffb18c !important;
+  background: rgba(184, 79, 45, .18) !important;
+  box-shadow: 0 0 0 2px rgba(184, 79, 45, .07) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic:hover,
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic:focus-visible,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic:hover,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic:focus-visible {
+  border-color: rgba(217, 119, 85, .58) !important;
+  color: #ffb18c !important;
+  background: rgba(184, 79, 45, .18) !important;
+  box-shadow: 0 0 0 2px rgba(184, 79, 45, .07) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:not(:hover):not(:focus-visible):not(.rec),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live:not(:hover):not(:focus-visible):not(.rec) {
+  border-color: rgba(210, 116, 76, .34) !important;
+  color: #f1a17c !important;
+  background: rgba(173, 73, 43, .13) !important;
+  box-shadow: none !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:hover,
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:focus-visible,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live:hover,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live:focus-visible {
+  border-color: rgba(238, 128, 83, .72) !important;
+  color: #ffc09b !important;
+  background: rgba(190, 75, 42, .26) !important;
+  box-shadow: 0 0 0 3px rgba(184, 79, 45, .12) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic.rec,
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live.rec {
+  border-color: rgba(238, 128, 83, .78) !important;
+  color: #ffc09b !important;
+  background: rgba(190, 75, 42, .27) !important;
+  box-shadow: 0 0 0 3px rgba(184, 79, 45, .12) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:not(:hover):not(:focus-visible):not(:disabled),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send:not(:hover):not(:focus-visible):not(:disabled) {
+  border-color: rgba(235, 153, 117, .42) !important;
+  color: #fff8f1 !important;
+  background: linear-gradient(145deg, #c96643, #a84629) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:focus-visible,
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:hover:not(:disabled),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send:focus-visible,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send:hover:not(:disabled) {
+  border-color: rgba(255, 190, 158, .72) !important;
+  color: #fff8f1 !important;
+  background: linear-gradient(145deg, #d87851, #b24c2c) !important;
+  box-shadow: 0 10px 23px -13px rgba(190, 79, 45, .75) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(button):focus-visible {
+  outline: 2px solid rgba(217, 119, 85, .72) !important;
+  outline-offset: 3px !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-toolbar {
+  gap: 8px !important;
+  row-gap: 7px !important;
+}
+#ast #bot.qbot-ultra .qbot-tool-pill {
+  min-height: 31px !important;
+  padding-inline: 10px !important;
+  border-radius: 999px !important;
+}
+#ast #bot.qbot-ultra .qbot-home-composer button,
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home button {
+  filter: none !important;
+  transform: none;
+}
+#ast #bot.qbot-ultra .qbot-network-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: 8px;
+  padding: 5px 8px;
+  border: 1px solid rgba(58, 42, 31, .12);
+  border-radius: 999px;
+  color: #625449 !important;
+  background: rgba(255, 254, 250, .72);
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: .08em;
+  white-space: nowrap;
+}
+#ast #bot.qbot-ultra .qbot-network-indicator i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #35a46b;
+  box-shadow: 0 0 0 3px rgba(53, 164, 107, .1);
+}
+#ast #bot.qbot-ultra .qbot-network-indicator.is-offline {
+  border-color: rgba(177, 70, 41, .22);
+  color: #8f4128 !important;
+  background: #fae9df;
+}
+#ast #bot.qbot-ultra .qbot-network-indicator.is-offline i {
+  background: #d15b3a;
+  box-shadow: 0 0 0 3px rgba(209, 91, 58, .12);
+}
+@media (max-width: 760px) {
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
+  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
+    grid-template-columns: 36px minmax(0, 1fr) 36px 36px 40px !important;
+    grid-template-rows: minmax(54px, auto) 38px auto !important;
+    gap: 8px 6px !important;
+    padding: 9px !important;
+    min-height: 124px !important;
+  }
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send),
+  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-network-indicator {
+    margin-left: 4px;
+    padding: 4px 6px;
+  }
+  #ast #bot.qbot-ultra .qbot-network-indicator > span { display: none; }
+}
+@media (max-width: 390px) {
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
+  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
+    grid-template-columns: 34px minmax(0, 1fr) 34px 34px 38px !important;
+    gap: 7px 4px !important;
+    padding: 8px !important;
+  }
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send),
+  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-assistant-message .mact button {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+@media (max-width: 520px) {
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message { border-radius: 5px 15px 15px 15px !important; }
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt { font-size: 14px !important; line-height: 1.76 !important; }
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact { gap: 4px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ast #bot.qbot-ultra .qbot-conversation *,
+  #ast #bot.qbot-ultra .ast-in * {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
