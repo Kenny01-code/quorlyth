@@ -105,7 +105,7 @@ async function readError(r: Response) {
       'Gemini did not respond within the configured provider timeout. Check the Gemini API key, model access, and quota, then try again.',
       'The AI service could not authenticate this request. Check the configured provider API key, permissions, and account usage status, then try again.',
       'QuorlythBot could not get a response from the available AI services. Please try again shortly.',
-      'No text AI provider is configured. Add GEMINI_API_KEY, XAI_API_KEY, or OPENAI_API_KEY to the server environment.',
+      'No text AI provider is configured. Add DEEPSEEK_API_KEY, GEMINI_API_KEY, XAI_API_KEY, or OPENAI_API_KEY to the server environment.',
       'No AI speech provider is configured. Add ELEVENLABS_API_KEY (primary), XAI_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY to the server environment.',
       'QuorlythBot could not prepare voice audio. Each configured speech provider was tried; check the provider quota or retry shortly.',
     ]
