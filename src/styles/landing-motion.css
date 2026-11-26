@@ -343,3 +343,24 @@
 @media (prefers-reduced-motion: reduce) {
   .qth-creator-stage__art img.qth-character { animation: none !important; }
 }
+
+
+/* Landing labels use the same compact rectangular treatment as the system-map
+   kicker. Keep the rest of the application's chips unchanged. */
+#root #main .hero > .chip,
+#root #main .preview-card .preview-topline > .chip {
+  min-height: 31px;
+  padding: 7px 10px;
+  border: 1px solid rgba(217,121,82,.28);
+  border-radius: 8px;
+  color: #F0EAD9;
+  background: linear-gradient(145deg,rgba(217,121,82,.11),rgba(255,255,255,.025));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .09em;
+}
+#root #main .hero > .chip .ic,
+#root #main .preview-card .preview-topline > .chip .ic {
+  color: #E48763;
+}
