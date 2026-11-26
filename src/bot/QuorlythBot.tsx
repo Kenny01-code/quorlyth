@@ -525,6 +525,14 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
       localStorage.setItem(guideKey, '1')
       localStorage.setItem(lastOpenedKey, String(now))
       localStorage.setItem('qseen', '1')
+      if (a.me?.email) {
+        const email = a.me.email.trim().toLowerCase()
+        let emailHash = 2166136261
+        for (let index = 0; index < email.length; index += 1) {
+          emailHash = Math.imul(emailHash ^ email.charCodeAt(index), 16777619)
+        }
+        localStorage.setItem('quorlyth:signin-welcomed:v2:' + (emailHash >>> 0).toString(36), '1')
+      }
     } catch {
       // Storage can be unavailable in private/restricted browser contexts; still greet once per open.
       firstTime = true
