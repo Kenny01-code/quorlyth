@@ -84,13 +84,14 @@ function LocalContextPreview() {
       </div>
       <div className="q-signin-mini-map" role="img" aria-label={`Stylised region map for approximately ${place}, ${area}`}>
         <svg viewBox="0 0 112 72" aria-hidden="true" focusable="false">
-          <path d="M-4 13 C15 7 22 18 39 15 S63 7 78 15 100 20 118 7" />
-          <path d="M-6 34 C12 25 24 31 38 29 S64 36 78 31 96 25 118 35" />
-          <path d="M-6 55 C13 49 27 58 43 53 S68 45 82 53 101 60 119 48" />
-          <path d="M18 -6 C22 11 31 21 30 37 S24 60 32 78" />
-          <path d="M51 -7 C47 12 56 20 54 36 S48 57 58 78" />
-          <path d="M84 -8 C76 9 88 23 82 39 S78 58 91 78" />
-          <path d="M-5 43 C16 39 26 42 41 40 S67 31 83 39 100 47 117 42" className="q-signin-map-highlight" />
+          <path className="q-signin-map-water" d="M-5 43 C10 38 18 42 28 45 C39 50 43 61 54 63 C66 65 73 55 81 51 C93 45 103 49 118 41 L118 77 L-5 77 Z" />
+          <path className="q-signin-map-road" d="M-4 16 C16 12 25 19 43 17 S68 10 88 17 104 21 118 12" />
+          <path className="q-signin-map-road" d="M-6 31 C13 25 24 34 42 30 S67 24 82 31 101 36 118 28" />
+          <path className="q-signin-map-road" d="M9 -6 C16 12 17 23 25 34 S36 56 34 78" />
+          <path className="q-signin-map-road" d="M49 -7 C44 12 52 24 51 39 S55 57 63 78" />
+          <path className="q-signin-map-road" d="M87 -7 C79 10 90 24 83 39 S82 58 96 78" />
+          <path className="q-signin-map-route" d="M-5 51 C14 43 22 40 39 43 S62 39 72 31 95 27 118 20" />
+          <text x="7" y="11" className="q-signin-map-label">MAP</text>
         </svg>
         <span className="q-signin-map-pin"><i /></span>
       </div>
