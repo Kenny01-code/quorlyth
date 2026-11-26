@@ -9,12 +9,106 @@ import { useRef } from 'react'
 import '../styles/signin-performance.css'
 import '../styles/signin-luxury.css'
 
-function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: boolean }) {
+function signinWelcomeKey(identity?: string) {
+  const value = (identity || '').trim().toLowerCase()
+  if (!value) return ''
+  // Hash the identifier so an email address is never written into a storage key.
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash = Math.imul(hash ^ value.charCodeAt(index), 16777619)
+  }
+  return 'quorlyth:signin-welcomed:v2:' + (hash >>> 0).toString(36)
+}
+
+function hasSigninWelcome(identity?: string) {
+  try {
+    const key = signinWelcomeKey(identity)
+    return key ? localStorage.getItem(key) === '1' : localStorage.getItem('qseen') === '1'
+  } catch { return false }
+}
+
+function markSigninWelcome(identity?: string) {
+  try {
+    const key = signinWelcomeKey(identity)
+    if (key) localStorage.setItem(key, '1')
+    localStorage.setItem('qseen', '1')
+  } catch { /* Welcome speech must still work when browser storage is disabled. */ }
+}
+
+function LocalContextPreview() {
+  const [now, setNow] = useState(() => Date.now())
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine)
+  const zone = (() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Device time zone' }
+    catch { return 'Device time zone' }
+  })()
+  const zoneParts = zone.split('/')
+  const place = (zoneParts[zoneParts.length - 1] || 'Local area').replace(/_/g, ' ')
+  const region = zoneParts.length > 1 ? zoneParts[0].replace(/_/g, ' ') : 'Device'
+  const time = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now)
+  const date = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(now)
+
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(Date.now()), 1000)
+    const sync = () => setOnline(navigator.onLine)
+    window.addEventListener('online', sync)
+    window.addEventListener('offline', sync)
+    return () => {
+      window.clearInterval(tick)
+      window.removeEventListener('online', sync)
+      window.removeEventListener('offline', sync)
+    }
+  }, [])
+
+  return (
+    <aside className="q-signin-live-context" aria-label="Live local context">
+      <div className="q-signin-context-head">
+        <span>LOCAL SIGNAL</span>
+        <span className="q-signin-context-live"><i />LIVE</span>
+      </div>
+      <div className="q-signin-context-time">
+        <strong>{time}</strong>
+        <span>{date}</span>
+      </div>
+      <div className="q-signin-context-place">
+        <span>TIME-ZONE REGION</span>
+        <strong>{place}</strong>
+        <small>{region} · {zone}</small>
+      </div>
+      <div className="q-signin-context-network">
+        <i className={online ? 'is-online' : 'is-offline'} />
+        <span>{online ? 'Connection active' : 'You are offline'}</span>
+      </div>
+      {!online && <p className="q-signin-context-note">I can try your device voice, but signing in needs an internet connection.</p>}
+      <p className="q-signin-context-foot">Region comes from your device time zone. Precise location is not accessed.</p>
+    </aside>
+  )
+}
+
+function Stage({
+  greeting,
+  returningGreeting,
+  accountKey,
+  firstTimeOverride,
+  autoSpeak = false,
+}: {
+  greeting: string
+  returningGreeting?: string
+  accountKey?: string
+  firstTimeOverride?: boolean
+  autoSpeak?: boolean
+}) {
   const r = useRef<RobotApi | null>(null)
   const { toast } = useApp()
-  const [first] = useState(() => {
-    try { return localStorage.getItem('qseen') !== '1' } catch { return true }
+  const [first, setFirst] = useState(() => {
+    const seen = hasSigninWelcome(accountKey)
+    return !seen && (firstTimeOverride ?? true)
   })
+  useEffect(() => {
+    const seen = hasSigninWelcome(accountKey)
+    setFirst(!seen && (firstTimeOverride ?? true))
+  }, [accountKey, firstTimeOverride])
+  const activeGreeting = first ? greeting : (returningGreeting || greeting)
   const [helloState, setHelloState] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle')
   const [helloStatus, setHelloStatus] = useState('')
   const helloController = useRef<AbortController | null>(null)
@@ -87,7 +181,9 @@ function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: 
     }
 
     setHelloState('loading')
-    setHelloStatus('Preparing QuorlythBot’s voice…')
+    setHelloStatus(navigator.onLine
+      ? 'Preparing QuorlythBot’s voice…'
+      : 'You are offline. Trying your device voice…')
     r.current?.welcome()
     // Start the hard deadline before any provider request so a stuck buffered retry cannot leave the control loading forever.
     helloStartTimer.current = window.setTimeout(() => {
@@ -97,7 +193,7 @@ function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: 
     }, 10_000)
     try {
       const playback = await speakText(
-        greeting,
+        activeGreeting,
         preferredVoice(),
         () => {
           if (run !== helloRun.current || controller.signal.aborted || failureReported) return
@@ -106,7 +202,7 @@ function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: 
           r.current?.talk(true)
           setHelloState('playing')
           setHelloStatus(usedBrowserFallback ? 'Speaking with your device voice.' : 'QuorlythBot is speaking.')
-          try { localStorage.setItem('qseen', '1') } catch {}
+          markSigninWelcome(accountKey)
         },
         () => {
           if (run !== helloRun.current || failureReported) return
@@ -127,7 +223,9 @@ function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: 
           liveTalk: false,
           onBrowserFallback: () => {
             usedBrowserFallback = true
-            if (run === helloRun.current) setHelloStatus('Switching to your device voice…')
+            if (run === helloRun.current) setHelloStatus(navigator.onLine
+              ? 'Switching to your device voice…'
+              : 'Offline. Speaking with your device voice…')
           },
           onPlaybackError: error => {
             const blocked = error?.name === 'NotAllowedError' || /not allowed|user gesture|user activation/i.test(error?.message || '')
@@ -149,11 +247,13 @@ function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: 
     } catch (error) {
       if (run !== helloRun.current || controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return
       const blocked = error instanceof Error && (error.name === 'NotAllowedError' || /not allowed|user gesture|user activation/i.test(error.message))
-      const message = automatic
-        ? blocked
-          ? 'Your browser blocked automatic audio. Tap Hear a hello to start the greeting.'
-          : 'QuorlythBot could not start audio automatically. Tap Hear a hello to try again.'
-        : error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
+      const message = !navigator.onLine
+        ? 'You are offline. Reconnect to sign in. You can still try the greeting with your device voice.'
+        : automatic
+          ? blocked
+            ? 'Your browser blocked automatic audio. Tap Hear a hello to start the greeting.'
+            : 'QuorlythBot could not start audio automatically. Tap Hear a hello to try again.'
+          : error instanceof Error ? error.message : 'Natural voice playback is unavailable on this device.'
       reportFailure(message, automatic)
     } finally {
       if (helloController.current === controller) helloController.current = null
@@ -188,6 +288,7 @@ function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: 
         window.setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400)
       }} />
       <div className="c1 glass"><span className="chip"><Icon name="private" size={12} />Private session</span></div>
+      <LocalContextPreview />
       <button
         type="button"
         className="chip hello"
@@ -199,7 +300,7 @@ function Stage({ greeting, autoSpeak = false }: { greeting: string; autoSpeak?: 
         {helloState === 'loading' ? 'Starting voice…' : helloState === 'playing' ? 'Stop hello' : helloState === 'error' ? 'Tap to hear hello' : 'Hear a hello'}
       </button>
       {helloStatus && <p className={helloState === 'error' ? 'q-signin-hello-status is-error' : 'q-signin-hello-status'} role="status" aria-live="polite">{helloStatus}</p>}
-      <div className="cap"><p className="dim">QuorlythBot</p><h3 style={{ fontSize: 22, fontWeight: 200, marginTop: 4 }}>{first ? 'Your room is ready.' : 'Welcome back to your room.'}</h3></div>
+      <div className="cap"><p className="dim">QuorlythBot</p><h3 style={{ fontSize: 22, fontWeight: 200, marginTop: 4 }}>{first ? 'Your room is ready.' : 'Good to have you back.'}</h3></div>
     </div>
   )
 }
@@ -224,9 +325,6 @@ export function SignIn() {
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset' | 'otp' | 'recovery'>(() => {
     if (params.get('recovery') === '1') return params.get('otp') === '1' ? 'otp' : 'recovery'
     return params.get('mode') === 'signup' ? 'signup' : 'signin'
-  })
-  const [firstWelcome] = useState(() => {
-    try { return localStorage.getItem('qseen') !== '1' } catch { return true }
   })
   const [resetMethod, setResetMethod] = useState<'link' | 'otp'>('otp')
   const [otp, setOtp] = useState('')
@@ -253,7 +351,13 @@ export function SignIn() {
 
   if (me && mode !== 'recovery' && mode !== 'otp') {
     return (
-      <div className="lg"><Stage greeting={`Welcome back, ${me.name.split(' ')[0]}. Your Quorlyth space is ready.`} />
+      <div className="lg"><Stage
+        accountKey={me.id}
+        firstTimeOverride={!!me.createdAt && Date.now() - me.createdAt < 24 * 60 * 60 * 1000}
+        greeting={`Welcome to your new Quorlyth space, ${me.name.split(' ')[0]}.`}
+        returningGreeting={`Welcome back, ${me.name.split(' ')[0]}. Your Quorlyth space is ready.`}
+        autoSpeak
+      />
         <div className="glass fm"><h2 style={{ fontSize: 40 }}>Welcome back, {me.name.split(' ')[0]}.</h2>
           <div className="acts"><button className="btn p" onClick={() => nav('/dashboard')}><Icon name="home" />Open dashboard</button>
             <button className="btn" disabled={busy} onClick={async () => { setBusy(true); try { await signOut(); sessionStorage.removeItem('qreturn'); nav('/signin', { replace: true }); toast('Signed out. You can sign in again below.') } catch (error: any) { toast(error?.message || 'Could not sign out. Please try again.') } finally { setBusy(false) } }}>{busy ? 'Signing out…' : 'Sign out'}</button></div></div></div>
@@ -304,6 +408,8 @@ export function SignIn() {
       } else {
         if (password.length < 8) throw new Error('Use a password with at least 8 characters.')
         await backend!.auth.signInEmail(email.trim(), password)
+        const signedInUser = await backend!.auth.current()
+        if (signedInUser) markSigninWelcome(signedInUser.id)
         nav(dest(), { replace: true })
       }
     } catch (er: any) {
@@ -342,9 +448,12 @@ export function SignIn() {
 
   return (
     <div className="lg">
-      <Stage greeting={firstWelcome
-        ? "Hello and welcome to Quorlyth, where your fans, in order, become a community."
-        : "Welcome back to Quorlyth. Your space is ready whenever you are."} autoSpeak={mode === 'signin'} />
+      <Stage
+        accountKey={email.trim().toLowerCase()}
+        greeting="Hello and welcome to Quorlyth. I’m your community copilot. I can help you find your way around, surface promising ideas, and keep collaborations moving."
+        returningGreeting="Welcome back to Quorlyth. I can help you catch up on what has changed and pick up where you left off."
+        autoSpeak={mode === 'signin'}
+      />
       <div className="glass fm">
         {notice ? (
           <div className="done"><div className="score"><Icon name="mail" size={30} /></div>
