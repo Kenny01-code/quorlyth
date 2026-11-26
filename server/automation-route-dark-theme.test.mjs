@@ -34,6 +34,8 @@ test('Automation Studio activates a route-level dark theme on the full app shell
 
   assert.match(bot, /nav\('\/automations'\)\s*\}\}><Icon name="calendar-clock" size=\{16\} \/>Automations/)
   assert.doesNotMatch(bot, /calendar-clock[^\n]*nav\('\/architecture'\)/)
+  assert.equal((bot.match(/\/automations\?created=/g) || []).length, 2)
+  assert.doesNotMatch(bot, /\/architecture\?automationCreated=/)
 })
 
 test('Automation dark route class is removed when leaving the route', async () => {
