@@ -194,7 +194,9 @@ test('Signed-out navigation remains visible and scrollable on narrow screens', a
 test('Chat provider failover bounds stalled header and first-token waits', async () => {
   const server = await readSource('server/openai.mjs')
   assert.match(server, /Math\.min\(configured, 2200\)/)
-  assert.match(server, /isTtsRequest \? 30000 : isGeminiRequest \? 4500 : 2400/)
+  assert.match(server, /const timeoutCap = isTtsRequest \\? 30000 : isGeminiRequest \\? 4500 : isDeepSeekRequest \\? 15000 : 2400/)
+  assert.match(server, /process\\.env\\.AI_DEEPSEEK_PROVIDER_TIMEOUT_MS/)
+  assert.match(server, /const defaultTimeout = isTtsRequest \\? 8000 : isGeminiRequest \\? 4500 : isDeepSeekRequest \\? 9000 : 2400/)
   assert.match(server, /PROVIDER_FALLBACK_STATUSES = new Set\(\[401, 402, 403, 404, \.\.\.TRANSIENT_STATUSES\]\)/)
 })
 
