@@ -74,7 +74,7 @@ test('voice UI exposes the pearl orb and keeps the chat composer mounted during 
     source('src/bot/config.ts'),
   ])
 
-  assert.match(bot, /aria-label=\{live \? 'End voice conversation' : 'Start voice conversation'\}/)
+  assert.match(bot, /aria-label=\{live \? 'End Live Talk' : 'Start Live Talk'\}/)
   assert.match(bot, /live\?\.user/)
   assert.match(bot, /live\?\.bot/)
   assert.match(views, /Orb finish/)
