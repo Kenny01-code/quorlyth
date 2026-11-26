@@ -3968,7 +3968,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                   <span className="qbot-sidebar-primary-copy"><b>New chat</b></span>
                 </button>
                 <button className={cn('bsb', view === 'projects' && 'on')} onClick={() => { stopLive(); stopVoice(); setView('projects'); if (!wide) setSide(false) }}><Icon name="folder" size={16} />Projects</button>
-                <button className="bsb" onClick={() => { stopLive(); stopVoice(); setOpen(false); nav('/architecture') }}><Icon name="calendar-clock" size={16} />Automations</button>
+                <button className="bsb" onClick={() => { stopLive(); stopVoice(); setOpen(false); nav('/automations') }}><Icon name="calendar-clock" size={16} />Automations</button>
                 <button className={cn('bsb', view === 'skills' && 'on')} onClick={() => { stopLive(); stopVoice(); setView('skills'); if (!wide) setSide(false) }}><Icon name="plug" size={16} />Plugins</button>
                 <button type="button" className={cn('bsb qbot-more-nav-toggle', showMoreNav && 'on')} aria-expanded={showMoreNav} onClick={() => setShowMoreNav(value => !value)}><Icon name="more-horizontal" size={16} /><span>More</span><i aria-hidden="true">{showMoreNav ? '−' : '···'}</i></button>
                 {showMoreNav && <div className="qbot-more-nav-group">
