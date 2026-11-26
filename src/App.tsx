@@ -163,7 +163,7 @@ export default function App() {
 
 
   useEffect(() => {
-    const active = loc.pathname.replace(/\\/+$/, '') === '/automations'
+        const active = loc.pathname === '/automations'
     document.documentElement.classList.toggle('q-automation-route-active', active)
     document.body.classList.toggle('q-automation-route-active', active)
     return () => {
