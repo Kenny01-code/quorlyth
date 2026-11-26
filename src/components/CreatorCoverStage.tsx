@@ -17,6 +17,32 @@ export function CreatorCoverStage() {
     let cancelled = false
     let dispose: (() => void) | undefined
     let requested = false
+    let idleHandle: number | null = null
+    let fallbackTimer: number | null = null
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void,
+        options?: { timeout: number },
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+
+    const scheduleMount = () => {
+      if (requested || cancelled) return
+      if (typeof idleWindow.requestIdleCallback === 'function') {
+        idleHandle = idleWindow.requestIdleCallback(() => { void mount() }, { timeout: 1400 })
+      } else {
+        // Give the landing copy and navigation a clean first paint before WebGL work.
+        fallbackTimer = window.setTimeout(() => { void mount() }, 240)
+      }
+    }
+
+    const cancelScheduledMount = () => {
+      if (idleHandle !== null) idleWindow.cancelIdleCallback?.(idleHandle)
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer)
+      idleHandle = null
+      fallbackTimer = null
+    }
 
     const mount = async () => {
       if (requested || cancelled) return
@@ -32,24 +58,26 @@ export function CreatorCoverStage() {
     }
 
     if (typeof IntersectionObserver === 'undefined') {
-      void mount()
+      scheduleMount()
     } else {
       const observer = new IntersectionObserver(entries => {
         if (entries.some(entry => entry.isIntersecting)) {
           observer.disconnect()
-          void mount()
+          scheduleMount()
         }
       }, { rootMargin: '180px 0px' })
       observer.observe(element)
       return () => {
         cancelled = true
         observer.disconnect()
+        cancelScheduledMount()
         dispose?.()
       }
     }
 
     return () => {
       cancelled = true
+      cancelScheduledMount()
       dispose?.()
     }
   }, [])
