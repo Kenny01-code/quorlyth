@@ -695,3 +695,42 @@
     min-height: 36px !important;
   }
 }
+
+
+/* Shared Bot subpage header and Chat/Work tabs follow the warm editorial pane. */
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh {
+  color: #211913 !important;
+  background: #f5f0e7 !important;
+  border-bottom: 1px solid rgba(49,35,25,.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh .qbot-chat-title,
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh .bht :is(span,b,strong) {
+  color: #211913 !important;
+  -webkit-text-fill-color: #211913 !important;
+}
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh .bha .bib {
+  border-color: rgba(55,39,28,.15) !important;
+  color: #984326 !important;
+  background: rgba(255,254,250,.72) !important;
+}
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh .bha .bib:is(:hover,:focus-visible) {
+  border-color: rgba(168,74,42,.4) !important;
+  color: #87391f !important;
+  background: #f5e7db !important;
+}
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) .qbot-reference-tabs {
+  border: 1px solid rgba(55,39,28,.12) !important;
+  background: #e9e0d5 !important;
+}
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) .qbot-reference-tabs button {
+  color: #68594d !important;
+  background: transparent !important;
+}
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) .qbot-reference-tabs button.is-active {
+  color: #7f381f !important;
+  background: #fffefa !important;
+  box-shadow: 0 2px 9px rgba(61,40,26,.08) !important;
+}
