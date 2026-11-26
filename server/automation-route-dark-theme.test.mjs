@@ -13,10 +13,15 @@ test('Automation Studio activates a route-level dark theme on the full app shell
     source('src/bot/QuorlythBot.tsx'),
   ])
 
-  const lightThemeIndex = entry.indexOf("import './styles/luxury-light-system.css'")
+  const baseThemeIndex = entry.indexOf("import './styles/app.css'")
+  const lightThemeImportedGlobally = entry.includes("import './styles/luxury-light-system.css'")
   const darkThemeIndex = entry.indexOf("import './styles/automation-dark.css'")
-  assert.ok(lightThemeIndex >= 0, 'the existing light/editorial theme remains available')
-  assert.ok(darkThemeIndex > lightThemeIndex, 'the Automation dark theme loads after the global light theme')
+  const baseTheme = await source('src/styles/app.css')
+  assert.ok(baseThemeIndex >= 0, 'the original app-wide dark theme remains the base layer')
+  assert.equal(lightThemeImportedGlobally, false, 'the editorial light override must not be applied globally')
+  assert.ok(darkThemeIndex > baseThemeIndex, 'the Automation dark route layer loads after the app base styles')
+  assert.match(baseTheme, /:root\\s*\\{[^}]*--k:\\s*#000[^}]*--w:\\s*#fff/s)
+  assert.match(baseTheme, /body\\s*\\{background:\\s*var\\(--k\\);color:\\s*var\\(--w\\);/)
 
   assert.match(app, /loc\.pathname === '\/automations' \? 'q-automation-route' : undefined/)
   assert.match(app, /document\.documentElement\.classList\.toggle\('q-automation-route-active', active\)/)
