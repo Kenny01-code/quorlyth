@@ -5,11 +5,12 @@ import { readFile } from 'node:fs/promises'
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
 test('Automation Studio activates a route-level dark theme on the full app shell', async () => {
-  const [entry, app, theme, automation, automationPage, bot] = await Promise.all([
+  const [entry, app, theme, automation, automationAi, automationPage, bot] = await Promise.all([
     source('src/main.tsx'),
     source('src/App.tsx'),
     source('src/styles/automation-dark.css'),
     source('src/styles/automations.css'),
+    source('src/styles/automation-ai.css'),
     source('src/screens/Automations.tsx'),
     source('src/bot/QuorlythBot.tsx'),
   ])
@@ -28,6 +29,12 @@ test('Automation Studio activates a route-level dark theme on the full app shell
   assert.ok(automationBaseIndex >= 0 && automationEditorialIndex > automationBaseIndex, 'Automation starter-card styles retain their original order')
   assert.ok(automationAiIndex > automationEditorialIndex, 'Automation AI styles load after editorial cards')
   assert.ok(automationDarkIndex > automationAiIndex, 'the route dark theme loads after all lazy Automation styles')
+  assert.doesNotMatch(automationAi, /#FFFCF6|#F2EADB|#FFFEFA|#F5EFE6|#F8F2E8|#EAE0D1|#F4EBDD|#F5AD87|#F7E9D7|color:#000000 !important|color:#211B15 !important/)
+  assert.match(automationAi, /background:linear-gradient\(145deg,#16191c 0%,#101214 100%\) !important/)
+  assert.match(automationAi, /\.wa-connected-service \{/)
+  assert.match(automationAi, /background:#151719 !important;/)
+  assert.match(automationAi, /\.wa-ai-controls select option \{ color:#F0EAD9; background:#141619; \}/)
+  assert.match(automationAi, /\.wa-ai-pulse[\s\S]*?background:#D98A67;/)
   assert.ok(baseTheme.includes(':root{--k:#000;--w:#fff;'), 'the base palette stays black and white')
   assert.ok(baseTheme.includes('body{background:var(--k);color:var(--w);'), 'the body keeps the original dark canvas and light text')
 
