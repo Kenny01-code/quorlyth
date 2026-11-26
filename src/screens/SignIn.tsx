@@ -23,7 +23,9 @@ function signinWelcomeKey(identity?: string) {
 function hasSigninWelcome(identity?: string) {
   try {
     const key = signinWelcomeKey(identity)
-    return key ? localStorage.getItem(key) === '1' : localStorage.getItem('qseen') === '1'
+    return key
+      ? localStorage.getItem(key) === '1' || localStorage.getItem('qseen') === '1'
+      : localStorage.getItem('qseen') === '1'
   } catch { return false }
 }
 
@@ -64,7 +66,7 @@ function LocalContextPreview() {
     <aside className="q-signin-live-context" aria-label="Live local context">
       <div className="q-signin-context-head">
         <span>LOCAL SIGNAL</span>
-        <span className="q-signin-context-live"><i />LIVE</span>
+        <span className="q-signin-context-live"><i className={online ? 'is-online' : 'is-offline'} />{online ? 'LIVE' : 'OFFLINE'}</span>
       </div>
       <div className="q-signin-context-time">
         <strong>{time}</strong>
