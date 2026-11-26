@@ -73,3 +73,34 @@ test('Quorlyth AI is the final evidence decision-maker, with a manager override 
   assert.match(finalAction, /status: decision/)
   assert.doesNotMatch(finalAction, /body\.aiReview/, 'The server must generate the verdict itself, not trust a browser-supplied decision.')
 })
+
+
+test('evidence viewer is a centered document-level modal with focus management and a blurred backdrop', async () => {
+  const [preview, styles] = await Promise.all([
+    source('src/components/EvidencePreview.tsx'),
+    source('src/styles/evidence-preview.css'),
+  ])
+
+  assert.match(preview, /import \{ createPortal \} from 'react-dom'/)
+  assert.match(preview, /viewerPanelRef = useRef/)
+  assert.match(preview, /viewerCloseRef = useRef/)
+  assert.match(preview, /viewerOpenerRef = useRef/)
+  assert.match(preview, /createPortal\([\s\S]*?document\.body/)
+  assert.match(preview, /tabIndex=\{-1\}/)
+  assert.match(preview, /event\.key === 'Escape'[\s\S]*?setViewerOpen\(false\)/)
+  assert.match(preview, /event\.key !== 'Tab'/)
+  assert.match(preview, /document\.body\.style\.overflow = 'hidden'/)
+  assert.match(preview, /document\.documentElement\.style\.overflow = 'hidden'/)
+  assert.match(preview, /viewerOpenerRef\.current\.focus\(\)/)
+  assert.match(styles, /\.ql-evidence-viewer[\s\S]*?z-index:\s*10000 !important/)
+  assert.match(styles, /backdrop-filter:\s*blur\(24px\) saturate\(130%\)/)
+  assert.match(styles, /\.ql-evidence-viewer__panel[\s\S]*?height:\s*min\(880px, calc\(100dvh - 48px\)\)/)
+  assert.match(styles, /\.ql-evidence-viewer__image[\s\S]*?object-fit:\s*contain/)
+})
+
+test('evidence viewer keeps the preview action connected to the opener for focus restoration', async () => {
+  const preview = await source('src/components/EvidencePreview.tsx')
+  assert.equal((preview.match(/viewerOpenerRef\.current = event\.currentTarget/g) || []).length, 2)
+  assert.match(preview, /ref=\{viewerPanelRef\}[^>]*role="dialog"[^>]*aria-modal="true"/)
+  assert.match(preview, /ref=\{viewerCloseRef\}[^>]*aria-label="Close evidence preview"/)
+})
