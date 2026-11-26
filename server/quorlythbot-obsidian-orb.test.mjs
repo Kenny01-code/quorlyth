@@ -168,7 +168,7 @@ test('the first dark reference interface remains consistent through empty chat, 
 
   const premium = await source('src/styles/bot-premium-chat.css')
   assert.match(premium, /qbot-compose-live[\s\S]*?display: inline-grid !important/)
-  assert.match(premium, /grid-template-columns: 40px minmax\(0,1fr\) 40px 40px 44px/)
+  assert.match(premium, /grid-template-columns: 42px minmax\(0,1fr\) 42px 42px 46px/)
   assert.match(premium, /qbot-chat-surface[\s\S]*?linear-gradient\(180deg, #0b0c0e 0%, #090a0c 100%\)/)
   assert.match(premium, /qbot-home-composer[\s\S]*?background: #090a0c !important/)
   assert.match(premium, /qbot-conversation:not\(\.qbot-chat-surface\):not\(\.qbot-robot-studio-shell\)/)
