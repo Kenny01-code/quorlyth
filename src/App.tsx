@@ -380,7 +380,7 @@ export default function App() {
       {(a.me || a.demo) && (!a.me || a.demo || (a.dataReady && a.platformRolesReady)) && <Suspense fallback={null}><AutomationRuntime /></Suspense>}
       {appNavigation}
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
-      <main id="main" tabIndex={-1} aria-busy={!!a.me && (!a.dataReady || !a.platformRolesReady)}>
+      <main id="main" className={loc.pathname === '/automations' ? 'q-automation-route' : undefined} tabIndex={-1} aria-busy={!!a.me && (!a.dataReady || !a.platformRolesReady)}>
         {a.me && (!a.dataReady || !a.platformRolesReady) ? (
           // Keep the account-isolation gate: never reveal a previous or incomplete account snapshot.
           // The status is screen-reader only; normal users are not interrupted by a full-screen loader.
