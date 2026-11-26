@@ -144,3 +144,12 @@ test('burnt-orange Three.js cover adds sculptural depth without removing perform
   assert.match(stage, /IntersectionObserver/)
   assert.match(stage, /import\('\.\/creatorCoverScene'\)/)
 })
+
+
+test('sign-in actions explain network failures without exposing raw browser fetch errors', async () => {
+  const signIn = await source('src/screens/SignIn.tsx')
+  assert.match(signIn, /function friendlyAuthError\(error: unknown, fallback: string\)/)
+  assert.match(signIn, /You are offline\. Reconnect to the internet and try again\./)
+  assert.match(signIn, /Quorlyth could not reach the sign-in service\./)
+  assert.match(signIn, /toast\(friendlyAuthError\(er,/)
+})
