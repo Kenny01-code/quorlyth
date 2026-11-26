@@ -276,9 +276,3 @@
 @media (prefers-reduced-motion: reduce) {
   .qth-cover-stage::before { transform: none; }
 }
-
-/* Keep the landing actions aligned with the compact rectangular editorial labels.
-   Scope this to the hero only; product-wide buttons retain their own shape. */
-#root #main .hero .hero-actions .btn {
-  border-radius: 8px !important;
-}
