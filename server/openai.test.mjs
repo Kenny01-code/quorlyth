@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { afterEach, test } from 'node:test'
+import { afterEach, beforeEach, test } from 'node:test'
 import { chat, json, realtimeSession, speak, speakElevenLabs, speakElevenLabsStream, speakStream } from './openai.mjs'
 
 const originalFetch = globalThis.fetch
@@ -11,6 +11,7 @@ const originalElevenLabsLiveTtsModel = process.env.ELEVENLABS_LIVE_TTS_MODEL
 const originalElevenLabsNigerianVoiceId = process.env.ELEVENLABS_VOICE_NIGERIAN_ID
 const originalRealtimeModel = process.env.OPENAI_REALTIME_MODEL
 const originalXaiKey = process.env.XAI_API_KEY
+const originalDeepSeekKey = process.env.DEEPSEEK_API_KEY
 const originalXaiModel = process.env.XAI_MODEL
 const originalXaiQuickModel = process.env.XAI_QUICK_MODEL
 const originalAiProvider = process.env.AI_PROVIDER
@@ -30,6 +31,11 @@ function response() {
   }
 }
 
+beforeEach(() => {
+  // Deployment builds can inherit real provider keys; this legacy suite tests only its own explicit fixtures.
+  delete process.env.DEEPSEEK_API_KEY
+})
+
 afterEach(() => {
   globalThis.fetch = originalFetch
   if (originalGeminiKey === undefined) delete process.env.GEMINI_API_KEY
@@ -48,6 +54,8 @@ afterEach(() => {
   else process.env.OPENAI_REALTIME_MODEL = originalRealtimeModel
   if (originalXaiKey === undefined) delete process.env.XAI_API_KEY
   else process.env.XAI_API_KEY = originalXaiKey
+  if (originalDeepSeekKey === undefined) delete process.env.DEEPSEEK_API_KEY
+  else process.env.DEEPSEEK_API_KEY = originalDeepSeekKey
   if (originalXaiModel === undefined) delete process.env.XAI_MODEL
   else process.env.XAI_MODEL = originalXaiModel
   if (originalXaiQuickModel === undefined) delete process.env.XAI_QUICK_MODEL
