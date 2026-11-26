@@ -107,6 +107,9 @@ test('Sign-in robot recognizes account-specific returns and shows live local con
   assert.match(bot, /qbot:welcomed:v1:/)
   assert.match(bot, /quorlyth:signin-welcomed:v2:/)
   assert.match(signInCss, /\.q-signin-live-context/)
+  assert.match(signInCss, /width: min\(218px, calc\(100% - 26px\)\)/)
+  assert.match(signInCss, /\.q-signin-mini-map/)
+  assert.match(signInCss, /width: 76px;\s*height: 50px/)
   assert.match(signInCss, /@media \(max-width: 540px\)/)
 })
 
