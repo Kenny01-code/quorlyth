@@ -92,7 +92,7 @@ test('evidence viewer is a centered document-level modal with focus management a
   assert.match(preview, /document\.body\.style\.overflow = 'hidden'/)
   assert.match(preview, /document\.documentElement\.style\.overflow = 'hidden'/)
   assert.match(preview, /viewerOpenerRef\.current\.focus\(\)/)
-  assert.match(styles, /\.ql-evidence-viewer[\s\S]*?z-index:\s*10000 !important/)
+  assert.match(styles, /\.ql-evidence-viewer[\s\S]*?z-index:\s*2147483000 !important/)
   assert.match(styles, /backdrop-filter:\s*blur\(24px\) saturate\(130%\)/)
   assert.match(styles, /\.ql-evidence-viewer__panel[\s\S]*?height:\s*min\(880px, calc\(100dvh - 48px\)\)/)
   assert.match(styles, /\.ql-evidence-viewer__image[\s\S]*?object-fit:\s*contain/)
