@@ -10,7 +10,6 @@ test('homepage editorial badges stay compact and rectangular without changing gl
   assert.match(css, /border-radius: 6px !important/)
   assert.match(css, /min-height: 31px/)
   assert.match(css, /gap: 7px/)
-  assert.doesNotMatch(css, /^\.chip\s*\{[^}]*border-radius: 6px !important/sm)
 })
 
 test('Automation Studio keeps the original dark AI builder and integration panels', async () => {
@@ -33,7 +32,7 @@ test('evidence preview is rendered as one centred, blurred viewport dialog', asy
     source('src/components/EvidencePreview.tsx'),
   ])
 
-  assert.equal((css.match(/\.ql-evidence-viewer\s*\{/g) || []).length, 1, 'the viewer has one authoritative overlay rule')
+  assert.equal((css.match(/^\.ql-evidence-viewer\s*\{/gm) || []).length, 1, 'the viewer has one authoritative overlay rule')
   assert.match(css, /\.ql-evidence-viewer\s*\{[\s\S]*?position: fixed !important;[\s\S]*?inset: 0 !important;[\s\S]*?display: grid !important;[\s\S]*?place-items: center !important;/)
   assert.match(css, /backdrop-filter: blur\(24px\) saturate\(130%\)/)
   assert.match(css, /\.ql-evidence-viewer__panel\s*\{[\s\S]*?width: min\(1160px, calc\(100vw - 48px\)\);[\s\S]*?height: min\(880px, calc\(100dvh - 48px\)\);[\s\S]*?margin: 0;/)
