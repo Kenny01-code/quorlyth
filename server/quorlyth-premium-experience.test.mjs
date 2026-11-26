@@ -35,13 +35,18 @@ test('the Bot composer keeps Live Talk visible, evenly spaced and independent on
   assert.match(css, /@media \(max-width: 390px\)/)
 })
 
-test('Bot chat and workspace views use paper-and-ink surfaces while Robot Studio stays dark', async () => {
+test('QuorlythBot chat, composer and every workspace stay on the original dark palette', async () => {
   const css = await source('src/styles/bot-premium-chat.css')
 
-  assert.match(css, /qbot-chat-surface[\s\S]*?background:[\s\S]*?#f7f3ec/)
-  assert.match(css, /qbot-assistant-message[\s\S]*?background: rgba\(255,254,250,.92\)/)
+  assert.match(css, /qbot-chat-surface[\s\S]*?linear-gradient\(180deg, #0b0c0e 0%, #090a0c 100%\)/)
+  assert.match(css, /qbot-assistant-message[\s\S]*?background:[\s\S]*?#111316/)
+  assert.match(css, /qbot-home-composer[\s\S]*?background: #090a0c !important/)
   assert.match(css, /qbot-conversation:not\(\.qbot-chat-surface\):not\(\.qbot-robot-studio-shell\)/)
   assert.match(css, /qbot-robot-studio-shell[\s\S]*?background: #08090b/)
+  assert.match(css, /\.mact button[\s\S]*?flex: 0 0 auto !important/)
+  assert.match(css, /white-space: nowrap !important/)
+  assert.match(css, /\.qbot-reference-tabs[\s\S]*?position: relative !important/)
+  assert.doesNotMatch(css, /#f7f3ec|#f1ebe1|#fffefa|#f3ede5|#f2ece3|#eae1d7/)
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
 })
 
@@ -88,7 +93,9 @@ test('Sign-in robot recognizes account-specific returns and shows live local con
   assert.match(signIn, /setInterval\(\(\) => setNow\(Date\.now\(\)\), 1000\)/)
   assert.match(signIn, /addEventListener\('online', sync\)/)
   assert.match(signIn, /addEventListener\('offline', sync\)/)
-  assert.match(signIn, /Region comes from your device time zone\. Precise location is not accessed\./)
+  assert.match(signIn, /Region is estimated from your device time zone\. No GPS location is accessed\./)
+  assert.match(signIn, /q-signin-mini-map/)
+  assert.match(signIn, /role="img" aria-label=\{\`Stylised region map/)
   assert.match(signIn, /firstTimeOverride=\{!!me\.createdAt/)
   assert.match(signIn, /accountKey=\{me\.email\}/)
   assert.match(signIn, /firstTimeOverride=\{mode === 'signup'\}/)
@@ -119,8 +126,9 @@ test('QuorlythBot keeps Live Talk distinct and reports connection state on every
   assert.match(css, /\.qbot-compose-live:hover/)
   assert.match(css, /\.qbot-compose-send:hover:not\(:disabled\)/)
   assert.match(css, /\.qbot-network-indicator\.is-offline/)
-  assert.match(css, /grid-template-columns: 36px minmax\(0, 1fr\) 36px 36px 40px/)
-  assert.match(css, /background: #fffefa !important/)
+  assert.match(css, /grid-template-columns: 36px minmax\(0,1fr\) 36px 36px 40px/)
+  assert.match(css, /background: #090a0c !important/)
+  assert.doesNotMatch(css, /#fffefa|#f7f3ec|#f2ece3|#eae1d7/)
   assert.match(css, /qbot-conversation:not\(\.qbot-chat-surface\):not\(\.qbot-robot-studio-shell\)/)
 })
 
