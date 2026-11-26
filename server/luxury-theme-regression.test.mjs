@@ -4,12 +4,14 @@ import { readFile } from 'node:fs/promises'
 
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('warm editorial palette is loaded after the existing page themes and stays outside QuorlythBot', async () => {
+test('warm editorial palette stays isolated without overriding the app-wide dark theme', async () => {
   const [entry, theme] = await Promise.all([
     source('src/main.tsx'),
     source('src/styles/luxury-light-system.css'),
   ])
-  assert.ok(entry.indexOf("import './styles/luxury-light-system.css'") > entry.indexOf("import './styles/request-access-editorial.css'"))
+  assert.equal(entry.includes("import './styles/luxury-light-system.css'"), false, 'the optional warm editorial palette must not be mounted globally')
+  assert.ok(entry.indexOf("import './styles/app.css'") >= 0, 'the original dark app theme stays active')
+  assert.ok(entry.indexOf("import './styles/automation-dark.css'") > entry.indexOf("import './styles/app.css'"), 'the Automation route override loads after base styles')
   assert.match(theme, /--q-lux-page:\s*#f5f1e9/)
   assert.match(theme, /--q-lux-orange:\s*#bf5532/)
   assert.match(theme, /--q-lux-bone:\s*#efe7dc/)
