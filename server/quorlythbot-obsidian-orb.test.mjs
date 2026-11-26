@@ -165,6 +165,11 @@ test('the first dark reference interface remains consistent through empty chat, 
   assert.ok(operatingSystem.includes('qbot-has-messages .ast-in.qbot-reference-composer-home'))
   assert.ok(operatingSystem.includes('qbot-has-messages .qbot-reference-tabs'))
   assert.ok(!operatingSystem.includes('#f1f0ee'))
+  assert.match(operatingSystem, /\.ast-in\.qbot-reference-composer-home[\s\S]*?background: #171717 !important/)
+  assert.doesNotMatch(operatingSystem, /\.ast-in\.qbot-reference-composer\s*\{[\s\S]{0,260}background: #fff !important/)
+  assert.match(operatingSystem, /qbot-compose-live[\s\S]*?display: inline-grid !important/)
+  assert.match(operatingSystem, /qbot-compose-mic[\s\S]*?grid-column: 3 !important/)
+  assert.match(operatingSystem, /qbot-home-composer[\s\S]*?width: min\(100%, 1120px\) !important/)
 
   const premium = await source('src/styles/bot-premium-chat.css')
   assert.match(premium, /qbot-compose-live[\s\S]*?display: inline-grid !important/)
