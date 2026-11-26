@@ -28,5 +28,5 @@ test('automation integration and workflow guidance retain the original dark surf
   assert.match(styles, /\.wa-connected-services-note \{ margin:0; color:#D7CBB9; font-size:9px;/)
   assert.match(styles, /\.wa-runtime-status p \{ margin-top:4px; max-width:780px; color:#D7CBB9; font-size:10px;/)
   assert.match(styles, /\.wa-plain-guide-steps p \{ margin-top:4px; color:#D7CBB9; font-size:9px;/)
-  assert.match(styles, /\.wa-ai-example-prompts>button[\s\S]*?color:#F0EAD9 !important/)
+  assert.match(styles, /\.wa-ai-example-prompts>button \{ border:1px solid rgba\(255,255,255,\.12\); border-radius:999px; padding:7px 10px; color:#E4DCC9; background:rgba\(255,255,255,\.035\);/)
 })
