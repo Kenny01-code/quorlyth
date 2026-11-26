@@ -56,8 +56,9 @@ function LocalContextPreview() {
     catch { return 'Device time zone' }
   })()
   const zoneParts = zone.split('/')
-  const place = (zoneParts[zoneParts.length - 1] || 'Local area').replace(/_/g, ' ')
-  const region = zoneParts.length > 1 ? zoneParts[0].replace(/_/g, ' ') : 'Device'
+  const fallbackPlace = (zoneParts[zoneParts.length - 1] || 'Local region').replace(/_/g, ' ')
+  const place = zone === 'Africa/Lagos' ? 'Lagos' : fallbackPlace
+  const area = zone === 'Africa/Lagos' ? 'Nigeria' : (zoneParts[0] || 'Device').replace(/_/g, ' ')
   const time = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now)
   const date = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(now)
 
@@ -74,26 +75,31 @@ function LocalContextPreview() {
   }, [])
 
   return (
-    <aside className="q-signin-live-context" aria-label="Live local context">
-      <div className="q-signin-context-head">
-        <span>LOCAL SIGNAL</span>
-        <span className="q-signin-context-live"><i className={online ? 'is-online' : 'is-offline'} />{online ? 'LIVE' : 'OFFLINE'}</span>
-      </div>
-      <div className="q-signin-context-time">
-        <strong>{time}</strong>
-        <span>{date}</span>
-      </div>
-      <div className="q-signin-context-place">
-        <span>TIME-ZONE REGION</span>
+    <aside className="q-signin-live-context" aria-label="Approximate location, local time and connection">
+      <div className="q-signin-context-copy">
+        <span className="q-signin-context-kicker">APPROXIMATE AREA</span>
         <strong>{place}</strong>
-        <small>{region} · {zone}</small>
+        <span className="q-signin-context-time">{time}</span>
+        <small>{area} · {date}</small>
       </div>
-      <div className="q-signin-context-network">
+      <div className="q-signin-mini-map" role="img" aria-label={`Stylised region map for approximately ${place}, ${area}`}>
+        <svg viewBox="0 0 112 72" aria-hidden="true" focusable="false">
+          <path d="M-4 13 C15 7 22 18 39 15 S63 7 78 15 100 20 118 7" />
+          <path d="M-6 34 C12 25 24 31 38 29 S64 36 78 31 96 25 118 35" />
+          <path d="M-6 55 C13 49 27 58 43 53 S68 45 82 53 101 60 119 48" />
+          <path d="M18 -6 C22 11 31 21 30 37 S24 60 32 78" />
+          <path d="M51 -7 C47 12 56 20 54 36 S48 57 58 78" />
+          <path d="M84 -8 C76 9 88 23 82 39 S78 58 91 78" />
+          <path d="M-5 43 C16 39 26 42 41 40 S67 31 83 39 100 47 117 42" className="q-signin-map-highlight" />
+        </svg>
+        <span className="q-signin-map-pin"><i /></span>
+      </div>
+      <div className="q-signin-context-status">
         <i className={online ? 'is-online' : 'is-offline'} />
-        <span>{online ? 'Connection active' : 'You are offline'}</span>
+        <span>{online ? 'CONNECTED' : 'OFFLINE'}</span>
+        <small>{zone}</small>
       </div>
-      {!online && <p className="q-signin-context-note">I can try your device voice, but signing in needs an internet connection.</p>}
-      <p className="q-signin-context-foot">Region comes from your device time zone. Precise location is not accessed.</p>
+      <p className="q-signin-context-foot">Region is estimated from your device time zone. No GPS location is accessed.</p>
     </aside>
   )
 }
