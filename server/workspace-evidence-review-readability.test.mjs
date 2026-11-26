@@ -102,5 +102,6 @@ test('evidence viewer keeps the preview action connected to the opener for focus
   const preview = await source('src/components/EvidencePreview.tsx')
   assert.equal((preview.match(/viewerOpenerRef\.current = event\.currentTarget/g) || []).length, 2)
   assert.match(preview, /ref=\{viewerPanelRef\}[^>]*role="dialog"[^>]*aria-modal="true"/)
-  assert.match(preview, /ref=\{viewerCloseRef\}[^>]*aria-label="Close evidence preview"/)
+  assert.match(preview, /ref=\{viewerCloseRef\} type="button" className="ql-evidence-viewer__close"/)
+  assert.match(preview, /aria-label="Close evidence preview"/)
 })
