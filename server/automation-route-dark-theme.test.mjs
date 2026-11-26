@@ -5,21 +5,27 @@ import { readFile } from 'node:fs/promises'
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
 test('Automation Studio activates a route-level dark theme on the full app shell', async () => {
-  const [entry, app, theme, automation, bot] = await Promise.all([
+  const [entry, app, theme, automation, automationPage, bot] = await Promise.all([
     source('src/main.tsx'),
     source('src/App.tsx'),
     source('src/styles/automation-dark.css'),
     source('src/styles/automations.css'),
+    source('src/screens/Automations.tsx'),
     source('src/bot/QuorlythBot.tsx'),
   ])
 
   const baseThemeIndex = entry.indexOf("import './styles/app.css'")
   const lightThemeImportedGlobally = entry.includes("import './styles/luxury-light-system.css'")
-  const darkThemeIndex = entry.indexOf("import './styles/automation-dark.css'")
+  const routeThemeImportedGlobally = entry.includes("import './styles/automation-dark.css'")
+  const automationBaseIndex = automationPage.indexOf("import '../styles/automations.css'")
+  const automationAiIndex = automationPage.indexOf("import '../styles/automation-ai.css'")
+  const automationDarkIndex = automationPage.indexOf("import '../styles/automation-dark.css'")
   const baseTheme = await source('src/styles/app.css')
   assert.ok(baseThemeIndex >= 0, 'the original app-wide dark theme remains the base layer')
   assert.equal(lightThemeImportedGlobally, false, 'the editorial light override must not be applied globally')
-  assert.ok(darkThemeIndex > baseThemeIndex, 'the Automation dark route layer loads after the app base styles')
+  assert.equal(routeThemeImportedGlobally, false, 'the Automation route override is not loaded globally')
+  assert.ok(automationBaseIndex >= 0 && automationAiIndex > automationBaseIndex, 'Automation feature styles retain their original order')
+  assert.ok(automationDarkIndex > automationAiIndex, 'the route dark theme loads after all lazy Automation styles')
   assert.ok(baseTheme.includes(':root{--k:#000;--w:#fff;'), 'the base palette stays black and white')
   assert.ok(baseTheme.includes('body{background:var(--k);color:var(--w);'), 'the body keeps the original dark canvas and light text')
 
@@ -35,6 +41,8 @@ test('Automation Studio activates a route-level dark theme on the full app shell
   assert.match(theme, /\.wa-screen > \.head::before[\s\S]*?display:\s*none\s*!important/)
   assert.match(theme, /\.wa-screen :is\(input,textarea,select\)[\s\S]*?color-scheme:\s*dark\s*!important/)
   assert.match(theme, /body\.q-automation-route-active #nav/)
+  assert.match(theme, /#root main#main\.q-automation-route \.wa-screen :is\(input,textarea,select\)[\s\S]*?color-scheme:\s*dark\s*!important/)
+  assert.match(automationPage, /import '\.\.\/styles\/automation-dark\.css'/)
   assert.doesNotMatch(automation, /Automation Studio is intentionally a dark workspace/)
 
   assert.match(bot, /nav\('\/automations'\)\s*\}\}><Icon name="calendar-clock" size=\{16\} \/>Automations/)
