@@ -11,12 +11,17 @@ const REALTIME_MODEL = () => {
 }
 const GEMINI_KEY = () => process.env.GEMINI_API_KEY
 const XAI_KEY = () => process.env.XAI_API_KEY
+const DEEPSEEK_KEY = () => process.env.DEEPSEEK_API_KEY
 const XAI_MODEL = (tier) => tier === 'quick'
   ? process.env.XAI_QUICK_MODEL || process.env.XAI_MODEL || 'grok-4.7'
   : process.env.XAI_MODEL || 'grok-4.7'
-const TEXT_PROVIDER_ORDER = ['grok', 'gemini', 'openai']
+const DEEPSEEK_MODEL = (tier) => tier === 'quick'
+  ? process.env.DEEPSEEK_QUICK_MODEL || 'deepseek-flash'
+  : process.env.DEEPSEEK_MODEL || 'deepseek-v4-pro'
+const TEXT_PROVIDER_ORDER = ['deepseek', 'grok', 'gemini', 'openai']
 
 function hasTextProviderKey(provider) {
+  if (provider === 'deepseek') return Boolean(DEEPSEEK_KEY())
   if (provider === 'gemini') return Boolean(GEMINI_KEY())
   if (provider === 'grok') return Boolean(XAI_KEY())
   if (provider === 'openai') return Boolean(KEY())
@@ -38,7 +43,7 @@ const GEMINI_MODEL = (tier) => tier === 'quick'
 function needText() {
   const providers = textProviders()
   if (!providers.length) {
-    const e = new Error('No text AI provider is configured. Add GEMINI_API_KEY, XAI_API_KEY, or OPENAI_API_KEY to the server environment.')
+    const e = new Error('No text AI provider is configured. Add DEEPSEEK_API_KEY, GEMINI_API_KEY, XAI_API_KEY, or OPENAI_API_KEY to the server environment.')
     e.status = 503
     throw e
   }
@@ -216,6 +221,22 @@ async function geminiError(r) {
   return r.status >= 500 ? 'QuorlythBot is having trouble reaching its AI service. Please try again shortly.' : 'Gemini could not complete this request.'
 }
 
+async function deepseekError(r) {
+  let payload = {}
+  try { payload = await r.json() } catch {}
+  const code = payload.error?.code || payload.error?.type
+  if (r.status === 402 || code === 'insufficient_balance') {
+    return 'DeepSeek is temporarily unavailable because its API balance is insufficient. Check the DeepSeek account billing and available balance, then retry.'
+  }
+  if (r.status === 401 || r.status === 403) {
+    return 'DeepSeek could not authenticate this request. Check the API key, permissions, and account status.'
+  }
+  if (r.status === 429) return 'DeepSeek is temporarily rate-limited. Please retry shortly.'
+  return r.status >= 500
+    ? 'DeepSeek is temporarily unavailable. QuorlythBot will try another configured AI provider.'
+    : 'DeepSeek could not complete this request. Please try again.'
+}
+
 const TRANSIENT_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504])
 const PROVIDER_FALLBACK_STATUSES = new Set([401, 402, 403, 404, ...TRANSIENT_STATUSES])
 
@@ -233,14 +254,19 @@ async function fetchWithHeaderTimeout(url, options = {}) {
   // Timeout only the wait for response headers, never a healthy streaming body.
   const isTtsRequest = /\/v1\/(?:tts|audio\/speech|text-to-speech)|\/v1beta\/interactions/.test(url)
   const isGeminiRequest = /generativelanguage\.googleapis\.com/i.test(url)
+  const isDeepSeekRequest = /api\.deepseek\.com/i.test(url)
   const configuredTimeout = Number(isTtsRequest
     ? process.env.AI_TTS_PROVIDER_TIMEOUT_MS
     : isGeminiRequest
       ? process.env.AI_GEMINI_PROVIDER_TIMEOUT_MS
-      : process.env.AI_PROVIDER_TIMEOUT_MS)
+      : isDeepSeekRequest
+        ? process.env.AI_DEEPSEEK_PROVIDER_TIMEOUT_MS
+        : process.env.AI_PROVIDER_TIMEOUT_MS)
+  const timeoutCap = isTtsRequest ? 30000 : isGeminiRequest ? 4500 : isDeepSeekRequest ? 15000 : 2400
+  const defaultTimeout = isTtsRequest ? 8000 : isGeminiRequest ? 4500 : isDeepSeekRequest ? 9000 : 2400
   const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout >= 1000
-    ? Math.min(configuredTimeout, isTtsRequest ? 30000 : isGeminiRequest ? 4500 : 2400)
-    : isTtsRequest ? 8000 : isGeminiRequest ? 4500 : 2400
+    ? Math.min(configuredTimeout, timeoutCap)
+    : defaultTimeout
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -249,7 +275,9 @@ async function fetchWithHeaderTimeout(url, options = {}) {
     if (controller.signal.aborted) {
       const timeoutError = new Error(isGeminiRequest
         ? 'Gemini timed out before returning response headers.'
-        : 'AI provider timed out before returning response headers.')
+        : isDeepSeekRequest
+          ? 'DeepSeek timed out before returning response headers.'
+          : 'AI provider timed out before returning response headers.')
       timeoutError.code = 'AI_PROVIDER_HEADER_TIMEOUT'
       throw timeoutError
     }
@@ -310,22 +338,37 @@ async function requestGeminiJson(body) {
 }
 
 function openAICompatibleRequest(provider, body, structured = false) {
+  const deepseek = provider === 'deepseek'
   const grok = provider === 'grok'
-  const url = grok ? 'https://api.x.ai/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions'
-  const key = grok ? XAI_KEY() : KEY()
+  const url = deepseek
+    ? 'https://api.deepseek.com/chat/completions'
+    : grok
+      ? 'https://api.x.ai/v1/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions'
+  const key = deepseek ? DEEPSEEK_KEY() : grok ? XAI_KEY() : KEY()
+  const model = deepseek
+    ? DEEPSEEK_MODEL(body.tier)
+    : grok
+      ? XAI_MODEL(body.tier)
+      : body.tier === 'quick'
+        ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini')
+        : MODEL()
   const { messages = [], prompt = '', system = 'Reply with only valid JSON.', tier } = body
+  const thinking = deepseek ? { thinking: { type: tier === 'quick' ? 'disabled' : 'enabled' } } : {}
   const requestBody = structured
     ? {
-        model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
+        model,
+        ...thinking,
         response_format: { type: 'json_object' },
-        max_tokens: tier === 'quick' ? 1536 : 2048,
+        max_tokens: tier === 'quick' ? 2048 : 4096,
         messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
       }
     : {
-        model: grok ? XAI_MODEL(tier) : tier === 'quick' ? (process.env.OPENAI_QUICK_MODEL || 'gpt-4o-mini') : MODEL(),
+        model,
+        ...thinking,
         stream: true,
-        temperature: 0.7,
-        max_tokens: tier === 'quick' ? 1024 : 2048,
+        ...(deepseek ? {} : { temperature: 0.7 }),
+        max_tokens: tier === 'quick' ? 1024 : 4096,
         messages: [...(system ? [{ role: 'system', content: system }] : []), ...(Array.isArray(messages) ? messages : [])],
       }
   return () => fetchWithHeaderTimeout(url, {
@@ -334,7 +377,6 @@ function openAICompatibleRequest(provider, body, structured = false) {
     body: JSON.stringify(requestBody),
   })
 }
-
 async function requestProviderChat(provider, body) {
   if (provider === 'gemini') return requestGeminiChat(body)
   return openAICompatibleRequest(provider, body)()
@@ -469,6 +511,7 @@ async function chooseProvider(providers, request, requireStream = false) {
 async function providerErrorMessage(provider, response) {
   if (provider === 'gemini') return geminiError(response)
   if (provider === 'grok') return xaiError(response)
+  if (provider === 'deepseek') return deepseekError(response)
   return providerError(response)
 }
 
@@ -479,6 +522,9 @@ function actionableProviderFailure(failure) {
 
   if (provider === 'openai' && (code === 'credit_balance_exhausted' || code === 'insufficient_quota')) {
     return 'QuorlythBot is temporarily unavailable because the OpenAI account has no API credits remaining. Add credits to the OpenAI project connected to this site, or enable another working provider, then try again.'
+  }
+  if (provider === 'deepseek' && (status === 402 || code === 'insufficient_balance')) {
+    return 'DeepSeek is temporarily unavailable because its API balance is insufficient. Check the DeepSeek account billing and available balance, then retry.'
   }
   if (provider === 'gemini' && code === 'AI_PROVIDER_HEADER_TIMEOUT') {
     return 'Gemini did not respond within the configured provider timeout. Check the Gemini API key, model access, and quota, then try again.'
