@@ -1,0 +1,613 @@
+/* QuorlythBot premium experience
+   Owns the Bot's right content surface and composer only. The application
+   shell and the dedicated Three.js Robot Studio retain their own materials. */
+#ast #bot.qbot-ultra {
+  --qbot-paper: #f5f0e7;
+  --qbot-paper-raised: #fffefa;
+  --qbot-paper-soft: #eee6da;
+  --qbot-ink: #1b1713;
+  --qbot-ink-soft: #51483f;
+  --qbot-muted: #766b60;
+  --qbot-orange: #b84f2d;
+  --qbot-orange-deep: #87391f;
+  --qbot-copper-line: rgba(144, 67, 39, .19);
+}
+
+/* Stable header and identity. There is no response-mode toggle in the UI. */
+#ast #bot.qbot-ultra .qbot-core-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+#ast #bot.qbot-ultra .qbot-core-brand > span {
+  color: var(--qbot-paper-raised) !important;
+  font-size: 14px;
+  font-weight: 680;
+  letter-spacing: -.025em;
+}
+#ast #bot.qbot-ultra .qbot-core-brand > i {
+  padding: 4px 7px;
+  border: 1px solid rgba(217,119,85,.28);
+  border-radius: 999px;
+  color: #e6a181 !important;
+  background: rgba(184,79,45,.11);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 750;
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+#ast #bot.qbot-ultra .qbot-core-selector,
+#ast #bot.qbot-ultra .qbot-model-switch { display: none !important; }
+
+#ast #bot.qbot-ultra .bh {
+  border-bottom: 1px solid rgba(217,119,85,.2) !important;
+}
+#ast #bot.qbot-ultra .bha {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  margin-left: auto !important;
+}
+#ast #bot.qbot-ultra .bha > .bib,
+#ast #bot.qbot-ultra .bha > .qbot-share-pill {
+  width: 37px !important;
+  min-width: 37px !important;
+  height: 37px !important;
+  min-height: 37px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(240,234,217,.13) !important;
+  border-radius: 11px !important;
+  color: #e9ddd2 !important;
+  background: rgba(255,255,255,.045) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .bha > .bib:is(:hover,:focus-visible),
+#ast #bot.qbot-ultra .bha > .qbot-share-pill:is(:hover,:focus-visible) {
+  border-color: rgba(217,119,85,.48) !important;
+  color: #ffc09f !important;
+  background: rgba(184,79,45,.16) !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .bha > .bib:active,
+#ast #bot.qbot-ultra .bha > .qbot-share-pill:active { transform: none !important; }
+#ast #bot.qbot-ultra .bha > .bib:focus-visible,
+#ast #bot.qbot-ultra .bha > .qbot-share-pill:focus-visible {
+  outline: 2px solid rgba(217,119,85,.74) !important;
+  outline-offset: 3px !important;
+}
+
+/* The transcript is a quiet, paper-toned reading surface with clear message roles. */
+#ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  padding: clamp(18px, 3vw, 34px) clamp(14px, 4.2vw, 48px) 28px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: var(--qbot-ink) !important;
+  background:
+    radial-gradient(ellipse 54% 30% at 50% 0%, rgba(184,79,45,.045), transparent 75%),
+    linear-gradient(180deg, #f7f3ec 0%, #f1ebe1 100%) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  scrollbar-color: rgba(127,75,53,.28) transparent !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface > .ast-log {
+  display: flex !important;
+  flex: 1 0 auto !important;
+  flex-direction: column !important;
+  gap: 22px !important;
+  width: min(100%, 840px) !important;
+  margin: 0 auto !important;
+  padding: 8px 0 24px !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-user-message {
+  align-self: flex-end !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  width: fit-content !important;
+  max-width: min(82%, 680px) !important;
+  padding: 13px 16px !important;
+  border: 1px solid rgba(142,58,31,.22) !important;
+  border-radius: 17px 17px 5px 17px !important;
+  color: #fff8f2 !important;
+  background: linear-gradient(145deg, #bd5b38 0%, #9e4428 100%) !important;
+  box-shadow: 0 10px 28px -22px rgba(113,48,27,.55), inset 0 1px 0 rgba(255,235,220,.2) !important;
+  font-size: 14px !important;
+  font-weight: 480 !important;
+  line-height: 1.72 !important;
+  overflow-wrap: anywhere;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-user-message .qbot-message-label {
+  color: rgba(255,247,239,.78) !important;
+  font-size: 9px !important;
+  font-weight: 760 !important;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message {
+  align-self: stretch !important;
+  width: min(100%, 820px) !important;
+  max-width: 100% !important;
+  padding: clamp(15px, 2vw, 22px) clamp(15px, 2.5vw, 25px) 14px !important;
+  border: 1px solid rgba(44,34,26,.1) !important;
+  border-left: 3px solid #b65332 !important;
+  border-radius: 5px 18px 18px 18px !important;
+  color: var(--qbot-ink) !important;
+  background: rgba(255,254,250,.92) !important;
+  box-shadow: 0 14px 38px -32px rgba(42,29,20,.42), inset 0 1px 0 rgba(255,255,255,.95) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-byline {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  margin: 0 0 12px !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-mark {
+  display: grid !important;
+  width: 28px !important;
+  height: 28px !important;
+  flex: 0 0 28px !important;
+  place-items: center !important;
+  border: 1px solid rgba(161,75,44,.22) !important;
+  border-radius: 9px !important;
+  color: #a64b2c !important;
+  background: linear-gradient(145deg,#f5e4d7,#fffaf4) !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-mark svg { color: #a64b2c !important; }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-byline b {
+  color: #211811 !important;
+  font-size: 12px !important;
+  font-weight: 760 !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-byline i {
+  padding-left: 9px;
+  border-left: 1px solid rgba(53,40,29,.18);
+  color: #766a5e !important;
+  font-size: 10px !important;
+  font-style: normal;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt {
+  color: #211a14 !important;
+  font-size: clamp(14px, 1.02vw, 15px) !important;
+  font-weight: 430 !important;
+  line-height: 1.82 !important;
+  letter-spacing: .003em;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt :is(p,li,blockquote,span,div) {
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt :is(b,strong) {
+  color: #170f0b !important;
+  font-weight: 760 !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt a {
+  color: #984326 !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(152,67,38,.35);
+  text-underline-offset: 3px;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt :is(code,pre) {
+  color: #f4e6d9 !important;
+  background: #28211d !important;
+  border: 1px solid rgba(40,33,29,.25);
+  border-radius: 8px;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px !important;
+  margin-top: 14px !important;
+  padding-top: 10px;
+  border-top: 1px solid rgba(51,39,29,.09);
+  opacity: .9 !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 8px !important;
+  border: 1px solid transparent !important;
+  border-radius: 9px !important;
+  color: #66584d !important;
+  background: transparent !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button:is(:hover,:focus-visible) {
+  color: #8e3e23 !important;
+  border-color: rgba(154,70,39,.18) !important;
+  background: #f6e9de !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-thinking-panel {
+  align-self: flex-start;
+  width: min(100%, 520px);
+  border: 1px solid rgba(155,79,48,.17) !important;
+  border-radius: 13px !important;
+  color: #34251d !important;
+  background: #fffaf4 !important;
+  box-shadow: 0 10px 28px -24px rgba(50,32,21,.35) !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-thinking-copy :is(strong,small) { color: #35251b !important; }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-thinking-orbit { color: #ae4b2a !important; }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-feed {
+  width: min(100%, 820px);
+  margin: 0 auto 2px;
+  border: 1px solid rgba(155,79,48,.16);
+  border-radius: 14px;
+  color: #35271e;
+  background: rgba(255,254,250,.88);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-feed :is(span,small,b) { color: #35271e !important; }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-feed .qbot-activity-heading > span { color: #8e492e !important; }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-step > i { color: #a94b2b !important; }
+
+/* Composer: a stable five-control row with no model selector and no cross-hover effects. */
+#ast #bot.qbot-ultra .qbot-home-composer {
+  flex: 0 0 auto !important;
+  padding: 10px clamp(12px, 3vw, 30px) 13px !important;
+  border-top: 1px solid rgba(217,119,85,.19) !important;
+  background: linear-gradient(180deg,#f2ece3 0%,#eae1d6 100%) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home {
+  display: grid !important;
+  grid-template-columns: 40px minmax(0,1fr) 40px 40px 44px !important;
+  grid-template-rows: minmax(56px,auto) 40px auto !important;
+  align-items: center !important;
+  gap: 8px 7px !important;
+  min-width: 0 !important;
+  min-height: 126px !important;
+  padding: 10px 12px !important;
+  border: 1px solid rgba(210,132,98,.3) !important;
+  border-radius: 20px !important;
+  color: #f2e8dc !important;
+  background: linear-gradient(145deg,#24201d 0%,#131211 100%) !important;
+  box-shadow: 0 15px 38px -27px rgba(55,31,21,.72), inset 0 1px 0 rgba(255,239,226,.09) !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home:focus-within {
+  border-color: rgba(205,105,66,.68) !important;
+  box-shadow: 0 0 0 3px rgba(180,79,45,.1), 0 18px 44px -30px rgba(55,31,21,.8), inset 0 1px 0 rgba(255,239,226,.1) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home > textarea {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  align-self: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 52px !important;
+  max-height: 150px !important;
+  margin: 0 !important;
+  padding: 7px 5px !important;
+  border: 0 !important;
+  color: #f7efe6 !important;
+  -webkit-text-fill-color: #f7efe6 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  line-height: 1.68 !important;
+  resize: none !important;
+  outline: none !important;
+  caret-color: #e07b50 !important;
+  grid-area: 1 / 1 / 2 / -1 !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home > textarea::placeholder {
+  color: #b9a99b !important;
+  -webkit-text-fill-color: #b9a99b !important;
+  opacity: .88 !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus {
+  grid-area: 2 / 1 !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic {
+  grid-area: 2 / 3 !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live {
+  display: inline-grid !important;
+  grid-area: 2 / 4 !important;
+  visibility: visible !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send {
+  grid-area: 2 / 5 !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
+  display: inline-grid !important;
+  place-items: center !important;
+  justify-self: center;
+  align-self: center;
+  width: 39px !important;
+  min-width: 39px !important;
+  height: 39px !important;
+  min-height: 39px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid rgba(240,225,211,.17) !important;
+  border-radius: 11px !important;
+  color: #e8d9ca !important;
+  background: rgba(255,255,255,.055) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease !important;
+  flex: 0 0 auto !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live):is(:hover,:focus-visible) {
+  border-color: rgba(217,119,85,.58) !important;
+  color: #ffb18c !important;
+  background: rgba(184,79,45,.18) !important;
+  box-shadow: 0 0 0 2px rgba(184,79,45,.07) !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live {
+  border-color: rgba(210,116,76,.34) !important;
+  color: #f1a17c !important;
+  background: rgba(173,73,43,.13) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:is(:hover,:focus-visible),
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live.rec {
+  border-color: rgba(238,128,83,.72) !important;
+  color: #ffc09b !important;
+  background: rgba(190,75,42,.26) !important;
+  box-shadow: 0 0 0 3px rgba(184,79,45,.12) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send {
+  border-color: rgba(235,153,117,.42) !important;
+  color: #fff8f1 !important;
+  background: linear-gradient(145deg,#c96643,#a84629) !important;
+  box-shadow: 0 8px 18px -13px rgba(190,79,45,.7), inset 0 1px 0 rgba(255,235,217,.25) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:is(:hover,:focus-visible):not(:disabled) {
+  border-color: rgba(255,190,158,.72) !important;
+  background: linear-gradient(145deg,#d87851,#b24c2c) !important;
+  box-shadow: 0 10px 23px -13px rgba(190,79,45,.75), inset 0 1px 0 rgba(255,235,217,.3) !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:disabled {
+  opacity: .4 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-toolbar {
+  grid-area: 3 / 1 / 4 / -1 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  min-width: 0;
+  flex-wrap: wrap !important;
+  padding: 3px 0 0 !important;
+  border-top: 1px solid rgba(240,225,211,.09);
+}
+#ast #bot.qbot-ultra .qbot-composer-tools-label {
+  color: #9b8c7e !important;
+  font-size: 8px !important;
+  font-weight: 760;
+  letter-spacing: .14em;
+}
+#ast #bot.qbot-ultra .qbot-tool-pill {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px !important;
+  min-height: 29px !important;
+  padding: 4px 9px !important;
+  border: 1px solid rgba(240,225,211,.1) !important;
+  border-radius: 999px !important;
+  color: #d5c6b8 !important;
+  background: rgba(255,255,255,.035) !important;
+  font-size: 10px !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .qbot-tool-pill:is(:hover,:focus-visible) {
+  border-color: rgba(217,119,85,.36) !important;
+  color: #f2b08e !important;
+  background: rgba(184,79,45,.12) !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .qbot-tool-pill .ic { color: #d88965 !important; }
+#ast #bot.qbot-ultra .qbot-disclaimer {
+  margin: 7px 0 0 !important;
+  color: #766a5e !important;
+  font-size: 9px !important;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* Other Bot pages use the same editorial paper/ink language as Quorlyth itself.
+   The Robot Studio stays dark because its stage and tools are visual work surfaces. */
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) {
+  color: #211913 !important;
+  background: #f2ece3 !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) {
+  min-width: 0 !important;
+  color: #211913 !important;
+  background: linear-gradient(180deg,#f5f0e7 0%,#efe8de 100%) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(h1,h2,h3,h4,h5,h6,p,li,label,small,span,b,strong,em,summary,output,time) {
+  color: #211913 !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(.dim,.mut,.muted,.subtle,.hint,.helper,.caption,small,time) {
+  color: #6f6257 !important;
+  -webkit-text-fill-color: #6f6257 !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(svg,.ic,.quorlyth-glyph) {
+  color: #a84a2a !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .glass,
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(.qbot-os-panel,.qbot-os-metric,.qbot-os-tile,.qbot-os-signal,.qbot-os-empty,.qbot-os-activity,.csr,.bsk,.bvc) {
+  border: 1px solid rgba(47,34,25,.12) !important;
+  border-radius: 16px !important;
+  color: #211913 !important;
+  background: linear-gradient(145deg,#fffefa 0%,#f8f2e9 100%) !important;
+  box-shadow: 0 13px 34px -30px rgba(52,34,23,.4), inset 0 1px 0 rgba(255,255,255,.95) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(.qbot-os-eyebrow,.qbot-os-section-label,.qbot-os-counter) {
+  color: #9d4a2d !important;
+  -webkit-text-fill-color: #9d4a2d !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-heading h2 {
+  color: #1d1712 !important;
+  font-size: clamp(25px,3.2vw,36px);
+  font-weight: 720;
+  letter-spacing: -.045em;
+  line-height: 1.12;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-heading p {
+  max-width: 660px;
+  color: #65594e !important;
+  line-height: 1.7;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-primary {
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid #a84a2a !important;
+  border-radius: 11px !important;
+  color: #fff8f2 !important;
+  -webkit-text-fill-color: #fff8f2 !important;
+  background: linear-gradient(135deg,#c46542,#a8472a) !important;
+  box-shadow: 0 9px 22px -17px rgba(151,61,32,.68), inset 0 1px 0 rgba(255,231,215,.3) !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-primary:is(:hover,:focus-visible) {
+  background: linear-gradient(135deg,#d37752,#b65332) !important;
+  transform: translateY(-1px);
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-tile :is(b,.qbot-os-tile-bottom) {
+  color: #8b3e23 !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-signal :is(b,small) {
+  color: #261b14 !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(input,textarea,select) {
+  min-width: 0;
+  border: 1px solid rgba(65,45,31,.18) !important;
+  border-radius: 11px !important;
+  color: #211913 !important;
+  -webkit-text-fill-color: #211913 !important;
+  background: #fffefa !important;
+  box-shadow: inset 0 1px 2px rgba(42,29,19,.04) !important;
+  color-scheme: light !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(input,textarea,select)::placeholder {
+  color: #83766a !important;
+  -webkit-text-fill-color: #83766a !important;
+  opacity: 1 !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(button,.chip,.btn) {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(button,.chip,.btn):focus-visible,
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(input,textarea,select):focus-visible {
+  outline: 2px solid rgba(177,78,45,.72) !important;
+  outline-offset: 3px !important;
+}
+#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .orb3d i {
+  background: radial-gradient(circle at 30% 24%,#ffe1c8 0%,#db8059 26%,#ad4e2c 60%,#552719 100%) !important;
+  box-shadow: 0 8px 24px -5px rgba(163,73,40,.42), inset -7px -9px 16px rgba(33,15,10,.4) !important;
+}
+#ast #bot.qbot-ultra .qbot-robot-studio-shell {
+  color: #f0eadf !important;
+  background: #08090b !important;
+}
+
+/* Small screens retain a full set of controls. Only labels compress; actions do not vanish. */
+@media (max-width: 620px) {
+  #ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface {
+    padding: 16px 12px 20px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-user-message {
+    max-width: 92% !important;
+    font-size: 13px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message {
+    padding: 15px 14px 12px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-home-composer {
+    padding: 8px 9px 10px !important;
+  }
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home {
+    grid-template-columns: 36px minmax(0,1fr) 36px 36px 40px !important;
+    gap: 7px 5px !important;
+    padding: 9px !important;
+    border-radius: 17px !important;
+  }
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    border-radius: 10px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-composer-toolbar { gap: 6px !important; }
+  #ast #bot.qbot-ultra .qbot-tool-pill { min-height: 30px !important; padding-inline: 8px !important; }
+  #ast #bot.qbot-ultra .qbot-tool-pill span { font-size: 9px !important; }
+  #ast #bot.qbot-ultra .qbot-disclaimer { font-size: 8px !important; }
+}
+@media (max-width: 390px) {
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home {
+    grid-template-columns: 34px minmax(0,1fr) 34px 34px 38px !important;
+    gap: 6px 4px !important;
+    padding: 8px !important;
+  }
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+  }
+}
+@media (max-width: 760px) {
+  #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-metrics {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+  }
+  #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-two-column {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  #ast #bot.qbot-ultra .bm,
+  #ast #bot.qbot-ultra .bh,
+  #ast #bot.qbot-ultra .bc,
+  #ast #bot.qbot-ultra .ast-in {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ast #bot.qbot-ultra :is(.ast-in,.ast-in button,.qbot-conversation .am,.qbot-os-primary,.qbot-os-tile) {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    scroll-behavior: auto !important;
+  }
+}
