@@ -69,8 +69,6 @@ export function mountCreatorCoverScene(canvas: HTMLCanvasElement, host: HTMLElem
     clearcoat: 1,
     clearcoatRoughness: 0.12,
     reflectivity: 0.9,
-    sheen: 0.22,
-    sheenColor: new Color(0xf6a27a),
   })
   const brightCopper = new MeshPhysicalMaterial({
     color: new Color(0xd16a3e),
@@ -231,8 +229,6 @@ export function mountCreatorCoverScene(canvas: HTMLCanvasElement, host: HTMLElem
       if (Array.isArray(material)) material.forEach(item => item.dispose())
       else if (material) material.dispose()
     })
-    dustGeometry.dispose()
-    dustMaterial.dispose()
     renderer.dispose()
   }
 }
