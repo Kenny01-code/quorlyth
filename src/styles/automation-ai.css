@@ -28,7 +28,7 @@
   border:1px solid rgba(255,255,255,.13); border-radius:11px;
   background:rgba(0,0,0,.36); color:#fff; font:inherit; font-size:11px;
 }
-.wa-ai-controls select option { color:#111; background:#fff; }
+.wa-ai-controls select option { color:#F0EAD9; background:#141619; }
 .wa-ai-field-choices { display:flex; align-items:center; gap:8px 15px; flex-wrap:wrap; padding:12px 0; border-block:1px solid rgba(255,255,255,.075); }
 .wa-ai-field-choices > div { display:grid; gap:3px; flex:1 0 100%; }
 .wa-ai-field-choices > div span { color:#E4DCC9; font-size:11px; font-weight:520; }
@@ -60,7 +60,7 @@
 .wa-ai-build-status-head { display:flex; align-items:center; gap:9px; min-width:0; }
 .wa-ai-build-status-head strong { flex:1; color:#F0EAD9; font-size:12px; font-weight:540; }
 .wa-ai-build-status-head > span:last-child { color:#D7CBB9; font-size:9px; letter-spacing:.11em; }
-.wa-ai-pulse { display:block; width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.07),0 0 15px rgba(255,255,255,.5); animation:waAiPulse 1.25s ease-in-out infinite; }
+.wa-ai-pulse { display:block; width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:#D98A67; box-shadow:0 0 0 4px rgba(217,138,103,.1),0 0 15px rgba(217,138,103,.3); animation:waAiPulse 1.25s ease-in-out infinite; }
 .is-ready .wa-ai-pulse { background:#9fe8bb; box-shadow:0 0 0 4px rgba(159,232,187,.08); animation:none; }
 .is-error .wa-ai-pulse { background:#ff9292; box-shadow:0 0 0 4px rgba(255,146,146,.08); animation:none; }
 .wa-ai-build-steps { display:grid; gap:0; }
@@ -291,7 +291,7 @@
 }
 .wa-screen .wa-connection-state.is-loading {
   border-color:#D6B58F !important;
-  background:#F7E9D7 !important;
+  background:rgba(184,79,45,.12) !important;
 }
 .wa-screen .wa-connected-services-list {
   display:grid;
