@@ -35,6 +35,19 @@ function markSigninWelcome(identity?: string) {
   } catch { /* Welcome speech must still work when browser storage is disabled. */ }
 }
 
+function friendlyAuthError(error: unknown, fallback: string) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return 'You are offline. Reconnect to the internet and try again. Your form entries are still here.'
+  }
+  const message = error && typeof error === 'object' && 'message' in error
+    ? String((error as { message?: unknown }).message || '')
+    : typeof error === 'string' ? error : ''
+  if (/failed to fetch|networkerror|network request failed|load failed|timeout|connection.*lost/i.test(message)) {
+    return 'Quorlyth could not reach the sign-in service. Check your Wi-Fi or mobile data, then try again.'
+  }
+  return message || fallback
+}
+
 function LocalContextPreview() {
   const [now, setNow] = useState(() => Date.now())
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine)
@@ -417,7 +430,7 @@ export function SignIn() {
         nav(dest(), { replace: true })
       }
     } catch (er: any) {
-      toast(er.message || (mode === 'otp' ? 'Could not verify recovery code' : 'Could not complete authentication'))
+      toast(friendlyAuthError(er, mode === 'otp' ? 'Could not verify recovery code' : 'Could not complete authentication'))
     } finally {
       setBusy(false)
     }
@@ -430,13 +443,13 @@ export function SignIn() {
       setOtp('')
       toast('If an account uses this email, a fresh recovery code will arrive shortly.')
     } catch (er: any) {
-      toast(er.message || 'Could not request another code. Please wait a moment and try again.')
+      toast(friendlyAuthError(er, 'Could not request another code. Please wait a moment and try again.'))
     } finally {
       setBusy(false)
     }
   }
   async function google() {
-    try { await backend!.auth.signInGoogle(authRedirectUrl()) } catch (er: any) { toast(er.message || 'Google sign in is not set up') }
+    try { await backend!.auth.signInGoogle(authRedirectUrl()) } catch (er: any) { toast(friendlyAuthError(er, 'Google sign in is not set up')) }
   }
   async function copyPageLink() {
     try { await navigator.clipboard.writeText(window.location.href); toast('Page link copied') }
@@ -447,7 +460,7 @@ export function SignIn() {
       const current = await backend!.auth.current()
       if (!current) return toast('Sign in or verify your email first')
       window.location.assign(dest())
-    } catch (er: any) { toast(er.message || 'Could not check your sign-in') }
+    } catch (er: any) { toast(friendlyAuthError(er, 'Could not check your sign-in')) }
   }
 
   return (
