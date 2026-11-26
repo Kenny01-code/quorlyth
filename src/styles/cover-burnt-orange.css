@@ -226,3 +226,53 @@
   .qth-cover-stage[data-ready="false"] .qth-cover-atmosphere,
   .qth-cover-canvas { transition: none !important; animation: none !important; }
 }
+
+
+/* A fine orbital instrument grid behind the sculpture adds depth without
+   competing with the headline or increasing WebGL draw calls. */
+.qth-cover-stage::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 3% 0 2%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%,
+      transparent 23%,
+      rgba(224, 126, 87, .13) 23.15%,
+      transparent 23.55%,
+      transparent 42%,
+      rgba(224, 126, 87, .11) 42.15%,
+      transparent 42.5%,
+      transparent 59%,
+      rgba(224, 126, 87, .075) 59.15%,
+      transparent 59.45%),
+    linear-gradient(118deg, transparent 48.9%, rgba(224, 126, 87, .08) 49.05%, transparent 49.2%);
+  opacity: .7;
+  transform: rotate(-14deg) scale(1.03);
+  pointer-events: none;
+}
+#root #main .hero {
+  border-color: rgba(208, 112, 77, .3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 228, 210, .09),
+    inset 0 0 0 1px rgba(255, 255, 255, .012),
+    0 36px 100px -58px rgba(0, 0, 0, .84),
+    0 0 50px -42px rgba(194, 79, 43, .5);
+}
+#root #main .hero .hero-title {
+  text-shadow: 0 8px 42px rgba(0, 0, 0, .26);
+}
+#root #main .hero .hero-copy {
+  max-width: 540px;
+  color: #d0c1b6 !important;
+}
+@media (max-width: 760px) {
+  .qth-cover-stage::before {
+    inset: 8% -8% 0;
+    opacity: .38;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qth-cover-stage::before { transform: none; }
+}
