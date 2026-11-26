@@ -23,9 +23,7 @@ function signinWelcomeKey(identity?: string) {
 function hasSigninWelcome(identity?: string) {
   try {
     const key = signinWelcomeKey(identity)
-    return key
-      ? localStorage.getItem(key) === '1' || localStorage.getItem('qseen') === '1'
-      : localStorage.getItem('qseen') === '1'
+    return key ? localStorage.getItem(key) === '1' : localStorage.getItem('qseen') === '1'
   } catch { return false }
 }
 
@@ -411,7 +409,10 @@ export function SignIn() {
         if (password.length < 8) throw new Error('Use a password with at least 8 characters.')
         await backend!.auth.signInEmail(email.trim(), password)
         const signedInUser = await backend!.auth.current()
-        if (signedInUser) markSigninWelcome(signedInUser.id)
+        if (signedInUser) {
+          markSigninWelcome(signedInUser.id)
+          markSigninWelcome(email.trim().toLowerCase())
+        }
         nav(dest(), { replace: true })
       }
     } catch (er: any) {
