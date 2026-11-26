@@ -1,4 +1,4 @@
-const CACHE = 'quorlyth-shell-v1'
+const CACHE = 'quorlyth-shell-v2'
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/quorlyth-logo.svg']
 
 self.addEventListener('install', event => {
