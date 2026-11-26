@@ -107,9 +107,12 @@ test('Sign-in robot recognizes account-specific returns and shows live local con
   assert.match(bot, /qbot:welcomed:v1:/)
   assert.match(bot, /quorlyth:signin-welcomed:v2:/)
   assert.match(signInCss, /\.q-signin-live-context/)
-  assert.match(signInCss, /width: min\(218px, calc\(100% - 26px\)\)/)
+  assert.match(signInCss, /width: min\(194px, calc\(100% - 22px\)\)/)
   assert.match(signInCss, /\.q-signin-mini-map/)
-  assert.match(signInCss, /width: 76px;\s*height: 50px/)
+  assert.match(signInCss, /width: 68px;\s*height: 46px/)
+  assert.match(signIn, /q-signin-map-water/)
+  assert.match(signIn, /q-signin-map-route/)
+  assert.match(signIn, /q-signin-map-label\">MAP/)
   assert.match(signInCss, /@media \(max-width: 540px\)/)
 })
 
@@ -163,4 +166,26 @@ test('sign-in actions explain network failures without exposing raw browser fetc
   assert.match(signIn, /You are offline\. Reconnect to the internet and try again\./)
   assert.match(signIn, /Quorlyth could not reach the sign-in service\./)
   assert.match(signIn, /toast\(friendlyAuthError\(er,/)
+})
+
+
+test('QuorlythBot full-page chat has one dark composer surface, full-width assistant messages and a collision-free header', async () => {
+  const css = await source('src/styles/bot-premium-chat.css')
+  assert.match(css, /qbot-fullpage\.qbot-reference-layout\.qbot-has-messages > \.bm > \.bc\.qbot-home-composer[\s\S]*?background: #08090b !important/)
+  assert.match(css, /qbot-fullpage\.qbot-reference-layout\.qbot-has-messages > \.bm > \.bc\.qbot-home-composer::before[\s\S]*?display: none !important/)
+  assert.match(css, /qbot-reference-composer-home::before[\s\S]*?display: none !important/)
+  assert.match(css, /qbot-conversation > \.ast-log > \.am\.ma[\s\S]*?width: 100% !important/)
+  assert.match(css, /qbot-assistant-message \.mact button[\s\S]*?white-space: nowrap !important/)
+  assert.match(css, /grid-template-areas: "menu title tabs status actions"/)
+  assert.match(css, /grid-template-areas:[\s\S]*?"menu title status actions"/)
+  assert.match(css, /@media \(max-width: 390px\)/)
+})
+
+test('the service worker drops the previous cache-first style bundle on update', async () => {
+  const worker = await source('public/sw.js')
+  assert.match(worker, /const CACHE = 'quorlyth-shell-v2'/)
+  assert.doesNotMatch(worker, /quorlyth-shell-v1/)
+  assert.match(worker, /key\.startsWith\('quorlyth-shell-'\) && key !== CACHE/)
+  assert.match(worker, /self\.skipWaiting\(\)/)
+  assert.match(worker, /self\.clients\.claim\(\)/)
 })
