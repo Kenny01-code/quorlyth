@@ -335,6 +335,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
   const [busy, setBusy] = useState(false)
   const [stage, setStage] = useState<'std' | 'big'>('std')
   const [status, setStatus] = useState('Online')
+  const [networkOnline, setNetworkOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine)
   const [thinkingTask, setThinkingTask] = useState('')
   const [activitySteps, setActivitySteps] = useState<BotActivityStep[]>([])
   const recordActivity = (label: string, detail: string, state: BotActivityStep['state'] = 'active') => {
@@ -407,6 +408,16 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
     window.addEventListener('resize', resize)
     return () => window.removeEventListener('resize', resize)
   }, [mode])
+
+  useEffect(() => {
+    const syncNetwork = () => setNetworkOnline(navigator.onLine)
+    window.addEventListener('online', syncNetwork)
+    window.addEventListener('offline', syncNetwork)
+    return () => {
+      window.removeEventListener('online', syncNetwork)
+      window.removeEventListener('offline', syncNetwork)
+    }
+  }, [])
 
   useEffect(() => {
     try {
@@ -503,7 +514,14 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
       // Keep the first welcome per account and use a quiet window for repeat opens.
       // This keeps visitors and signed-in members from consuming one another's greeting.
       lastOpenedAt = Number(localStorage.getItem(lastOpenedKey) || 0) || 0
-      firstTime = localStorage.getItem(guideKey) !== '1' && lastOpenedAt === 0
+      const accountCreatedAt = Number(a.me?.createdAt || 0)
+      const accountIsNew = accountCreatedAt > 0
+        && now >= accountCreatedAt
+        && now - accountCreatedAt < 24 * 60 * 60 * 1000
+      // Existing accounts stay returning users even when they sign in on a new device.
+      firstTime = localStorage.getItem(guideKey) !== '1'
+        && lastOpenedAt === 0
+        && (!a.me || accountIsNew)
       localStorage.setItem(guideKey, '1')
       localStorage.setItem(lastOpenedKey, String(now))
       localStorage.setItem('qseen', '1')
@@ -4072,6 +4090,10 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                     {view === 'robot-studio' && <i className="qrs-header-badge">DESIGN MODE</i>}
                   </div>}
                 </div>
+                <span className={cn('qbot-network-indicator', networkOnline ? 'is-online' : 'is-offline')} role="status" aria-live="polite" aria-label={networkOnline ? 'Internet connection active' : 'No internet connection'}>
+                  <i aria-hidden="true" />
+                  <span>{networkOnline ? 'CONNECTED' : 'OFFLINE'}</span>
+                </span>
                 {fullPage && (view === 'chat' || view === 'work') && <nav className="qbot-reference-tabs" aria-label="QuorlythBot mode">
                   <button type="button" className={cn(view === 'chat' && 'is-active')} aria-pressed={view === 'chat'} onClick={() => setView('chat')}>Chat</button>
                   <button type="button" className={cn(view === 'work' && 'is-active')} aria-pressed={view === 'work'} onClick={() => setView('work')}>Work</button>
@@ -4304,7 +4326,7 @@ export function QuorlythBot({ initialOpen = false, openRequest = 0, voiceRequest
                     <textarea rows={1} value={input} placeholder={ph || 'How can I help you today?'} aria-label="Message" onChange={e => setInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (slash.length) { const s = slash[slashSel] || slash[0]; setInput(''); if (s.id === 'find' || s.id === 'improve') setInput('/' + s.id + ' '); else skill(s.id) } else send() } }} />
                     <button className={cn('btn', 'qbot-compose-mic', recordingNote && 'rec')} aria-label={recordingNote ? 'Stop voice note' : 'Record voice note'} title={recordingNote ? 'Recording - click to stop and send' : 'Record a voice note'} onClick={dictate}><Icon name="mic" size={16} /></button>
-                    <button className={cn('btn', 'qbot-compose-live', live && 'rec')} aria-label={live ? 'End voice conversation' : 'Start voice conversation'} title={live ? 'End voice conversation' : 'Start voice conversation'} onClick={startLive}><Icon name={live ? 'mic' : 'audio-lines'} size={16} /></button>
+                    <button className={cn('btn', 'qbot-compose-live', live && 'rec')} aria-label={live ? 'End Live Talk' : 'Start Live Talk'} title={live ? 'End Live Talk' : 'Start Live Talk'} onClick={startLive}><Icon name={live ? 'mic' : 'audio-lines'} size={16} /></button>
                     <button className="btn p qbot-compose-send" aria-label="Send" title={busy ? 'QuorlythBot is responding' : 'Send message'} disabled={busy || !input.trim()} onClick={() => send()}><Icon name="arrow-up" size={17} /></button>
                     <div className="qbot-composer-toolbar" aria-label="Quick prompt tools">
                       <span className="qbot-composer-tools-label">TRY</span>
