@@ -316,7 +316,8 @@ body:has(#root main#main.q-automation-route) #nav .nav-item.on :is(svg,.ic,span)
 #root main#main.q-automation-route .wa-screen .wa-template-section .wa-template-card h4{color:#F4EDE3!important;-webkit-text-fill-color:#F4EDE3!important}
 #root main#main.q-automation-route .wa-screen .wa-template-section .wa-template-card>p{color:#BFB3A7!important;-webkit-text-fill-color:#BFB3A7!important}
 #root main#main.q-automation-route .wa-screen .wa-template-section .wa-template-card .wa-template-icon{border-color:rgba(217,121,82,.28)!important;color:#E89A75!important;background:rgba(184,79,45,.13)!important}
-#root main#main.q-automation-route .wa-screen .wa-template-section .wa-template-card :is(.wa-template-trigger svg,>button svg){color:#E58A62!important}
+#root main#main.q-automation-route .wa-screen .wa-template-section .wa-template-card .wa-template-trigger svg,
+#root main#main.q-automation-route .wa-screen .wa-template-section .wa-template-card>button svg{color:#E58A62!important}
 #root main#main.q-automation-route .wa-screen .wa-template-section .wa-template-card>button{border-top-color:rgba(236,221,204,.12)!important;color:#E7A17E!important;-webkit-text-fill-color:#E7A17E!important}
 #root main#main.q-automation-route .wa-screen .wa-template-section .wa-template-card>button:hover{color:#FFC09C!important;-webkit-text-fill-color:#FFC09C!important}
 
