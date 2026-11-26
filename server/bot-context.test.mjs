@@ -4,7 +4,7 @@ import { buildAuthenticatedBotContext } from './bot-context.mjs'
 import { chat } from './openai.mjs'
 
 const originalFetch = globalThis.fetch
-const envNames = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'XAI_API_KEY', 'AI_PROVIDER']
+const envNames = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'XAI_API_KEY', 'DEEPSEEK_API_KEY', 'AI_PROVIDER']
 const originalEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]))
 
 afterEach(() => {
@@ -231,6 +231,7 @@ test('missing text providers return a calm retryable response without exposing e
   delete process.env.OPENAI_API_KEY
   delete process.env.GEMINI_API_KEY
   delete process.env.XAI_API_KEY
+  delete process.env.DEEPSEEK_API_KEY
   process.env.AI_PROVIDER = 'auto'
   globalThis.fetch = async () => { throw new Error('No provider request should occur without a configured key') }
   const res = {
