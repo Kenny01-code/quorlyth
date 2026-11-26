@@ -92,7 +92,7 @@ test('DeepSeek structured requests enable JSON mode and parse the response', asy
   }
 
   const res = response()
-  await json({ body: { prompt: 'Return a JSON object with ready=true.' } }, res)
+  await json({ body: { prompt: 'Return a JSON object with ready=true.', tier: 'quick' } }, res)
 
   assert.equal(request.url, 'https://api.deepseek.com/chat/completions')
   const payload = JSON.parse(request.options.body)
