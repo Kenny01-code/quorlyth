@@ -78,7 +78,7 @@ test('voice UI exposes the pearl orb and keeps the chat composer mounted during 
   assert.match(bot, /live\?\.user/)
   assert.match(bot, /live\?\.bot/)
   assert.match(views, /Orb finish/)
-  assert.match(views, /Cobalt glass with a flowing pearl-white lower surface/)
+  assert.match(views, /Burnished copper glass with a warm pearl highlight/)
   assert.match(views, /Chips label="Orb scale"/)
   assert.doesNotMatch(views, /Robot finish|Robot size|Hidden/)
   assert.match(config, /theme: 'pearl'/)
