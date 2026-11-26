@@ -58,6 +58,10 @@ export function mountCreatorCoverScene(canvas: HTMLCanvasElement, host: HTMLElem
   softFill.position.set(1.8, -2.2, 3.2)
   scene.add(softFill)
 
+  const coreGlow = new PointLight(0xff6338, 0.85, 4.5)
+  coreGlow.position.set(0, 0, 0.72)
+  scene.add(coreGlow)
+
   const sculpture = new Group()
   sculpture.rotation.set(-0.2, 0.42, -0.08)
   scene.add(sculpture)
@@ -94,10 +98,54 @@ export function mountCreatorCoverScene(canvas: HTMLCanvasElement, host: HTMLElem
   innerCore.position.set(0, -0.02, 0.05)
   sculpture.add(innerCore)
 
+  // A restrained luminous heart gives the metallic knot a real focal depth.
+  const signalCore = new Mesh(
+    new SphereGeometry(0.145, 48, 36),
+    new MeshPhysicalMaterial({
+      color: 0x9d3e23,
+      metalness: 0.66,
+      roughness: 0.2,
+      clearcoat: 1,
+      clearcoatRoughness: 0.08,
+      emissive: new Color(0xc24c29),
+      emissiveIntensity: 0.42,
+    }),
+  )
+  signalCore.position.set(0, -0.02, 0.58)
+  sculpture.add(signalCore)
+
   const orbit = new Mesh(new TorusGeometry(1.46, 0.022, 12, 180), brightCopper)
   orbit.rotation.set(1.12, 0.32, -0.24)
   orbit.scale.set(1.02, 0.82, 1)
   sculpture.add(orbit)
+
+  // A hairline outer orbit and four polished nodes make the hero feel engineered,
+  // without adding another expensive animated system or a large polygon count.
+  const orbitTrace = new Mesh(
+    new TorusGeometry(1.79, 0.008, 8, 200),
+    new MeshPhysicalMaterial({
+      color: 0xb45a38,
+      metalness: 0.93,
+      roughness: 0.2,
+      clearcoat: 1,
+      clearcoatRoughness: 0.12,
+    }),
+  )
+  orbitTrace.rotation.set(-0.48, 0.92, 0.18)
+  orbitTrace.scale.set(1, 0.8, 1)
+  sculpture.add(orbitTrace)
+
+  const satelliteGeometry = new SphereGeometry(0.052, 20, 16)
+  for (let i = 0; i < 4; i += 1) {
+    const angle = (Math.PI * 2 * i) / 4 + 0.38
+    const satellite = new Mesh(satelliteGeometry, brightCopper)
+    satellite.position.set(
+      Math.cos(angle) * 1.76,
+      Math.sin(angle) * 1.31,
+      Math.sin(angle * 1.6) * 0.2,
+    )
+    sculpture.add(satellite)
+  }
 
   const fineRing = new Mesh(
     new TorusGeometry(0.72, 0.012, 8, 140),
