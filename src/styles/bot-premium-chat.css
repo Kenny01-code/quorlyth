@@ -1,115 +1,290 @@
-/* QuorlythBot premium experience
-   Owns the Bot's right content surface and composer only. The application
-   shell and the dedicated Three.js Robot Studio retain their own materials. */
+/* QuorlythBot dark glass system
+   The application shell, transcript, composer and every Bot workspace stay on
+   the original obsidian palette. Robot Studio keeps its dedicated visual stage. */
 #ast #bot.qbot-ultra {
-  --qbot-paper: #f5f0e7;
-  --qbot-paper-raised: #fffefa;
-  --qbot-paper-soft: #eee6da;
-  --qbot-ink: #1b1713;
-  --qbot-ink-soft: #51483f;
-  --qbot-muted: #766b60;
-  --qbot-orange: #b84f2d;
-  --qbot-orange-deep: #87391f;
-  --qbot-copper-line: rgba(144, 67, 39, .19);
+  --qbot-bg: #08090b;
+  --qbot-panel: #101215;
+  --qbot-panel-raised: #15181c;
+  --qbot-panel-soft: #1b1e22;
+  --qbot-line: rgba(236, 221, 204, .12);
+  --qbot-line-strong: rgba(218, 125, 84, .34);
+  --qbot-ink: #f2ebe2;
+  --qbot-ink-soft: #d2c5b7;
+  --qbot-muted: #a79a8c;
+  --qbot-orange: #d97952;
+  --qbot-orange-soft: #f0a17b;
+  color: var(--qbot-ink) !important;
+  background: var(--qbot-bg) !important;
+  color-scheme: dark !important;
 }
 
-/* Stable header and identity. There is no response-mode toggle in the UI. */
+/* One consistent dark shell across chat and all Bot subpages. */
+#ast #bot.qbot-ultra,
+#ast #bot.qbot-ultra > .bm,
+#ast #bot.qbot-ultra .bm,
+#ast #bot.qbot-ultra .bmain,
+#ast #bot.qbot-ultra .bcontent {
+  min-width: 0;
+  color: var(--qbot-ink) !important;
+  background: var(--qbot-bg) !important;
+}
+#ast #bot.qbot-ultra .bm {
+  isolation: isolate;
+}
+#ast #bot.qbot-ultra .bh {
+  position: relative;
+  z-index: 12;
+  display: flex !important;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 66px;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 8px clamp(12px, 2vw, 24px) !important;
+  border-bottom: 1px solid rgba(239, 222, 204, .11) !important;
+  color: var(--qbot-ink) !important;
+  background: #090a0c !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025) !important;
+  overflow: visible !important;
+}
+#ast #bot.qbot-ultra .bh > .bib {
+  order: 0;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  border: 1px solid var(--qbot-line) !important;
+  border-radius: 11px !important;
+  color: var(--qbot-orange-soft) !important;
+  background: rgba(255,255,255,.025) !important;
+  box-shadow: none !important;
+}
+#ast #bot.qbot-ultra .bh > .bib:is(:hover,:focus-visible) {
+  border-color: var(--qbot-line-strong) !important;
+  background: rgba(217,121,82,.1) !important;
+  color: #ffc09e !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .bht {
+  order: 1;
+  flex: 0 1 360px !important;
+  min-width: 140px !important;
+  max-width: min(380px, 34vw);
+  overflow: hidden;
+}
+#ast #bot.qbot-ultra .qbot-header-stack {
+  display: flex !important;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
 #ast #bot.qbot-ultra .qbot-core-brand {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
 }
 #ast #bot.qbot-ultra .qbot-core-brand > span {
-  color: var(--qbot-paper-raised) !important;
+  color: #f4eee6 !important;
   font-size: 14px;
-  font-weight: 680;
+  font-weight: 720;
   letter-spacing: -.025em;
-}
-#ast #bot.qbot-ultra .qbot-core-brand > i {
-  padding: 4px 7px;
-  border: 1px solid rgba(217,119,85,.28);
-  border-radius: 999px;
-  color: #e6a181 !important;
-  background: rgba(184,79,45,.11);
-  font-size: 8px;
-  font-style: normal;
-  font-weight: 750;
-  letter-spacing: .12em;
   white-space: nowrap;
 }
+#ast #bot.qbot-ultra .qbot-core-brand > i {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid rgba(217,121,82,.34);
+  border-radius: 999px;
+  color: #efa27d !important;
+  background: rgba(173,75,43,.11);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
 #ast #bot.qbot-ultra .qbot-core-selector,
-#ast #bot.qbot-ultra .qbot-model-switch { display: none !important; }
+#ast #bot.qbot-ultra .qbot-model-switch {
+  display: none !important;
+}
+#ast #bot.qbot-ultra .qbot-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+#ast #bot.qbot-ultra .qbot-title-row .qbot-chat-title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #a99e92 !important;
+  font-size: 11px !important;
+  font-weight: 530;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-#ast #bot.qbot-ultra .bh {
-  border-bottom: 1px solid rgba(217,119,85,.2) !important;
+/* Chat/Work switch is part of header flow, never an absolute overlay on the title. */
+#ast #bot.qbot-ultra.qbot-reference-layout .qbot-reference-tabs,
+#ast #bot.qbot-ultra .qbot-reference-tabs {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 13;
+  order: 2;
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center;
+  gap: 4px;
+  width: auto !important;
+  min-width: 0;
+  margin: 0 auto !important;
+  padding: 4px !important;
+  border: 1px solid rgba(238,222,205,.1) !important;
+  border-radius: 13px !important;
+  background: #101215 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .qbot-reference-tabs button {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  min-height: 31px;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  color: #a69b90 !important;
+  background: transparent !important;
+  font-size: 11px;
+  font-weight: 620;
+  white-space: nowrap;
+  transform: none !important;
+}
+#ast #bot.qbot-ultra .qbot-reference-tabs button.is-active {
+  color: #f5eee6 !important;
+  background: #25282d !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055) !important;
+}
+#ast #bot.qbot-ultra .qbot-reference-tabs button:is(:hover,:focus-visible):not(.is-active) {
+  color: #f2b18f !important;
+  background: rgba(217,121,82,.09) !important;
+}
+#ast #bot.qbot-ultra .qbot-network-indicator {
+  order: 3;
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  margin: 0 2px 0 0 !important;
+  padding: 7px 10px;
+  border: 1px solid rgba(236,221,204,.13);
+  border-radius: 999px;
+  color: #d9cfc4 !important;
+  background: #15181b !important;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+#ast #bot.qbot-ultra .qbot-network-indicator i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #4cc48a;
+  box-shadow: 0 0 0 3px rgba(76,196,138,.12);
+}
+#ast #bot.qbot-ultra .qbot-network-indicator.is-offline {
+  border-color: rgba(217,121,82,.3);
+  color: #efb097 !important;
+  background: rgba(155,63,35,.12) !important;
+}
+#ast #bot.qbot-ultra .qbot-network-indicator.is-offline i {
+  background: #e17b56;
+  box-shadow: 0 0 0 3px rgba(225,123,86,.13);
 }
 #ast #bot.qbot-ultra .bha {
+  order: 4;
   display: flex !important;
+  flex: 0 0 auto !important;
+  min-width: 0;
   align-items: center !important;
   justify-content: flex-end !important;
-  gap: 8px !important;
-  margin-left: auto !important;
+  gap: 7px !important;
+  margin-left: 0 !important;
 }
 #ast #bot.qbot-ultra .bha > .bib,
 #ast #bot.qbot-ultra .bha > .qbot-share-pill {
-  width: 37px !important;
-  min-width: 37px !important;
-  height: 37px !important;
-  min-height: 37px !important;
-  margin: 0 !important;
-  padding: 0 !important;
   display: inline-flex !important;
+  flex: 0 0 38px !important;
   align-items: center !important;
   justify-content: center !important;
-  border: 1px solid rgba(240,234,217,.13) !important;
+  width: 38px !important;
+  min-width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid rgba(240,225,211,.14) !important;
   border-radius: 11px !important;
-  color: #e9ddd2 !important;
-  background: rgba(255,255,255,.045) !important;
+  color: #e8d9ca !important;
+  background: #141619 !important;
   box-shadow: none !important;
   transform: none !important;
 }
+#ast #bot.qbot-ultra .bha > .qbot-share-pill {
+  gap: 7px !important;
+  width: auto !important;
+  min-width: 68px !important;
+  padding: 0 12px !important;
+}
 #ast #bot.qbot-ultra .bha > .bib:is(:hover,:focus-visible),
 #ast #bot.qbot-ultra .bha > .qbot-share-pill:is(:hover,:focus-visible) {
-  border-color: rgba(217,119,85,.48) !important;
-  color: #ffc09f !important;
-  background: rgba(184,79,45,.16) !important;
+  border-color: rgba(217,121,82,.5) !important;
+  color: #ffbd98 !important;
+  background: rgba(173,75,43,.17) !important;
   transform: none !important;
 }
-#ast #bot.qbot-ultra .bha > .bib:active,
-#ast #bot.qbot-ultra .bha > .qbot-share-pill:active { transform: none !important; }
-#ast #bot.qbot-ultra .bha > .bib:focus-visible,
-#ast #bot.qbot-ultra .bha > .qbot-share-pill:focus-visible {
-  outline: 2px solid rgba(217,119,85,.74) !important;
-  outline-offset: 3px !important;
-}
 
-/* The transcript is a quiet, paper-toned reading surface with clear message roles. */
+/* Transcript: one readable column, with full-width assistant copy and no shrinking action labels. */
 #ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface {
+  display: block;
   flex: 1 1 0% !important;
+  min-width: 0 !important;
   min-height: 0 !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
-  padding: clamp(18px, 3vw, 34px) clamp(14px, 4.2vw, 48px) 28px !important;
+  padding: clamp(18px, 3vw, 34px) clamp(14px, 4.2vw, 48px) 26px !important;
   border: 0 !important;
   border-radius: 0 !important;
   color: var(--qbot-ink) !important;
   background:
-    radial-gradient(ellipse 54% 30% at 50% 0%, rgba(184,79,45,.045), transparent 75%),
-    linear-gradient(180deg, #f7f3ec 0%, #f1ebe1 100%) !important;
+    radial-gradient(ellipse 60% 32% at 50% 0%, rgba(173,75,43,.09), transparent 74%),
+    linear-gradient(180deg, #0b0c0e 0%, #090a0c 100%) !important;
   box-shadow: none !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-  scrollbar-color: rgba(127,75,53,.28) transparent !important;
+  scrollbar-color: rgba(217,121,82,.26) transparent !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface > .ast-log {
   display: flex !important;
-  flex: 1 0 auto !important;
+  flex: 0 0 auto !important;
   flex-direction: column !important;
-  gap: 22px !important;
-  width: min(100%, 840px) !important;
+  gap: 18px !important;
+  width: min(100%, 1080px) !important;
+  min-width: 0 !important;
   margin: 0 auto !important;
-  padding: 8px 0 24px !important;
+  padding: 8px 0 28px !important;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-user-message {
   align-self: flex-end !important;
@@ -117,182 +292,317 @@
   flex-direction: column !important;
   gap: 6px !important;
   width: fit-content !important;
-  max-width: min(82%, 680px) !important;
+  max-width: min(84%, 740px) !important;
+  min-width: 0 !important;
   padding: 13px 16px !important;
-  border: 1px solid rgba(142,58,31,.22) !important;
+  border: 1px solid rgba(217,121,82,.34) !important;
   border-radius: 17px 17px 5px 17px !important;
-  color: #fff8f2 !important;
-  background: linear-gradient(145deg, #bd5b38 0%, #9e4428 100%) !important;
-  box-shadow: 0 10px 28px -22px rgba(113,48,27,.55), inset 0 1px 0 rgba(255,235,220,.2) !important;
+  color: #fff4e9 !important;
+  background: linear-gradient(145deg, rgba(139,65,40,.74), rgba(77,39,27,.84)) !important;
+  box-shadow: 0 12px 32px -26px rgba(0,0,0,.82), inset 0 1px 0 rgba(255,235,220,.08) !important;
   font-size: 14px !important;
   font-weight: 480 !important;
   line-height: 1.72 !important;
   overflow-wrap: anywhere;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-user-message .qbot-message-label {
-  color: rgba(255,247,239,.78) !important;
+  color: #d9a78d !important;
   font-size: 9px !important;
-  font-weight: 760 !important;
+  font-weight: 780 !important;
   letter-spacing: .12em;
   text-transform: uppercase;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message {
+  display: block !important;
   align-self: stretch !important;
-  width: min(100%, 820px) !important;
+  width: min(100%, 1020px) !important;
   max-width: 100% !important;
-  padding: clamp(15px, 2vw, 22px) clamp(15px, 2.5vw, 25px) 14px !important;
-  border: 1px solid rgba(44,34,26,.1) !important;
-  border-left: 3px solid #b65332 !important;
-  border-radius: 5px 18px 18px 18px !important;
+  min-width: 0 !important;
+  margin: 4px auto 18px !important;
+  padding: clamp(16px, 2.2vw, 23px) clamp(16px, 2.7vw, 27px) 14px !important;
+  border: 1px solid rgba(234,216,197,.12) !important;
+  border-left: 2px solid #b85b38 !important;
+  border-radius: 4px 16px 16px 16px !important;
   color: var(--qbot-ink) !important;
-  background: rgba(255,254,250,.92) !important;
-  box-shadow: 0 14px 38px -32px rgba(42,29,20,.42), inset 0 1px 0 rgba(255,255,255,.95) !important;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012)),
+    #111316 !important;
+  box-shadow: 0 18px 44px -38px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.035) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-byline {
   display: flex !important;
+  min-width: 0;
+  flex-wrap: nowrap;
   align-items: center !important;
   gap: 9px !important;
-  margin: 0 0 12px !important;
+  margin: 0 0 13px !important;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-mark {
   display: grid !important;
-  width: 28px !important;
-  height: 28px !important;
   flex: 0 0 28px !important;
   place-items: center !important;
-  border: 1px solid rgba(161,75,44,.22) !important;
+  width: 28px !important;
+  height: 28px !important;
+  border: 1px solid rgba(217,121,82,.34) !important;
   border-radius: 9px !important;
-  color: #a64b2c !important;
-  background: linear-gradient(145deg,#f5e4d7,#fffaf4) !important;
+  color: #f0a17b !important;
+  background: linear-gradient(145deg,rgba(217,121,82,.15),rgba(115,53,32,.12)) !important;
 }
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-mark svg { color: #a64b2c !important; }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-mark svg {
+  color: #f0a17b !important;
+}
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-byline b {
-  color: #211811 !important;
+  color: #f5eee6 !important;
   font-size: 12px !important;
   font-weight: 760 !important;
+  white-space: nowrap;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-byline i {
   padding-left: 9px;
-  border-left: 1px solid rgba(53,40,29,.18);
-  color: #766a5e !important;
+  border-left: 1px solid rgba(236,221,204,.15);
+  color: #aa9d8f !important;
   font-size: 10px !important;
   font-style: normal;
+  white-space: nowrap;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt {
-  color: #211a14 !important;
-  font-size: clamp(14px, 1.02vw, 15px) !important;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  color: #efe8df !important;
+  font-size: clamp(14px, 1.02vw, 15.5px) !important;
   font-weight: 430 !important;
   line-height: 1.82 !important;
   letter-spacing: .003em;
   overflow-wrap: anywhere;
   word-break: normal;
+  text-wrap: pretty;
 }
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt :is(p,li,blockquote,span,div) {
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt :is(p,li,blockquote,span,div,td,th) {
   color: inherit !important;
   -webkit-text-fill-color: currentColor !important;
 }
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt :is(b,strong) {
-  color: #170f0b !important;
-  font-weight: 760 !important;
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt :is(b,strong,h1,h2,h3,h4) {
+  color: #fff7ee !important;
+  font-weight: 750 !important;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt a {
-  color: #984326 !important;
+  color: #f0a17b !important;
+  -webkit-text-fill-color: #f0a17b !important;
   text-decoration: underline;
-  text-decoration-color: rgba(152,67,38,.35);
+  text-decoration-color: rgba(240,161,123,.4);
   text-underline-offset: 3px;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt :is(code,pre) {
-  color: #f4e6d9 !important;
-  background: #28211d !important;
-  border: 1px solid rgba(40,33,29,.25);
-  border-radius: 8px;
+  color: #f3e7da !important;
+  background: #08090b !important;
+  border: 1px solid rgba(236,221,204,.13) !important;
+  border-radius: 9px;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 13px 14px;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt th,
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt td {
+  padding: 8px 10px;
+  border: 1px solid rgba(236,221,204,.14);
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact {
   display: flex !important;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px !important;
+  width: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
+  flex-flow: row wrap !important;
+  align-items: center !important;
+  justify-content: flex-start;
+  gap: 7px !important;
   margin-top: 14px !important;
   padding-top: 10px;
-  border-top: 1px solid rgba(51,39,29,.09);
-  opacity: .9 !important;
+  border-top: 1px solid rgba(236,221,204,.1);
+  opacity: 1 !important;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button {
   display: inline-flex !important;
+  flex: 0 0 auto !important;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: 32px;
-  min-height: 32px;
-  padding: 0 8px !important;
-  border: 1px solid transparent !important;
+  width: max-content;
+  min-width: 36px !important;
+  min-height: 34px !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 9px !important;
+  border: 1px solid rgba(236,221,204,.1) !important;
   border-radius: 9px !important;
-  color: #66584d !important;
-  background: transparent !important;
+  color: #b7aa9d !important;
+  background: rgba(255,255,255,.025) !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  flex-shrink: 0 !important;
   transform: none !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button span {
+  display: inline-block !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
 }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button:is(:hover,:focus-visible) {
-  color: #8e3e23 !important;
-  border-color: rgba(154,70,39,.18) !important;
-  background: #f6e9de !important;
+  color: #ffc09a !important;
+  border-color: rgba(217,121,82,.38) !important;
+  background: rgba(173,75,43,.13) !important;
   transform: none !important;
 }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button:focus-visible {
+  outline: 2px solid rgba(217,121,82,.7) !important;
+  outline-offset: 2px;
+}
+
+/* Activity, tool progress and thinking panels share dark materials and readable ink. */
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-thinking-panel {
   align-self: flex-start;
-  width: min(100%, 520px);
-  border: 1px solid rgba(155,79,48,.17) !important;
-  border-radius: 13px !important;
-  color: #34251d !important;
-  background: #fffaf4 !important;
-  box-shadow: 0 10px 28px -24px rgba(50,32,21,.35) !important;
+  width: min(100%, 680px);
+  border: 1px solid rgba(217,121,82,.2) !important;
+  border-radius: 14px !important;
+  color: #eadfd3 !important;
+  background: linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.012)),#121417 !important;
+  box-shadow: 0 14px 32px -28px rgba(0,0,0,.92) !important;
 }
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-thinking-copy :is(strong,small) { color: #35251b !important; }
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-thinking-orbit { color: #ae4b2a !important; }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-thinking-copy :is(strong,small) {
+  color: #e9ded2 !important;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-thinking-orbit { color: #e58a61 !important; }
 #ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-feed {
-  width: min(100%, 820px);
+  width: min(100%, 1020px);
+  min-width: 0;
   margin: 0 auto 2px;
-  border: 1px solid rgba(155,79,48,.16);
+  padding: 13px 15px;
+  border: 1px solid rgba(217,121,82,.23);
   border-radius: 14px;
-  color: #35271e;
-  background: rgba(255,254,250,.88);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  color: #e6d9cc;
+  background: linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.012)),#101215;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
 }
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-feed :is(span,small,b) { color: #35271e !important; }
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-feed .qbot-activity-heading > span { color: #8e492e !important; }
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-step > i { color: #a94b2b !important; }
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-heading > span {
+  color: #e08a62 !important;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .15em;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-heading > i {
+  color: #c7b5a4 !important;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 760;
+  letter-spacing: .1em;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-step {
+  display: grid;
+  grid-template-columns: 20px minmax(0,1fr) minmax(0,1.4fr);
+  gap: 9px;
+  align-items: center;
+  padding: 5px 0;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-step > i {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(217,121,82,.25);
+  border-radius: 6px;
+  color: #e18d66 !important;
+  font-style: normal;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-step > span {
+  min-width: 0;
+  color: #e9ded2 !important;
+  font-size: 11px;
+  font-weight: 620;
+  overflow-wrap: anywhere;
+}
+#ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-step > small {
+  min-width: 0;
+  color: #a99a8c !important;
+  font-size: 9px;
+  line-height: 1.4;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
 
-/* Composer: a stable five-control row with no model selector and no cross-hover effects. */
+/* Composer outer tray blends into the transcript. Only the actual input panel is raised. */
 #ast #bot.qbot-ultra .qbot-home-composer {
+  position: relative;
+  z-index: 4;
+  display: block;
   flex: 0 0 auto !important;
-  padding: 10px clamp(12px, 3vw, 30px) 13px !important;
-  border-top: 1px solid rgba(217,119,85,.19) !important;
-  background: linear-gradient(180deg,#f2ece3 0%,#eae1d6 100%) !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home {
-  display: grid !important;
-  grid-template-columns: 40px minmax(0,1fr) 40px 40px 44px !important;
-  grid-template-rows: minmax(56px,auto) 40px auto !important;
-  align-items: center !important;
-  gap: 8px 7px !important;
+  width: min(100%, 1120px) !important;
   min-width: 0 !important;
-  min-height: 126px !important;
-  padding: 10px 12px !important;
-  border: 1px solid rgba(210,132,98,.3) !important;
+  max-width: 1120px !important;
+  margin: 0 auto !important;
+  padding: 10px clamp(12px, 3vw, 26px) 12px !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(217,121,82,.12) !important;
+  border-radius: 0 !important;
+  color: var(--qbot-ink) !important;
+  background: #090a0c !important;
+  box-shadow: none !important;
+}
+#ast #bot.qbot-ultra .qbot-home-composer .ast-q {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
+  display: grid !important;
+  grid-template-columns: 42px minmax(0,1fr) 42px 42px 46px !important;
+  grid-template-rows: minmax(54px,auto) 42px auto !important;
+  align-items: center !important;
+  gap: 9px 9px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 130px !important;
+  margin: 0 auto !important;
+  padding: 11px 13px !important;
+  border: 1px solid rgba(217,121,82,.27) !important;
   border-radius: 20px !important;
-  color: #f2e8dc !important;
-  background: linear-gradient(145deg,#24201d 0%,#131211 100%) !important;
-  box-shadow: 0 15px 38px -27px rgba(55,31,21,.72), inset 0 1px 0 rgba(255,239,226,.09) !important;
+  color: #f1e8de !important;
+  background:
+    radial-gradient(ellipse 62% 100% at 0% 0%,rgba(217,121,82,.075),transparent 66%),
+    linear-gradient(145deg,#191b1e 0%,#101113 76%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 18px 45px -38px rgba(0,0,0,.95) !important;
   transform: none !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home:focus-within {
-  border-color: rgba(205,105,66,.68) !important;
-  box-shadow: 0 0 0 3px rgba(180,79,45,.1), 0 18px 44px -30px rgba(55,31,21,.8), inset 0 1px 0 rgba(255,239,226,.1) !important;
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home:focus-within,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home:focus-within {
+  border-color: rgba(217,121,82,.58) !important;
+  box-shadow: 0 0 0 3px rgba(184,79,45,.1), inset 0 1px 0 rgba(255,255,255,.055), 0 18px 48px -38px rgba(0,0,0,.95) !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home > textarea {
-  grid-column: 1 / -1 !important;
-  grid-row: 1 !important;
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home > textarea,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home > textarea {
+  grid-area: 1 / 1 / 2 / -1 !important;
+  display: block !important;
   align-self: stretch !important;
   width: 100% !important;
   min-width: 0 !important;
@@ -301,124 +611,132 @@
   margin: 0 !important;
   padding: 7px 5px !important;
   border: 0 !important;
-  color: #f7efe6 !important;
-  -webkit-text-fill-color: #f7efe6 !important;
+  border-radius: 0 !important;
+  color: #f3ece4 !important;
+  -webkit-text-fill-color: #f3ece4 !important;
   background: transparent !important;
   box-shadow: none !important;
   font-size: 14px !important;
-  line-height: 1.68 !important;
+  line-height: 1.65 !important;
   resize: none !important;
   outline: none !important;
-  caret-color: #e07b50 !important;
-  grid-area: 1 / 1 / 2 / -1 !important;
+  caret-color: #e58b62 !important;
 }
 #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home > textarea::placeholder {
-  color: #b9a99b !important;
-  -webkit-text-fill-color: #b9a99b !important;
-  opacity: .88 !important;
+  color: #a69a8e !important;
+  -webkit-text-fill-color: #a69a8e !important;
+  opacity: .96 !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus {
-  grid-area: 2 / 1 !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic {
-  grid-area: 2 / 3 !important;
-}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus { grid-area: 2 / 1 !important; }
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic { grid-area: 2 / 3 !important; }
 #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live {
   display: inline-grid !important;
-  grid-area: 2 / 4 !important;
   visibility: visible !important;
+  grid-area: 2 / 4 !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send {
-  grid-area: 2 / 5 !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send { grid-area: 2 / 5 !important; }
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
+  position: relative;
+  isolation: isolate;
   display: inline-grid !important;
+  flex: 0 0 auto !important;
   place-items: center !important;
-  justify-self: center;
-  align-self: center;
-  width: 39px !important;
-  min-width: 39px !important;
-  height: 39px !important;
-  min-height: 39px !important;
+  justify-self: center !important;
+  align-self: center !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
   margin: 0 !important;
   padding: 0 !important;
-  border: 1px solid rgba(240,225,211,.17) !important;
-  border-radius: 11px !important;
+  border: 1px solid rgba(236,221,204,.15) !important;
+  border-radius: 12px !important;
   color: #e8d9ca !important;
-  background: rgba(255,255,255,.055) !important;
+  background: rgba(255,255,255,.035) !important;
   box-shadow: none !important;
+  filter: none !important;
   transform: none !important;
-  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease !important;
-  flex: 0 0 auto !important;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live):is(:hover,:focus-visible) {
-  border-color: rgba(217,119,85,.58) !important;
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus:is(:hover,:focus-visible),
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic:is(:hover,:focus-visible),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:is(:hover,:focus-visible),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic:is(:hover,:focus-visible) {
+  border-color: rgba(217,121,82,.55) !important;
   color: #ffb18c !important;
-  background: rgba(184,79,45,.18) !important;
-  box-shadow: 0 0 0 2px rgba(184,79,45,.07) !important;
+  background: rgba(173,75,43,.16) !important;
+  box-shadow: 0 0 0 2px rgba(184,79,45,.08) !important;
   transform: none !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live {
-  border-color: rgba(210,116,76,.34) !important;
-  color: #f1a17c !important;
-  background: rgba(173,73,43,.13) !important;
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live {
+  border-color: rgba(217,121,82,.34) !important;
+  color: #f0a17b !important;
+  background: rgba(173,75,43,.12) !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:is(:hover,:focus-visible),
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live.rec {
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:is(:hover,:focus-visible,.rec),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live:is(:hover,:focus-visible,.rec) {
   border-color: rgba(238,128,83,.72) !important;
   color: #ffc09b !important;
-  background: rgba(190,75,42,.26) !important;
-  box-shadow: 0 0 0 3px rgba(184,79,45,.12) !important;
+  background: rgba(190,75,42,.24) !important;
+  box-shadow: 0 0 0 3px rgba(184,79,45,.11) !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send {
-  border-color: rgba(235,153,117,.42) !important;
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic.rec,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic.rec {
+  border-color: rgba(238,128,83,.74) !important;
+  color: #ffc09b !important;
+  background: rgba(190,75,42,.24) !important;
+  box-shadow: 0 0 0 3px rgba(184,79,45,.11) !important;
+}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send,
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send {
+  border-color: rgba(235,153,117,.4) !important;
   color: #fff8f1 !important;
-  background: linear-gradient(145deg,#c96643,#a84629) !important;
-  box-shadow: 0 8px 18px -13px rgba(190,79,45,.7), inset 0 1px 0 rgba(255,235,217,.25) !important;
+  background: linear-gradient(145deg,#bd6543,#914127) !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:is(:hover,:focus-visible):not(:disabled) {
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:is(:hover,:focus-visible):not(:disabled),
+#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send:is(:hover,:focus-visible):not(:disabled) {
   border-color: rgba(255,190,158,.72) !important;
-  background: linear-gradient(145deg,#d87851,#b24c2c) !important;
-  box-shadow: 0 10px 23px -13px rgba(190,79,45,.75), inset 0 1px 0 rgba(255,235,217,.3) !important;
+  background: linear-gradient(145deg,#d87851,#a8492b) !important;
+  box-shadow: 0 10px 23px -13px rgba(190,79,45,.6) !important;
   transform: none !important;
 }
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:disabled {
-  opacity: .4 !important;
-  cursor: not-allowed !important;
-  box-shadow: none !important;
-}
+#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:disabled { opacity: .42 !important; cursor: not-allowed !important; }
 #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-toolbar {
   grid-area: 3 / 1 / 4 / -1 !important;
   display: flex !important;
+  min-width: 0 !important;
   align-items: center !important;
-  gap: 7px !important;
-  min-width: 0;
   flex-wrap: wrap !important;
-  padding: 3px 0 0 !important;
-  border-top: 1px solid rgba(240,225,211,.09);
+  gap: 7px !important;
+  padding: 7px 0 0 !important;
+  border-top: 1px solid rgba(236,221,204,.09);
 }
 #ast #bot.qbot-ultra .qbot-composer-tools-label {
-  color: #9b8c7e !important;
+  color: #958779 !important;
   font-size: 8px !important;
-  font-weight: 760;
+  font-weight: 780;
   letter-spacing: .14em;
 }
 #ast #bot.qbot-ultra .qbot-tool-pill {
   display: inline-flex !important;
+  flex: 0 0 auto !important;
   align-items: center;
   justify-content: center;
   gap: 6px !important;
-  min-height: 29px !important;
-  padding: 4px 9px !important;
-  border: 1px solid rgba(240,225,211,.1) !important;
+  min-height: 30px !important;
+  padding: 4px 10px !important;
+  border: 1px solid rgba(236,221,204,.11) !important;
   border-radius: 999px !important;
   color: #d5c6b8 !important;
-  background: rgba(255,255,255,.035) !important;
+  background: rgba(255,255,255,.025) !important;
   font-size: 10px !important;
+  white-space: nowrap;
   transform: none !important;
 }
 #ast #bot.qbot-ultra .qbot-tool-pill:is(:hover,:focus-visible) {
-  border-color: rgba(217,119,85,.36) !important;
+  border-color: rgba(217,121,82,.36) !important;
   color: #f2b08e !important;
   background: rgba(184,79,45,.12) !important;
   transform: none !important;
@@ -426,22 +744,20 @@
 #ast #bot.qbot-ultra .qbot-tool-pill .ic { color: #d88965 !important; }
 #ast #bot.qbot-ultra .qbot-disclaimer {
   margin: 7px 0 0 !important;
-  color: #766a5e !important;
+  color: #8f857a !important;
   font-size: 9px !important;
   line-height: 1.5;
   text-align: center;
 }
 
-/* Other Bot pages use the same editorial paper/ink language as Quorlyth itself.
-   The Robot Studio stays dark because its stage and tools are visual work surfaces. */
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) {
-  color: #211913 !important;
-  background: #f2ece3 !important;
-}
+/* Other Bot pages: same obsidian canvas, warm text, copper interactions. */
+#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode),
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) {
   min-width: 0 !important;
-  color: #211913 !important;
-  background: linear-gradient(180deg,#f5f0e7 0%,#efe8de 100%) !important;
+  color: #efe7dd !important;
+  background:
+    radial-gradient(ellipse 58% 36% at 88% 0%,rgba(173,75,43,.08),transparent 68%),
+    linear-gradient(180deg,#0d0f11 0%,#090a0c 100%) !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -449,33 +765,33 @@
   backdrop-filter: none !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(h1,h2,h3,h4,h5,h6,p,li,label,small,span,b,strong,em,summary,output,time) {
-  color: #211913 !important;
+  color: #efe7dd !important;
   -webkit-text-fill-color: currentColor !important;
   text-shadow: none !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(.dim,.mut,.muted,.subtle,.hint,.helper,.caption,small,time) {
-  color: #6f6257 !important;
-  -webkit-text-fill-color: #6f6257 !important;
+  color: #a99b8d !important;
+  -webkit-text-fill-color: #a99b8d !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(svg,.ic,.quorlyth-glyph) {
-  color: #a84a2a !important;
+  color: #d77a53 !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .glass,
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(.qbot-os-panel,.qbot-os-metric,.qbot-os-tile,.qbot-os-signal,.qbot-os-empty,.qbot-os-activity,.csr,.bsk,.bvc) {
-  border: 1px solid rgba(47,34,25,.12) !important;
+  border: 1px solid rgba(236,221,204,.12) !important;
   border-radius: 16px !important;
-  color: #211913 !important;
-  background: linear-gradient(145deg,#fffefa 0%,#f8f2e9 100%) !important;
-  box-shadow: 0 13px 34px -30px rgba(52,34,23,.4), inset 0 1px 0 rgba(255,255,255,.95) !important;
+  color: #efe7dd !important;
+  background: linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.014)),#121518 !important;
+  box-shadow: 0 16px 38px -34px rgba(0,0,0,.88), inset 0 1px 0 rgba(255,255,255,.035) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(.qbot-os-eyebrow,.qbot-os-section-label,.qbot-os-counter) {
-  color: #9d4a2d !important;
-  -webkit-text-fill-color: #9d4a2d !important;
+  color: #d88965 !important;
+  -webkit-text-fill-color: #d88965 !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-heading h2 {
-  color: #1d1712 !important;
+  color: #f5eee6 !important;
   font-size: clamp(25px,3.2vw,36px);
   font-weight: 720;
   letter-spacing: -.045em;
@@ -483,42 +799,42 @@
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-heading p {
   max-width: 660px;
-  color: #65594e !important;
+  color: #b8aa9b !important;
   line-height: 1.7;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-primary {
   min-height: 42px;
   padding: 10px 14px;
-  border: 1px solid #a84a2a !important;
+  border: 1px solid rgba(217,121,82,.52) !important;
   border-radius: 11px !important;
-  color: #fff8f2 !important;
-  -webkit-text-fill-color: #fff8f2 !important;
-  background: linear-gradient(135deg,#c46542,#a8472a) !important;
-  box-shadow: 0 9px 22px -17px rgba(151,61,32,.68), inset 0 1px 0 rgba(255,231,215,.3) !important;
+  color: #fff7ef !important;
+  -webkit-text-fill-color: #fff7ef !important;
+  background: linear-gradient(135deg,#bb6443,#8f3f27) !important;
+  box-shadow: 0 9px 22px -17px rgba(151,61,32,.68), inset 0 1px 0 rgba(255,231,215,.12) !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-primary:is(:hover,:focus-visible) {
-  background: linear-gradient(135deg,#d37752,#b65332) !important;
+  background: linear-gradient(135deg,#d37752,#a94e30) !important;
   transform: translateY(-1px);
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-tile :is(b,.qbot-os-tile-bottom) {
-  color: #8b3e23 !important;
+  color: #efa17b !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-signal :is(b,small) {
-  color: #261b14 !important;
+  color: #f2e8dd !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(input,textarea,select) {
   min-width: 0;
-  border: 1px solid rgba(65,45,31,.18) !important;
+  border: 1px solid rgba(236,221,204,.16) !important;
   border-radius: 11px !important;
-  color: #211913 !important;
-  -webkit-text-fill-color: #211913 !important;
-  background: #fffefa !important;
-  box-shadow: inset 0 1px 2px rgba(42,29,19,.04) !important;
-  color-scheme: light !important;
+  color: #f1e9df !important;
+  -webkit-text-fill-color: #f1e9df !important;
+  background: #0b0d0f !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.3) !important;
+  color-scheme: dark !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(input,textarea,select)::placeholder {
-  color: #83766a !important;
-  -webkit-text-fill-color: #83766a !important;
+  color: #a99b8d !important;
+  -webkit-text-fill-color: #a99b8d !important;
   opacity: 1 !important;
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(button,.chip,.btn) {
@@ -526,26 +842,75 @@
 }
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(button,.chip,.btn):focus-visible,
 #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) :is(input,textarea,select):focus-visible {
-  outline: 2px solid rgba(177,78,45,.72) !important;
+  outline: 2px solid rgba(217,121,82,.72) !important;
   outline-offset: 3px !important;
-}
-#ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .orb3d i {
-  background: radial-gradient(circle at 30% 24%,#ffe1c8 0%,#db8059 26%,#ad4e2c 60%,#552719 100%) !important;
-  box-shadow: 0 8px 24px -5px rgba(163,73,40,.42), inset -7px -9px 16px rgba(33,15,10,.4) !important;
 }
 #ast #bot.qbot-ultra .qbot-robot-studio-shell {
   color: #f0eadf !important;
   background: #08090b !important;
 }
 
-/* Small screens retain a full set of controls. Only labels compress; actions do not vanish. */
-@media (max-width: 620px) {
-  #ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface {
-    padding: 16px 12px 20px !important;
+/* Responsive header, messages and composer. The actions never collapse into vertical words. */
+@media (max-width: 900px) {
+  #ast #bot.qbot-ultra .bh {
+    gap: 8px !important;
+    padding-inline: 10px !important;
   }
-  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-user-message {
-    max-width: 92% !important;
-    font-size: 13px !important;
+  #ast #bot.qbot-ultra .bht {
+    flex-basis: 240px !important;
+    max-width: 28vw;
+  }
+  #ast #bot.qbot-ultra .qbot-reference-tabs button {
+    min-width: 64px;
+    padding-inline: 10px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-network-indicator {
+    padding-inline: 8px;
+  }
+}
+@media (max-width: 760px) {
+  #ast #bot.qbot-ultra .bh {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    min-height: 0;
+    row-gap: 7px !important;
+    padding: 9px 10px !important;
+  }
+  #ast #bot.qbot-ultra .bh > .bib { order: 0; }
+  #ast #bot.qbot-ultra .bht {
+    order: 1;
+    flex: 1 1 calc(100% - 160px) !important;
+    max-width: none;
+    min-width: 0 !important;
+  }
+  #ast #bot.qbot-ultra .qbot-network-indicator {
+    order: 2;
+    margin-left: auto !important;
+    padding: 6px 8px;
+  }
+  #ast #bot.qbot-ultra .bha {
+    order: 3;
+    gap: 4px !important;
+  }
+  #ast #bot.qbot-ultra .bha > .bib,
+  #ast #bot.qbot-ultra .bha > .qbot-share-pill {
+    width: 33px !important;
+    min-width: 33px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+  }
+  #ast #bot.qbot-ultra .bha > .qbot-share-pill {
+    width: auto !important;
+    min-width: 54px !important;
+    padding-inline: 8px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-reference-tabs {
+    order: 4;
+    flex: 0 0 auto !important;
+    margin: 1px auto 0 44px !important;
+  }
+  #ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface {
+    padding: 15px 12px 20px !important;
   }
   #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message {
     padding: 15px 14px 12px !important;
@@ -553,26 +918,51 @@
   #ast #bot.qbot-ultra .qbot-home-composer {
     padding: 8px 9px 10px !important;
   }
-  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home {
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
+  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
     grid-template-columns: 36px minmax(0,1fr) 36px 36px 40px !important;
     gap: 7px 5px !important;
+    min-height: 122px !important;
     padding: 9px !important;
     border-radius: 17px !important;
   }
   #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
     width: 36px !important;
     min-width: 36px !important;
-    height: 38px !important;
-    min-height: 38px !important;
-    border-radius: 10px !important;
+    height: 36px !important;
+    min-height: 36px !important;
   }
   #ast #bot.qbot-ultra .qbot-composer-toolbar { gap: 6px !important; }
   #ast #bot.qbot-ultra .qbot-tool-pill { min-height: 30px !important; padding-inline: 8px !important; }
   #ast #bot.qbot-ultra .qbot-tool-pill span { font-size: 9px !important; }
   #ast #bot.qbot-ultra .qbot-disclaimer { font-size: 8px !important; }
+  #ast #bot.qbot-ultra .qbot-network-indicator > span { display: none; }
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-step {
+    grid-template-columns: 20px minmax(0,1fr);
+  }
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-activity-step > small {
+    grid-column: 2;
+    text-align: left;
+  }
+}
+@media (max-width: 520px) {
+  #ast #bot.qbot-ultra .qbot-reference-tabs {
+    margin-left: 0 !important;
+  }
+  #ast #bot.qbot-ultra .qbot-reference-tabs button {
+    min-width: 76px;
+  }
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt {
+    font-size: 14px !important;
+    line-height: 1.76 !important;
+  }
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact {
+    gap: 5px !important;
+  }
 }
 @media (max-width: 390px) {
-  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home {
+  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
+  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
     grid-template-columns: 34px minmax(0,1fr) 34px 34px 38px !important;
     gap: 6px 4px !important;
     padding: 8px !important;
@@ -580,397 +970,19 @@
   #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
     width: 34px !important;
     min-width: 34px !important;
-    height: 36px !important;
-    min-height: 36px !important;
-  }
-}
-@media (max-width: 760px) {
-  #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-  }
-  #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-metrics {
-    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
-  }
-  #ast #bot.qbot-ultra .qbot-conversation:not(.qbot-chat-surface):not(.qbot-robot-studio-shell) .qbot-os-two-column {
-    grid-template-columns: minmax(0,1fr) !important;
-  }
-  #ast #bot.qbot-ultra .bm,
-  #ast #bot.qbot-ultra .bh,
-  #ast #bot.qbot-ultra .bc,
-  #ast #bot.qbot-ultra .ast-in {
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  #ast #bot.qbot-ultra :is(.ast-in,.ast-in button,.qbot-conversation .am,.qbot-os-primary,.qbot-os-tile) {
-    animation: none !important;
-    transition: none !important;
-    transform: none !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-
-/* The full-page reference layout has more specific legacy grid declarations.
-   Override them explicitly so the four actions stay visible in that layout too. */
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
-  display: grid !important;
-  grid-template-columns: 40px minmax(0,1fr) 40px 40px 44px !important;
-  grid-template-rows: minmax(56px,auto) 40px auto !important;
-  align-items: center !important;
-  gap: 8px 7px !important;
-  min-height: 126px !important;
-  padding: 10px 12px !important;
-  border: 1px solid rgba(210,132,98,.3) !important;
-  border-radius: 20px !important;
-  background: linear-gradient(145deg,#24201d 0%,#131211 100%) !important;
-  box-shadow: 0 15px 38px -27px rgba(55,31,21,.72), inset 0 1px 0 rgba(255,239,226,.09) !important;
-}
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home > textarea {
-  grid-area: 1 / 1 / 2 / -1 !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  min-height: 52px !important;
-  max-height: 150px !important;
-  color: #f7efe6 !important;
-  -webkit-text-fill-color: #f7efe6 !important;
-}
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus { grid-area: 2 / 1 !important; }
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic { grid-area: 2 / 3 !important; }
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live {
-  display: inline-grid !important;
-  visibility: visible !important;
-  grid-area: 2 / 4 !important;
-}
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send { grid-area: 2 / 5 !important; }
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
-  display: inline-grid !important;
-  place-items: center !important;
-  justify-self: center !important;
-  width: 39px !important;
-  min-width: 39px !important;
-  height: 39px !important;
-  min-height: 39px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 1px solid rgba(240,225,211,.17) !important;
-  border-radius: 11px !important;
-  color: #e8d9ca !important;
-  background: rgba(255,255,255,.055) !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-toolbar {
-  grid-area: 3 / 1 / 4 / -1 !important;
-  display: flex !important;
-  min-width: 0 !important;
-  flex-wrap: wrap !important;
-  align-items: center !important;
-}
-@media (max-width: 620px) {
-  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
-    grid-template-columns: 36px minmax(0,1fr) 36px 36px 40px !important;
-    gap: 7px 5px !important;
-    padding: 9px !important;
-  }
-  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
-    width: 36px !important;
-    min-width: 36px !important;
-    height: 38px !important;
-    min-height: 38px !important;
-  }
-}
-@media (max-width: 390px) {
-  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
-    grid-template-columns: 34px minmax(0,1fr) 34px 34px 38px !important;
-    gap: 6px 4px !important;
-    padding: 8px !important;
-  }
-  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
-    width: 34px !important;
-    min-width: 34px !important;
-    height: 36px !important;
-    min-height: 36px !important;
-  }
-}
-
-
-/* Shared Bot subpage header and Chat/Work tabs follow the warm editorial pane. */
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh {
-  color: #211913 !important;
-  background: #f5f0e7 !important;
-  border-bottom: 1px solid rgba(49,35,25,.12) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh .qbot-chat-title,
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh .bht :is(span,b,strong) {
-  color: #211913 !important;
-  -webkit-text-fill-color: #211913 !important;
-}
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh .bha .bib {
-  border-color: rgba(55,39,28,.15) !important;
-  color: #984326 !important;
-  background: rgba(255,254,250,.72) !important;
-}
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) > .bh .bha .bib:is(:hover,:focus-visible) {
-  border-color: rgba(168,74,42,.4) !important;
-  color: #87391f !important;
-  background: #f5e7db !important;
-}
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) .qbot-reference-tabs {
-  border: 1px solid rgba(55,39,28,.12) !important;
-  background: #e9e0d5 !important;
-}
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) .qbot-reference-tabs button {
-  color: #68594d !important;
-  background: transparent !important;
-}
-#ast #bot.qbot-ultra .bm:not(.qbot-chat-mode) .qbot-reference-tabs button.is-active {
-  color: #7f381f !important;
-  background: #fffefa !important;
-  box-shadow: 0 2px 9px rgba(61,40,26,.08) !important;
-}
-
-
-/* Final chat polish: firm paper reading panels, comfortable type and isolated controls. */
-#ast #bot.qbot-ultra .qbot-conversation.qbot-chat-surface {
-  background:
-    radial-gradient(ellipse 60% 26% at 50% 0%, rgba(185, 78, 44, .055), transparent 78%),
-    linear-gradient(180deg, #f8f4ee 0%, #f1ebe2 100%) !important;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(157, 76, 45, .28) transparent !important;
-}
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message {
-  width: min(100%, 860px) !important;
-  border: 1px solid rgba(57, 43, 32, .12) !important;
-  border-left: 3px solid #b65332 !important;
-  border-radius: 6px 19px 19px 19px !important;
-  background: #fffefa !important;
-  box-shadow: 0 16px 42px -34px rgba(46, 30, 19, .48), inset 0 1px 0 #fff !important;
-}
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt {
-  max-width: 100%;
-  color: #211913 !important;
-  font-size: clamp(14px, 1.04vw, 15.5px) !important;
-  line-height: 1.82 !important;
-  text-wrap: pretty;
-}
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-user-message {
-  max-width: min(86%, 700px) !important;
-  line-height: 1.72 !important;
-}
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact {
-  gap: 7px !important;
-  padding-top: 11px;
-}
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button {
-  min-width: 34px;
-  min-height: 34px;
-  border-radius: 10px !important;
-  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease !important;
-}
-#ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button:hover {
-  border-color: rgba(154, 70, 39, .18) !important;
-  color: #87391f !important;
-  background: #f6e9de !important;
-}
-#ast #bot.qbot-ultra .qbot-home-composer {
-  padding: 11px clamp(13px, 3vw, 32px) 14px !important;
-  background: linear-gradient(180deg, #f3ede5 0%, #eae1d7 100%) !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
-  grid-template-columns: 42px minmax(0, 1fr) 42px 42px 46px !important;
-  grid-template-rows: minmax(58px, auto) 42px auto !important;
-  gap: 9px 9px !important;
-  min-height: 132px !important;
-  padding: 11px 13px !important;
-  border-radius: 22px !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send),
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
-  position: relative;
-  isolation: isolate;
-  display: inline-grid !important;
-  place-items: center !important;
-  width: 40px !important;
-  min-width: 40px !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  border-radius: 12px !important;
-  outline: 0;
-  filter: none !important;
-  transform: none !important;
-  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus:not(:hover):not(:focus-visible),
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic:not(:hover):not(:focus-visible):not(.rec),
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:not(:hover):not(:focus-visible),
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic:not(:hover):not(:focus-visible):not(.rec) {
-  border-color: rgba(240, 225, 211, .17) !important;
-  color: #e8d9ca !important;
-  background: rgba(255, 255, 255, .055) !important;
-  box-shadow: none !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus:hover,
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-plus:focus-visible,
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:hover,
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-composer-plus:focus-visible {
-  border-color: rgba(217, 119, 85, .58) !important;
-  color: #ffb18c !important;
-  background: rgba(184, 79, 45, .18) !important;
-  box-shadow: 0 0 0 2px rgba(184, 79, 45, .07) !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic:hover,
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic:focus-visible,
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic:hover,
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-mic:focus-visible {
-  border-color: rgba(217, 119, 85, .58) !important;
-  color: #ffb18c !important;
-  background: rgba(184, 79, 45, .18) !important;
-  box-shadow: 0 0 0 2px rgba(184, 79, 45, .07) !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:not(:hover):not(:focus-visible):not(.rec),
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live:not(:hover):not(:focus-visible):not(.rec) {
-  border-color: rgba(210, 116, 76, .34) !important;
-  color: #f1a17c !important;
-  background: rgba(173, 73, 43, .13) !important;
-  box-shadow: none !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:hover,
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live:focus-visible,
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live:hover,
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-live:focus-visible {
-  border-color: rgba(238, 128, 83, .72) !important;
-  color: #ffc09b !important;
-  background: rgba(190, 75, 42, .26) !important;
-  box-shadow: 0 0 0 3px rgba(184, 79, 45, .12) !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-mic.rec,
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-live.rec {
-  border-color: rgba(238, 128, 83, .78) !important;
-  color: #ffc09b !important;
-  background: rgba(190, 75, 42, .27) !important;
-  box-shadow: 0 0 0 3px rgba(184, 79, 45, .12) !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:not(:hover):not(:focus-visible):not(:disabled),
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send:not(:hover):not(:focus-visible):not(:disabled) {
-  border-color: rgba(235, 153, 117, .42) !important;
-  color: #fff8f1 !important;
-  background: linear-gradient(145deg, #c96643, #a84629) !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:focus-visible,
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-compose-send:hover:not(:disabled),
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send:focus-visible,
-#ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home .qbot-compose-send:hover:not(:disabled) {
-  border-color: rgba(255, 190, 158, .72) !important;
-  color: #fff8f1 !important;
-  background: linear-gradient(145deg, #d87851, #b24c2c) !important;
-  box-shadow: 0 10px 23px -13px rgba(190, 79, 45, .75) !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(button):focus-visible {
-  outline: 2px solid rgba(217, 119, 85, .72) !important;
-  outline-offset: 3px !important;
-}
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home .qbot-composer-toolbar {
-  gap: 8px !important;
-  row-gap: 7px !important;
-}
-#ast #bot.qbot-ultra .qbot-tool-pill {
-  min-height: 31px !important;
-  padding-inline: 10px !important;
-  border-radius: 999px !important;
-}
-#ast #bot.qbot-ultra .qbot-home-composer button,
-#ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home button {
-  filter: none !important;
-  transform: none;
-}
-#ast #bot.qbot-ultra .qbot-network-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-  margin-left: 8px;
-  padding: 5px 8px;
-  border: 1px solid rgba(58, 42, 31, .12);
-  border-radius: 999px;
-  color: #625449 !important;
-  background: rgba(255, 254, 250, .72);
-  font-size: 8px;
-  font-weight: 760;
-  letter-spacing: .08em;
-  white-space: nowrap;
-}
-#ast #bot.qbot-ultra .qbot-network-indicator i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #35a46b;
-  box-shadow: 0 0 0 3px rgba(53, 164, 107, .1);
-}
-#ast #bot.qbot-ultra .qbot-network-indicator.is-offline {
-  border-color: rgba(177, 70, 41, .22);
-  color: #8f4128 !important;
-  background: #fae9df;
-}
-#ast #bot.qbot-ultra .qbot-network-indicator.is-offline i {
-  background: #d15b3a;
-  box-shadow: 0 0 0 3px rgba(209, 91, 58, .12);
-}
-@media (max-width: 760px) {
-  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
-  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
-    grid-template-columns: 36px minmax(0, 1fr) 36px 36px 40px !important;
-    grid-template-rows: minmax(54px, auto) 38px auto !important;
-    gap: 8px 6px !important;
-    padding: 9px !important;
-    min-height: 124px !important;
-  }
-  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send),
-  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
-    width: 36px !important;
-    min-width: 36px !important;
-    height: 36px !important;
-    min-height: 36px !important;
-  }
-  #ast #bot.qbot-ultra .qbot-network-indicator {
-    margin-left: 4px;
-    padding: 4px 6px;
-  }
-  #ast #bot.qbot-ultra .qbot-network-indicator > span { display: none; }
-}
-@media (max-width: 390px) {
-  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home,
-  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home {
-    grid-template-columns: 34px minmax(0, 1fr) 34px 34px 38px !important;
-    gap: 7px 4px !important;
-    padding: 8px !important;
-  }
-  #ast #bot.qbot-ultra .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send),
-  #ast #bot.qbot-ultra.qbot-reference-layout .ast-in.qbot-reference-composer-home :is(.qbot-composer-plus,.qbot-compose-mic,.qbot-compose-live,.qbot-compose-send) {
-    width: 34px !important;
-    min-width: 34px !important;
     height: 34px !important;
     min-height: 34px !important;
   }
-  #ast #bot.qbot-ultra .qbot-assistant-message .mact button {
-    min-width: 32px;
-    min-height: 32px;
+  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact button {
+    min-height: 32px !important;
+    padding-inline: 7px !important;
   }
 }
-@media (max-width: 520px) {
-  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message { border-radius: 5px 15px 15px 15px !important; }
-  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mt { font-size: 14px !important; line-height: 1.76 !important; }
-  #ast #bot.qbot-ultra .qbot-chat-surface .qbot-assistant-message .mact { gap: 4px !important; }
-}
 @media (prefers-reduced-motion: reduce) {
-  #ast #bot.qbot-ultra .qbot-conversation *,
-  #ast #bot.qbot-ultra .ast-in * {
+  #ast #bot.qbot-ultra *,
+  #ast #bot.qbot-ultra *::before,
+  #ast #bot.qbot-ultra *::after {
+    scroll-behavior: auto !important;
     transition-duration: .01ms !important;
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
