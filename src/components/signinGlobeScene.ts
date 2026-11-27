@@ -52,7 +52,7 @@ function drawPolygon(
   points: GeoPoint[],
   width: number,
   height: number,
-  fill: string,
+  fill: string | CanvasGradient | CanvasPattern,
   stroke: string,
 ) {
   if (!points.length) return
