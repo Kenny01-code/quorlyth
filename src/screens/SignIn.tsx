@@ -245,7 +245,7 @@ function LocalContextPreview() {
       {geoError && <p className="q-signin-context-error" role="status">{geoError}</p>}
       <p className="q-signin-context-foot">{geoPoint
         ? 'Updates while this screen is open. Your location is not saved to Quorlyth.'
-        : 'Map preview uses your device time zone. GPS starts only when you enable it.'}</p>
+        : 'Region is estimated from your device time zone. No GPS location is accessed. Enable live location to opt in.'}</p>
     </aside>
   )
 }
