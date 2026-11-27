@@ -4,11 +4,12 @@ import { Icon, GoogleG } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
 import { useApp } from '../data/AppProvider'
 import { Robot, RobotApi } from '../bot/Robot'
+import { SignInGlobe } from '../components/SignInGlobe'
 import { speakText, type SpeechPlayback } from '../ai/client'
 import { useRef } from 'react'
 import '../styles/signin-performance.css'
 import '../styles/signin-luxury.css'
-import '../styles/signin-live-map.css'
+import '../styles/signin-globe.css'
 
 function signinWelcomeKey(identity?: string) {
   const value = (identity || '').trim().toLowerCase()
@@ -49,203 +50,71 @@ function friendlyAuthError(error: unknown, fallback: string) {
   return message || fallback
 }
 
-const SIGNIN_MAP_ZOOM = 15
-const SIGNIN_MAP_TILE_SIZE = 256
-const SIGNIN_ZONE_CENTRES: Record<string, [number, number]> = {
-  'Africa/Lagos': [6.5244, 3.3792],
-  'Africa/Accra': [5.6037, -0.1870],
-  'Africa/Nairobi': [-1.2921, 36.8219],
-  'Africa/Johannesburg': [-26.2041, 28.0473],
-  'Europe/Paris': [48.8566, 2.3522],
-  'Europe/London': [51.5072, -0.1276],
-  'Europe/Berlin': [52.5200, 13.4050],
-  'Europe/Madrid': [40.4168, -3.7038],
-  'America/New_York': [40.7128, -74.0060],
-  'America/Chicago': [41.8781, -87.6298],
-  'America/Los_Angeles': [34.0522, -118.2437],
-  'America/Toronto': [43.6532, -79.3832],
-  'America/Sao_Paulo': [-23.5505, -46.6333],
-  'Asia/Dubai': [25.2048, 55.2708],
-  'Asia/Kolkata': [19.0760, 72.8777],
-  'Asia/Singapore': [1.3521, 103.8198],
-  'Asia/Tokyo': [35.6762, 139.6503],
-  'Australia/Sydney': [-33.8688, 151.2093],
+type SignInRegion = {
+  country: string
+  continent: string
+  subregion: string
 }
 
-type SignInGeoPoint = {
-  latitude: number
-  longitude: number
-  accuracy: number
-  timestamp: number
+const SIGNIN_REGIONS: Record<string, SignInRegion> = {
+  'Africa/Lagos': { country: 'Nigeria', continent: 'Africa', subregion: 'WEST AFRICA' },
+  'Africa/Accra': { country: 'Ghana', continent: 'Africa', subregion: 'WEST AFRICA' },
+  'Africa/Abidjan': { country: 'Côte d’Ivoire', continent: 'Africa', subregion: 'WEST AFRICA' },
+  'Africa/Dakar': { country: 'Senegal', continent: 'Africa', subregion: 'WEST AFRICA' },
+  'Africa/Nairobi': { country: 'Kenya', continent: 'Africa', subregion: 'EAST AFRICA' },
+  'Africa/Addis_Ababa': { country: 'Ethiopia', continent: 'Africa', subregion: 'EAST AFRICA' },
+  'Africa/Johannesburg': { country: 'South Africa', continent: 'Africa', subregion: 'SOUTHERN AFRICA' },
+  'Africa/Cairo': { country: 'Egypt', continent: 'Africa', subregion: 'NORTH AFRICA' },
+  'Europe/Paris': { country: 'France', continent: 'Europe', subregion: 'WESTERN EUROPE' },
+  'Europe/London': { country: 'United Kingdom', continent: 'Europe', subregion: 'WESTERN EUROPE' },
+  'Europe/Berlin': { country: 'Germany', continent: 'Europe', subregion: 'CENTRAL EUROPE' },
+  'Europe/Madrid': { country: 'Spain', continent: 'Europe', subregion: 'SOUTHERN EUROPE' },
+  'Asia/Dubai': { country: 'United Arab Emirates', continent: 'Asia', subregion: 'WEST ASIA' },
+  'Asia/Kolkata': { country: 'India', continent: 'Asia', subregion: 'SOUTH ASIA' },
+  'Asia/Singapore': { country: 'Singapore', continent: 'Asia', subregion: 'SOUTHEAST ASIA' },
+  'Asia/Tokyo': { country: 'Japan', continent: 'Asia', subregion: 'EAST ASIA' },
+  'Australia/Sydney': { country: 'Australia', continent: 'Oceania', subregion: 'OCEANIA' },
+  'America/New_York': { country: 'United States', continent: 'Americas', subregion: 'NORTH AMERICA' },
+  'America/Chicago': { country: 'United States', continent: 'Americas', subregion: 'NORTH AMERICA' },
+  'America/Los_Angeles': { country: 'United States', continent: 'Americas', subregion: 'NORTH AMERICA' },
+  'America/Toronto': { country: 'Canada', continent: 'Americas', subregion: 'NORTH AMERICA' },
+  'America/Sao_Paulo': { country: 'Brazil', continent: 'Americas', subregion: 'SOUTH AMERICA' },
 }
 
-function getSigninMapTiles(latitude: number, longitude: number) {
-  const zoom = SIGNIN_MAP_ZOOM
-  const scale = Math.pow(2, zoom)
-  const safeLatitude = Math.max(-85.05112878, Math.min(85.05112878, latitude))
-  const radians = safeLatitude * Math.PI / 180
-  const x = ((longitude + 180) / 360) * scale
-  const y = (1 - Math.asinh(Math.tan(radians)) / Math.PI) / 2 * scale
-  const centreX = Math.floor(x)
-  const centreY = Math.floor(y)
-  const fractionX = x - centreX
-  const fractionY = y - centreY
-
-  return [-1, 0, 1].flatMap(row => [-1, 0, 1].map(column => {
-    const rawX = centreX + column
-    const tileY = centreY + row
-    if (tileY < 0 || tileY >= scale) return null
-    const tileX = ((rawX % scale) + scale) % scale
-    return {
-      key: zoom + '-' + tileX + '-' + tileY,
-      src: 'https://tile.openstreetmap.org/' + zoom + '/' + tileX + '/' + tileY + '.png',
-      left: 'calc(50% + ' + ((column - fractionX) * SIGNIN_MAP_TILE_SIZE).toFixed(2) + 'px)',
-      top: 'calc(50% + ' + ((row - fractionY) * SIGNIN_MAP_TILE_SIZE).toFixed(2) + 'px)',
-    }
-  })).filter((tile): tile is NonNullable<typeof tile> => tile !== null)
+function getSignInRegion(): SignInRegion {
+  let zone = ''
+  try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '' } catch { /* Use a neutral global fallback. */ }
+  if (SIGNIN_REGIONS[zone]) return SIGNIN_REGIONS[zone]
+  const continent = zone.startsWith('Africa/') ? 'Africa'
+    : zone.startsWith('Europe/') ? 'Europe'
+      : zone.startsWith('Asia/') ? 'Asia'
+        : zone.startsWith('America/') ? 'Americas'
+          : zone.startsWith('Australia/') || zone.startsWith('Pacific/') ? 'Oceania'
+            : 'Global'
+  return {
+    country: continent === 'Africa' ? 'Africa' : 'World',
+    continent,
+    subregion: continent === 'Africa' ? 'AFRICAN REGION' : 'REGIONAL VIEW',
+  }
 }
 
 function LocalContextPreview() {
-  const [now, setNow] = useState(() => Date.now())
-  const [online, setOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine)
-  const [geoPoint, setGeoPoint] = useState<SignInGeoPoint | null>(null)
-  const [geoState, setGeoState] = useState<'preview' | 'requesting' | 'live' | 'error'>('preview')
-  const [geoError, setGeoError] = useState('')
-  const geoWatch = useRef<number | null>(null)
-  const zone = (() => {
-    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Device time zone' }
-    catch { return 'Device time zone' }
-  })()
-  const zoneParts = zone.split('/')
-  const fallbackPlace = (zoneParts[zoneParts.length - 1] || 'Local region').replace(/_/g, ' ')
-  const place = zone === 'Africa/Lagos' ? 'Lagos' : fallbackPlace
-  const area = zone === 'Africa/Lagos' ? 'Nigeria' : (zoneParts[0] || 'Device').replace(/_/g, ' ')
-  const time = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now)
-  const date = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(now)
-  const approximateCentre = SIGNIN_ZONE_CENTRES[zone] || [0, 0]
-  const mapLatitude = geoPoint?.latitude ?? approximateCentre[0]
-  const mapLongitude = geoPoint?.longitude ?? approximateCentre[1]
-  const tiles = getSigninMapTiles(mapLatitude, mapLongitude)
-  const pointAge = geoPoint ? Math.max(0, Math.floor((now - geoPoint.timestamp) / 1000)) : 0
-  const updatedLabel = pointAge < 5 ? 'JUST NOW' : pointAge < 60 ? pointAge + 'S AGO' : Math.floor(pointAge / 60) + 'M AGO'
-
-  useEffect(() => {
-    const tick = window.setInterval(() => setNow(Date.now()), 1000)
-    const sync = () => setOnline(navigator.onLine)
-    window.addEventListener('online', sync)
-    window.addEventListener('offline', sync)
-    return () => {
-      window.clearInterval(tick)
-      window.removeEventListener('online', sync)
-      window.removeEventListener('offline', sync)
-      if (geoWatch.current !== null && navigator.geolocation) {
-        navigator.geolocation.clearWatch(geoWatch.current)
-        geoWatch.current = null
-      }
-    }
-  }, [])
-
-  function stopLiveLocation() {
-    if (geoWatch.current !== null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(geoWatch.current)
-      geoWatch.current = null
-    }
-    setGeoPoint(null)
-    setGeoError('')
-    setGeoState('preview')
-  }
-
-  function startLiveLocation() {
-    if (geoState === 'live') {
-      stopLiveLocation()
-      return
-    }
-    if (!window.isSecureContext || !navigator.geolocation) {
-      setGeoState('error')
-      setGeoError('Live location needs a secure connection and a supported browser.')
-      return
-    }
-    if (geoWatch.current !== null) navigator.geolocation.clearWatch(geoWatch.current)
-    setGeoPoint(null)
-    setGeoError('')
-    setGeoState('requesting')
-    geoWatch.current = navigator.geolocation.watchPosition(
-      position => {
-        setGeoPoint({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: position.timestamp || Date.now(),
-        })
-        setGeoState('live')
-        setGeoError('')
-      },
-      error => {
-        if (geoWatch.current !== null) {
-          navigator.geolocation.clearWatch(geoWatch.current)
-          geoWatch.current = null
-        }
-        setGeoState('error')
-        setGeoError(error.code === 1
-          ? 'Location access was declined. Allow it in your browser settings, then retry.'
-          : error.code === 2
-            ? 'Your device could not find a location. Check GPS or Wi-Fi and retry.'
-            : 'Location took too long. Try again when your signal is stronger.')
-      },
-      { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 },
-    )
-  }
-
-  const coordinateLabel = geoPoint
-    ? Math.abs(geoPoint.latitude).toFixed(3) + '° ' + (geoPoint.latitude >= 0 ? 'N' : 'S') +
-      '  ·  ' + Math.abs(geoPoint.longitude).toFixed(3) + '° ' + (geoPoint.longitude >= 0 ? 'E' : 'W')
-    : area + ' · ' + date
+  const region = getSignInRegion()
 
   return (
-    <aside className={'q-signin-live-context' + (geoPoint ? ' is-live' : '') + (geoState === 'error' ? ' has-error' : '')} aria-label="Live map and local device context">
+    <aside className="q-signin-live-context" aria-label="Regional world view">
       <div className="q-signin-context-copy">
-        <span className="q-signin-context-kicker">{geoPoint ? 'LIVE LOCATION' : 'REGIONAL MAP PREVIEW'}</span>
-        <strong>{geoPoint ? 'You are here' : place}</strong>
-        <span className="q-signin-context-time">{time}</span>
-        <small>{coordinateLabel}</small>
+        <span className="q-signin-context-kicker">REGIONAL SIGNAL</span>
+        <strong>{region.country}</strong>
+        <span className="q-signin-context-time">{region.continent}</span>
+        <small>{region.subregion}</small>
       </div>
-      <div className={'q-signin-map-viewport' + (geoPoint ? ' is-tracking' : '')} role="img" aria-label={geoPoint ? 'Live street map following your device location' : 'Street map preview around ' + place}>
-        <div className="q-signin-map-tiles">
-          {tiles.map(tile => (
-            <img
-              key={tile.key}
-              className="q-signin-map-tile"
-              src={tile.src}
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              loading="lazy"
-              decoding="async"
-              style={{ left: tile.left, top: tile.top }}
-            />
-          ))}
-        </div>
-        <div className="q-signin-map-tint" />
-        <div className="q-signin-map-grid" />
-        <span className={'q-signin-map-marker' + (geoPoint ? ' is-live' : ' is-preview')}><i /></span>
-        <span className="q-signin-map-heading">N</span>
-        <a className="q-signin-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>
-      </div>
+      <SignInGlobe />
       <div className="q-signin-context-status">
-        <i className={geoPoint ? 'is-online' : geoState === 'error' ? 'is-offline' : 'is-preview'} />
-        <span>{geoPoint ? 'TRACKING LIVE' : geoState === 'requesting' ? 'FINDING DEVICE' : geoState === 'error' ? 'LOCATION BLOCKED' : 'CITY PREVIEW'}</span>
-        <small>{geoPoint ? '±' + Math.round(geoPoint.accuracy) + ' M · ' + updatedLabel : online ? 'GPS NOT SHARED' : 'NETWORK OFFLINE'}</small>
+        <i />
+        <span>WORLD ROTATION</span>
+        <small>360° VIEW</small>
       </div>
-      <button className="q-signin-map-action" type="button" onClick={startLiveLocation} disabled={geoState === 'requesting'}>
-        <span className="q-signin-map-action-icon" aria-hidden="true">
-          <svg viewBox="0 0 16 16"><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M8 4.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Z" /></svg>
-        </span>
-        {geoState === 'requesting' ? 'Locating device…' : geoPoint ? 'Stop live location' : geoState === 'error' ? 'Try location again' : 'Enable live location'}
-      </button>
-      {geoError && <p className="q-signin-context-error" role="status">{geoError}</p>}
-      <p className="q-signin-context-foot">{geoPoint
-        ? 'OpenStreetMap receives map-tile requests for this area. Your location is not saved to Quorlyth.'
-        : 'Region is estimated from your device time zone. No GPS location is accessed. Enable live location to opt in.'}</p>
     </aside>
   )
 }
