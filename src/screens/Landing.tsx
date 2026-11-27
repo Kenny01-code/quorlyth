@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icon } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
 import { Bar } from '../components/ui'
+import { CreatorCoverStage } from '../components/CreatorCoverStage'
 import { useApp } from '../data/AppProvider'
 import { useReveal } from '../lib/hooks'
 import { useEffect, useState } from 'react'
@@ -93,6 +94,7 @@ export function Landing() {
           event.currentTarget.style.setProperty('--qth-orbit-x', '0deg')
           event.currentTarget.style.setProperty('--qth-orbit-y', '0deg')
         }}>
+        <CreatorCoverStage />
         <div className="hmark"><i className="hh" /><Logo size={72} breathe /></div>
         <span className="chip"><Icon name="spark" size={14} />An operating system for fanbases</span>
         <h1 className="hero-title"><EditorialReveal text={HERO_COPY.headline} /></h1>
