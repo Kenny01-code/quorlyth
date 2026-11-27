@@ -50,7 +50,7 @@ test('QuorlythBot chat, composer and every workspace stay on the original dark p
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
 })
 
-test('landing hero loads its premium copper Three.js sculpture only near the viewport', async () => {
+test('homepage keeps the reference hero while the optional copper Three.js stage stays unmounted', async () => {
   const [landing, stage, scene, coverCss, entry] = await Promise.all([
     source('src/screens/Landing.tsx'),
     source('src/components/CreatorCoverStage.tsx'),
@@ -59,7 +59,7 @@ test('landing hero loads its premium copper Three.js sculpture only near the vie
     source('src/main.tsx'),
   ])
 
-  assert.match(landing, /<CreatorCoverStage \/>/)
+  assert.doesNotMatch(landing, /CreatorCoverStage/)
   assert.match(stage, /IntersectionObserver/)
   assert.match(stage, /import\('\.\/creatorCoverScene'\)/)
   assert.match(stage, /rootMargin: '180px 0px'/)
@@ -75,7 +75,7 @@ test('landing hero loads its premium copper Three.js sculpture only near the vie
   assert.match(scene, /renderer\.dispose\(\)/)
   assert.match(coverCss, /@media \(max-width: 760px\)/)
   assert.match(coverCss, /@media \(prefers-reduced-motion: reduce\)/)
-  assert.match(entry, /styles\/cover-burnt-orange\.css/)
+  assert.doesNotMatch(entry, /styles\/cover-burnt-orange\.css/)
   assert.doesNotMatch(entry, /from ['"]\.\/components\/creatorCoverScene['"]/)
 })
 
