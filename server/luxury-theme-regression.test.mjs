@@ -12,7 +12,7 @@ test('optional warm palette stays isolated while Automations keeps its reference
     source('src/styles/luxury-light-system.css'),
   ])
   assert.equal(entry.includes("import './styles/luxury-light-system.css'"), false, 'the optional warm editorial palette must not be mounted globally')
-  assert.equal(entry.includes("import './styles/cover-burnt-orange.css'"), false, 'the homepage reference styling must not be overridden globally')
+  assert.ok(entry.includes("import './styles/cover-burnt-orange.css'"), 'the reference homepage cover styling stays active')
   assert.ok(entry.indexOf("import './styles/app.css'") >= 0, 'the original app theme stays active')
   assert.equal(entry.includes("import './styles/automation-dark.css'"), false, 'Automation theme stays out of the global entry point')
   assert.ok(automationPage.indexOf("import '../styles/automation-ai.css'") >= 0, 'the Automation AI styles remain active')
