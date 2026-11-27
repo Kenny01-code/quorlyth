@@ -115,7 +115,7 @@ test('Sign-in robot recognizes account-specific returns and shows a consent-base
   assert.match(signInCss, /\.q-signin-live-context/)
   assert.match(liveMapCss, /\.q-signin-map-viewport/)
   assert.match(liveMapCss, /\.q-signin-map-marker/)
-  assert.match(liveMapCss, /© OpenStreetMap/)
+  assert.match(signIn, /© OpenStreetMap/)
   assert.match(liveMapCss, /@media \(max-width: 540px\)/)
   assert.match(liveMapCss, /prefers-reduced-motion: reduce/)
 })
