@@ -229,7 +229,7 @@ function LocalContextPreview() {
         <div className="q-signin-map-grid" />
         <span className={'q-signin-map-marker' + (geoPoint ? ' is-live' : ' is-preview')}><i /></span>
         <span className="q-signin-map-heading">N</span>
-        <a className="q-signin-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>
+        <a className="q-signin-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>
       </div>
       <div className="q-signin-context-status">
         <i className={geoPoint ? 'is-online' : geoState === 'error' ? 'is-offline' : 'is-preview'} />
