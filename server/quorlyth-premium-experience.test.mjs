@@ -80,46 +80,65 @@ test('homepage follows the linked reference and leaves the separate copper cover
 })
 
 
-test('Sign-in robot recognizes account-specific returns and shows a consent-based live street map', async () => {
-  const [signIn, bot, signInCss, liveMapCss] = await Promise.all([
+test('Sign-in robot keeps its white styling and uses a compact animated 3D regional globe', async () => {
+  const [signIn, bot, signInCss, globeComponent, globeScene, globeCss] = await Promise.all([
     source('src/screens/SignIn.tsx'),
     source('src/bot/QuorlythBot.tsx'),
     source('src/styles/signin-luxury.css'),
-    source('src/styles/signin-live-map.css'),
+    source('src/components/SignInGlobe.tsx'),
+    source('src/components/signinGlobeScene.ts'),
+    source('src/styles/signin-globe.css'),
   ])
 
   assert.match(signIn, /function signinWelcomeKey\(identity\?: string\)/)
   assert.match(signIn, /quorlyth:signin-welcomed:v2:/)
   assert.match(signIn, /function LocalContextPreview\(\)/)
-  assert.match(signIn, /setInterval\(\(\) => setNow\(Date\.now\(\)\), 1000\)/)
-  assert.match(signIn, /addEventListener\('online', sync\)/)
-  assert.match(signIn, /addEventListener\('offline', sync\)/)
-  assert.match(signIn, /Region is estimated from your device time zone\. No GPS location is accessed\./)
-  assert.match(signIn, /getSigninMapTiles/)
-  assert.match(signIn, /https:\/\/tile\.openstreetmap\.org\//)
-  assert.match(signIn, /navigator\.geolocation\.watchPosition/)
-  assert.match(signIn, /navigator\.geolocation\.clearWatch/)
-  assert.match(signIn, /enableHighAccuracy: true/)
-  assert.match(signIn, /Your location is not saved to Quorlyth/)
-  assert.match(signIn, /q-signin-map-attribution/)
+  assert.match(signIn, /function getSignInRegion\(\): SignInRegion/)
+  assert.match(signIn, /'Africa\/Lagos': \{ country: 'Nigeria', continent: 'Africa'/)
+  assert.match(signIn, /REGIONAL SIGNAL/)
+  assert.match(signIn, /WORLD ROTATION/)
+  assert.match(signIn, /360° VIEW/)
+  assert.match(signIn, /<SignInGlobe \/>/)
+  assert.doesNotMatch(signIn, /navigator\.geolocation/)
+  assert.doesNotMatch(signIn, /tile\.openstreetmap\.org/)
+  assert.doesNotMatch(signIn, /signin-live-map\.css/)
   assert.match(signIn, /firstTimeOverride=\{!!me\.createdAt/)
   assert.match(signIn, /accountKey=\{me\.email\}/)
   assert.match(signIn, /firstTimeOverride=\{mode === 'signup'\}/)
   assert.match(signIn, /You are offline\. Reconnect to sign in\./)
   assert.doesNotMatch(signIn, /markSigninWelcome\(signedInUser\.id\)/)
   assert.match(signIn, /navigator\.onLine/)
+
   assert.match(bot, /accountCreatedAt = Number\(a\.me\?\.createdAt \|\| 0\)/)
   assert.match(bot, /accountIsNew/)
   assert.match(bot, /qbot:welcomed:v1:/)
   assert.match(bot, /quorlyth:signin-welcomed:v2:/)
-  assert.match(signInCss, /\.q-signin-live-context/)
-  assert.match(liveMapCss, /\.q-signin-map-viewport/)
-  assert.match(liveMapCss, /\.q-signin-map-marker/)
-  assert.match(signIn, /© OpenStreetMap/)
-  assert.match(liveMapCss, /@media \(max-width: 540px\)/)
-  assert.match(liveMapCss, /prefers-reduced-motion: reduce/)
-})
 
+  assert.match(signInCss, /background: linear-gradient\(145deg,rgba\(255,253,248/)
+  assert.match(signInCss, /q-signin-mini-map/)
+  assert.match(globeComponent, /import\('\.\/signinGlobeScene'\)/)
+  assert.match(globeComponent, /IntersectionObserver/)
+  assert.match(globeComponent, /requestIdleCallback/)
+  assert.match(globeComponent, /q-signin-globe__canvas/)
+
+  assert.match(globeScene, /CanvasTexture/)
+  assert.match(globeScene, /createRegionalTexture/)
+  assert.match(globeScene, /const AFRICA:/)
+  assert.match(globeScene, /'#[0-9a-fA-F]{6}'/)
+  assert.match(globeScene, /surfacePoint\(\.651, 9, 8\)/)
+  assert.match(globeScene, /TorusGeometry/)
+  assert.match(globeScene, /seconds \* \.105/)
+  assert.match(globeScene, /prefers-reduced-motion/)
+  assert.match(globeScene, /document\.visibilityState/)
+  assert.match(globeScene, /renderer\.dispose\(\)/)
+
+  assert.match(globeCss, /width: min\(194px, calc\(100% - 24px\)\)/)
+  assert.match(globeCss, /width: 76px/)
+  assert.match(globeCss, /height: 50px/)
+  assert.match(globeCss, /background: linear-gradient\(145deg, rgba\(255, 253, 249/)
+  assert.match(globeCss, /@media \(max-width: 540px\)/)
+  assert.match(globeCss, /prefers-reduced-motion: reduce/)
+})
 test('QuorlythBot keeps Live Talk distinct and reports connection state on every assistant page', async () => {
   const [bot, css] = await Promise.all([
     source('src/bot/QuorlythBot.tsx'),
