@@ -4,16 +4,20 @@ import { readFile } from 'node:fs/promises'
 
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('warm editorial palette stays isolated without overriding the app-wide dark theme', async () => {
-  const [entry, automationPage, theme] = await Promise.all([
+test('optional warm palette stays isolated while Automations keeps its reference styling', async () => {
+  const [entry, automationPage, automationStyles, theme] = await Promise.all([
     source('src/main.tsx'),
     source('src/screens/Automations.tsx'),
+    source('src/styles/automation-ai.css'),
     source('src/styles/luxury-light-system.css'),
   ])
   assert.equal(entry.includes("import './styles/luxury-light-system.css'"), false, 'the optional warm editorial palette must not be mounted globally')
-  assert.ok(entry.indexOf("import './styles/app.css'") >= 0, 'the original dark app theme stays active')
+  assert.equal(entry.includes("import './styles/cover-burnt-orange.css'"), false, 'the homepage reference styling must not be overridden globally')
+  assert.ok(entry.indexOf("import './styles/app.css'") >= 0, 'the original app theme stays active')
   assert.equal(entry.includes("import './styles/automation-dark.css'"), false, 'Automation theme stays out of the global entry point')
-  assert.ok(automationPage.indexOf("import '../styles/automation-dark.css'") > automationPage.indexOf("import '../styles/automation-ai.css'"), 'the Automation route override loads after its feature styles')
+  assert.ok(automationPage.indexOf("import '../styles/automation-ai.css'") >= 0, 'the Automation AI styles remain active')
+  assert.equal(automationPage.includes("import '../styles/automation-dark.css'"), false, 'the reference route does not add a dark-only override')
+  assert.ok(automationStyles.includes('#FFFCF6') && automationStyles.includes('#F2EADB'), 'reference integration panels retain their bone surfaces')
   assert.match(theme, /--q-lux-page:\s*#f5f1e9/)
   assert.match(theme, /--q-lux-orange:\s*#bf5532/)
   assert.match(theme, /--q-lux-bone:\s*#efe7dc/)
