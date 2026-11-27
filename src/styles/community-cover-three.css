@@ -1,0 +1,217 @@
+/* Individual Community Space cover: obsidian, burnished copper and a quiet
+   Three.js sculpture. Discovery tiles and the cover picker remain untouched. */
+#root #main .ccard > .ccv.ccv--space-cover {
+  position: relative;
+  display: flex;
+  min-height: 224px;
+  height: clamp(224px, 25vw, 292px);
+  align-items: center;
+  justify-content: flex-start;
+  padding: clamp(20px, 4vw, 42px);
+  overflow: hidden;
+  isolation: isolate;
+  border: 0;
+  border-bottom: 1px solid rgba(224, 139, 100, .2);
+  border-radius: 24px 24px 0 0;
+  background:
+    radial-gradient(ellipse 54% 85% at 78% 46%, rgba(193, 75, 39, .25), transparent 74%),
+    radial-gradient(ellipse 38% 60% at 12% 0%, rgba(111, 45, 27, .35), transparent 76%),
+    linear-gradient(125deg, #21130f 0%, #0d0c0c 56%, #17100e 100%) !important;
+}
+
+#root #main .ccard > .ccv.ccv--space-cover::before {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(13, 10, 9, .2) 0%, rgba(13, 10, 9, .08) 44%, rgba(13, 10, 9, .02) 100%),
+    repeating-linear-gradient(90deg, transparent 0 47px, rgba(245, 189, 161, .025) 48px, transparent 49px);
+  content: "";
+  pointer-events: none;
+}
+
+#root #main .ccard > .ccv.ccv--space-cover::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(14, 10, 9, .36) 0%, rgba(14, 10, 9, .18) 47%, transparent 82%);
+  content: "";
+  pointer-events: none;
+}
+
+#root #main .ccv-space-cover__scene {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(68%, 720px);
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.28) 15%, #000 42%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.28) 15%, #000 42%, #000 100%);
+}
+
+#root #main .ccv-space-cover__glow {
+  position: absolute;
+  inset: 4% 2% -8%;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 54% 48%, rgba(224, 103, 63, .36), transparent 34%),
+    radial-gradient(ellipse at 58% 54%, rgba(118, 43, 25, .42), transparent 67%);
+  filter: blur(22px);
+  animation: ccv-space-glow 8s ease-in-out infinite;
+}
+
+#root #main .ccv-space-cover__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 680ms ease;
+}
+
+#root #main .ccv-space-cover__scene[data-ready="true"] .ccv-space-cover__canvas {
+  opacity: 1;
+}
+
+#root #main .ccv-space-cover__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 54% 72% at 60% 48%, transparent 33%, rgba(8,7,7,.28) 100%);
+}
+
+#root #main .ccv-space-cover__signature {
+  position: absolute;
+  right: 28px;
+  bottom: 19px;
+  color: rgba(236, 174, 145, .56);
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: .2em;
+  white-space: nowrap;
+}
+
+#root #main .ccv-space-cover__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(620px, 64%);
+  align-items: center;
+  gap: clamp(14px, 2.6vw, 26px);
+  min-width: 0;
+}
+
+#root #main .ccv--space-cover .cic {
+  display: grid;
+  width: clamp(66px, 8vw, 88px);
+  height: clamp(66px, 8vw, 88px);
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 221, 203, .34);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(245, 180, 148, .16), rgba(20, 12, 10, .72));
+  box-shadow: inset 0 1px 0 rgba(255, 240, 230, .18), 0 18px 44px -25px rgba(239, 105, 62, .54);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+  backdrop-filter: blur(16px) saturate(135%);
+}
+
+#root #main .ccv--space-cover .cic .ic {
+  color: #f3a17c !important;
+  filter: drop-shadow(0 0 14px rgba(238, 111, 70, .24));
+}
+
+#root #main .ccv-space-cover__copy {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: #f5e9df;
+}
+
+#root #main .ccv-space-cover__copy > span {
+  color: #d98b6a;
+  font-size: 9px;
+  font-weight: 780;
+  letter-spacing: .2em;
+  line-height: 1.4;
+}
+
+#root #main .ccv-space-cover__copy strong {
+  color: #fbf0e8;
+  font-family: "Iowan Old Style", "Bodoni 72", Georgia, serif;
+  font-size: clamp(25px, 3.35vw, 40px);
+  font-weight: 520;
+  letter-spacing: -.045em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+#root #main .ccv-space-cover__copy small {
+  color: rgba(238, 220, 207, .7);
+  font-size: clamp(10px, 1.1vw, 12px);
+  font-weight: 430;
+  line-height: 1.55;
+}
+
+@keyframes ccv-space-glow {
+  0%, 100% { opacity: .62; transform: scale(.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@media (max-width: 760px) {
+  #root #main .ccard > .ccv.ccv--space-cover {
+    min-height: 212px;
+    height: 224px;
+    padding: 20px 17px;
+  }
+  #root #main .ccv-space-cover__scene {
+    right: -12%;
+    width: 76%;
+    opacity: .82;
+  }
+  #root #main .ccv-space-cover__content {
+    width: min(100%, 460px);
+    gap: 13px;
+  }
+  #root #main .ccv--space-cover .cic {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+  }
+  #root #main .ccv-space-cover__copy > span {
+    font-size: 8px;
+    letter-spacing: .16em;
+  }
+  #root #main .ccv-space-cover__copy strong {
+    font-size: clamp(24px, 7vw, 32px);
+  }
+  #root #main .ccv-space-cover__copy small {
+    max-width: 225px;
+    font-size: 10px;
+  }
+  #root #main .ccv-space-cover__signature {
+    right: 15px;
+    bottom: 12px;
+    font-size: 7px;
+  }
+}
+
+@media (max-width: 380px) {
+  #root #main .ccv--space-cover .cic {
+    width: 50px;
+    height: 50px;
+    border-radius: 15px;
+  }
+  #root #main .ccv-space-cover__content { gap: 10px; }
+  #root #main .ccv-space-cover__copy strong { font-size: 23px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root #main .ccv-space-cover__glow {
+    animation: none !important;
+  }
+  #root #main .ccv-space-cover__canvas { transition: none !important; }
+}
