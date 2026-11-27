@@ -13,6 +13,8 @@ import { CommunityCreatorBadge } from '../components/RoleBadges'
 import { useDraftState } from '../lib/useDraftState'
 import { askJson } from '../ai/client'
 import { IDEA_MEDIA_MAX_FILES, IDEA_MEDIA_MIME_TYPES, isIdeaVideo, validateIdeaMediaFiles } from '../lib/ideaMedia'
+import '../styles/community-cover-three.css'
+import { CommunityCoverStage } from '../components/CommunityCoverStage'
 
 const ICONS = ['community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab']
 const BADGE_ICONS = ['star', 'community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab', 'approve', 'lock']
@@ -23,7 +25,22 @@ type CommunityAIDraft = { name: string; purpose: string; welcome: string; rules:
 type IdeaAIDraft = { title: string; body: string; tags: string[] }
 
 export function Cover({ c, big }: { c: Community; big?: boolean }) {
-  return <div className={cn('ccv', 'v' + (c.cover || 'a'))}><span className="cic"><Icon name={c.icon || 'community'} size={big ? 44 : 30} /></span></div>
+  return (
+    <div className={cn('ccv', 'v' + (c.cover || 'a'), big && 'ccv--space-cover')}>
+      {big && <CommunityCoverStage />}
+      {big && (
+        <div className="ccv-space-cover__content">
+          <span className="cic"><Icon name={c.icon || 'community'} size={44} /></span>
+          <div className="ccv-space-cover__copy">
+            <span>QUORLYTH / COMMUNITY SPACE</span>
+            <strong>Ideas, in motion.</strong>
+            <small>A shared place to shape what comes next.</small>
+          </div>
+        </div>
+      )}
+      {!big && <span className="cic"><Icon name={c.icon || 'community'} size={30} /></span>}
+    </div>
+  )
 }
 
 export function Communities() {
