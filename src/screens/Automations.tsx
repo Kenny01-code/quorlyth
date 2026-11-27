@@ -1,7 +1,6 @@
 import '../styles/automations.css'
 import '../styles/automation-editorial-cards.css'
 import '../styles/automation-ai.css'
-import '../styles/automation-dark.css'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Gate } from '../components/Gate'
 import { Head } from '../components/ui'
