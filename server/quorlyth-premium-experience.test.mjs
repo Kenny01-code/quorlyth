@@ -50,7 +50,7 @@ test('QuorlythBot chat, composer and every workspace stay on the original dark p
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
 })
 
-test('homepage keeps the reference hero while the optional copper Three.js stage stays unmounted', async () => {
+test('homepage restores the reference copper Three.js cover with lazy performance guards', async () => {
   const [landing, stage, scene, coverCss, entry] = await Promise.all([
     source('src/screens/Landing.tsx'),
     source('src/components/CreatorCoverStage.tsx'),
@@ -59,7 +59,8 @@ test('homepage keeps the reference hero while the optional copper Three.js stage
     source('src/main.tsx'),
   ])
 
-  assert.doesNotMatch(landing, /CreatorCoverStage/)
+  assert.match(landing, /import \{ CreatorCoverStage \} from '\.\.\/components\/CreatorCoverStage'/)
+  assert.match(landing, /<CreatorCoverStage \/>/)
   assert.match(stage, /IntersectionObserver/)
   assert.match(stage, /import\('\.\/creatorCoverScene'\)/)
   assert.match(stage, /rootMargin: '180px 0px'/)
@@ -75,7 +76,7 @@ test('homepage keeps the reference hero while the optional copper Three.js stage
   assert.match(scene, /renderer\.dispose\(\)/)
   assert.match(coverCss, /@media \(max-width: 760px\)/)
   assert.match(coverCss, /@media \(prefers-reduced-motion: reduce\)/)
-  assert.doesNotMatch(entry, /styles\/cover-burnt-orange\.css/)
+  assert.match(entry, /styles\/cover-burnt-orange\.css/)
   assert.doesNotMatch(entry, /from ['"]\.\/components\/creatorCoverScene['"]/)
 })
 
