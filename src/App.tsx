@@ -81,8 +81,6 @@ export default function App() {
   const a = useApp()
   const loc = useLocation()
   const nav = useNavigate()
-  // React Router accepts a trailing slash on this route; the theme must follow it too.
-  const automationRouteActive = loc.pathname.replace(/\/+$/, '') === '/automations'
   const [palette, setPalette] = useState(false)
   const [keys, setKeys] = useState(false)
   const [bell, setBell] = useState(false)
@@ -163,16 +161,6 @@ export default function App() {
   const knownMessages = useRef<Set<string> | null>(null)
   const g = useRef(0)
 
-
-  useEffect(() => {
-        const active = automationRouteActive
-    document.documentElement.classList.toggle('q-automation-route-active', active)
-    document.body.classList.toggle('q-automation-route-active', active)
-    return () => {
-      document.documentElement.classList.remove('q-automation-route-active')
-      document.body.classList.remove('q-automation-route-active')
-    }
-  }, [automationRouteActive])
 
   useEffect(() => {
     // Keep route changes instant while ordinary document scrolling remains smooth.
@@ -392,7 +380,7 @@ export default function App() {
       {(a.me || a.demo) && (!a.me || a.demo || (a.dataReady && a.platformRolesReady)) && <Suspense fallback={null}><AutomationRuntime /></Suspense>}
       {appNavigation}
       {a.demo && <div className="demo-banner" role="status"><span><b>Interactive demo</b><small>Sample data only · changes reset when you leave</small></span><div><button className="chip" onClick={async () => { await a.exitDemo(); nav('/signin', { replace: true }) }}>Sign in</button>{' '}<button className="chip" onClick={async () => { try { await a.signOut(); nav('/signin', { replace: true }) } catch (error: any) { a.toast(error?.message || 'Could not sign out. Please try again.') } }}>Sign out</button>{' '}<button className="chip" onClick={async () => { await a.exitDemo(); nav('/') }}>Exit demo</button></div></div>}
-      <main id="main" className={automationRouteActive ? 'q-automation-route' : undefined} tabIndex={-1} aria-busy={!!a.me && (!a.dataReady || !a.platformRolesReady)}>
+      <main id="main" tabIndex={-1} aria-busy={!!a.me && (!a.dataReady || !a.platformRolesReady)}>
         {a.me && (!a.dataReady || !a.platformRolesReady) ? (
           // Keep the account-isolation gate: never reveal a previous or incomplete account snapshot.
           // The status is screen-reader only; normal users are not interrupted by a full-screen loader.
