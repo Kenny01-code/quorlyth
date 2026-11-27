@@ -80,11 +80,12 @@ test('homepage follows the linked reference and leaves the separate copper cover
 })
 
 
-test('Sign-in robot recognizes account-specific returns and shows live local context safely', async () => {
-  const [signIn, bot, signInCss] = await Promise.all([
+test('Sign-in robot recognizes account-specific returns and shows a consent-based live street map', async () => {
+  const [signIn, bot, signInCss, liveMapCss] = await Promise.all([
     source('src/screens/SignIn.tsx'),
     source('src/bot/QuorlythBot.tsx'),
     source('src/styles/signin-luxury.css'),
+    source('src/styles/signin-live-map.css'),
   ])
 
   assert.match(signIn, /function signinWelcomeKey\(identity\?: string\)/)
@@ -94,8 +95,13 @@ test('Sign-in robot recognizes account-specific returns and shows live local con
   assert.match(signIn, /addEventListener\('online', sync\)/)
   assert.match(signIn, /addEventListener\('offline', sync\)/)
   assert.match(signIn, /Region is estimated from your device time zone\. No GPS location is accessed\./)
-  assert.match(signIn, /q-signin-mini-map/)
-  assert.match(signIn, /className="q-signin-mini-map" role="img"/)
+  assert.match(signIn, /getSigninMapTiles/)
+  assert.match(signIn, /https:\/\/tile\.openstreetmap\.org\//)
+  assert.match(signIn, /navigator\.geolocation\.watchPosition/)
+  assert.match(signIn, /navigator\.geolocation\.clearWatch/)
+  assert.match(signIn, /enableHighAccuracy: true/)
+  assert.match(signIn, /Your location is not saved to Quorlyth/)
+  assert.match(signIn, /q-signin-map-attribution/)
   assert.match(signIn, /firstTimeOverride=\{!!me\.createdAt/)
   assert.match(signIn, /accountKey=\{me\.email\}/)
   assert.match(signIn, /firstTimeOverride=\{mode === 'signup'\}/)
@@ -107,13 +113,11 @@ test('Sign-in robot recognizes account-specific returns and shows live local con
   assert.match(bot, /qbot:welcomed:v1:/)
   assert.match(bot, /quorlyth:signin-welcomed:v2:/)
   assert.match(signInCss, /\.q-signin-live-context/)
-  assert.match(signInCss, /width: min\(194px, calc\(100% - 22px\)\)/)
-  assert.match(signInCss, /\.q-signin-mini-map/)
-  assert.match(signInCss, /width: 68px;\s*height: 46px/)
-  assert.match(signIn, /q-signin-map-water/)
-  assert.match(signIn, /q-signin-map-route/)
-  assert.match(signIn, /q-signin-map-label\">MAP/)
-  assert.match(signInCss, /@media \(max-width: 540px\)/)
+  assert.match(liveMapCss, /\.q-signin-map-viewport/)
+  assert.match(liveMapCss, /\.q-signin-map-marker/)
+  assert.match(liveMapCss, /© OpenStreetMap/)
+  assert.match(liveMapCss, /@media \(max-width: 540px\)/)
+  assert.match(liveMapCss, /prefers-reduced-motion: reduce/)
 })
 
 test('QuorlythBot keeps Live Talk distinct and reports connection state on every assistant page', async () => {
