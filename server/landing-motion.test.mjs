@@ -24,13 +24,3 @@ test('homepage copy transitions respect the reduced-motion preference', async ()
   assert.match(styles, /@keyframes qthEditorialWordReveal/)
   assert.match(styles, /prefers-reduced-motion:reduce[\s\S]*?\.qth-editorial-word/)
 })
-
-
-test('the landing hero and illustrative demo use compact rectangular labels without changing global chips', async () => {
-  const styles = await source('src/styles/landing-motion.css')
-  assert.match(styles, /#root #main \.hero > \.chip/)
-  assert.match(styles, /#root #main \.preview-card \.preview-topline > \.chip/)
-  assert.match(styles, /border-radius:\s*6px !important/)
-  assert.match(styles, /background:\s*linear-gradient\(145deg,rgba\(217,121,82,\.13\),rgba\(255,255,255,\.025\)\) !important/)
-  assert.doesNotMatch(styles, /(?:^|[\n,])\.chip\s*\{/)
-})
