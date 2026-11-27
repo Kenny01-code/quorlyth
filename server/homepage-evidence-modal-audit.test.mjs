@@ -4,18 +4,19 @@ import { readFile } from 'node:fs/promises'
 
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('homepage matches the reference deployment structure and avoids the added cover override', async () => {
+test('homepage restores the linked reference cover and its copper hero treatment', async () => {
   const [entry, landing, styles] = await Promise.all([
     source('src/main.tsx'),
     source('src/screens/Landing.tsx'),
     source('src/styles/landing-motion.css'),
   ])
 
-  assert.equal(entry.includes("import './styles/cover-burnt-orange.css'"), false)
-  assert.equal(landing.includes('CreatorCoverStage'), false)
+  assert.ok(entry.includes("import './styles/cover-burnt-orange.css'"))
+  assert.ok(landing.includes("import { CreatorCoverStage } from '../components/CreatorCoverStage'"))
+  assert.ok(landing.includes('<CreatorCoverStage />'))
+  assert.ok(landing.indexOf('<CreatorCoverStage />') < landing.indexOf('<div className="hmark">'))
   assert.ok(landing.includes('className="hero"'))
-  assert.equal(styles.includes('#root #main .hero > .chip'), false)
-  assert.equal(styles.includes('#root #main .preview-card .preview-topline > .chip'), false)
+  assert.ok(styles.includes('#root #main .hero > .chip'))
 })
 
 test('Automation content retains the reference deployment surfaces', async () => {
