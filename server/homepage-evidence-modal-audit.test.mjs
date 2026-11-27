@@ -4,26 +4,30 @@ import { readFile } from 'node:fs/promises'
 
 const source = path => readFile(new URL('../' + path, import.meta.url), 'utf8')
 
-test('homepage editorial badges stay compact and rectangular without changing global chips', async () => {
-  const css = await source('src/styles/landing-motion.css')
-  assert.match(css, /#root #main \.hero > \.chip,[\s\S]*?#root #main \.preview-card \.preview-topline > \.chip/)
-  assert.match(css, /border-radius: 6px !important/)
-  assert.match(css, /min-height: 31px/)
-  assert.match(css, /gap: 7px/)
-})
-
-test('Automation Studio keeps the original dark AI builder and integration panels', async () => {
-  const [ai, dark] = await Promise.all([
-    source('src/styles/automation-ai.css'),
-    source('src/styles/automation-dark.css'),
+test('homepage matches the reference deployment structure and avoids the added cover override', async () => {
+  const [entry, landing, styles] = await Promise.all([
+    source('src/main.tsx'),
+    source('src/screens/Landing.tsx'),
+    source('src/styles/landing-motion.css'),
   ])
 
-  assert.match(ai, /\.wa-ai-architect\s*\{/)
-  assert.match(ai, /\.wa-connected-services\s*\{[^}]*background:linear-gradient\(145deg,rgba\(255,255,255,\.045\),rgba\(255,255,255,\.012\)\),rgba\(3,3,4,\.72\)/s)
-  assert.match(ai, /\.wa-plain-guide\s*\{[^}]*background:linear-gradient\(125deg,rgba\(255,255,255,\.045\),rgba\(255,255,255,\.012\)\)/s)
-  assert.doesNotMatch(ai, /Verified integration, runtime and plain-language copy: clear bone surfaces|#FFFCF6|#F2EADB|#FFFEFA|#F5EFE6|#F8F2E8|#EAE0D1|#F4EBDD|#F5AD87|#F7E9D7|color:#000000 !important/)
-  assert.match(dark, /#root main#main\.q-automation-route \.wa-screen/)
-  assert.match(dark, /background:\s*#08090b\s*!important/)
+  assert.equal(entry.includes("import './styles/cover-burnt-orange.css'"), false)
+  assert.equal(landing.includes('CreatorCoverStage'), false)
+  assert.ok(landing.includes('className="hero"'))
+  assert.equal(styles.includes('#root #main .hero > .chip'), false)
+  assert.equal(styles.includes('#root #main .preview-card .preview-topline > .chip'), false)
+})
+
+test('Automation content retains the reference deployment surfaces', async () => {
+  const [screen, styles] = await Promise.all([
+    source('src/screens/Automations.tsx'),
+    source('src/styles/automation-ai.css'),
+  ])
+
+  assert.ok(screen.includes("import '../styles/automation-ai.css'"))
+  assert.equal(screen.includes('automation-dark.css'), false)
+  assert.ok(styles.includes('background:linear-gradient(145deg,#FFFCF6 0%,#F2EADB 100%) !important'))
+  assert.ok(styles.includes('.wa-plain-guide-steps article'))
 })
 
 test('evidence preview is rendered as one centred, blurred viewport dialog', async () => {
