@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from 'react'
  * Lazy-loaded Three.js artwork for an individual Community Space cover.
  * The shared copper scene is only requested when the cover approaches view.
  */
-export function CommunityCoverStage() {
+export function CommunityCoverStage({ coverStyle = 'a' }: { coverStyle?: string }) {
   const host = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    setReady(false)
     const element = host.current
     const surface = canvas.current
     if (!element || !surface) return
@@ -31,7 +32,7 @@ export function CommunityCoverStage() {
       try {
         const { mountCreatorCoverScene } = await import('./creatorCoverScene')
         if (cancelled) return
-        dispose = mountCreatorCoverScene(surface, element)
+        dispose = mountCreatorCoverScene(surface, element, coverStyle)
         setReady(true)
       } catch {
         // The CSS-lit copper fallback remains visible when WebGL is unavailable.
@@ -77,12 +78,13 @@ export function CommunityCoverStage() {
       cancelScheduledMount()
       dispose?.()
     }
-  }, [])
+  }, [coverStyle])
 
   return (
     <div
       ref={host}
       className="ccv-space-cover__scene"
+      data-style={coverStyle}
       data-ready={ready ? 'true' : 'false'}
       aria-hidden="true"
     >

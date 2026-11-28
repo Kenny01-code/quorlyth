@@ -4,12 +4,12 @@ import { Icon, GoogleG } from '../lib/Icon'
 import { Logo } from '../lib/Logo'
 import { useApp } from '../data/AppProvider'
 import { Robot, RobotApi } from '../bot/Robot'
-import { SignInGlobe } from '../components/SignInGlobe'
+import { SignInClock } from '../components/SignInClock'
 import { speakText, type SpeechPlayback } from '../ai/client'
 import { useRef } from 'react'
 import '../styles/signin-performance.css'
 import '../styles/signin-luxury.css'
-import '../styles/signin-globe.css'
+import '../styles/signin-clock.css'
 
 function signinWelcomeKey(identity?: string) {
   const value = (identity || '').trim().toLowerCase()
@@ -50,74 +50,7 @@ function friendlyAuthError(error: unknown, fallback: string) {
   return message || fallback
 }
 
-type SignInRegion = {
-  country: string
-  continent: string
-  subregion: string
-}
 
-const SIGNIN_REGIONS: Record<string, SignInRegion> = {
-  'Africa/Lagos': { country: 'Nigeria', continent: 'Africa', subregion: 'WEST AFRICA' },
-  'Africa/Accra': { country: 'Ghana', continent: 'Africa', subregion: 'WEST AFRICA' },
-  'Africa/Abidjan': { country: 'Côte d’Ivoire', continent: 'Africa', subregion: 'WEST AFRICA' },
-  'Africa/Dakar': { country: 'Senegal', continent: 'Africa', subregion: 'WEST AFRICA' },
-  'Africa/Nairobi': { country: 'Kenya', continent: 'Africa', subregion: 'EAST AFRICA' },
-  'Africa/Addis_Ababa': { country: 'Ethiopia', continent: 'Africa', subregion: 'EAST AFRICA' },
-  'Africa/Johannesburg': { country: 'South Africa', continent: 'Africa', subregion: 'SOUTHERN AFRICA' },
-  'Africa/Cairo': { country: 'Egypt', continent: 'Africa', subregion: 'NORTH AFRICA' },
-  'Europe/Paris': { country: 'France', continent: 'Europe', subregion: 'WESTERN EUROPE' },
-  'Europe/London': { country: 'United Kingdom', continent: 'Europe', subregion: 'WESTERN EUROPE' },
-  'Europe/Berlin': { country: 'Germany', continent: 'Europe', subregion: 'CENTRAL EUROPE' },
-  'Europe/Madrid': { country: 'Spain', continent: 'Europe', subregion: 'SOUTHERN EUROPE' },
-  'Asia/Dubai': { country: 'United Arab Emirates', continent: 'Asia', subregion: 'WEST ASIA' },
-  'Asia/Kolkata': { country: 'India', continent: 'Asia', subregion: 'SOUTH ASIA' },
-  'Asia/Singapore': { country: 'Singapore', continent: 'Asia', subregion: 'SOUTHEAST ASIA' },
-  'Asia/Tokyo': { country: 'Japan', continent: 'Asia', subregion: 'EAST ASIA' },
-  'Australia/Sydney': { country: 'Australia', continent: 'Oceania', subregion: 'OCEANIA' },
-  'America/New_York': { country: 'United States', continent: 'Americas', subregion: 'NORTH AMERICA' },
-  'America/Chicago': { country: 'United States', continent: 'Americas', subregion: 'NORTH AMERICA' },
-  'America/Los_Angeles': { country: 'United States', continent: 'Americas', subregion: 'NORTH AMERICA' },
-  'America/Toronto': { country: 'Canada', continent: 'Americas', subregion: 'NORTH AMERICA' },
-  'America/Sao_Paulo': { country: 'Brazil', continent: 'Americas', subregion: 'SOUTH AMERICA' },
-}
-
-function getSignInRegion(): SignInRegion {
-  let zone = ''
-  try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '' } catch { /* Use a neutral global fallback. */ }
-  if (SIGNIN_REGIONS[zone]) return SIGNIN_REGIONS[zone]
-  const continent = zone.startsWith('Africa/') ? 'Africa'
-    : zone.startsWith('Europe/') ? 'Europe'
-      : zone.startsWith('Asia/') ? 'Asia'
-        : zone.startsWith('America/') ? 'Americas'
-          : zone.startsWith('Australia/') || zone.startsWith('Pacific/') ? 'Oceania'
-            : 'Global'
-  return {
-    country: continent === 'Africa' ? 'Africa' : 'World',
-    continent,
-    subregion: continent === 'Africa' ? 'AFRICAN REGION' : 'REGIONAL VIEW',
-  }
-}
-
-function LocalContextPreview() {
-  const region = getSignInRegion()
-
-  return (
-    <aside className="q-signin-live-context" aria-label="Regional world view">
-      <div className="q-signin-context-copy">
-        <span className="q-signin-context-kicker">REGIONAL SIGNAL</span>
-        <strong>{region.country}</strong>
-        <span className="q-signin-context-time">{region.continent}</span>
-        <small>{region.subregion}</small>
-      </div>
-      <SignInGlobe />
-      <div className="q-signin-context-status">
-        <i />
-        <span>WORLD ROTATION</span>
-        <small>360° VIEW</small>
-      </div>
-    </aside>
-  )
-}
 function Stage({
   greeting,
   returningGreeting,
@@ -327,7 +260,7 @@ function Stage({
         window.setTimeout(() => (first ? r.current?.welcome() : r.current?.wave()), 400)
       }} />
       <div className="c1 glass"><span className="chip"><Icon name="private" size={12} />Private session</span></div>
-      <LocalContextPreview />
+      <SignInClock />
       <button
         type="button"
         className="chip hello"

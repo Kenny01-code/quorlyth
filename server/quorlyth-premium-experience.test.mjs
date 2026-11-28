@@ -80,65 +80,71 @@ test('homepage follows the linked reference and leaves the separate copper cover
 })
 
 
-test('Sign-in robot keeps its white styling and uses a compact animated 3D regional globe', async () => {
-  const [signIn, bot, signInCss, globeComponent, globeScene, globeCss] = await Promise.all([
+test('sign-in keeps the porcelain styling and shows only a live animated local clock', async () => {
+  const [signIn, signInCss, clock, clockScene, oldLuxuryCss] = await Promise.all([
     source('src/screens/SignIn.tsx'),
-    source('src/bot/QuorlythBot.tsx'),
+    source('src/styles/signin-clock.css'),
+    source('src/components/SignInClock.tsx'),
+    source('src/components/signinClockScene.ts'),
     source('src/styles/signin-luxury.css'),
-    source('src/components/SignInGlobe.tsx'),
-    source('src/components/signinGlobeScene.ts'),
-    source('src/styles/signin-globe.css'),
   ])
 
-  assert.match(signIn, /function signinWelcomeKey\(identity\?: string\)/)
-  assert.match(signIn, /quorlyth:signin-welcomed:v2:/)
-  assert.match(signIn, /function LocalContextPreview\(\)/)
-  assert.match(signIn, /function getSignInRegion\(\): SignInRegion/)
-  assert.match(signIn, /'Africa\/Lagos': \{ country: 'Nigeria', continent: 'Africa'/)
-  assert.match(signIn, /REGIONAL SIGNAL/)
-  assert.match(signIn, /WORLD ROTATION/)
-  assert.match(signIn, /360° VIEW/)
-  assert.match(signIn, /<SignInGlobe \/>/)
-  assert.doesNotMatch(signIn, /navigator\.geolocation/)
-  assert.doesNotMatch(signIn, /tile\.openstreetmap\.org/)
-  assert.doesNotMatch(signIn, /signin-live-map\.css/)
-  assert.match(signIn, /firstTimeOverride=\{!!me\.createdAt/)
-  assert.match(signIn, /accountKey=\{me\.email\}/)
-  assert.match(signIn, /firstTimeOverride=\{mode === 'signup'\}/)
-  assert.match(signIn, /You are offline\. Reconnect to sign in\./)
-  assert.doesNotMatch(signIn, /markSigninWelcome\(signedInUser\.id\)/)
-  assert.match(signIn, /navigator\.onLine/)
-
-  assert.match(bot, /accountCreatedAt = Number\(a\.me\?\.createdAt \|\| 0\)/)
-  assert.match(bot, /accountIsNew/)
-  assert.match(bot, /qbot:welcomed:v1:/)
-  assert.match(bot, /quorlyth:signin-welcomed:v2:/)
-
-  assert.match(signInCss, /background: linear-gradient\(145deg,rgba\(255,253,248/)
-  assert.match(signInCss, /q-signin-mini-map/)
-  assert.match(globeComponent, /import\('\.\/signinGlobeScene'\)/)
-  assert.match(globeComponent, /IntersectionObserver/)
-  assert.match(globeComponent, /requestIdleCallback/)
-  assert.match(globeComponent, /q-signin-globe__canvas/)
-
-  assert.match(globeScene, /CanvasTexture/)
-  assert.match(globeScene, /createRegionalTexture/)
-  assert.match(globeScene, /const AFRICA:/)
-  assert.match(globeScene, /'#[0-9a-fA-F]{6}'/)
-  assert.match(globeScene, /surfacePoint\(\.651, 9, 8\)/)
-  assert.match(globeScene, /TorusGeometry/)
-  assert.match(globeScene, /seconds \* \.105/)
-  assert.match(globeScene, /prefers-reduced-motion/)
-  assert.match(globeScene, /document\.visibilityState/)
-  assert.match(globeScene, /renderer\.dispose\(\)/)
-
-  assert.match(globeCss, /width: min\(194px, calc\(100% - 24px\)\)/)
-  assert.match(globeCss, /width: 76px/)
-  assert.match(globeCss, /height: 50px/)
-  assert.match(globeCss, /background: linear-gradient\(145deg, rgba\(255, 253, 249/)
-  assert.match(globeCss, /@media \(max-width: 540px\)/)
-  assert.match(globeCss, /prefers-reduced-motion: reduce/)
+  assert.ok(signIn.includes('<SignInClock />'))
+  assert.ok(signIn.includes("signin-clock.css"))
+  assert.ok(!signIn.includes('SignInGlobe'))
+  assert.ok(!signIn.includes('LocalContextPreview'))
+  assert.ok(!signIn.includes('getSignInRegion'))
+  assert.ok(!signIn.toLowerCase().includes('openstreetmap'))
+  assert.ok(!signIn.includes('navigator.geolocation'))
+  assert.ok(clock.includes('Intl.DateTimeFormat'))
+  assert.ok(clock.includes('setInterval(update, 1000)'))
+  assert.ok(clock.includes("import('./signinClockScene')"))
+  assert.ok(clock.includes('IntersectionObserver'))
+  assert.ok(clockScene.includes("from 'three'"))
+  assert.ok(clockScene.includes('hourHand.rotation.z'))
+  assert.ok(clockScene.includes('minuteHand.rotation.z'))
+  assert.ok(clockScene.includes('secondHand.rotation.z'))
+  assert.ok(clockScene.includes('new Date()'))
+  assert.ok(clockScene.includes('prefers-reduced-motion'))
+  assert.ok(clockScene.includes('document.visibilityState'))
+  assert.ok(clockScene.includes('renderer.dispose()'))
+  assert.ok(signInCss.includes('#fffefa'))
+  assert.ok(signInCss.includes('q-signin-clock__canvas'))
+  assert.ok(oldLuxuryCss.includes('.lg > .fm'))
+  assert.ok(!oldLuxuryCss.includes('q-signin-live-context'))
+  assert.ok(!oldLuxuryCss.includes('q-signin-mini-map'))
 })
+
+test('community cover styles provide eight burnt-copper Three.js scenes with saved selection', async () => {
+  const [communities, stage, scene, css] = await Promise.all([
+    source('src/screens/Communities.tsx'),
+    source('src/components/CommunityCoverStage.tsx'),
+    source('src/components/creatorCoverScene.ts'),
+    source('src/styles/community-cover-three.css'),
+  ])
+
+  for (const key of ["key: 'a'", "key: 'b'", "key: 'c'", "key: 'd'", "key: 'e'", "key: 'f'", "key: 'g'", "key: 'h'"]) {
+    assert.ok(communities.includes(key), 'Missing cover ' + key)
+  }
+  assert.ok(communities.includes('CoverStylePicker value={f.cover}'))
+  assert.ok(communities.includes('a.saveCommunity(c.id, { cover: key })'))
+  assert.ok(communities.includes("<CommunityCoverStage coverStyle={c.cover || 'a'} />"))
+  assert.ok(stage.includes('mountCreatorCoverScene(surface, element, coverStyle)'))
+  assert.ok(stage.includes('}, [coverStyle])'))
+  for (const key of ['b', 'c', 'd', 'e', 'f', 'g', 'h']) {
+    assert.ok(scene.includes("activeStyle === '" + key + "'"), 'Missing Three.js scene ' + key)
+  }
+  assert.ok(scene.includes('TorusKnotGeometry'))
+  assert.ok(scene.includes('IcosahedronGeometry'))
+  assert.ok(scene.includes('OctahedronGeometry'))
+  assert.ok(scene.includes('prefers-reduced-motion'))
+  assert.ok(scene.includes('document.visibilityState'))
+  assert.ok(scene.includes('renderer.dispose()'))
+  assert.ok(css.includes('cover-option__check'))
+  assert.ok(css.includes('#d16a43'))
+  assert.ok(css.includes('prefers-reduced-motion: reduce'))
+})
+
 test('QuorlythBot keeps Live Talk distinct and reports connection state on every assistant page', async () => {
   const [bot, css] = await Promise.all([
     source('src/bot/QuorlythBot.tsx'),

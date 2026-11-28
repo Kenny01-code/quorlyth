@@ -18,21 +18,57 @@ import { CommunityCoverStage } from '../components/CommunityCoverStage'
 
 const ICONS = ['community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab']
 const BADGE_ICONS = ['star', 'community', 'idea', 'audience', 'promote', 'rank', 'member', 'insight', 'collab', 'approve', 'lock']
-const COVERS = [['a', 'Aurora'], ['b', 'Halo'], ['c', 'Grid'], ['d', 'Dusk']]
+const COVERS = [
+  { key: 'a', label: 'Aurora', description: 'Interlaced copper sculpture' },
+  { key: 'b', label: 'Halo', description: 'Layered orbital rings' },
+  { key: 'c', label: 'Grid', description: 'Geometric signal lattice' },
+  { key: 'd', label: 'Dusk', description: 'Faceted metallic prism' },
+  { key: 'e', label: 'Ember', description: 'Glowing molten core' },
+  { key: 'f', label: 'Helix', description: 'Twin spiralling forms' },
+  { key: 'g', label: 'Pulse', description: 'Concentric energy fields' },
+  { key: 'h', label: 'Orbit', description: 'Satellite constellation' },
+] as const
 const RULE = { anyone: 'Anyone can post', members: 'Members can post', owner: 'Owner / moderators only' }
 
 type CommunityAIDraft = { name: string; purpose: string; welcome: string; rules: string }
 type IdeaAIDraft = { title: string; body: string; tags: string[] }
 
+function CoverStylePicker({ value, onChange }: { value: string; onChange: (key: string) => void }) {
+  return (
+    <div className="cover-picker" role="group" aria-label="Community cover styles">
+      {COVERS.map(cover => (
+        <button
+          type="button"
+          key={cover.key}
+          data-style={cover.key}
+          className={cn('cover-option', value === cover.key && 'on')}
+          aria-label={'Use ' + cover.label + ' cover style: ' + cover.description}
+          aria-pressed={value === cover.key}
+          onClick={() => onChange(cover.key)}
+        >
+          <span className={cn('ccv', 'v' + cover.key, 'cover-option__visual')} aria-hidden="true">
+            <span className="cover-option__sample">{cover.key.toUpperCase()}</span>
+            <span className="cover-option__orb" />
+          </span>
+          <b>{cover.label}</b>
+          <small>{cover.description}</small>
+          {value === cover.key && <span className="cover-option__check" aria-hidden="true"><Icon name="check" size={11} /></span>}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function Cover({ c, big }: { c: Community; big?: boolean }) {
+  const activeCover = COVERS.find(cover => cover.key === (c.cover || 'a')) || COVERS[0]
   return (
     <div className={cn('ccv', 'v' + (c.cover || 'a'), big && 'ccv--space-cover')}>
-      {big && <CommunityCoverStage />}
+      {big && <CommunityCoverStage coverStyle={c.cover || 'a'} />}
       {big && (
         <div className="ccv-space-cover__content">
           <span className="cic"><Icon name={c.icon || 'community'} size={44} /></span>
           <div className="ccv-space-cover__copy">
-            <span>QUORLYTH / COMMUNITY SPACE</span>
+            <span>QUORLYTH / {activeCover.label.toUpperCase()} SPACE</span>
             <strong>Ideas, in motion.</strong>
             <small>A shared place to shape what comes next.</small>
           </div>
@@ -279,7 +315,7 @@ function List() {
           <label className="field"><span>Welcome message <small>Optional</small></span><textarea value={f.welcome} maxLength={1200} onChange={e => setF({ ...f, welcome: e.target.value })} placeholder="Make new members feel at home" /></label>
           <label className="field"><span>Community guidelines <small>Optional</small></span><textarea value={f.rules} maxLength={3000} onChange={e => setF({ ...f, rules: e.target.value })} placeholder="Describe the kind of participation you welcome" /></label>
           <Pick label="Icon" value={f.icon} onChange={v => setF({ ...f, icon: v })} opts={ICONS.map(i => [i, <Icon key={i} name={i} size={18} />])} />
-          <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={() => setF({ ...f, cover: key })}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
+          <div className="field"><span>Cover style</span><CoverStylePicker value={f.cover} onChange={key => setF({ ...f, cover: key })} /></div>
           <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
           <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people must request approval before they can join.' : 'OFF — anyone can join this community immediately.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
           <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner / moderators only']]} />
@@ -832,13 +868,13 @@ function CommunitySettings({ c, memberIds }: { c: Community; memberIds: string[]
       <label className="field"><span>Name</span><input value={f.name} maxLength={60} onChange={e => setF({ ...f, name: e.target.value })} /></label>
       <label className="field"><span>What is it for</span><textarea value={f.purpose} maxLength={300} onChange={e => setF({ ...f, purpose: e.target.value })} /></label>
       <Pick label="Icon" value={f.icon} onChange={v => setF({ ...f, icon: v })} opts={ICONS.map(i => [i, <Icon key={i} name={i} size={18} />])} />
-      <div className="field"><span>Cover style</span><div className="cover-picker">{COVERS.map(([key, label]) => <button type="button" key={key} className={cn('cover-option', f.cover === key && 'on')} aria-pressed={f.cover === key} onClick={async () => {
-          setF({ ...f, cover: key })
-          if (key !== (c.cover || 'a')) {
-            const saved = await a.saveCommunity(c.id, { cover: key })
-            if (!saved) setF(current => ({ ...current, cover: c.cover || 'a' }))
-          }
-        }}><span className={cn('ccv', 'v' + key)}><span className="cover-sample">{label.slice(0,1)}</span></span><b>{label}</b></button>)}</div></div>
+      <div className="field"><span>Cover style</span><CoverStylePicker value={f.cover} onChange={async key => {
+        setF({ ...f, cover: key })
+        if (key !== (c.cover || 'a')) {
+          const saved = await a.saveCommunity(c.id, { cover: key })
+          if (!saved) setF(current => ({ ...current, cover: c.cover || 'a' }))
+        }
+      }} /></div>
       <Pick label="Visibility" value={f.vis} onChange={v => setF({ ...f, vis: v as any })} opts={[['listed', 'Listed'], ['unlisted', 'Unlisted']]} />
       <div className="set"><div><h3 style={{ fontSize: 15 }}>Approve new members</h3><p className="dim">{f.joinApproval ? 'ON — people must request approval before they can join.' : 'OFF — anyone can join immediately. Saving this change will approve existing pending requests.'}</p></div><button className={cn('tg', f.joinApproval && 'on')} role="switch" aria-checked={!!f.joinApproval} aria-label="Approve new members" onClick={() => setF({ ...f, joinApproval: !f.joinApproval })}><i /></button></div>
       <Pick label="Who can post" value={f.post} onChange={v => setF({ ...f, post: v as any })} opts={[['anyone', 'Anyone'], ['members', 'Members'], ['owner', 'Owner / moderators only']]} />

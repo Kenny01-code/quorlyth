@@ -1,0 +1,181 @@
+/* Porcelain sign-in stage with a premium live local chronograph. */
+#root #main .lg > .stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(147,92,65,.19) !important;
+  background:
+    radial-gradient(ellipse 54% 70% at 73% 28%, rgba(223,142,103,.15), transparent 72%),
+    radial-gradient(ellipse 58% 54% at 18% 92%, rgba(223,190,163,.22), transparent 75%),
+    linear-gradient(148deg, #fffefa 0%, #f8f1e8 58%, #efe5d9 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.98), inset 0 -1px 0 rgba(129,83,55,.06), 0 30px 78px -48px rgba(78,47,29,.3), 0 0 46px -40px rgba(190,91,54,.3) !important;
+}
+#root #main .lg > .stage::before {
+  background: radial-gradient(ellipse 52% 38% at 48% 0%, rgba(255,255,255,.92), transparent 78%), linear-gradient(120deg, rgba(255,255,255,.42), transparent 38%, transparent 68%, rgba(197,104,68,.045)) !important;
+}
+#root #main .lg > .stage::after {
+  background: linear-gradient(128deg, rgba(255,255,255,.45), transparent 23%, transparent 75%, rgba(203,100,63,.045)) !important;
+  opacity: .65;
+}
+#root #main .lg > .stage .c1 .chip,
+#root #main .lg > .stage .hello {
+  border-color: rgba(174,100,69,.22) !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.9), rgba(246,234,222,.84)) !important;
+  color: #6f3e29 !important;
+  box-shadow: inset 0 1px 0 #fff, 0 9px 24px -19px rgba(76,46,30,.34);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+#root #main .lg > .stage .c1 .chip .ic,
+#root #main .lg > .stage .hello .ic { color: #a65335 !important; }
+#root #main .lg > .stage .cap {
+  color: #2a2019 !important;
+  text-shadow: none !important;
+}
+#root #main .lg > .stage .cap .dim { color: #a45c3e !important; }
+#root #main .lg .q-signin-hello-status { color: #6f4d3a !important; text-shadow: none !important; }
+#root #main .lg .q-signin-hello-status.is-error { color: #a23f2b !important; }
+
+#root #main .lg > .stage .q-signin-clock {
+  position: absolute;
+  z-index: 8;
+  top: 13px;
+  right: 13px;
+  display: grid;
+  grid-template-columns: 62px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+  width: min(178px, calc(100% - 26px));
+  min-height: 76px;
+  padding: 8px 10px 8px 8px;
+  overflow: hidden;
+  border: 1px solid rgba(159,91,62,.2);
+  border-radius: 16px;
+  color: #3a281f;
+  background: radial-gradient(ellipse at 9% 0%, rgba(255,255,255,.98), transparent 58%), linear-gradient(145deg, rgba(255,255,255,.97), rgba(245,235,224,.96));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.98), 0 14px 32px -25px rgba(74,45,29,.38), 0 0 22px -18px rgba(185,89,53,.36);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+  pointer-events: none;
+}
+#root #main .lg .q-signin-clock::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(118deg, rgba(255,255,255,.48), transparent 42%, rgba(215,137,102,.05));
+  content: "";
+  pointer-events: none;
+}
+#root #main .lg .q-signin-clock__dial {
+  position: relative;
+  width: 62px;
+  height: 62px;
+  overflow: visible;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #fffefa, #f0e2d5 72%, #d9bca8);
+  box-shadow: 0 5px 15px -10px rgba(88,48,28,.42), inset 0 1px 0 rgba(255,255,255,.96);
+}
+#root #main .lg .q-signin-clock__canvas {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 520ms ease;
+}
+#root #main .lg .q-signin-clock.is-ready .q-signin-clock__canvas { opacity: 1; }
+#root #main .lg .q-signin-clock__fallback {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(174,91,59,.58);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 4px rgba(194,121,89,.08), 0 0 0 1px rgba(255,255,255,.9);
+}
+#root #main .lg .q-signin-clock__fallback::before {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(173,111,81,.2);
+  border-radius: 50%;
+  content: "";
+}
+#root #main .lg .q-signin-clock__fallback i {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  display: block;
+  width: 2px;
+  border-radius: 999px;
+  transform-origin: 50% 100%;
+}
+#root #main .lg .q-signin-clock__fallback-hour { height: 14px; background: #79513d; }
+#root #main .lg .q-signin-clock__fallback-minute { height: 20px; background: #986047; }
+#root #main .lg .q-signin-clock__fallback-second { height: 22px; width: 1px !important; background: #bd5d3b; }
+#root #main .lg .q-signin-clock__fallback b {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border: 1px solid #fff4e9;
+  border-radius: 50%;
+  background: #b65a39;
+  transform: translate(-50%,-50%);
+}
+#root #main .lg .q-signin-clock.is-ready .q-signin-clock__fallback { opacity: 0; }
+#root #main .lg .q-signin-clock__readout {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#root #main .lg .q-signin-clock__main {
+  color: #3b281f !important;
+  font-size: 21px;
+  font-weight: 760;
+  letter-spacing: -.055em;
+  line-height: 1.08;
+}
+#root #main .lg .q-signin-clock__sub {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #a45b3c !important;
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: .1em;
+  line-height: 1.2;
+}
+#root #main .lg .q-signin-clock__sub i {
+  color: #927361 !important;
+  font-size: 8px;
+  font-style: normal;
+  letter-spacing: .15em;
+}
+@media (max-width: 860px) {
+  #root #main .lg > .stage .q-signin-clock { top: 11px; right: 11px; }
+}
+@media (max-width: 540px) {
+  #root #main .lg > .stage .q-signin-clock {
+    top: 8px;
+    right: 8px;
+    grid-template-columns: 54px minmax(0,1fr);
+    gap: 8px;
+    width: min(164px, calc(100% - 16px));
+    min-height: 66px;
+    padding: 6px 8px 6px 6px;
+  }
+  #root #main .lg .q-signin-clock__dial { width: 54px; height: 54px; }
+  #root #main .lg .q-signin-clock__main { font-size: 19px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root #main .lg .q-signin-clock *,
+  #root #main .lg .q-signin-clock *::before,
+  #root #main .lg .q-signin-clock *::after { animation: none !important; transition: none !important; }
+}
